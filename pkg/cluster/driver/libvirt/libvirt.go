@@ -207,7 +207,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}
 	info := log.Info
 	infof := log.Infof
-	if config.Quiet {
+	if config.Quiet  && log.GetLevel() != log.DebugLevel {
 		info = func(a ...interface{}) {}
 		infof = func(s string, a ...interface{}) {}
 	}

@@ -68,7 +68,12 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 	}
 
 	if isEphemeral {
-		defer start.StopEphemeralCluster(startConfig, clusterConfig)
+		defer func() {
+			err := start.StopEphemeralCluster(startConfig, clusterConfig)
+			if err != nil {
+				log.Errorf("Error deleting ephemeral cluster: %v", err)
+			}
+		}()
 	}
 
 	// Get a kubernetes client

@@ -71,6 +71,11 @@ else
   done
 fi
 
+# Run any tests that require an ephemeral cluster.  These are always run in
+# sequence because the ephemeral cluster is not very tolerant of being used
+# by multiple processes at once.
+bats -o "$BATS_RESULT_DIR/$setup" -r ./ephemeral-bats $(echo $TEST_FILTERS)
+
 unlink "$TMP_HOME/.cache/libvirt/libvirt-sock"
 if [[ $INCLUDE_CAPI -eq 1 ]]; then
 	unlink $TMP_HOME/.oci
