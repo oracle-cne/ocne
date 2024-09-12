@@ -167,6 +167,7 @@ EXPOSE 443`
 	ostreeArchiveScriptName = "make-archive.sh"
 	ostreeArchiveScript     = `
 #! /bin/bash
+set -e
 
 # Apply the given trust store
 mv /etc/pki/ca-trust /tmp/ca-trust-orig
@@ -191,7 +192,7 @@ ostree --repo=/usr/share/nginx/html/ostree init --mode=archive
 # or a bare image.  Differentiating between the two is annoying, but
 # must be done
 DIGEST=""
-MANIFEST=$(podman manifest inspect $PODMAN_IMG 2>&1)
+MANIFEST=$(podman manifest inspect $PODMAN_IMG 2>&1 || true)
 if echo "$MANIFEST" | grep -v "is not a manifest list but a single image"; then
 	DIGEST=$(skopeo inspect docker://$PODMAN_IMG | jq -r .Digest)
 else

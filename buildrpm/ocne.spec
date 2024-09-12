@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.1
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,10 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Thu Sep 12 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.1-2
+- Change the default ostree registry to include a transport
+- Tolerate less well specified ostree registry references
+
 * Wed Sep 11 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.1-1
 - Remove copy of the catalog repository in favor of cloning it during build
 - Improve error reporting when a kubeconfig is given but the file does not exist

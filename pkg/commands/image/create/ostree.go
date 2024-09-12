@@ -7,57 +7,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/oracle-cne/ocne/pkg/file"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 )
-
-func imagesFromOstreeImage(img string) (string, string, error) {
-	// Important stuff is colon delimited.
-	fields := strings.Split(img, ":")
-
-	// At the very least there needs to be a registry
-	// and a tag.  More, actually, but that is all checked
-	// later on.
-	if len(fields) < 2 {
-		return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
-	}
-
-	switch fields[0] {
-	case "ostree-unverified-image", "ostree-image-signed":
-		fields = fields[1:]
-		switch fields[0] {
-		case "registry":
-			fields = fields[1:]
-		case "docker":
-			// strip off the "//"
-			fields[0] = fields[0][2:]
-		default:
-			return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
-		}
-	case "ostree-unverified-registry":
-		fields = fields[1:]
-	case "ostree-remote-image":
-		if len(fields) < 3 {
-			return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
-		}
-		fields = fields[2:]
-	default:
-		return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
-	}
-
-	// Hack the tag off the reference for the ostree image
-	imgIdx := strings.LastIndex(img, ":")
-	ostreeImg := img[:imgIdx]
-
-	return ostreeImg, strings.Join(fields, ":"), nil
-}
 
 func createOstreeImage(cc *copyConfig) error {
 	ignores := []string{
@@ -76,7 +35,7 @@ func createOstreeImage(cc *copyConfig) error {
 	// Convert the given container image to something that can be used
 	// by the script.  Notable, it hacks the tag off the ostree image
 	// and hacks the transport off to generate the podman image.
-	containerImage, podmanImage, err := imagesFromOstreeImage(cc.ostreeContainerImage)
+	containerImage, podmanImage, err := image.ParseOstreeReference(cc.ostreeContainerImage)
 	if err != nil {
 		return err
 	}

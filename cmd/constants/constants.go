@@ -45,7 +45,7 @@ const (
 const (
 	OsHostname   = ""
 	CaButaneFile = "ca.crt"
-	OsRegistry   = "container-registry.oracle.com/olcne/ock-ostree"
+	OsRegistry   = "ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree"
 	NodeAddress  = ""
 	NodeIP       = ""
 )
