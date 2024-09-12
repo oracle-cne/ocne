@@ -45,7 +45,7 @@ install -m 755 -d %{buildroot}%{_sysconfdir}/bash_completion.d
 chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 
 %files
-%license LICENSE THIRD_PARTY_LICENSES.txt
+%license LICENSE.txt THIRD_PARTY_LICENSES.txt
 /usr/bin/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
