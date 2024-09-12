@@ -1,0 +1,169 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "{{.ClusterConfig.Name}}"
+  name: "{{.ClusterConfig.Name}}"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - {{.ClusterConfig.PodSubnet}}
+    serviceDomain: "cluster.local"
+    services:
+      cidrBlocks:
+        - {{.ClusterConfig.ServiceSubnet}}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCICluster
+    name: "{{.ClusterConfig.Name}}"
+    namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: "{{.ClusterConfig.Name}}-control-plane"
+    namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "{{.ClusterConfig.Name}}"
+  name: "{{.ClusterConfig.Name}}"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  compartmentId: "{{.ClusterConfig.Providers.Oci.Compartment}}"
+---
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: "{{.ClusterConfig.Name}}-control-plane"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  version: "{{.KubeVersions.Kubernetes}}"
+  replicas: {{.ClusterConfig.ControlPlaneNodes}}
+  machineTemplate:
+    infrastructureRef:
+      kind: OCIMachineTemplate
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      name: "{{.ClusterConfig.Name}}-control-plane"
+      namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+  kubeadmConfigSpec:
+    format: ignition
+    ignition:
+      variant: fcos
+      version: 1.5.0
+      containerLinuxConfig:
+        additionalConfig: |
+{{.ExtraConfig}}
+    clusterConfiguration:
+      kubernetesVersion: {{.KubeVersions.Kubernetes}}
+      imageRepository: container-registry.oracle.com/olcne
+      apiServer:
+        certSANs: [localhost, 127.0.0.1]
+      dns:
+        imageRepository: container-registry.oracle.com/olcne
+        imageTag: {{.KubeVersions.CoreDNS}}
+      etcd:
+        local:
+          imageRepository: container-registry.oracle.com/olcne
+          imageTag: {{.KubeVersions.Etcd}}
+      networking: {}
+      scheduler: {}
+    initConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/crio/crio.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{"{{ ds[\"id\"] }}"}}
+          volume-plugin-dir: "{{.VolumePluginDir}}"
+    joinConfiguration:
+      discovery: {}
+      nodeRegistration:
+        criSocket: /var/run/crio/crio.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{"{{ ds[\"id\"] }}"}}
+          volume-plugin-dir: "{{.VolumePluginDir}}"
+---
+kind: OCIMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+metadata:
+  name: "{{.ClusterConfig.Name}}-control-plane"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  template:
+    spec:
+      imageId: "{{shapeImage .ClusterConfig.Providers.Oci.ControlPlaneShape.Shape .ClusterConfig.Providers.Oci.Images}}"
+      compartmentId: "{{.ClusterConfig.Providers.Oci.Compartment}}"
+      shape: "{{.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape}}"
+      shapeConfig:
+        ocpus: "{{.ClusterConfig.Providers.Oci.ControlPlaneShape.Ocpus}}"
+      metadata:
+        ssh_authorized_keys: "{{.ClusterConfig.SshPublicKey}}"
+      isPvEncryptionInTransitEnabled: false
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  template:
+    spec:
+      imageId: "{{shapeImage .ClusterConfig.Providers.Oci.WorkerShape.Shape .ClusterConfig.Providers.Oci.Images}}"
+      compartmentId: "{{.ClusterConfig.Providers.Oci.Compartment}}"
+      shape: "{{.ClusterConfig.Providers.Oci.WorkerShape.Shape}}"
+      shapeConfig:
+        ocpus: "{{.ClusterConfig.Providers.Oci.WorkerShape.Ocpus}}"
+      metadata:
+        ssh_authorized_keys: "{{.ClusterConfig.SshPublicKey}}"
+      isPvEncryptionInTransitEnabled: false
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  template:
+    spec:
+      format: ignition
+      ignition:
+        variant: fcos
+        version: 1.5.0
+        containerLinuxConfig:
+          additionalConfig: |
+{{.ExtraConfig}}
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: oci://{{"{{ ds[\"id\"] }}"}}
+            volume-plugin-dir: "{{.VolumePluginDir}}"
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  clusterName: "{{.ClusterConfig.Name}}"
+  replicas: {{.ClusterConfig.WorkerNodes}}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "{{.ClusterConfig.Name}}"
+      version: "{{.KubeVersions.Kubernetes}}"
+      bootstrap:
+        configRef:
+          name: "{{.ClusterConfig.Name}}-md-0"
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+      infrastructureRef:
+        name: "{{.ClusterConfig.Name}}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachineTemplate
+

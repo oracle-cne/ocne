@@ -1,0 +1,30 @@
+# Copyright (c) 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+setup_suite() {
+	if [ $(uname) == "Darwin" ]; then
+		skip
+	fi
+
+	CLUSTER_NAME="remoteworkers"
+	if [ -z "$OCNE_LIBVIRT_URI" ]; then
+		CLUSTER_NAME="localworkers"
+		ocne cluster start --auto-start-ui false --cluster-name $CLUSTER_NAME --control-plane-nodes 2 --worker-nodes 2 $(echo $K8S_VERSION_FLAG)
+	else
+		ocne cluster start --auto-start-ui false --session "$OCNE_LIBVIRT_URI" --cluster-name remoteworkers --control-plane-nodes 2 --worker-nodes 2 $(echo $K8S_VERSION_FLAG)
+	fi
+	export KUBECONFIG=~/.kube/kubeconfig.$CLUSTER_NAME.local
+	export CAPI_NAME=capi-named
+
+	# wait for cluster to come up
+	kubectl rollout status deployment -n kube-system coredns
+	kubectl rollout status deployment -n ocne-system ocne-catalog
+}
+
+teardown_suite() {
+	if [ -z "$OCNE_LIBVIRT_URI" ]; then
+		ocne cluster delete --cluster-name localworkers
+	else
+		ocne cluster delete --cluster-name remoteworkers --session "$OCNE_LIBVIRT_URI"
+	fi
+}

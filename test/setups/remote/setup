@@ -1,0 +1,24 @@
+# Copyright (c) 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+setup_suite() {
+	if [ -z "$OCNE_LIBVIRT_URI" ]; then
+		skip
+	fi
+
+	ocne cluster start --auto-start-ui false --session "$OCNE_LIBVIRT_URI" --cluster-name defaultremote $(echo $K8S_VERSION_FLAG)
+	export KUBECONFIG=~/.kube/kubeconfig.defaultremote.local
+	export CAPI_NAME=capi-remote
+
+	# wait for cluster to come up
+	kubectl rollout status deployment -n kube-system coredns
+	kubectl rollout status deployment -n ocne-system ocne-catalog
+}
+
+teardown_suite() {
+	if [ -z "$OCNE_LIBVIRT_URI" ]; then
+		skip
+	fi
+
+	ocne cluster delete --cluster-name defaultremote --session "$OCNE_LIBVIRT_URI"
+}
