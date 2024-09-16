@@ -43,7 +43,7 @@ func NewCmd() *cobra.Command {
 		Use:   CommandName,
 		Short: helpShort,
 		Long:  helpLong,
-		Args:  cobra.MatchAll(cobra.ExactArgs(0), cobra.OnlyValidArgs),
+		Args:  cobra.MatchAll(cobra.OnlyValidArgs),
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -63,6 +63,12 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne cluster console" command
 func RunCmd(cmd *cobra.Command) error {
-	err := console.Console(kubeConfig, nodeName, toolbox, chroot)
+	// Get any command that was provided
+	cmds := []string{}
+	if cmd.ArgsLenAtDash() >= 0 {
+		cmds = cmd.Flags().Args()[cmd.ArgsLenAtDash():]
+	}
+
+	err := console.Console(kubeConfig, nodeName, toolbox, chroot, cmds)
 	return err
 }

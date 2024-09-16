@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.1
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,10 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+
+* Fri Sep 13 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.1-3
+- Add support for double dash commands when using the cluster console
+
 * Thu Sep 12 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.1-2
 - Change the default ostree registry to include a transport
 - Tolerate less well specified ostree registry references

@@ -13,6 +13,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
+	log "github.com/sirupsen/logrus"
 	"os"
 )
 
@@ -23,7 +24,7 @@ type Overrides struct {
 
 const podPrefix = "console"
 
-func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool) error {
+func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds []string) error {
 	// Get a kubernetes client
 	_, kubeClient, err := client.GetKubeClient(kubeconfig)
 	if err != nil {
@@ -84,11 +85,15 @@ func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool) erro
 	cmd := kexec.NewCmdExec(factory, streams)
 	cmd.Flags().Set("tty", tty)
 	cmd.Flags().Set("stdin", "true")
+	cmdArgs := []string{pod.ObjectMeta.Name, "--"}
 	if chroot {
-		cmd.SetArgs([]string{pod.ObjectMeta.Name, "--", "/usr/sbin/chroot", "/hostroot"})
-	} else {
-		cmd.SetArgs([]string{pod.ObjectMeta.Name, "--", "sh"})
+		cmdArgs = append(cmdArgs, "/usr/sbin/chroot", "/hostroot")
+	} else if len(cmds) == 0 {
+		cmdArgs = append(cmdArgs, "sh")
 	}
+	cmdArgs = append(cmdArgs, cmds...)
+	log.Debugf("Executing command on %s: %+v", pod.ObjectMeta.Name, cmdArgs)
+	cmd.SetArgs(cmdArgs)
 	if err := cmd.Execute(); err != nil {
 		return err
 	}
