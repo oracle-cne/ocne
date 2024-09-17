@@ -5,6 +5,7 @@ package libvirt
 
 import (
 	"bytes"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"text/template"
 
@@ -32,6 +33,7 @@ func checkLibvirtError(err error, ec libvirt.ErrorNumber) bool {
 // container image to the target libvirtd instance, locating in the given
 // Pool and assigning in the given name.
 func TransferBaseImage(l *libvirt.Libvirt, imageName string, pool *libvirt.StoragePool, volumeName string, arch string) error {
+	log.Debugf("Downloading bootVolumeContainerImage %s", imageName)
 	tarStream, closer, err := image.EnsureBaseQcow2Image(imageName, arch)
 	if err != nil {
 		return err

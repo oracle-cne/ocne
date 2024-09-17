@@ -4,7 +4,6 @@
 package cmdutil
 
 import (
-	"github.com/Masterminds/semver/v3"
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/config"
@@ -34,17 +33,17 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 	return &ndf, &cc, nil
 }
 
-// ensureBootImageVersion patches the boot image tag as necessary based on the desired version
-// of Kubernetes. It returns the updated image string.
-func EnsureBootImageVersion(requestedVersion string, image string) string {
+// EnsureBootImageVersion appends an image tag consisting of the Kubernetes version ,if the image string does not currently have a tag.
+// It returns the updated image string.
+func EnsureBootImageVersion(kubeVersion string, image string) string {
 	// if the user already specified a tag at the end of the image, use that tag and return
 	parts := strings.Split(image, ":")
-	_, err := semver.NewVersion(parts[len(parts)-1])
-	if err == nil {
+	// This means that the image has at least two colons, one for the transport and another for the tag
+	if len(parts) > 2 {
 		return image
 	}
 	// if the version contains a "v" prefix, strip it
-	ver := strings.TrimPrefix(requestedVersion, "v")
+	ver := strings.TrimPrefix(kubeVersion, "v")
 	// add the tag to the image string
 	return image + ":" + ver
 }
