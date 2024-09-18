@@ -90,7 +90,10 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 
 	// Append the version to the boot volume container image registry path specified, if it does not already exist
-	cc.BootVolumeContainerImage = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	if err != nil {
+		return err
+	}
 
 	// if the user has not overridden the osTag and the requested k8s version is not the default, make the osTag
 	// match the k8s version

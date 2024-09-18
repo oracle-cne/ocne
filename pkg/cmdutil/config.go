@@ -36,14 +36,17 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 
 // EnsureBootImageVersion appends an image tag consisting of the Kubernetes version ,if the image string does not currently have a tag.
 // It returns the updated image string.
-func EnsureBootImageVersion(kubeVersion string, image string) string {
+func EnsureBootImageVersion(kubeVersion string, image string) (string, error) {
 	// if the user already specified a tag at the end of the image, use that tag and return
-	image, err := image2.WithoutTag(image)
+	_, imageWithoutTag, err := image2.GetTag(image)
 	if err != nil {
-		return image
+		return image, err
+	}
+	if imageWithoutTag == image {
+		return image, nil
 	}
 	// if the version contains a "v" prefix, strip it
 	ver := strings.TrimPrefix(kubeVersion, "v")
 	// add the tag to the image string
-	return image + ":" + ver
+	return image + ":" + ver, nil
 }
