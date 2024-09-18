@@ -51,12 +51,12 @@ const (
 Environment=ACTION={{.Action}}
 Environment=NET_INTERFACE={{.NetInterface}}
 `
-
+	DefaultTransport      = "ostree-unverified-registry"
 	OcneUpdateServiceName = "ocne-update.service"
 	OcneUpdateConfigPath  = "/etc/ocne/update.yaml"
 	OcneUpdateYamlPattern = `registry: %s
 tag: %s
-transport: ostree-unverified-registry
+transport: %s
 `
 
 	// Populating core configuration files, such as crio.conf and the
@@ -251,12 +251,19 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 		Enabled: util.BoolPtr(true),
 	}
 
-	// Update service configuration file
+	// Update service configuration file, parse out the transport from OsRegistry and set it in the update config
+	transport := DefaultTransport
+	osRegistry := cc.OsRegistry
+	fields := strings.Split(cc.OsRegistry, ":")
+	if len(fields) > 1 {
+		transport = fields[0]
+		osRegistry = fields[1]
+	}
 	updateFile := &File{
 		Path: OcneUpdateConfigPath,
 		Mode: 0400,
 		Contents: FileContents{
-			Source: fmt.Sprintf(OcneUpdateYamlPattern, cc.OsRegistry, cc.OsTag),
+			Source: fmt.Sprintf(OcneUpdateYamlPattern, osRegistry, cc.OsTag, transport),
 		},
 	}
 	ocneShFile := &File{
