@@ -96,6 +96,9 @@ SUBCOMMANDS
 `-b`, `--built-in-catalog` *built-in-catalog*
     Update the built-in catalog in the ocne-system namespace.
 
+`-c`, `--catalog` *catalog*
+The name of the catalog that contains the application.
+
 `-r`, `--release` *release-name*
     The name of the release of the application.
 
