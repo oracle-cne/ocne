@@ -21,8 +21,8 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
 )
 
 // imageDirectoryPrefix is used for testing to avoid writing to the users
@@ -392,26 +392,29 @@ func ChangeImageDomain(imageString string, newDomain string) (types.ImageReferen
 	return newImage, nil
 }
 
-func WithoutTag(image string) (string, error) {
-	fullImage, err := AddDefaultRegistry(image, "place.holder.com")
+// GetTag Returns the image tag, the image without the tag, and any errors; in this order.
+func GetTag(image string) (string, string, error) {
+	transportName := alltransports.TransportFromImageName(image)
+	if transportName == nil {
+		image = "docker://" + image
+	}
+	imageRef, err := alltransports.ParseImageName(image)
 	if err != nil {
-		return image, err
+		return "", "", fmt.Errorf("error parsing image %s", image)
+	}
+	fullImage, err := AddDefaultRegistry(imageRef.DockerReference().String(), "place.holder.com")
+	if err != nil {
+		return "", "", err
 	}
 	named, err := reference.ParseNamed(fullImage)
 	if err != nil {
-		return image, err
+		return "", "", err
 	}
 	named = reference.TagNameOnly(named)
 	tagged, ok := named.(reference.NamedTagged)
 	if !ok {
 		tmp := fmt.Sprintf("error removing image tag from string %s", image)
-		return image, errors.New(tmp)
+		return "", "", errors.New(tmp)
 	}
-	justImage, found := strings.CutSuffix(named.String(), ":"+tagged.Tag())
-	if found {
-		return justImage, nil
-	}
-
-	tmp := fmt.Sprintf("error removing image tag from string %s", image)
-	return image, errors.New(tmp)
+	return tagged.Tag(), named.String(), nil
 }
