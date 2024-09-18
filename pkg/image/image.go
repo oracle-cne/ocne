@@ -392,7 +392,7 @@ func ChangeImageDomain(imageString string, newDomain string) (types.ImageReferen
 	return newImage, nil
 }
 
-// GetTag Returns the image tag, the image without the tag, and any errors; in that order.
+// GetTag Returns the image tag, the image without the tag, and any errors; in this order.
 func GetTag(image string) (string, string, error) {
 	transportName := alltransports.TransportFromImageName(image)
 	if transportName == nil {
