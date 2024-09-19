@@ -254,10 +254,9 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	// Update service configuration file, parse out the transport from OsRegistry and set it in the update config
 	transport := DefaultTransport
 	osRegistry := cc.OsRegistry
-	fields := strings.Split(cc.OsRegistry, ":")
-	if len(fields) > 1 {
-		transport = fields[0]
-		osRegistry = fields[1]
+	if tr, rg, ok := strings.Cut(cc.OsRegistry, ":"); ok {
+		transport = tr
+		osRegistry = rg
 	}
 	updateFile := &File{
 		Path: OcneUpdateConfigPath,
