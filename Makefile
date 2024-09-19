@@ -120,6 +120,13 @@ capi-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instru
 	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
 	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
 
+.PHONY: release-test
+release-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
+	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./run-tests.sh '$(TEST_PATTERN)' 1 1
+	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
+	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
+	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
+
 clean-charts:
 	rm -rf $(CHART_EMBED)
 	rm -rf $(CHART_GIT_DIR)
