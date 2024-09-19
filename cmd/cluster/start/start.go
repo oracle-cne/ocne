@@ -5,12 +5,12 @@ package start
 
 import (
 	"github.com/containers/image/v5/transports/alltransports"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -60,14 +60,14 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
-	cmd.Flags().Uint16VarP(&clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 1, flagControlPlaneNodesHelp)
+	cmd.Flags().Uint16VarP(&clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
 	cmd.Flags().Uint16VarP(&clusterConfig.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
 	cmd.Flags().StringVarP(&config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
 	cmd.Flags().StringVarP(&config.Providers.Libvirt.SshKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
 	cmd.Flags().StringVarP(&config.BootVolumeContainerImage, constants.FlagBootVolumeContainerImage, constants.FlagBootVolumeContainerImageShort, "", constants.FlagBootVolumeContainerImageHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "ocne", constants.FlagClusterNameHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
-	cmd.Flags().StringVarP(&config.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "true", constants.FlagAutoStartUIHelp)
+	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
+	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&config.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "", constants.FlagAutoStartUIHelp)
 	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
 	cmd.Flags().StringVar(&clusterConfig.VirtualIp, flagVirtualIP, "", flagVirtualIPHelp)
 	cmd.Flags().StringVar(&clusterConfig.LoadBalancer, flagLoadBalancer, "", flagLoadBalancerHelp)
@@ -82,7 +82,15 @@ func RunCmd(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-
+	if cc.Name == "" {
+		cc.Name = "ocne"
+	}
+	if cc.Provider == "" {
+		cc.Provider = "libvirt"
+	}
+	if cc.ControlPlaneNodes == 0 {
+		cc.ControlPlaneNodes = 1
+	}
 	imageTransport := alltransports.TransportFromImageName(cc.BootVolumeContainerImage)
 	if imageTransport == nil {
 		// No transport protocol detected. Adding docker transport protocol as default.

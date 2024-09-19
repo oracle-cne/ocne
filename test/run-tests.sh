@@ -7,7 +7,10 @@ PATTERN=${1:-'.*'}
 SUITE_JOBS=${SUITE_JOBS:-2}
 TEST_JOBS=${TEST_JOBS:-2}
 INCLUDE_CAPI=${2:-0}
-TEST_FILTERS=${TEST_FILTERS:-'--filter-tags !CAPI,!CLUSTER_UPGRADE'}
+RELEASE_TEST=${3:-0}
+if [[ $RELEASE_TEST -eq 0 ]]; then
+	TEST_FILTERS=${TEST_FILTERS:-'--filter-tags !CAPI,!CLUSTER_UPGRADE'}
+fi
 TEST_K8S_VERSION=${TEST_K8S_VERSION:=""}
 
 # Default to the latest k8s version

@@ -5,13 +5,14 @@ package update
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/update"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -35,6 +36,7 @@ var values string
 var version string
 var namespace string
 var builtin bool
+var catalogName string
 
 const (
 	flagRelease      = "release"
@@ -56,6 +58,10 @@ const (
 	flagBuiltIn      = "built-in-catalog"
 	flagBuiltInShort = "b"
 	flagBuiltInHelp  = "Update the built-in catalog in the ocne-system namespace."
+
+	flagCatalogName      = "catalog"
+	flagCatalogNameShort = "c"
+	flagCatalogNameHelp  = "The name of the catalog that contains the application."
 )
 
 func NewCmd() *cobra.Command {
@@ -78,10 +84,12 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, flagNamespace, flagNamespaceShort, "", flagNamespaceHelp)
 	cmd.Flags().StringVarP(&release, flagRelease, flagReleaseShort, "", flagReleaseHelp)
 	cmd.Flags().StringVarP(&version, flagVersion, flagVersionShort, "", flagVersionHelp)
+	cmd.Flags().StringVarP(&catalogName, flagCatalogName, flagCatalogNameShort, pkgconst.DefaultCatalogName, flagCatalogNameHelp)
 
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagRelease)
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagVersion)
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagNamespace)
+	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagCatalogName)
 
 	return cmd
 }
@@ -99,6 +107,7 @@ func RunCmd(cmd *cobra.Command) error {
 	err := update.Update(application.UpdateOptions{
 		Namespace:      namespace,
 		KubeConfigPath: kubeConfig,
+		CatalogName:    catalogName,
 		Version:        version,
 		ReleaseName:    release,
 		Values:         values,
