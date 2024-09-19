@@ -255,7 +255,7 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	// Update service configuration file, parse out the transport from OsRegistry and set it in the update config
 	transport := DefaultTransport
 	osRegistry := cc.OsRegistry
-	if tr, rg, er := image.ParseOstreeReference(cc.OsRegistry); er == nil {
+	if tr, rg, er := image.ParseOsRegistry(cc.OsRegistry); er == nil {
 		transport = tr
 		osRegistry = rg
 	}

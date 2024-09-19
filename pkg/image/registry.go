@@ -6,9 +6,10 @@ package image
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/containers/image/v5/docker/reference"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 // AddDefaultRegistries takes a list of absolute, relative (without domain), and malformed images and returns a list of absolute and malformed images.
@@ -87,4 +88,14 @@ func ParseOstreeReference(img string) (string, string, error) {
 	ostreeImg := img[:imgIdx]
 
 	return ostreeImg, strings.Join(fields, ":"), nil
+}
+
+// ParseOsRegistry returns two strings.  First, the ostree
+// transport.  Second, a reference without the transport
+func ParseOsRegistry(osRegistry string) (string, string, error) {
+	if tr, rg, ok := strings.Cut(osRegistry, ":"); ok {
+		return tr, rg, nil
+	} else {
+		return "", "", fmt.Errorf("%s is not a valid OsRegistry reference", osRegistry)
+	}
 }
