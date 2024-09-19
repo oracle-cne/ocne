@@ -416,5 +416,6 @@ func GetTag(image string) (string, string, error) {
 		tmp := fmt.Sprintf("error removing image tag from string %s", image)
 		return "", "", errors.New(tmp)
 	}
-	return tagged.Tag(), named.String(), nil
+	justImage, _ := strings.CutSuffix(named.String(), ":"+tagged.Tag()) // should not fail, tag is guaranteed
+	return tagged.Tag(), justImage, nil
 }
