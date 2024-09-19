@@ -11,6 +11,7 @@ import (
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/image"
 
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -254,7 +255,7 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	// Update service configuration file, parse out the transport from OsRegistry and set it in the update config
 	transport := DefaultTransport
 	osRegistry := cc.OsRegistry
-	if tr, rg, ok := strings.Cut(cc.OsRegistry, ":"); ok {
+	if tr, rg, er := image.ParseOstreeReference(cc.OsRegistry); er == nil {
 		transport = tr
 		osRegistry = rg
 	}
