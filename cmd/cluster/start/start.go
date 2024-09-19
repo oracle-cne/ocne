@@ -60,7 +60,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
-	cmd.Flags().Uint16VarP(&clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 1, flagControlPlaneNodesHelp)
+	cmd.Flags().Uint16VarP(&clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
 	cmd.Flags().Uint16VarP(&clusterConfig.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
 	cmd.Flags().StringVarP(&config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
 	cmd.Flags().StringVarP(&config.Providers.Libvirt.SshKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
@@ -87,6 +87,9 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 	if cc.Provider == "" {
 		cc.Provider = "libvirt"
+	}
+	if cc.ControlPlaneNodes == 0 {
+		cc.ControlPlaneNodes = 1
 	}
 	imageTransport := alltransports.TransportFromImageName(cc.BootVolumeContainerImage)
 	if imageTransport == nil {
