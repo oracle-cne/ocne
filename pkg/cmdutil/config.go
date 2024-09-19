@@ -19,7 +19,6 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 		if err != nil {
 			return nil, nil, err
 		}
-
 		mcc := types.MergeClusterConfig(ncc, clusterConfig)
 		clusterConfig = &mcc
 	}
