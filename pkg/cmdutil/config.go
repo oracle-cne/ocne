@@ -42,9 +42,7 @@ func EnsureBootImageVersion(kubeVersion string, image string) (string, error) {
 	if err != nil {
 		return image, err
 	}
-	// By default, the GetTag functions returns the latest tag if the image doesn't have a tag
-	// Below checks if the image actually has this latest tag or not
-	if imageTag == "latest" && !strings.HasSuffix(image, ":latest") {
+	if imageTag == "" {
 		// if the version contains a "v" prefix, strip it
 		ver := strings.TrimPrefix(kubeVersion, "v")
 		// add the tag to the image string

@@ -416,6 +416,11 @@ func GetTag(image string) (string, string, error) {
 		tmp := fmt.Sprintf("error removing image tag from string %s", image)
 		return "", "", errors.New(tmp)
 	}
-	justImage, _ := strings.CutSuffix(named.String(), ":"+tagged.Tag()) // should not fail, tag is guaranteed
+	justImage, _ := strings.CutSuffix(named.String(), ":"+tagged.Tag())
+	// By default, the GetTag functions returns the latest tag if the image doesn't have a tag
+	// Below checks if the image actually has this latest tag or not
+	if tagged.Tag() == "latest" && !strings.HasSuffix(image, ":latest") {
+		return "", justImage, nil
+	}
 	return tagged.Tag(), justImage, nil
 }
