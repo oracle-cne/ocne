@@ -402,6 +402,9 @@ func GetTag(image string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("error parsing image %s", image)
 	}
+	if imageRef.DockerReference() == nil {
+		return "", "", fmt.Errorf("error parsing image %s not a valid docker reference", image)
+	}
 	fullImage, err := AddDefaultRegistry(imageRef.DockerReference().String(), "place.holder.com")
 	if err != nil {
 		return "", "", err
