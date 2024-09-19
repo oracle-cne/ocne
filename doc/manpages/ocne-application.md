@@ -47,7 +47,7 @@ SUBCOMMANDS
     The name of the catalog that contains the application.
 
 `-b`, `--built-in-catalog` *built-in-catalog*
-    Install the built-in catalog into the ocne-system namespace.  The cluster container runtime must be configured with the image registry name..
+    Install the built-in catalog into the ocne-system namespace.  The cluster container runtime must be configured with the image registry name.
 
 `-N`, `--name` *application-name*
     The name of the application to install.
