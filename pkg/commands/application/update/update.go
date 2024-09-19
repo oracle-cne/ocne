@@ -6,7 +6,6 @@ package update
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -16,6 +15,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	log "github.com/sirupsen/logrus"
 )
 
 // Update takes in a set of update options and returns an error that indicates whether the update was successful
@@ -49,7 +49,7 @@ func Update(opt application.UpdateOptions) error {
 	// Get the catalog information along with setting the port-forward
 	cat, err := search.Search(catalog.SearchOptions{
 		KubeConfigPath: opt.KubeConfigPath,
-		CatalogName:    constants.DefaultCatalogName,
+		CatalogName:    opt.CatalogName,
 		Pattern:        appName,
 	})
 	if err != nil {

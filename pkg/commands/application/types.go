@@ -54,7 +54,7 @@ type ShowOptions struct {
 // InstallOptions are the options for the application install command
 type InstallOptions struct {
 
-	// Catalog is the catalog object that is used to gather information about the app-catalog
+	// Catalog is the catalog object used to gather information about the app-catalog
 	Catalog *catalog.Catalog
 
 	// KubeConfigPath is the path of the kubeconfig file
@@ -80,6 +80,9 @@ type InstallOptions struct {
 	Overrides []helm.HelmOverrides
 }
 type UpdateOptions struct {
+
+	// Catalog is the name of the catalog used to gather information about the app-catalog
+	CatalogName string
 
 	// ReleaseName is the release name of the instance of the application
 	ReleaseName string
