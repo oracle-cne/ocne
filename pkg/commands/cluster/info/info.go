@@ -147,9 +147,9 @@ func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpD
 	unSanitizedPath := filepath.Join(outDir, "nodes", nodeName)
 	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
 	if _, err := os.Stat(sanitizedPath); err == nil {
-		nodeDir = unSanitizedPath
-	} else if _, err2 := os.Stat(unSanitizedPath); err == nil {
 		nodeDir = sanitizedPath
+	} else if _, err2 := os.Stat(unSanitizedPath); err2 == nil {
+		nodeDir = unSanitizedPath
 	} else if os.IsNotExist(err) && os.IsNotExist(err2) {
 		return nil, nil
 	} else if os.IsNotExist(err) && !os.IsNotExist(err2) {
