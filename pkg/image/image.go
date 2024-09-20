@@ -7,7 +7,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -392,38 +391,38 @@ func ChangeImageDomain(imageString string, newDomain string) (types.ImageReferen
 	return newImage, nil
 }
 
-// GetTag Returns the image tag, the image without the tag, and any errors; in this order.
-func GetTag(image string) (string, string, error) {
-	transportName := alltransports.TransportFromImageName(image)
+// SplitImage Returns an image tag if it exists, an image digest if it exists, the image without the tag and digest, and any errors; in this order.
+// images with both a tag and digest are not supported
+func SplitImage(imageArg string) (string, string, string, error) {
+	userImage := imageArg
+	//Parse the image using the docker transport
+	transportName := alltransports.TransportFromImageName(userImage)
 	if transportName == nil {
-		image = "docker://" + image
+		userImage = "docker://" + userImage
 	}
-	imageRef, err := alltransports.ParseImageName(image)
+	imageRef, err := alltransports.ParseImageName(userImage)
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing image %s", image)
+		return "", "", "", fmt.Errorf("error parsing image %s with error %v", imageArg, err)
 	}
 	if imageRef.DockerReference() == nil {
-		return "", "", fmt.Errorf("error parsing image %s not a valid docker reference", image)
+		return "", "", "", fmt.Errorf("error parsing image %s not a valid docker reference", imageArg)
 	}
-	fullImage, err := AddDefaultRegistry(imageRef.DockerReference().String(), "place.holder.com")
-	if err != nil {
-		return "", "", err
+	named := imageRef.DockerReference()
+	tagged, taggedOk := named.(reference.NamedTagged)
+	withDigest, digestOk := named.(reference.Digested)
+	if digestOk {
+		return "", withDigest.Digest().String(), reference.FamiliarName(named), nil
 	}
-	named, err := reference.ParseNamed(fullImage)
-	if err != nil {
-		return "", "", err
+	if taggedOk {
+		//only return latest if user specified it
+		if tagged.Tag() == "latest" {
+			if _, ok := strings.CutSuffix(imageArg, ":latest"); ok {
+				return "latest", "", reference.FamiliarName(named), nil
+			}
+			return "", "", reference.FamiliarName(named), nil
+		}
+
+		return tagged.Tag(), "", reference.FamiliarName(named), nil
 	}
-	named = reference.TagNameOnly(named)
-	tagged, ok := named.(reference.NamedTagged)
-	if !ok {
-		tmp := fmt.Sprintf("error removing image tag from string %s", image)
-		return "", "", errors.New(tmp)
-	}
-	justImage, _ := strings.CutSuffix(named.String(), ":"+tagged.Tag())
-	// By default, the GetTag functions returns the latest tag if the image doesn't have a tag
-	// Below checks if the image actually has this latest tag or not
-	if tagged.Tag() == "latest" && !strings.HasSuffix(image, ":latest") {
-		return "", justImage, nil
-	}
-	return tagged.Tag(), justImage, nil
+	return "", "", "", fmt.Errorf("error parsing image %s could not parse as tagged or with digest", imageArg)
 }
