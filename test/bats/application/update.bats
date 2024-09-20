@@ -21,7 +21,7 @@ EOF
     kubectl get pods -n weblogic-operator -o yaml | grep "image:" | grep "4.1.2"
 
     # Update to version 4.1.4 and reset previous override values.
-    ocne application update --release weblogic-operator --namespace weblogic-operator --version 4.1.4 --catalog "WebLogic Kubernetes Operator"
+    ocne application update --release weblogic-operator --namespace weblogic-operator --version 4.1.4 --catalog "WebLogic Kubernetes Operator" --reset-values
     kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
     kubectl get pods -n weblogic-operator -o yaml | grep "image:" | grep "4.1.4"
 
