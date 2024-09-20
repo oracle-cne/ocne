@@ -14,6 +14,27 @@ image: ghcr.io/oracle/weblogic-kubernetes-operator:4.1.2
 EOF
     kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
     run kubectl get pods -n weblogic-operator -o yaml | grep image:
-    [ $status -ne 0 ]
-    [[ "$output" =~ 1.4.2 ]]
+    [ $status -eq 0 ]
+    [[ "$output" =~ 4.1.2 ]]
+
+    # Update to version 4.1.3 but use previous set of overrides.  The image tag should remain 1.4.2.
+    ocne application update --release weblogic-operator --namespace weblogic-operator --version 4.1.3 --catalog "WebLogic Kubernetes Operator"
+    kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
+    run kubectl get pods -n weblogic-operator -o yaml | grep image:
+    [ $status -eq 0 ]
+    [[ "$output" =~ 4.1.2 ]]
+
+    # Update to version 4.1.4 and reset previous override values.
+    ocne application update --release weblogic-operator --namespace weblogic-operator --version 4.1.4 --catalog "WebLogic Kubernetes Operator"
+    kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
+    run kubectl get pods -n weblogic-operator -o yaml | grep image:
+    [ $status -eq 0 ]
+    [[ "$output" =~ 4.1.4 ]]
+
+    # Update to version 4.2.7 and use previous override values (of which there should be none)
+    ocne application update --release weblogic-operator --namespace weblogic-operator --version 4.2.7 --catalog "WebLogic Kubernetes Operator"
+    kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
+    run kubectl get pods -n weblogic-operator -o yaml | grep image:
+    [ $status -eq 0 ]
+    [[ "$output" =~ 4.2.7 ]]
 }
