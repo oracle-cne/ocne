@@ -37,11 +37,11 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 // It returns the updated image string.
 func EnsureBootImageVersion(kubeVersion string, image string) (string, error) {
 	// if the user already specified a tag at the end of the image, use that tag and return
-	imageTag, _, _, err := image2.SplitImage(image)
+	imageTag, digest, _, err := image2.SplitImage(image)
 	if err != nil {
 		return image, err
 	}
-	if imageTag == "" {
+	if imageTag == "" && digest == "" {
 		// if the version contains a "v" prefix, strip it
 		ver := strings.TrimPrefix(kubeVersion, "v")
 		// add the tag to the image string
