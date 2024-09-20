@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -24,8 +26,6 @@ import (
 	"helm.sh/helm/v3/pkg/strvals"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
-	"github.com/oracle-cne/ocne/pkg/k8s/client"
-	"github.com/oracle-cne/ocne/pkg/util"
 	"sigs.k8s.io/yaml"
 )
 
@@ -172,30 +172,18 @@ func GetValues(kubeInfo *client.KubeInfo, releaseName string, namespace string) 
 
 // UpgradeChartFromArchive installs a release into a cluster or upgrades an existing one.  The
 // reader must be a compressed tar archive.
-func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, dryRun bool, overrides []HelmOverrides) (*release.Release, error) {
+func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool) (*release.Release, error) {
 	theChart, err := loader.LoadArchive(archive)
 	if err != nil {
 		log.Errorf("Error loading archive: %v", err)
 		return nil, err
 	}
 
-	return UpgradeChart(kubeInfo, releaseName, namespace, createNamespace, theChart, wait, dryRun, overrides)
-}
-
-// UpgradeChartFromDirectory installs a release into a cluster or upgrades an existing one.  The
-// directory to install from must contain a valid chart.
-func UpgradeChartFromDirectory(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, chartDir string, wait bool, dryRun bool, overrides []HelmOverrides) (*release.Release, error) {
-	// load chart from the path
-	theChart, err := loadChartFn(chartDir)
-	if err != nil {
-		return nil, err
-	}
-
-	return UpgradeChart(kubeInfo, releaseName, namespace, createNamespace, theChart, wait, dryRun, overrides)
+	return UpgradeChart(kubeInfo, releaseName, namespace, createNamespace, theChart, wait, dryRun, overrides, resetValues)
 }
 
 // UpgradeChart installs a release into a cluster or upgrades an existing one.
-func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, theChart *chart.Chart, wait bool, dryRun bool, overrides []HelmOverrides) (*release.Release, error) {
+func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, theChart *chart.Chart, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool) (*release.Release, error) {
 	var err error
 	settings := cli.New()
 	settings.KubeConfig = kubeInfo.KubeconfigPath
@@ -227,10 +215,14 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.Wait = wait
 
 		// Reuse the original set of input values as the base set of helm overrides
-		helmValues, err := GetValuesMap(kubeInfo, releaseName, namespace)
-		if err != nil {
-			return nil, err
+		helmValues := map[string]interface{}{}
+		if !resetValues {
+			helmValues, err = GetValuesMap(kubeInfo, releaseName, namespace)
+			if err != nil {
+				return nil, err
+			}
 		}
+
 		// Append the new override values
 		for k, v := range vals {
 			helmValues[k] = v
