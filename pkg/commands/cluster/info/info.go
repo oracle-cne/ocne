@@ -4,12 +4,13 @@
 package info
 
 import (
-	"io"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"io"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"os"
 	"path/filepath"
 )
@@ -143,7 +144,9 @@ func validate(o *Options) error {
 func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpData, error) {
 	nodeDir := filepath.Join(outDir, "nodes", nodeName)
 	_, err := os.Stat(nodeDir)
-	if os.IsNotExist(err) {
+	redactedNodeDir := filepath.Join(capture.RedactionPrefix + capture.GetShortSha256Hash(nodeName))
+	_, err2 := os.Stat(redactedNodeDir)
+	if os.IsNotExist(err) && os.IsNotExist(err2) {
 		return nil, nil
 	}
 	if err != nil {
