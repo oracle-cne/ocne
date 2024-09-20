@@ -9,7 +9,7 @@
     ocne catalog add --uri https://oracle.github.io/weblogic-kubernetes-operator --name "WebLogic Kubernetes Operator"
 
     # Override the image used to later verify that --reset-values works
-    ocne application install --release weblogic-operator --namespace weblogic-operator --name weblogic-operator --version 4.2.7 --catalog "WebLogic Kubernetes Operator" --values - <<EOF
+    ocne application install --release weblogic-operator --namespace weblogic-operator --name weblogic-operator --version 4.1.2 --catalog "WebLogic Kubernetes Operator" --values - <<EOF
 image: ghcr.io/oracle/weblogic-kubernetes-operator:4.1.2
 EOF
     kubectl rollout status deployment -n weblogic-operator weblogic-operator -w
