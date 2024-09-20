@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package capture
+package sanitize
 
 import (
 	"bufio"
@@ -20,6 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
+const (
+	// File containing a map from redacted values to their original values
+
+	RedactionPrefix = "REDACTED-"
+	RedactionMap    = "sensitive-do-not-share-redaction-map.csv"
+)
+
 type regexPlan struct {
 	preprocess  func(string) string
 	regex       string
@@ -31,9 +38,9 @@ var regexToReplacementListMutex sync.RWMutex
 var regexToReplacementList = []regexPlan{}
 
 var KnownHostNames = make(map[string]bool)
-var knownHostNamesMutex = &sync.Mutex{}
+var KnownHostNamesMutex = &sync.Mutex{}
 var KnownNodeNames = make(map[string]string)
-var knownNodeNamesMutex = &sync.Mutex{}
+var KnownNodeNamesMutex = &sync.Mutex{}
 
 // A map to keep track of all the strings that have been redacted.
 var redactedValues = make(map[string]string)
@@ -75,18 +82,18 @@ func InitRegexToReplacementMap() {
 func SanitizeString(l string, redactedValuesOverride map[string]string) string {
 	InitRegexToReplacementMap()
 
-	knownHostNamesMutex.Lock()
+	KnownHostNamesMutex.Lock()
 	for knownHost := range KnownHostNames {
 		wholeOccurrenceHostPattern := "\"" + knownHost + "\""
 		l = regexp.MustCompile(wholeOccurrenceHostPattern).ReplaceAllString(l, "\""+RedactionPrefix+GetShortSha256Hash(knownHost)+"\"")
 	}
-	knownHostNamesMutex.Unlock()
+	KnownHostNamesMutex.Unlock()
 
-	knownNodeNamesMutex.Lock()
+	KnownNodeNamesMutex.Lock()
 	for knownNode, hash := range KnownNodeNames {
 		l = regexp.MustCompile(knownNode).ReplaceAllString(l, hash)
 	}
-	knownNodeNamesMutex.Unlock()
+	KnownNodeNamesMutex.Unlock()
 
 	regexToReplacementListMutex.Lock()
 	for _, eachRegex := range regexToReplacementList {
@@ -201,7 +208,7 @@ func sanitizeFile(srcPath string) error {
 	defer fDest.Close()
 
 	// read each line, sanitize it and write to the destination file
-	if err := sanitizeLines(fSrc, fDest); err != nil {
+	if err := SanitizeLines(fSrc, fDest); err != nil {
 		return err
 	}
 
@@ -217,7 +224,7 @@ func sanitizeFile(srcPath string) error {
 }
 
 // read each line, sanitize it and write to writer
-func sanitizeLines(reader io.Reader, writer io.Writer) error {
+func SanitizeLines(reader io.Reader, writer io.Writer) error {
 	scanner := bufio.NewScanner(reader)
 	bufWriter := bufio.NewWriter(writer)
 	for scanner.Scan() {

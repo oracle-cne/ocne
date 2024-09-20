@@ -6,9 +6,10 @@ package capture
 import (
 	"bufio"
 	"bytes"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/info"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/info"
 	"os"
 	"path/filepath"
 )
@@ -46,7 +47,7 @@ func CaptureClusterInfo(kubeClient kubernetes.Interface, outDir string, skipReda
 	defer fOut.Close()
 
 	if !skipRedact {
-		sanitizeLines(bytes.NewReader(b.Bytes()), bufio.NewWriter(fOut))
+		sanitize.SanitizeLines(bytes.NewReader(b.Bytes()), bufio.NewWriter(fOut))
 	} else {
 		writeWithoutSanitize(bytes.NewReader(b.Bytes()), bufio.NewWriter(fOut))
 	}

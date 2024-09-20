@@ -4,7 +4,8 @@
 package info
 
 import (
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture"
+	"fmt"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -142,15 +143,21 @@ func validate(o *Options) error {
 
 // extractNodeInfo extracts info from node dump files.  If the node directory doesn't exist then return nil
 func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpData, error) {
-	nodeDir := filepath.Join(outDir, "nodes", nodeName)
-	_, err := os.Stat(nodeDir)
-	redactedNodeDir := filepath.Join(capture.RedactionPrefix + capture.GetShortSha256Hash(nodeName))
-	_, err2 := os.Stat(redactedNodeDir)
-	if os.IsNotExist(err) && os.IsNotExist(err2) {
+	var nodeDir string
+	unSanitizedPath := filepath.Join(outDir, "nodes", nodeName)
+	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
+	if _, err := os.Stat(sanitizedPath); err == nil {
+		nodeDir = unSanitizedPath
+	} else if _, err2 := os.Stat(unSanitizedPath); err == nil {
+		nodeDir = sanitizedPath
+	} else if os.IsNotExist(err) && os.IsNotExist(err2) {
 		return nil, nil
-	}
-	if err != nil {
+	} else if os.IsNotExist(err) && !os.IsNotExist(err2) {
 		return nil, err
+	} else if !os.IsNotExist(err) && os.IsNotExist(err2) {
+		return nil, err2
+	} else {
+		return nil, fmt.Errorf("the first error that occured is %s and the second error that occurred is %s", err.Error(), err.Error())
 	}
 
 	// Read the files downloaded from the node
