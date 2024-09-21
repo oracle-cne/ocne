@@ -35,11 +35,17 @@ func createOstreeImage(cc *copyConfig) error {
 	// Convert the given container image to something that can be used
 	// by the script.  Notable, it hacks the tag off the ostree image
 	// and hacks the transport off to generate the podman image.
-	containerImage, podmanImage, err := image.ParseOstreeReference(cc.ostreeContainerImage)
+	ostreeTransport, registry, tag, err := image.ParseOstreeReference(cc.ostreeContainerImage)
 	if err != nil {
 		return err
 	}
-	log.Debugf("The podman image is %s", podmanImage)
+	if tag == "" {
+		return fmt.Errorf("ostree image %s requires a tag", cc.ostreeContainerImage)
+	}
+	containerImage := fmt.Sprintf("%s:%s", ostreeTransport, registry)
+	podmanImage := fmt.Sprintf("%s:%s", registry, tag)
+
+	log.Debugf("The podman image is %s", registry)
 	script := fmt.Sprintf(ostreeScript, cc.httpsProxy, cc.httpProxy, cc.noProxy, containerImage, podmanImage, cc.imageArchitecture)
 
 	waitors := []*logutils.Waiter{

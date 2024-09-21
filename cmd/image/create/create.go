@@ -82,7 +82,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 	// Try to be polite by accepting "regular" container registry formats.
 	// Not everyone is familiar with the requirements for ostree.
-	_, _, err = image.ParseOstreeReference(cc.OsRegistry)
+	_, _, _, err = image.ParseOstreeReference(cc.OsRegistry)
 	if err != nil {
 		cc.OsRegistry = fmt.Sprintf("ostree-unverified-registry:%s", cc.OsRegistry)
 	}

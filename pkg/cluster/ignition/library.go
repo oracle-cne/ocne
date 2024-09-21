@@ -13,6 +13,7 @@ import (
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
 
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
@@ -56,7 +57,7 @@ Environment=NET_INTERFACE={{.NetInterface}}
 	OcneUpdateConfigPath  = "/etc/ocne/update.yaml"
 	OcneUpdateYamlPattern = `registry: %s
 tag: %s
-transport: ostree-unverified-registry
+transport: %s
 `
 
 	// Populating core configuration files, such as crio.conf and the
@@ -252,11 +253,18 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	}
 
 	// Update service configuration file
+	ostreeTransport, registry, tag, err := image.ParseOstreeReference(cc.OsRegistry)
+	if err != nil {
+		return nil, err
+	}
+	if tag != "" {
+		return nil, fmt.Errorf("osRegistry field cannot have a tag")
+	}
 	updateFile := &File{
 		Path: OcneUpdateConfigPath,
 		Mode: 0400,
 		Contents: FileContents{
-			Source: fmt.Sprintf(OcneUpdateYamlPattern, cc.OsRegistry, cc.OsTag),
+			Source: fmt.Sprintf(OcneUpdateYamlPattern, registry, cc.OsTag, ostreeTransport),
 		},
 	}
 	ocneShFile := &File{
