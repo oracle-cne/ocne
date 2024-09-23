@@ -165,6 +165,12 @@ type ClusterConfig struct {
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
 }
 
+type ImageInfo struct {
+	BaseImage string
+	Tag       string
+	Digest    string
+}
+
 // ies is short for "If Else String".  If the second argument is
 // non-empty, it is returned.  Otherwise, the first argument
 // is returned.

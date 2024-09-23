@@ -20,6 +20,7 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
+	ocneTypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	log "github.com/sirupsen/logrus"
 )
@@ -393,7 +394,7 @@ func ChangeImageDomain(imageString string, newDomain string) (types.ImageReferen
 
 // SplitImage Returns an image tag if it exists, an image digest if it exists, the image without the tag and digest, and any errors; in this order.
 // images with both a tag and digest are not supported
-func SplitImage(imageArg string) (string, string, string, error) {
+func SplitImage(imageArg string) (ocneTypes.ImageInfo, error) {
 	userImage := imageArg
 	//Parse the image using the docker transport
 	transportName := alltransports.TransportFromImageName(userImage)
@@ -402,27 +403,27 @@ func SplitImage(imageArg string) (string, string, string, error) {
 	}
 	imageRef, err := alltransports.ParseImageName(userImage)
 	if err != nil {
-		return "", "", "", fmt.Errorf("error parsing image %s with error %v", imageArg, err)
+		return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image %s with error %v", imageArg, err)
 	}
 	if imageRef.DockerReference() == nil {
-		return "", "", "", fmt.Errorf("error parsing image %s not a valid docker reference", imageArg)
+		return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image %s not a valid docker reference", imageArg)
 	}
 	named := imageRef.DockerReference()
 	tagged, taggedOk := named.(reference.NamedTagged)
 	withDigest, digestOk := named.(reference.Digested)
 	if digestOk {
-		return "", withDigest.Digest().String(), reference.FamiliarName(named), nil
+		return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "", Digest: withDigest.Digest().String()}, nil
 	}
 	if taggedOk {
 		//only return latest if user specified it
 		if tagged.Tag() == "latest" {
 			if _, ok := strings.CutSuffix(imageArg, ":latest"); ok {
-				return "latest", "", reference.FamiliarName(named), nil
+				return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "latest", Digest: ""}, nil
 			}
-			return "", "", reference.FamiliarName(named), nil
+			return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "", Digest: ""}, nil
 		}
 
-		return tagged.Tag(), "", reference.FamiliarName(named), nil
+		return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: tagged.Tag(), Digest: ""}, nil
 	}
-	return "", "", "", fmt.Errorf("error parsing image %s could not parse as tagged or with digest", imageArg)
+	return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image %s could not parse as tagged or with digest", imageArg)
 }

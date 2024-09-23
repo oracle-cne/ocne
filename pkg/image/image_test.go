@@ -91,15 +91,15 @@ func TestSplitImage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
-			tagRes, digestRes, imageOnlyRes, err := SplitImage(testCase.testImage)
+			imgInfo, err := SplitImage(testCase.testImage)
 			if testCase.expectedError {
-				assert.Errorf(t, err, "expected test case to return an error but got result %s", imageOnlyRes)
+				assert.Errorf(t, err, "expected test case to return an error but got result %s", imgInfo.BaseImage)
 				return
 			}
 			assert.NoError(t, err, "expected no error to be returned")
-			assert.EqualValues(t, testCase.tag, tagRes, "returned an incorrect tag")
-			assert.EqualValues(t, testCase.digest, digestRes, "returned an incorrect digest")
-			assert.EqualValues(t, testCase.imageOnly, imageOnlyRes, "image result without tag and digest is wrong")
+			assert.EqualValues(t, testCase.tag, imgInfo.Tag, "returned an incorrect tag")
+			assert.EqualValues(t, testCase.digest, imgInfo.Digest, "returned an incorrect digest")
+			assert.EqualValues(t, testCase.imageOnly, imgInfo.BaseImage, "image result without tag and digest is wrong")
 		})
 	}
 
