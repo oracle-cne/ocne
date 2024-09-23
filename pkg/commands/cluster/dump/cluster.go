@@ -5,11 +5,12 @@ package dump
 
 import (
 	"fmt"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/util/strutil"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"os"
 	"path/filepath"
 )
@@ -68,7 +69,7 @@ func populateNodeMap(cli kubernetes.Interface) error {
 		return err
 	}
 	for _, node := range nodeList.Items {
-		capture.PutIntoNodeNamesIfNotPresent(node.Name)
+		sanitize.PutIntoNodeNamesIfNotPresent(node.Name)
 	}
 	return nil
 }

@@ -181,7 +181,7 @@ func getNodePath(outDir string, nodeName string) (string, error) {
 	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
 	_, err = os.Stat(sanitizedPath)
 	if err == nil {
-		return unSanitizedPath, nil
+		return sanitizedPath, nil
 	}
 	return "", fmt.Errorf("A valid nodePath for a node was not found in the cluster dump")
 }

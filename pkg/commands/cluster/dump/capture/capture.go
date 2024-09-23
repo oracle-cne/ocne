@@ -5,7 +5,6 @@ package capture
 
 import (
 	"bufio"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
 	"io"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -101,16 +100,6 @@ func CaptureAllResources(cp CaptureParams) error {
 	cs.wg.Wait()
 
 	return nil
-}
-
-// PutIntoNodeNamesIfNotPresent populates the node map with a given node name
-func PutIntoNodeNamesIfNotPresent(inputKey string) {
-	sanitize.KnownNodeNamesMutex.Lock()
-	_, ok := sanitize.KnownNodeNames[inputKey]
-	if !ok {
-		sanitize.KnownNodeNames[inputKey] = sanitize.RedactionPrefix + sanitize.GetShortSha256Hash(inputKey)
-	}
-	sanitize.KnownNodeNamesMutex.Unlock()
 }
 
 // read each line, do not sanitize it and write to writer

@@ -236,3 +236,13 @@ func SanitizeLines(reader io.Reader, writer io.Writer) error {
 	bufWriter.Flush()
 	return nil
 }
+
+// PutIntoNodeNamesIfNotPresent populates the node map with a given node name
+func PutIntoNodeNamesIfNotPresent(inputKey string) {
+	KnownNodeNamesMutex.Lock()
+	defer KnownNodeNamesMutex.Unlock()
+	_, ok := KnownNodeNames[inputKey]
+	if !ok {
+		KnownNodeNames[inputKey] = RedactionPrefix + GetShortSha256Hash(inputKey)
+	}
+}
