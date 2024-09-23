@@ -127,3 +127,18 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 
 	return ostreeTransport, registry, tag, nil
 }
+
+// MakeOstreeReference does its level best to take a container image
+// reference and turn it into an ostree reference.  If there is no ostree
+// transport present, it will add "ostree-unverified-registry".
+func MakeOstreeReference(img string) (string, error) {
+	_, _, _, err := ParseOstreeReference(img)
+	if err == nil {
+		return img, nil
+	}
+
+	img = fmt.Sprintf("ostree-unverified-registry:%s", img)
+	_, _, _, err = ParseOstreeReference(img)
+	log.Debugf("Making reference %s", img)
+	return img, err
+}
