@@ -38,6 +38,7 @@ var archMap = map[string]string{
 // EnsureBaseQcow2Image ensures that the base image is downloaded. Return a tar stream of the image.
 func EnsureBaseQcow2Image(imageName string, arch string) (*tar.Reader, func(), error) {
 	// Fetch the image, or use the local cache if it exists
+	log.Debugf("Downloading bootVolumeContainerImage %s", imageName)
 	imgRef, err := GetOrPull(imageName, arch)
 	if err != nil {
 		return nil, nil, err
@@ -405,7 +406,7 @@ func SplitImage(imageArg string) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("error parsing image %s with error %v", imageArg, err)
 	}
 	if imageRef.DockerReference() == nil {
-		return "", "", "", fmt.Errorf("error parsing image %s not a valid docker reference", imageArg)
+		return "", "", "", fmt.Errorf("error parsing image, %s not a valid docker reference", imageArg)
 	}
 	named := imageRef.DockerReference()
 	tagged, taggedOk := named.(reference.NamedTagged)
