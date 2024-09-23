@@ -5,6 +5,7 @@ package dump
 
 import (
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
 	"os"
 	"path/filepath"
 	"sync"
@@ -13,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -97,7 +97,7 @@ func dumpNodes(o Options, kubeClient kubernetes.Interface) error {
 			if o.SkipRedact {
 				outDir = filepath.Join(o.OutDir, "nodes", p.NodeName)
 			} else {
-				outDir = filepath.Join(o.OutDir, "nodes", capture.RedactionPrefix+capture.GetShortSha256Hash(p.NodeName))
+				outDir = filepath.Join(o.OutDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(p.NodeName))
 			}
 
 			// Dump the node using a pod.  Just log if error, it is not fatal
@@ -105,7 +105,7 @@ func dumpNodes(o Options, kubeClient kubernetes.Interface) error {
 				log.Errorf("Error dumping node %s: %s", p.NodeName, err.Error())
 			}
 			if !o.SkipRedact {
-				if err := capture.SanitizeFilesInDirTree(outDir); err != nil {
+				if err := sanitize.SanitizeFilesInDirTree(outDir); err != nil {
 					log.Errorf("Error accessing files in directory %s: %s.  Manually delete this directory and its contents, it may have sensitive data", outDir, err.Error())
 				}
 			}

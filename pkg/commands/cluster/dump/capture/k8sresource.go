@@ -7,13 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/gvr"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/gvr"
 	"os"
 	"path/filepath"
 	"strings"
@@ -114,7 +115,7 @@ func writeJSONToFile(v interface{}, namespace, resourceFile, outDir string, reda
 
 	resJSON, _ := json.MarshalIndent(v, JSONPrefix, JSONIndent)
 	if redact {
-		_, err = f.WriteString(SanitizeString(string(resJSON), nil))
+		_, err = f.WriteString(sanitize.SanitizeString(string(resJSON), nil))
 	} else {
 		_, err = f.WriteString(string(resJSON))
 	}
