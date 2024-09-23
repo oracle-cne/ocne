@@ -48,7 +48,7 @@ func AddDefaultRegistry(imageToChange string, registry string) (string, error) {
 // "ostree-unverified-image:container-registry.oracle.com/olcne/ock-ostree:1.30"
 // returns "ostree-unverified-image", "container-registry.oracle.com/olcne/ock-ostree"
 // and "1.30".  It is not necessary that a tag is present, but all the rest of the
-// fields are reuired.
+// fields are required.
 func ParseOstreeReference(img string) (string, string, string, error) {
 	// Important stuff is colon delimited.
 	fields := strings.Split(img, ":")

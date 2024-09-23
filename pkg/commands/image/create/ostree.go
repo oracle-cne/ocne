@@ -45,7 +45,7 @@ func createOstreeImage(cc *copyConfig) error {
 	containerImage := fmt.Sprintf("%s:%s", ostreeTransport, registry)
 	podmanImage := fmt.Sprintf("%s:%s", registry, tag)
 
-	log.Debugf("The podman image is %s", registry)
+	log.Debugf("The podman image is %s", podmanImage)
 	script := fmt.Sprintf(ostreeScript, cc.httpsProxy, cc.httpProxy, cc.noProxy, containerImage, podmanImage, cc.imageArchitecture)
 
 	waitors := []*logutils.Waiter{
