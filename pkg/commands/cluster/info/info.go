@@ -144,23 +144,10 @@ func validate(o *Options) error {
 // extractNodeInfo extracts info from node dump files.  If the node directory doesn't exist then return nil
 func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpData, error) {
 	// This checks to see both filepaths, covering the cases where a redacted dump has occurred and when a non-redacted dump has occurred
-	var nodeDir string
-	unSanitizedPath := filepath.Join(outDir, "nodes", nodeName)
-	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
-	if _, err := os.Stat(sanitizedPath); err == nil {
-		nodeDir = sanitizedPath
-	} else if _, err2 := os.Stat(unSanitizedPath); err2 == nil {
-		nodeDir = unSanitizedPath
-	} else if os.IsNotExist(err) && os.IsNotExist(err2) {
-		return nil, nil
-	} else if os.IsNotExist(err) && !os.IsNotExist(err2) {
+	nodeDir, err := getNodePath(outDir, nodeName)
+	if err != nil {
 		return nil, err
-	} else if !os.IsNotExist(err) && os.IsNotExist(err2) {
-		return nil, err2
-	} else {
-		return nil, fmt.Errorf("the first error that occured is %s and the second error that occurred is %s", err.Error(), err.Error())
 	}
-
 	// Read the files downloaded from the node
 	updateYAML, err := os.ReadFile(filepath.Join(nodeDir, "update.yaml"))
 	if err != nil {
@@ -182,4 +169,19 @@ func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpD
 	}
 
 	return &ni, nil
+}
+
+// getNodePath returns a path for a node in the dump, if it exists and an error indicating whether it is a valid path
+func getNodePath(outDir string, nodeName string) (string, error) {
+	unSanitizedPath := filepath.Join(outDir, "nodes", nodeName)
+	_, err := os.Stat(unSanitizedPath)
+	if err == nil {
+		return unSanitizedPath, nil
+	}
+	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
+	_, err = os.Stat(sanitizedPath)
+	if err == nil {
+		return unSanitizedPath, nil
+	}
+	return "", fmt.Errorf("A valid nodePath for a node was not found in the cluster dump")
 }
