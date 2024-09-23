@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/containers/image/v5/docker/reference"
+	"github.com/containers/image/v5/transports/alltransports"
 	log "github.com/sirupsen/logrus"
 	"strings"
 )
@@ -42,49 +43,102 @@ func AddDefaultRegistry(imageToChange string, registry string) (string, error) {
 	return toAdd, nil
 }
 
-// ParseOstreeReference returns two strings.  First, the ostree
-// reference without a tag.  Second, a reference that is usable
-// by Podman compatible container runtimes.  For example,
+// ParseOstreeReference returns three strings: the ostree transport, registry,
+// and tag for an ostree container image.  For example,
 // "ostree-unverified-image:container-registry.oracle.com/olcne/ock-ostree:1.30"
-// returns "ostree-unverified-image:container-registry.oracle.com/olcne/ock-ostree"
-// and container-registry.oracle.com/olcne/ock-ostree:1.30
-func ParseOstreeReference(img string) (string, string, error) {
+// returns "ostree-unverified-image", "container-registry.oracle.com/olcne/ock-ostree"
+// and "1.30".  It is not necessary that a tag is present, but all the rest of the
+// fields are required.
+func ParseOstreeReference(img string) (string, string, string, error) {
 	// Important stuff is colon delimited.
 	fields := strings.Split(img, ":")
 
-	// At the very least there needs to be a registry
-	// and a tag.  More, actually, but that is all checked
-	// later on.
+	// At the very least there needs to be a transport and a registry.
 	if len(fields) < 2 {
-		return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+		return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
 	}
 
-	switch fields[0] {
+	ostreeTransport := fields[0]
+	switch ostreeTransport {
 	case "ostree-unverified-image", "ostree-image-signed":
 		fields = fields[1:]
+		ostreeTransport = fmt.Sprintf("%s:%s", ostreeTransport, fields[0])
 		switch fields[0] {
 		case "registry":
 			fields = fields[1:]
 		case "docker":
 			// strip off the "//"
+			ostreeTransport = fmt.Sprintf("%s://", ostreeTransport)
+			fields = fields[1:]
 			fields[0] = fields[0][2:]
 		default:
-			return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+			return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
 		}
 	case "ostree-unverified-registry":
+		ostreeTransport = fields[0]
 		fields = fields[1:]
 	case "ostree-remote-image":
-		if len(fields) < 3 {
-			return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+		if len(fields) < 4 {
+			return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
 		}
-		fields = fields[2:]
+
+		ostreeTransport = fmt.Sprintf("%s:%s", ostreeTransport, fields[1])
+		switch fields[2] {
+		case "registry":
+			ostreeTransport = fmt.Sprintf("%s:%s", ostreeTransport, fields[2])
+		case "docker":
+			ostreeTransport = fmt.Sprintf("%s:docker://", ostreeTransport)
+			if !strings.HasPrefix(fields[3], "//") {
+				return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+			}
+			fields[3] = fields[3][2:]
+		}
+		fields = fields[3:]
 	default:
-		return "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+		return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
 	}
 
-	// Hack the tag off the reference for the ostree image
-	imgIdx := strings.LastIndex(img, ":")
-	ostreeImg := img[:imgIdx]
+	// Parse the registry reference.  Stick a fake transport on top to
+	// satisfy the parser
+	registry := fmt.Sprintf("docker://%s", strings.Join(fields, ":"))
+	ref, err := alltransports.ParseImageName(registry)
+	if err != nil {
+		return "", "", "", err
+	}
 
-	return ostreeImg, strings.Join(fields, ":"), nil
+	dockerRef := ref.DockerReference()
+	if dockerRef == nil {
+		return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
+	}
+
+	tag := ""
+	registry = dockerRef.Name()
+	nameTag, ok := dockerRef.(reference.NamedTagged)
+	if ok {
+		tag = nameTag.Tag()
+	}
+
+	// If no tag is present, the docker reference will give
+	// back the tag "latest".  If the input image was not explicitly
+	// tagged that way, then set the tag to the empty string
+	if tag == "latest" && !strings.HasSuffix(img, ":latest") {
+		tag = ""
+	}
+
+	return ostreeTransport, registry, tag, nil
+}
+
+// MakeOstreeReference does its level best to take a container image
+// reference and turn it into an ostree reference.  If there is no ostree
+// transport present, it will add "ostree-unverified-registry".
+func MakeOstreeReference(img string) (string, error) {
+	_, _, _, err := ParseOstreeReference(img)
+	if err == nil {
+		return img, nil
+	}
+
+	img = fmt.Sprintf("ostree-unverified-registry:%s", img)
+	_, _, _, err = ParseOstreeReference(img)
+	log.Debugf("Making reference %s", img)
+	return img, err
 }

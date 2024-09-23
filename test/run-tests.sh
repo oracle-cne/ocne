@@ -16,7 +16,7 @@ TEST_K8S_VERSION=${TEST_K8S_VERSION:=""}
 # Default to the latest k8s version
 export K8S_VERSION_FLAG=""
 if [[ $TEST_K8S_VERSION != "" ]]; then
-  export K8S_VERSION_FLAG="--version ${TEST_K8S_VERSION}"
+  export K8S_VERSION_FLAG="--version=${TEST_K8S_VERSION}"
 fi
 
 # This silly thing makes mktemp work on Mac and Linux

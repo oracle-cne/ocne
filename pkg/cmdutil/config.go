@@ -9,6 +9,7 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/image"
 )
 
 func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConfig, clusterConfigPath string) (*types.Config, *types.ClusterConfig, error) {
@@ -29,6 +30,13 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 
 	ndf := types.MergeConfig(df, defaultConfig)
 	cc := types.OverlayConfig(clusterConfig, &ndf)
+
+	// Be as friendly as can be
+	img, err := image.MakeOstreeReference(cc.OsRegistry)
+	if err != nil {
+		return nil, nil, err
+	}
+	cc.OsRegistry = img
 
 	return &ndf, &cc, nil
 }

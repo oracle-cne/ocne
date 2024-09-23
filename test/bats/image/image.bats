@@ -12,25 +12,25 @@ setup_file() {
 }
 
 @test "ocne image create --type ostree" {
-	ocne image create --type ostree > /tmp/out-ostree 2>&1
-	img=$(grep "Saved image to" /tmp/out-ostree | awk '{print $NF}' | tr -d '"')
+	run -0 ocne image create --type ostree
+	img=$(echo "$output" | grep "Saved image to" | awk '{print $NF}' | tr -d '"')
 	if [ ! -f $img ]; then
 		echo "missing image file $img"
 		exit 1
 	fi
 	echo "image file created is $img"
-	rm -rf $img /tmp/out-ostree
+	rm -rf $img
 }
 
 @test "ocne image create -a arm64 and amd64" {
 	for arch in amd64 arm64; do
-		ocne image create -a $arch > /tmp/out-$arch 2>&1
-		img=$(tail -n1 /tmp/out-$arch | awk '{print $NF}' | tr -d '"')
+		run -0 ocne image create -a $arch
+		img=$(echo "$output" | tail -n1 | awk '{print $NF}' | tr -d '"')
 		if [ ! -f $img ]; then
 			echo "missing image file $img"
 			exit 1
 		fi
 		echo "image file created is $img"
-		rm -rf $img /tmp/out-$arch
+		rm -rf $img
 	done
 }
