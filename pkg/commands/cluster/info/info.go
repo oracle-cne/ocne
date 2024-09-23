@@ -143,6 +143,7 @@ func validate(o *Options) error {
 
 // extractNodeInfo extracts info from node dump files.  If the node directory doesn't exist then return nil
 func extractNodeInfo(skipNodes bool, outDir string, nodeName string) (*nodeDumpData, error) {
+	// This checks to see both filepaths, covering the cases where a redacted dump has occurred and when a non-redacted dump has occurred
 	var nodeDir string
 	unSanitizedPath := filepath.Join(outDir, "nodes", nodeName)
 	sanitizedPath := filepath.Join(outDir, "nodes", sanitize.RedactionPrefix+sanitize.GetShortSha256Hash(nodeName))
