@@ -107,6 +107,10 @@ The name of the catalog that contains the application.
     value is not provided, the namespace from the current context of the
     kubeconfig is used.
 
+`--reset-values`
+    Reset the values to the ones built into the chart. If `--values` is also
+    provided, it will be treated as a new set of overrides.
+
 `-v`, `--version` *version*
     The version of the application to update to.  By default, the version
     is the latest stable version of the application.

@@ -65,6 +65,7 @@ func Update(opt application.UpdateOptions) error {
 		Version:        opt.Version,
 		ReleaseName:    opt.ReleaseName,
 		Values:         opt.Values,
+		ResetValues:    opt.ResetValues,
 	})
 	return err
 }

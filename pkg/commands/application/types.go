@@ -78,6 +78,9 @@ type InstallOptions struct {
 	// Overrides is a list of overrides that get munged together.
 	// Later values take precedence over earlier ones.
 	Overrides []helm.HelmOverrides
+
+	// ResetValues is used to reset the values to the ones built into the chart.
+	ResetValues bool
 }
 type UpdateOptions struct {
 
@@ -98,6 +101,9 @@ type UpdateOptions struct {
 
 	// Values is the path to a file containing helm values that will be used for overrides
 	Values string
+
+	// ResetValues is used to reset the values to the ones built into the chart.
+	ResetValues bool
 }
 
 // TemplateOptions are the options for the application template command
