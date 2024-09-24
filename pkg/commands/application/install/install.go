@@ -8,16 +8,14 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/ls"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-
 	log "github.com/sirupsen/logrus"
-
-	"github.com/oracle-cne/ocne/pkg/catalog"
-	"github.com/oracle-cne/ocne/pkg/helm"
 )
 
 // Install parses a catalog for an entry with a given application name and version
@@ -58,8 +56,8 @@ func Install(opt application.InstallOptions) error {
 			FileOverride: opt.Values,
 		})
 	}
-	// Upload the helm chart that is stored at the temporary directory
-	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides)
+	// Upload the helm chart stored at the temporary directory
+	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues)
 	return err
 }
 
@@ -111,7 +109,7 @@ func InstallInternalCatalog(kubeConfigPath string, namespace string) error {
 	}
 
 	// install the OCNE catalog application
-	apps := []ApplicationDescription{}
+	var apps []ApplicationDescription
 	apps = append(apps, NewInternalCatalogApplication(namespace))
 	if err := InstallApplications(apps, kubeConfigPath, false); err != nil {
 		return err

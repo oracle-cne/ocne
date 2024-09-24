@@ -20,10 +20,6 @@ const (
 
 	// Throttle the go routines so Kuberenetes API server doesn't get overloaded
 	maxGoRoutines = 50
-
-	// File containing a map from redacted values to their original values
-	RedactionPrefix = "REDACTED-"
-	RedactionMap    = "sensitive-do-not-share-redaction-map.csv"
 )
 
 var containerStartLog = "==== START logs for container %s of pod %s/%s ====\n"
@@ -104,16 +100,6 @@ func CaptureAllResources(cp CaptureParams) error {
 	cs.wg.Wait()
 
 	return nil
-}
-
-// PutIntoNodeNamesIfNotPresent populates the node map with a given node name
-func PutIntoNodeNamesIfNotPresent(inputKey string) {
-	knownNodeNamesMutex.Lock()
-	_, ok := KnownNodeNames[inputKey]
-	if !ok {
-		KnownNodeNames[inputKey] = RedactionPrefix + GetShortSha256Hash(inputKey)
-	}
-	knownNodeNamesMutex.Unlock()
 }
 
 // read each line, do not sanitize it and write to writer

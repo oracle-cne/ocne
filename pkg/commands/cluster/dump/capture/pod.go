@@ -7,11 +7,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump/capture/sanitize"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/k8s"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,7 +90,7 @@ func CapturePodLog(kubeClient kubernetes.Interface, outDir, namespace string, po
 			reader := bufio.NewScanner(podLog)
 			f.WriteString(fmt.Sprintf(containerStartLog, contName, namespace, podName))
 			for reader.Scan() {
-				f.WriteString(SanitizeString(reader.Text()+"\n", nil))
+				f.WriteString(sanitize.SanitizeString(reader.Text()+"\n", nil))
 			}
 			f.WriteString(fmt.Sprintf(containerEndLog, contName, namespace, podName))
 			return nil

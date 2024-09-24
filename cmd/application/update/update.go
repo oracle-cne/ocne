@@ -37,6 +37,7 @@ var version string
 var namespace string
 var builtin bool
 var catalogName string
+var resetValues bool
 
 const (
 	flagRelease      = "release"
@@ -62,6 +63,9 @@ const (
 	flagCatalogName      = "catalog"
 	flagCatalogNameShort = "c"
 	flagCatalogNameHelp  = "The name of the catalog that contains the application."
+
+	flagResetValues     = "reset-values"
+	flagResetValuesHelp = "Reset the values to the ones built into the chart. If --values is also provided, it will be treated as a new set of overrides."
 )
 
 func NewCmd() *cobra.Command {
@@ -85,6 +89,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&release, flagRelease, flagReleaseShort, "", flagReleaseHelp)
 	cmd.Flags().StringVarP(&version, flagVersion, flagVersionShort, "", flagVersionHelp)
 	cmd.Flags().StringVarP(&catalogName, flagCatalogName, flagCatalogNameShort, pkgconst.DefaultCatalogName, flagCatalogNameHelp)
+	cmd.Flags().BoolVarP(&resetValues, flagResetValues, "", false, flagResetValuesHelp)
 
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagRelease)
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagVersion)
@@ -111,6 +116,7 @@ func RunCmd(cmd *cobra.Command) error {
 		Version:        version,
 		ReleaseName:    release,
 		Values:         values,
+		ResetValues:    resetValues,
 	})
 	if err != nil {
 		return err

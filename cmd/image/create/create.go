@@ -4,7 +4,6 @@
 package create
 
 import (
-	"fmt"
 	"github.com/containers/image/v5/transports/alltransports"
 	"strings"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
-	"github.com/oracle-cne/ocne/pkg/image"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -78,13 +76,6 @@ func RunCmd(cmd *cobra.Command) error {
 	if imageTransport == nil {
 		// No transport protocol detected. Adding docker transport protocol as default.
 		cc.BootVolumeContainerImage = "docker://" + cc.BootVolumeContainerImage
-	}
-
-	// Try to be polite by accepting "regular" container registry formats.
-	// Not everyone is familiar with the requirements for ostree.
-	_, _, err = image.ParseOstreeReference(cc.OsRegistry)
-	if err != nil {
-		cc.OsRegistry = fmt.Sprintf("ostree-unverified-registry:%s", cc.OsRegistry)
 	}
 
 	// Make sure we create the new image using the base image that goes with the requested version of k8s.
