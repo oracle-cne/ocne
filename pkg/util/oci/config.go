@@ -113,7 +113,7 @@ func GetConfig() (*OciConfig, error) {
 
 	var ret *OciConfig
 	for _, o := range sections {
-		if o.Name == "DEFAULT" {
+		if o != nil && o.Name == "DEFAULT" {
 			ret = o
 			break
 		}
