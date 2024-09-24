@@ -5,16 +5,17 @@ package create
 
 import (
 	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -65,6 +66,16 @@ func NewCmd() *cobra.Command {
 func RunCmd(cmd *cobra.Command) error {
 	if err := flags.ValidateArchitecture(createOptions.Architecture); err != nil {
 		return err
+	}
+
+	if config.KubeConfig == "" {
+		getCache, err := cache.GetCache()
+		if err != nil {
+			return err
+		}
+		if _, ok := getCache.Clusters[pkgconst.EphemeralClusterName]; ok {
+			config.KubeConfig = getCache.Clusters[pkgconst.EphemeralClusterName].KubeconfigPath
+		}
 	}
 
 	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
