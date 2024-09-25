@@ -4,12 +4,12 @@
 package start
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/libvirt"
 	delete2 "github.com/oracle-cne/ocne/pkg/commands/cluster/delete"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	log "github.com/sirupsen/logrus"
 )
 
 // EnsureCluster returns the kubeconfig to a functioning cluster.  If there is
@@ -54,7 +54,7 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 	config.Quiet = true
 	config.QuietPtr = &config.Quiet
 	config.BootVolumeContainerImage = clusterConfig.BootVolumeContainerImage
-	config.KubeVersion = clusterConfig.KubeVersion
+	config.KubeVersion = constants.EphemeralClusterVersion
 	config.OsTag = clusterConfig.OsTag
 
 	// If there was no valid kubeconfig, then a cluster is needed.  Make

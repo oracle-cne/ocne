@@ -31,6 +31,7 @@ const (
 	EphemeralNodeStorage         = "20Gi"
 	EphemeralClusterName         = "ocne-ephemeral"
 	EphemeralClusterPreserve     = true
+	EphemeralClusterVersion      = "1.30"
 
 	NetworkName = "default"
 
