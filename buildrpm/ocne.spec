@@ -5,7 +5,7 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.0.1
+Version: 2.0.2
 Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
@@ -50,6 +50,17 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Sep 23 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.2-3
+- Fixed an issue where specifying an ostree transport for the osRegistry configuration option would misconfigure the update service
+- Extended the set of supported ostree transports
+
+* Fri Sep 20 2024 George Aeillo <george.f.aeillo@oracle.com> - 2.0.2-2
+- Fixed an issue where cluster dump would omit information when performing a redacted dump
+- Fixed an issue where CLI arguments were not taking precedence over cluster configuration files during cluster start
+
+* Thu Sep 19 2024 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.0.2-1
+- Added -c option to application update to allow for catalog selection
+- Added --reset-values option to application update to allow complete reconfiguration of an application
 
 * Fri Sep 13 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.1-3
 - Add support for double dash commands when using the cluster console
