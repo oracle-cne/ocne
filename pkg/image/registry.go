@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/containers/image/v5/docker/reference"
-	"github.com/containers/image/v5/transports/alltransports"
 	log "github.com/sirupsen/logrus"
 	"strings"
 )
@@ -98,34 +97,16 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
 	}
 
-	// Parse the registry reference.  Stick a fake transport on top to
-	// satisfy the parser
-	registry := fmt.Sprintf("docker://%s", strings.Join(fields, ":"))
-	ref, err := alltransports.ParseImageName(registry)
+	// Parse the registry reference.
+	registry := fmt.Sprintf("%s", strings.Join(fields, ":"))
+
+	imgInfo, err := SplitImage(registry)
+
 	if err != nil {
 		return "", "", "", err
 	}
 
-	dockerRef := ref.DockerReference()
-	if dockerRef == nil {
-		return "", "", "", fmt.Errorf("%s is not a valid ostree image reference", img)
-	}
-
-	tag := ""
-	registry = dockerRef.Name()
-	nameTag, ok := dockerRef.(reference.NamedTagged)
-	if ok {
-		tag = nameTag.Tag()
-	}
-
-	// If no tag is present, the docker reference will give
-	// back the tag "latest".  If the input image was not explicitly
-	// tagged that way, then set the tag to the empty string
-	if tag == "latest" && !strings.HasSuffix(img, ":latest") {
-		tag = ""
-	}
-
-	return ostreeTransport, registry, tag, nil
+	return ostreeTransport, imgInfo.BaseImage, imgInfo.Tag, nil
 }
 
 // MakeOstreeReference does its level best to take a container image
