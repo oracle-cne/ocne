@@ -4,8 +4,6 @@
 package cluster
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/cluster/analyze"
 	"github.com/oracle-cne/ocne/cmd/cluster/backup"
 	"github.com/oracle-cne/ocne/cmd/cluster/console"
@@ -18,9 +16,10 @@ import (
 	"github.com/oracle-cne/ocne/cmd/cluster/stage"
 	"github.com/oracle-cne/ocne/cmd/cluster/start"
 	"github.com/oracle-cne/ocne/cmd/cluster/template"
-	"github.com/oracle-cne/ocne/cmd/cluster/update"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -40,7 +39,7 @@ func NewCmd() *cobra.Command {
 		Short:     helpShort,
 		Long:      helpLong,
 		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: []string{analyze.CommandName, backup.CommandName, console.CommandName, dump.CommandName, info.CommandName, join.CommandName, delete.CommandName, template.CommandName, update.CommandName, stage.CommandName},
+		ValidArgs: []string{analyze.CommandName, backup.CommandName, console.CommandName, dump.CommandName, info.CommandName, join.CommandName, delete.CommandName, template.CommandName, stage.CommandName},
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -62,7 +61,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(show.NewCmd())
 	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(template.NewCmd())
-	cmd.AddCommand(update.NewCmd())
 	cmd.AddCommand(stage.NewCmd())
 	return cmd
 }
