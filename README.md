@@ -4,32 +4,11 @@ The Oracle Linux Cloud Native Environment Command Line Interface (CLI) is a
 tool that manages the lifecycle of Kubernetes clusters and the applications
 running inside those clusters.
 
-## Installation
+## Documentation
 
-The CLI is available for Oracle Linux 8 and Oracle Linux 9.  It can be
-installed from repositories on the [Oracle Linux YUM Repository](https://yum.oracle.com).  It can also be built from this source code.
+For overall documentation, see [Oracle Linux Cloud Native Environment](https://docs.oracle.com/en/operating-systems/olcne/).  
 
-### Oracle Linux 8
-
-Perform the following steps to install the Oracle Cloud Native Environment
-YUM repository, enable it, and install the CLI.
-
-```
-dnf install -y oracle-ocne-release-el8
-dnf config-manager --enable ol8_ocne
-dnf install -y ocne
-```
-
-### Oracle Linux 9
-
-Installing the CLI on Oracle Linux 9 can be done with the following
-instructions.
-
-```
-dnf install -y oracle-ocne-release-el9
-dnf config-manager --enable ol9_ocne
-dnf install -y ocne
-```
+To start using the CLI, see [Quick Start for Release 2.0](https://docs.oracle.com/en/operating-systems/olcne/2.0/quickstart/intro.html).
 
 ### Building yourself
 
