@@ -125,6 +125,7 @@ type Config struct {
 	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
 	SshPublicKey             string                 `yaml:"sshPublicKey"`
 	Password                 string                 `yaml:"password"`
+	CipherSuites             string                 `yaml:"cipherSuites"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
 }
@@ -160,6 +161,7 @@ type ClusterConfig struct {
 	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
 	SshPublicKey             string                 `yaml:"sshPublicKey"`
 	Password                 string                 `yaml:"password"`
+	CipherSuites             string                 `yaml:"cipherSuites"`
 	ClusterDefinitionInline  string                 `yaml:"clusterDefinitionInline"`
 	ClusterDefinition        string                 `yaml:"clusterDefinition"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
@@ -475,6 +477,7 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		SshPublicKeyPath:         ies(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
 		SshPublicKey:             ies(def.SshPublicKey, ovr.SshPublicKey),
 		Password:                 ies(def.Password, ovr.Password),
+		CipherSuites:             ies(def.CipherSuites, ovr.CipherSuites),
 		ClusterDefinitionInline:  ies(def.ClusterDefinitionInline, ovr.ClusterDefinitionInline),
 		ClusterDefinition:        ies(def.ClusterDefinition, ovr.ClusterDefinition),
 		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
@@ -517,6 +520,7 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		SshPublicKeyPath:         ies(c.SshPublicKeyPath, cc.SshPublicKeyPath),
 		SshPublicKey:             ies(c.SshPublicKey, cc.SshPublicKey),
 		Password:                 ies(c.Password, cc.Password),
+		CipherSuites:             ies(c.CipherSuites, cc.CipherSuites),
 		ClusterDefinitionInline:  cc.ClusterDefinitionInline,
 		ClusterDefinition:        cc.ClusterDefinition,
 		ExtraIgnition:            ies(c.ExtraIgnition, cc.ExtraIgnition),
