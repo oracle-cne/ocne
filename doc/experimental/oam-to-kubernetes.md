@@ -1,4 +1,6 @@
-# OAM to Kubernetes Mappings - draft-001
+# OAM to Kubernetes Mappings
+
+### Version: v0.0.1-draft
 
 ## Verrazzano CLI export command
 Verrazzano provides a CLI command that you can use to facilitate the migration of an OAM application to be managed as a collection of Kubernetes objects.
