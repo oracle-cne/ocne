@@ -125,7 +125,6 @@ type Config struct {
 	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
 	SshPublicKey             string                 `yaml:"sshPublicKey"`
 	Password                 string                 `yaml:"password"`
-	CipherSuites             string                 `yaml:"cipherSuites"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
 }
@@ -520,7 +519,7 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		SshPublicKeyPath:         ies(c.SshPublicKeyPath, cc.SshPublicKeyPath),
 		SshPublicKey:             ies(c.SshPublicKey, cc.SshPublicKey),
 		Password:                 ies(c.Password, cc.Password),
-		CipherSuites:             ies(c.CipherSuites, cc.CipherSuites),
+		CipherSuites:             cc.CipherSuites,
 		ClusterDefinitionInline:  cc.ClusterDefinitionInline,
 		ClusterDefinition:        cc.ClusterDefinition,
 		ExtraIgnition:            ies(c.ExtraIgnition, cc.ExtraIgnition),
