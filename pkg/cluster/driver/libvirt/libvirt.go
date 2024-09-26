@@ -13,7 +13,6 @@ import (
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	libvirt "github.com/digitalocean/go-libvirt"
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -26,6 +25,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/pidlock"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -207,7 +207,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}
 	info := log.Info
 	infof := log.Infof
-	if config.Quiet  && log.GetLevel() != log.DebugLevel {
+	if config.Quiet && log.GetLevel() != log.DebugLevel {
 		info = func(a ...interface{}) {}
 		infof = func(s string, a ...interface{}) {}
 	}
@@ -296,6 +296,7 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 			NetInterface:         netInterface,
 			UploadCertificateKey: ld.UploadCertificateKey,
 			KubeVersion:          ld.KubeVersion,
+			TLSCipherSuites:      ld.Config.CipherSuites,
 		})
 	} else {
 		// Worker nodes do not get two networks.  On remote clusters,
@@ -319,6 +320,7 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 			ProxyMode:            ld.Config.KubeProxyMode,
 			NetInterface:         netInterface,
 			UploadCertificateKey: ld.UploadCertificateKey,
+			TLSCipherSuites:      ld.Config.CipherSuites,
 		})
 	}
 
