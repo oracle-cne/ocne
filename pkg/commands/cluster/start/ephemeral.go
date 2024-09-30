@@ -54,7 +54,8 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 	config.Quiet = true
 	config.QuietPtr = &config.Quiet
 	config.BootVolumeContainerImage = clusterConfig.BootVolumeContainerImage
-	config.KubeVersion = constants.EphemeralClusterVersion
+	config.KubeVersion = constants.KubeVersion
+	clusterConfig.KubeVersion = constants.KubeVersion
 	config.OsTag = clusterConfig.OsTag
 
 	// If there was no valid kubeconfig, then a cluster is needed.  Make
