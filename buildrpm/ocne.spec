@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.3
-Release: 5%{dist}
+Release: 6%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Fri Oct 11 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.3-6
+- Added TLS cipher suites support
+
 * Mon Oct 07 2024 Shih-Chang Chen <shih-chang.chen@oracle.com> - 2.0.3-5
 - Ensure that OCI metadata endpoint is in the no_proxy settings for the oci provider
 
