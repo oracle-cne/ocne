@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.4
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -51,6 +51,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Oct 28 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.4-3
+- Added TLS cipher suites support
+
 * Wed Oct 23 2024 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.0.4-2
 - Install Catalog and UI with custom container image registry when using the "none" provider
 
