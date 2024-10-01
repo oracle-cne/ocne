@@ -26,10 +26,18 @@ The installed version of Istio needs to be transformed to be manageable by Helm.
 
 **TBD** - we need a set of instructions to update Istio to be managed by helm.  Verrazzano 1.6.10 installed Istio 1.19.0-1.  This version of Istio is not yet in the 2.0 application catalog.
 
-## Modify WebLogic Kubernetes Operator Helm Overrides
+## Modify cert-manager Helm overrides
+
+Verrazzano deployed cert-manager using Helm overrides to specify the container images.
+Update the existing installation to remove those overrides,
+and instead Helm will get the container image values from the defaults in the catalog.
+
+**TBD**
+
+## Modify WebLogic Kubernetes Operator Helm overrides
 
 Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to specify the container images.  
-Update the existing installation to remove those overrides and let Helm get the container images values from the defaults in the catalog.
+Update the existing installation to remove those overrides, and instead Helm will get the container images values from the defaults in the catalog.
 
 The following example assumes WebLogic Kubernetes Operator 4.1.2 is already installed.
 
@@ -42,4 +50,12 @@ Update the existing installation:
 ```text
 ocne application update --release weblogic-operator --namespace verrazzano-system --version 4.1.2 --catalog "WebLogic Kubernetes Operator" --reset-values
 ```
+
+## Modify ingress-nginx Helm overrides
+
+Verrazzano deployed ingress-nginx using Helm overrides to specify the container images.
+Update the existing installation to remove those overrides, 
+and instead Helm will get the container image values from the defaults in the catalog.
+
+**TBD**
 
