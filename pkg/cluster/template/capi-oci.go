@@ -4,6 +4,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -258,6 +259,10 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 
 	if err != nil {
 		return "", err
+	}
+
+	if clusterConfig.ControlPlaneNodes % 2 == 0 {
+		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
 	// Get the Kubernetes version configuration
