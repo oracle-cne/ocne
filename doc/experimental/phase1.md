@@ -41,7 +41,7 @@ Update the existing installation to remove those overrides, and instead Helm wil
 
 The following example assumes WebLogic Kubernetes Operator 4.1.2 is already installed.
 
-Add the WebLogic helm chart catalog:
+Add the WebLogic Kubernetes Operator helm chart catalog:
 ```text
 ocne catalog add --uri https://oracle.github.io/weblogic-kubernetes-operator --name "WebLogic Kubernetes Operator"
 ```
