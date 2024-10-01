@@ -4,6 +4,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/oracle-cne/ocne/cmd/constants"
@@ -73,6 +74,10 @@ func RunCmd(cmd *cobra.Command) error {
 	// if number of control plane nodes is 0, then default it to 1
 	if cc.ControlPlaneNodes == 0 {
 		cc.ControlPlaneNodes = pkgconst.ControlPlaneNodes
+	}
+
+	if cc.Provider == "oci" && cc.ControlPlaneNodes % 2 == 0 {
+		return errors.New("the number of control plane nodes must be odd")
 	}
 
 	opts.Config = *c
