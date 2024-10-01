@@ -55,13 +55,8 @@ helm delete -n verrazzano-system verrazzano-cluster-operator
 helm delete -n verrazzano-system verrazzano-monitoring-operator
 helm delete -n verrazzano-system oam-kubernetes-runtime
 
-# Verify the deployments in verrazzano-system have zero ready pods
+# The following command should not return any results
 kubectl get deployment -n verrazzano-system | grep operator | grep verrazzano
-verrazzano-application-operator           0/0     0            0           8d
-verrazzano-application-operator-webhook   0/0     0            0           8d
-verrazzano-cluster-operator               0/0     0            0           8d
-verrazzano-cluster-operator-webhook       0/0     0            0           8d
-verrazzano-monitoring-operator            0/0     0            0           8d
 
 # Delete associated WebHook Configurations
 kubectl delete mutatingwebhookconfiguration verrazzano-mysql-backup
