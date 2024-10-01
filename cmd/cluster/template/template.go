@@ -6,12 +6,12 @@ package template
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -28,9 +28,7 @@ var clusterConfigPath string
 
 var opts = template.TemplateOptions{
 	ClusterConfig: types.ClusterConfig{
-		Name:              "ocne",
-		ControlPlaneNodes: pkgconst.ControlPlaneNodes,
-		WorkerNodes:       pkgconst.WorkerNodes,
+		WorkerNodes: pkgconst.WorkerNodes,
 	},
 }
 
@@ -65,6 +63,16 @@ func RunCmd(cmd *cobra.Command) error {
 	// match the k8s version
 	if cc.OsTag == pkgconst.KubeVersion && cc.KubeVersion != pkgconst.KubeVersion {
 		cc.OsTag = cc.KubeVersion
+	}
+
+	// if cluster name is empty, then default it to ocne
+	if cc.Name == "" {
+		cc.Name = "ocne"
+	}
+
+	// if number of control plane nodes is 0, then default it to 1
+	if cc.ControlPlaneNodes == 0 {
+		cc.ControlPlaneNodes = pkgconst.ControlPlaneNodes
 	}
 
 	opts.Config = *c
