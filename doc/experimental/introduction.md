@@ -21,14 +21,14 @@ The **acceptance criteria** for this phase being done follows:
 
 1. Oracle Cloud Native Environment 2.0 CLI is used for application lifecycle management
 2. Oracle Cloud Native Environment 2.0 catalog and UI installed on the cluster
-3. The life cycle of all supported components can be done via the Oracle Cloud Native environment 2.0 catalog
+3. The lifecycle of all supported components can be done via the Oracle Cloud Native environment 2.0 catalog
 4. The installed versions of all components can be used, they do not need to be upgraded
 5. OAM resources translated to Kubernetes native resource YAML 
 6. Verrazzano controllers and related resources are removed from cluster
 7. Some Oracle Cloud Native Environment 2.0 CLI functionality is not yet available (stage, update, etc.)
 
 ### Phase Two: Oracle Cloud Native Environment 2.0 OCK in-place Upgrade
-Oracle Cloud Native Environment 2.0 Ock migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.x. 
+Oracle Cloud Native Environment 2.0 OCK migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.x. 
 This phase will require in-place migration where no new nodes are added, rather existing nodes are updated to use the OCK 2.0 image.
 
 The **acceptance criteria** for this phase being done follows:
