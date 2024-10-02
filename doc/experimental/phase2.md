@@ -108,4 +108,30 @@ control plane node different from the target node.
 
 ## Upgrade the node
 
+1. Update the compute instance for the target node to boot with Oracle Cloud Native Environment 2.0 image that has the same kubernetes version and the ignition configuration, control-plane.ign or worker-ign, generated.
 
+   1a. Replace the boot volume with the compatible OCK image.
+
+   1b. Add an item of the Metadata user_data with base64 encoded ignition. Push the Save button. If the instance is running, pushing the Save button will reboot the instance.  
+
+2. (Optional) If the target node host machine was shutdown, start it. The target node will eventually become Ready: 
+    ```
+    kubectl get nodes
+    NAME                      STATUS                     ROLES           AGE    VERSION
+    cocne-control-plane-001   Ready,SchedulingDisabled   control-plane   132m   v1.27.12+1.el8
+    ocne-control-plane-002    Ready                      control-plane   129m   v1.26.6+1.el8
+    ocne-worker-001           Ready                      <none>          125m   v1.26.6+1.el8
+    ocne-worker-002           Ready                      <none>          131m   v1.26.6+1.el8
+    ```
+
+3. Uncordon the node once node is ready.
+    ```
+    kubectl uncordon $TARGET_NODE
+
+    kubectl get nodes
+    NAME                     STATUS   ROLES           AGE    VERSION
+    ocne-control-plane-001   Ready    control-plane   135m   v1.27.12+1.el8
+    ocne-control-plane-002   Ready    control-plane   132m   v1.26.6+1.el8
+    ocne-worker-001          Ready    <none>          128m   v1.26.6+1.el8
+    ocne-worker-002          Ready    <none>          134m   v1.26.6+1.el8
+    ```
