@@ -46,9 +46,17 @@ Add the WebLogic Kubernetes Operator helm chart catalog:
 ocne catalog add --uri https://oracle.github.io/weblogic-kubernetes-operator --name "WebLogic Kubernetes Operator"
 ```
 
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n verrazzano-system weblogic-operator > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/image:/d' overrides.yaml
+sed -i '/weblogicMonitoringExporterImage:/d' overrides.yaml
+```
+
 Update the existing installation:
 ```text
-ocne application update --release weblogic-operator --namespace verrazzano-system --version 4.1.2 --catalog "WebLogic Kubernetes Operator" --reset-values
+ocne application update --release weblogic-operator --namespace verrazzano-system --version 4.1.2 --catalog "WebLogic Kubernetes Operator" --reset-values --values overrides.yaml
 ```
 
 ## Modify ingress-nginx Helm overrides
@@ -58,4 +66,30 @@ Update the existing installation to remove those overrides,
 and instead Helm will get the container image values from the defaults in the catalog.
 
 **TBD**
+
+## Modify Grafana to be managed by Helm
+
+Verrazzano does not deploy Grafana using a Helm chart.
+The installed version of Grafana needs to be transformed to be manageable by Helm.
+
+**TBD**
+
+## Modify kube-prometheus-stack (named as prometheus-operator) to be managed by Helm
+
+**TBD**  We may need to uninstall prometheus-operator and then install kube-prometheus-stack.
+
+## Modify kube-state-metrics to be managed by Helm
+
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n verrazzano-monitoring kube-state-metrics > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/image:/,+3d' overrides.yaml
+```
+
+Update the existing installation:
+```text
+ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
+```
+
 
