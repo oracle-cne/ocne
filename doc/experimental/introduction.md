@@ -6,10 +6,10 @@
 
 Migration is divided into three main phases:
 1. Verrazzano migration
-2. Oracle Cloud Native Environment 2.0 OCK migration
+2. Oracle Cloud Native Environment 2.0 OCK in-place upgrade
 3. Migration from unsupported components.
 
-### Phase One: Verrazzano Migration
+### Phase One: Verrazzano Migration to Catalog
 Verrazzano migration means that Verrazzano is no longer used and all application lifecycle management will be done via 
 the Oracle Cloud Native Environment CLI or UI using the catalogs. Optionally, you can manage applications using Helm, 
 Kubernetes manifests, etc.,  However, management via the CLI with the catalog is recommended.
@@ -28,30 +28,23 @@ The acceptance criteria for this phase being done follows:
     - Existing cluster resources are not affected
 6. Some Oracle Cloud Native Environment 2.0 CLI functionality is not yet available (stage, update, etc.)
 
-### Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
-Oracle Cloud Native Environment 2.0 Ock migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.7. 
+### Phase Two: Oracle Cloud Native Environment 2.0 OCK in-place Upgrade
+Oracle Cloud Native Environment 2.0 Ock migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.x. 
 This phase will require in-place migration where no new nodes are added, rather existing nodes are updated to use the OCK 2.0 image.
 
+The acceptance criteria for this phase being done follows:
+
+1. All nodes in the cluster are running OCK 2.0 images
+2. Kubernetes version upgrade is not required if the existing 1.x system has Kubernetes 1.26-1.30
+
 ###  Phase Three: Unsupported Components that Require Migration
-There are a few components that a customer may want to use, such as Opensearch and Fluentd, that currently  
-require unsupported components. For example, Opensearch requires Verrazzano auto-proxy, Keycloak, MySQL, etc.  
-There needs to be a migration path so that replacement solutions can be developed and integrated  
-without breaking the current functionality of the system.  
+There are a few obsolete or unsupported components that are currently integrated with supported components.
+For example, Fluentd and Grafana require auth-proxy.  This phase discusses those solutions.
 
-The lists below summarize the components that need a migration solution:
+The acceptance criteria for this phase being done follows:
 
-**Verrazzano Developed**
-* auth-proxy
-
-**Third Party**
-* OpenSearch
-* Keycloak
-* MySQL
-* MySQL Operator
-
-**Issues**
-* Istio Authorization Polices
-* Network Policies
+1. auth-proxy can be removed from system without breaking supported consoles, logging, and identity.
+2. certain unsupported components on the system have Helm charts and are deployed as Helm release, so they can be upgraded.
 
 ## Unsupported Components
 This section lists components that are either obsolete or do not require migration.

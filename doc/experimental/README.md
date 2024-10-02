@@ -11,3 +11,5 @@ This set of documents contains instructions to aid in the migration of an Oracle
 ## [Phase One: Verrazzano Migration](./phase1.md)
 
 ## [Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration](./phase2.md)
+
+## [Phase Three: Unsupported Components that Require Migration](./phase3.md)
