@@ -92,4 +92,10 @@ Update the existing installation:
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
 ```
 
+## OAM Migration
 
+### Generated Kubernetes Manifests
+[Generated Kubernetes Manifests from OAM](./oam-to-kubernetes.md)
+
+### Remove OAM resources
+TDB

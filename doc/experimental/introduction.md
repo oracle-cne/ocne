@@ -10,13 +10,13 @@ Migration is divided into three main phases:
 3. Migration from unsupported components.
 
 ### Phase One: Verrazzano Migration to Catalog
-Verrazzano migration means that Verrazzano is no longer used and all application lifecycle management will be done via 
+Verrazzano migration means that Verrazzano is no longer used and all application lifecycle management can be done via 
 the Oracle Cloud Native Environment CLI or UI using the catalogs. Optionally, you can manage applications using Helm, 
-Kubernetes manifests, etc.,  However, management via the CLI with the catalog is recommended.
+Kubernetes manifests, etc.
 
 When this phase is complete, Verrazzano is effectively removed from the system and OAM resources no longer exist.
 Nothing in the topology or system architecture changes during this phase. All the components initially installed
-and configured by Verrazzano will continue to work, except for the obsolete components, which are removed from the system.
+and configured by Verrazzano will continue to work, except for certain obsolete components that are no longer required.
 
 The acceptance criteria for this phase being done follows:
 
@@ -24,8 +24,7 @@ The acceptance criteria for this phase being done follows:
 2. Verrazzano controllers and related resources are removed from cluster
 3. The life cycle of all supported components can be done via the Oracle Cloud Native environment 2.0 catalog
 4. The installed versions of all components can be used, they do not need to be upgraded
-5. **?? Not in this phase??** OAM resources translated to Kubernetes native resource YAML
-    - Existing cluster resources are not affected
+5. OAM resources translated to Kubernetes native resource YAML
 6. Some Oracle Cloud Native Environment 2.0 CLI functionality is not yet available (stage, update, etc.)
 
 ### Phase Two: Oracle Cloud Native Environment 2.0 OCK in-place Upgrade
