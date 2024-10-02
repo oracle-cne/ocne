@@ -10,9 +10,13 @@ Migration is divided into three main phases:
 3. Migration from unsupported components.
 
 ### Phase One: Verrazzano Migration
-Verrazzano migration means the customer is no longer using Verrazzano to manage the system and applications When Verrazzano migration is complete, all application lifecycle management will be done via helm directly, using the Oracle Cloud Native Environment catalog, other catalogs, various Helm charts, etc. At this point Verrazzano is effectively removed from the system and OAM resources no longer exist.
+Verrazzano migration means that Verrazzano is no longer used and all application lifecycle management will be done via 
+the Oracle Cloud Native Environment CLI or UI using the catalogs. Optionally, you can manage applications using Helm, 
+Kubernetes manifests, etc.,  However, management via the CLI with the catalog is recommended.
 
-The goal of this phase is to stop using Verrazzano and start using the Oracle Cloud Native Environment 2.0 Catalog for component/application life cycle management.  Nothing in the topology or system architecture changes during this phase.
+When this phase is complete, Verrazzano is effectively removed from the system and OAM resources no longer exist.
+Nothing in the topology or system architecture changes during this phase. All the components initially installed
+and configured by Verrazzano will continue to work, except for the obsolete components, which are removed from the system.
 
 The acceptance criteria for this phase being done follows:
 
@@ -25,13 +29,18 @@ The acceptance criteria for this phase being done follows:
 6. Some Oracle Cloud Native Environment 2.0 CLI functionality is not yet available (stage, update, etc.)
 
 ### Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
-Oracle Cloud Native Environment 2.0 Ock migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.7. This phase will require in-place migration where no new nodes are added, rather existing nodes are updated to use the OCK 2.0 image.
+Oracle Cloud Native Environment 2.0 Ock migration means that all the Kubernetes hosts are running OCK images with Oracle Cloud Native Environment 2.0, instead of 1.7. 
+This phase will require in-place migration where no new nodes are added, rather existing nodes are updated to use the OCK 2.0 image.
 
-###  Phase Three: Migration from unsupported components
+###  Phase Three: Unsupported Components that Require Migration
+There are a few components that a customer may want to use, such as Opensearch and Fluentd, that currently  
+require unsupported components. For example, Opensearch requires Verrazzano auto-proxy, Keycloak, MySQL, etc.  
+There needs to be a migration path so that replacement solutions can be developed and integrated  
+without breaking the current functionality of the system.  
 
-There are a few components currently required by the customer that will no longer be supported, some were developed by the Verrazzano team, and others are third party.  The lists below summarize the components, other sections of this document will have migration plans.
+The lists below summarize the components that need a migration solution:
 
-**Verrazzano Owned** (These components were developed by Verrazzano)
+**Verrazzano Developed**
 * auth-proxy
 
 **Third Party**
@@ -44,16 +53,21 @@ There are a few components currently required by the customer that will no longe
 * Istio Authorization Polices
 * Network Policies
 
-## Obsolete components
-Obsolete components consist of components that we neither support nor have migration solutions, such as Rancher.  The customer may or may not continue to use these components, but Oracle is not involved.
+## Unsupported Components
+This section lists components that are either obsolete or do not require migration.
 
-**Verrazzano Owned** (These components were developed by Verrazzano)
+### Obsolete components 
+These components are obsolete and were removed from the system during migration.
+
 * Verrazzano Platform Operator
 * verrazzano Application Operator
 * Verrazzano Cluster Operator
 * Verrazzano CAPI controllers
 
-**Third Party** (completely unsupported)
+### Unsupported components
+These components are unsupported, but not removed.
+You may continue to use these components at your own discretion.
+
 * Argo
 * Coherence
 * Rancher
