@@ -62,7 +62,7 @@ These components are obsolete and were removed from the system during migration.
 These components are unsupported, but not removed.
 You may continue to use these components at your own discretion.
 
-* Argo
+* Argo CD
 * Coherence
 * Rancher
 * Thanos
