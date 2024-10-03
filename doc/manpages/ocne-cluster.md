@@ -217,13 +217,6 @@ SUBCOMMANDS
 `-P`, `--provider` *string*
     The provider to use when interacting with the cluster.
 
-`update` [OPTIONS]...
-  Updates the version of a Kubernetes cluster.  Only the cluster version is
-  updated.  `ocne` `node` `update` is used to update individual cluster nodes.
-
-`-v`, `--version` *version*
-    The target Kubernetes version. [required]
-
 `backup` [OPTIONS]...
   Backup the contents of the `etcd` database that stores data for a target
   cluster.

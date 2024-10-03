@@ -22,6 +22,7 @@ SCHEMA
 name: ocne
 
 # The number of control plane nodes to spawn
+# When the provider is set to oci, the number of control plane nodes must be odd
 controlPlaneNodes: 1
 
 # The number of worker nodes to spawn

@@ -50,8 +50,8 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, flagConfig, flagConfigShort, "", flagConfigHelp)
 	cmd.Flags().StringVarP(&config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "ocne", constants.FlagClusterNameHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
+	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
 
 	return cmd
 }
@@ -93,6 +93,13 @@ func RunCmd(cmd *cobra.Command) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if cc.Name == "" {
+		cc.Name = "ocne"
+	}
+	if cc.Provider == "" {
+		cc.Provider = "libvirt"
 	}
 
 	err = delete2.Delete(c, cc)
