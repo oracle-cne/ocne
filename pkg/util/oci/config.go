@@ -92,6 +92,10 @@ func parseOciConfig(filename string) ([]*OciConfig, error) {
 		}
 	}
 
+	if cur == nil {
+		return ret, nil
+	}
+
 	// The final section is never added to the list
 	// because a new section is not started after it
 	// Add it now
@@ -113,7 +117,7 @@ func GetConfig() (*OciConfig, error) {
 
 	var ret *OciConfig
 	for _, o := range sections {
-		if o != nil && o.Name == "DEFAULT" {
+		if o.Name == "DEFAULT" {
 			ret = o
 			break
 		}
