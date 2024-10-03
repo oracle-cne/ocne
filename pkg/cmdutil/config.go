@@ -4,7 +4,6 @@
 package cmdutil
 
 import (
-	image2 "github.com/oracle-cne/ocne/pkg/image"
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/config"
@@ -43,17 +42,17 @@ func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConf
 
 // EnsureBootImageVersion appends an image tag consisting of the Kubernetes version ,if the image string does not currently have a tag.
 // It returns the updated image string.
-func EnsureBootImageVersion(kubeVersion string, image string) (string, error) {
+func EnsureBootImageVersion(kubeVersion string, imageForContainer string) (string, error) {
 	// if the user already specified a tag at the end of the image, use that tag and return
-	imgInfo, err := image2.SplitImage(image)
+	imgInfo, err := image.SplitImage(imageForContainer)
 	if err != nil {
-		return image, err
+		return imageForContainer, err
 	}
 	if imgInfo.Tag == "" && imgInfo.Digest == "" {
 		// if the version contains a "v" prefix, strip it
 		ver := strings.TrimPrefix(kubeVersion, "v")
 		// add the tag to the image string
-		return image + ":" + ver, nil
+		return imageForContainer + ":" + ver, nil
 	}
-	return image, nil
+	return imageForContainer, nil
 }
