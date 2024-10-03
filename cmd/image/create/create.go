@@ -7,14 +7,14 @@ import (
 	"github.com/containers/image/v5/transports/alltransports"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const (

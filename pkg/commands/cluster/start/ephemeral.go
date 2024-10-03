@@ -4,12 +4,12 @@
 package start
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/libvirt"
 	delete2 "github.com/oracle-cne/ocne/pkg/commands/cluster/delete"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
-	log "github.com/sirupsen/logrus"
 )
 
 // EnsureCluster returns the kubeconfig to a functioning cluster.  If there is
