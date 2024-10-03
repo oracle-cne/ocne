@@ -1,13 +1,14 @@
 # OAM to Kubernetes Mappings
 
 ### Version: v0.0.2-draft
-This document explains how to generate Kuberenetes YAML files from OAM-related resources that are running in a Kubernetes cluster.
+This document explains how to generate Kuberenetes YAML files from OAM-related objects that are running in a Kubernetes cluster.
 
-## Download Verrazzano 1.6.11 CLI
+## Installing Verrazzano 1.6.11 CLI on a Linux AMD64 machine
 Verrazzano provides a CLI command that you can use to facilitate the migration of an OAM application to be managed as a collection of Kubernetes objects.
-If you don't have the 1.6.11 CLI (or later), you need to download it to export the OAM resources to Kubernetes manfests.
+If you don't have the 1.6.11 CLI (or later), you need to download it, then use it to export the Kubernetes objects that were generated 
+for an OAM applications to Kubernetes YAML manifests.
 
-Download the CLI for Linux-AMD as follows:
+These instructions demonstrate installing the CLI on a Linux AMD64 machine:
 ```
 curl -LO https://github.com/verrazzano/verrazzano/releases/download/v1.6.11/verrazzano-1.6.11-linux-amd64.tar.gz
 tar xvf verrazzano-1.6.11-linux-amd64.tar.gz
