@@ -7,14 +7,14 @@ import (
 	"github.com/containers/image/v5/transports/alltransports"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -82,7 +82,10 @@ func RunCmd(cmd *cobra.Command) error {
 	// Note that c.BootVolumeContainerImage has the image that will be used to create the ephemeral cluster where
 	// we spin up a pod to create the custom image (which might be different than the base image we use to
 	// create the custom image).
-	cc.BootVolumeContainerImage = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	if err != nil {
+		return err
+	}
 
 	// if the user has not overridden the osTag and the requested k8s version is not the default, make the osTag
 	// match the k8s version

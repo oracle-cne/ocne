@@ -7,7 +7,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -21,8 +20,9 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
-	log "github.com/sirupsen/logrus"
+	ocneTypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
 )
 
 // imageDirectoryPrefix is used for testing to avoid writing to the users
@@ -39,6 +39,7 @@ var archMap = map[string]string{
 // EnsureBaseQcow2Image ensures that the base image is downloaded. Return a tar stream of the image.
 func EnsureBaseQcow2Image(imageName string, arch string) (*tar.Reader, func(), error) {
 	// Fetch the image, or use the local cache if it exists
+	log.Debugf("Downloading bootVolumeContainerImage %s", imageName)
 	imgRef, err := GetOrPull(imageName, arch)
 	if err != nil {
 		return nil, nil, err
@@ -392,26 +393,38 @@ func ChangeImageDomain(imageString string, newDomain string) (types.ImageReferen
 	return newImage, nil
 }
 
-func WithoutTag(image string) (string, error) {
-	fullImage, err := AddDefaultRegistry(image, "place.holder.com")
+// SplitImage Returns an image tag if it exists, an image digest if it exists, the image without the tag and digest, and any errors; in this order.
+// images with both a tag and digest are not supported
+func SplitImage(imageArg string) (ocneTypes.ImageInfo, error) {
+	userImage := imageArg
+	//Parse the image using the docker transport
+	transportName := alltransports.TransportFromImageName(userImage)
+	if transportName == nil {
+		userImage = "docker://" + userImage
+	}
+	imageRef, err := alltransports.ParseImageName(userImage)
 	if err != nil {
-		return image, err
+		return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image %s with error %v", imageArg, err)
 	}
-	named, err := reference.ParseNamed(fullImage)
-	if err != nil {
-		return image, err
+	if imageRef.DockerReference() == nil {
+		return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image, %s not a valid docker reference", imageArg)
 	}
-	named = reference.TagNameOnly(named)
-	tagged, ok := named.(reference.NamedTagged)
-	if !ok {
-		tmp := fmt.Sprintf("error removing image tag from string %s", image)
-		return image, errors.New(tmp)
+	named := imageRef.DockerReference()
+	tagged, taggedOk := named.(reference.NamedTagged)
+	withDigest, digestOk := named.(reference.Digested)
+	if digestOk {
+		return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "", Digest: withDigest.Digest().String()}, nil
 	}
-	justImage, found := strings.CutSuffix(named.String(), ":"+tagged.Tag())
-	if found {
-		return justImage, nil
-	}
+	if taggedOk {
+		//only return latest if user specified it
+		if tagged.Tag() == "latest" {
+			if _, ok := strings.CutSuffix(imageArg, ":latest"); ok {
+				return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "latest", Digest: ""}, nil
+			}
+			return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: "", Digest: ""}, nil
+		}
 
-	tmp := fmt.Sprintf("error removing image tag from string %s", image)
-	return image, errors.New(tmp)
+		return ocneTypes.ImageInfo{BaseImage: reference.FamiliarName(named), Tag: tagged.Tag(), Digest: ""}, nil
+	}
+	return ocneTypes.ImageInfo{}, fmt.Errorf("error parsing image %s could not parse as tagged or with digest", imageArg)
 }
