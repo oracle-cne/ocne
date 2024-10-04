@@ -309,6 +309,20 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		cdi = string(cdiBytes)
 	}
 
+	// Validate the provider configuration.  For OCI-CCM several pieces of
+	// configuration are required.  Specifically, a compartment, a vcn and
+	// two subnets (which can be the same).  These values are fed into the
+	// OCI-CCM configuration.
+	if clusterConfig.Providers.Oci.Compartment == "" {
+		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
+	}
+	if clusterConfig.Providers.Oci.Vcn == "" {
+		return nil, fmt.Errorf("the oci provider requires a vcn in the provider configuration to use with OCI-CCM")
+	}
+	if clusterConfig.Providers.Oci.LoadBalancer.Subnet1 == "" || clusterConfig.Providers.Oci.LoadBalancer.Subnet2 == "" {
+		return nil, fmt.Errorf("the oci provider requires two subnets in the provider configuration to use with OCI-CCM")
+	}
+
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
 	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA1Flex {
