@@ -36,6 +36,30 @@ sed -i '/prometheusDefaultBaseImageRegistry:/d' overrides.yaml
 sed -i '/image:/,+3d' overrides.yaml
 sed -i '/thanosImage:/,+3d' overrides.yaml
 ```
+## Change the Prometheus PV Reclaim Policy
+
+Change reclaim policy to **Retain**.  
+```text
+# get the pv-name (VOLUME NAME)
+PV_NAME=$(kubectl --kubeconfig ~/paul-kubeconfig.yaml get pvc -n verrazzano-monitoring -o jsonpath='{.items[0].spec.volumeName}')
+ 
+# patch the PV 
+kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+```
+
+## Uninstall Verrazzano kube-prometheus-stack (named prometheus-operator)
+```text
+uninstall -n verrazzano-monitoring prometheus-operator  
+```
+
+Change reclaim policy to **Retain**.
+```text
+# get the pv-name (VOLUME NAME)
+PV_NAME=$(kubectl --kubeconfig ~/paul-kubeconfig.yaml get pvc -n verrazzano-monitoring -o jsonpath='{.items[0].spec.volumeName}')
+ 
+# patch the PV 
+kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+```
 
 Update the existing installation:
 ```text
