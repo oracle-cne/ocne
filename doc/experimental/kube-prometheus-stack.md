@@ -52,15 +52,6 @@ kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}
 uninstall -n verrazzano-monitoring prometheus-operator  
 ```
 
-Change reclaim policy to **Retain**.
-```text
-# get the pv-name (VOLUME NAME)
-PV_NAME=$(kubectl --kubeconfig ~/paul-kubeconfig.yaml get pvc -n verrazzano-monitoring -o jsonpath='{.items[0].spec.volumeName}')
- 
-# patch the PV 
-kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
-```
-
 Update the existing installation:
 ```text
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
