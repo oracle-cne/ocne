@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.3
-Release: 4%{dist}
+Release: 5%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Oct 07 2024 Shih-Chang Chen <shih-chang.chen@oracle.com> - 2.0.3-5
+- Ensure that OCI metadata endpoint is in the no_proxy settings for the oci provider
+
 * Fri Oct 04 2024 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.0.3-4
 - Fix command line and config file precendence for cluster template
 
