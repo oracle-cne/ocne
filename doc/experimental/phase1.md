@@ -137,7 +137,6 @@ kubectl -n istio-system label RoleBinding istio-egressgateway-sds app.kubernetes
 kubectl -n istio-system annotate RoleBinding istio-egressgateway-sds meta.helm.sh/release-name=istio-egressgateway
 kubectl -n istio-system annotate RoleBinding istio-egressgateway-sds meta.helm.sh/release-namespace=istio-system
 
-
 ```
 ### Install Istio from the app-catalog
 
@@ -193,8 +192,10 @@ kubectl rollout status deployment -n verrazzano-system vmi-system-osd -w
  
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-0
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-0 -w
+
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-1
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-1 -w
+
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-2
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-2 -w
  

@@ -60,4 +60,7 @@ kubectl get deployment -n verrazzano-system | grep operator | grep verrazzano
 
 # Delete associated WebHook Configurations
 kubectl delete mutatingwebhookconfiguration verrazzano-mysql-backup
+
+# Recreate service account required by StatefulSet vmi-system-es-master in namespace verrazzano-system
+kubectl create serviceaccount verrazzano-monitoring-operator -n verrazzano-system
 ```
