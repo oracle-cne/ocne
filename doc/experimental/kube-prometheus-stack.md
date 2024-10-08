@@ -53,14 +53,11 @@ EOF
 
 Change reclaim policy to **Retain**.  
 ```text
-# get the PV name (VOLUME NAME)
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
- 
-# patch the PV 
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
 
-## Uninstall Verrazzano kube-prometheus-stack, node exporter
+## Uninstall Verrazzano kube-prometheus-stack (named prometheus-operator)
 ```text
 helm delete -n verrazzano-monitoring prometheus-operator  
 ```
@@ -73,10 +70,10 @@ ocne application install --name kube-prometheus-stack --namespace verrazzano-mon
 Wait until the prometheus server is running
 ```text
 kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus-0 
+```
 
 NAME                                            READY   STATUS    RESTARTS   AGE
 prometheus-kube-prometheus-stack-prometheus-0   3/3     Running   0          90s
-```
 
 ## Migrate metrics data from old PV to new PV
 In this section, the Prometheus metrics will be copied from the old PV to the new PV.
@@ -119,27 +116,35 @@ spec:
 Create the pod
 ```text
 kubectl apply -f pod.yaml
-
 ```
 
 Connect to the pod and copy the data
 ```text
-
 kubectl exec -it -n  verrazzano-monitoring  migrate-data  
+```
 
-# remove Prometheus data from new PV
+Remove Prometheus data from new PV
+```text
 rm -fr prom-new/*
+```
 
-# create archiver of data from old PV
+Create archive of data from old PV
+```text
 tar -cvf prom.tar -C prom-old/ .
+```
 
-# unpack data to new PV
+Unpack data into new PV
+```text
 tar -xvf prom.tar -C prom-new/ 
+```
 
-# delete the pod
-kubectl delete -f pod.yaml 
+Delete the pod
+```text
+kubectl delete -f pod.yaml
+```
 
-# scale Prometheus up 
+Scale Prometheus up 
+```text
 kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=1
 ```
 
@@ -198,7 +203,8 @@ replace it with the new one as shown below:
 
 ```text
 kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheus-authzpol
-...
+```
+```text
   - from:
     - source:
         namespaces:
@@ -212,15 +218,12 @@ At this point, you should be able to see your pre-migration data and new data fr
 
 Delete the original PVC and PV:
 ```text
-# get the PV name (VOLUME NAME)
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
- 
-# delete the PVC
 kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
+```
 
-# patch the PV so that it will delete when the PV is deleted
+Delete the PV
+```text
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
-
-# delete the PV
 kk delete pv  $PV_NAME
 ```
