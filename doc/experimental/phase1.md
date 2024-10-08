@@ -85,9 +85,13 @@ The installed version of Grafana needs to be transformed to be manageable by Hel
 
 **TBD**
 
-## Modify kube-prometheus-stack (named as prometheus-operator) to be managed by Helm
+## Modify kube-prometheus-stack to be managed by Helm
 
-**TBD**  We may need to uninstall prometheus-operator and then install kube-prometheus-stack.
+See [Migrate kube-prometheus-stack](./kube-prometheus-stack.md)
+
+## Modify prometheus-node-exporter Helm Overrides
+
+**TBD**
 
 ## Modify kube-state-metrics to be managed by Helm
 

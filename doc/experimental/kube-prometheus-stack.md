@@ -2,14 +2,13 @@
 
 ### Version: v0.0.1-draft
 
-The purpose of this document is to migrate the Verrazzana kube-prometheus-stack (named prometheus-operator),
-to the catalog kube-prometheus-stack so that future upgrades can be done using the catalog. This migration
-does not change any component versions.  
+The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator),
+to the catalog kube-prometheus-stack so that future upgrades can be done using the catalog. This migration preserves
+Prometheus metrics data and does not change any component versions.
 
-Verrazzano installs the kube-prometheus-stack using a Helm chart named prometheus-operator and a release named
-prometheus-operator.  As a result, the Helm release is named prometheus-operator and all resources 
-that use {RELEASE-NAME} in the Helm manifests will have the name prometheus-operator. 
-Consequently, you cannot directly upgrade to the version of kube-prometheus-stack that exists in the catalog.  T
+This migration is needed because Verrazzano installs the kube-prometheus-stack using a release named prometheus-operator.  
+As a result, all the related resources that use {RELEASE-NAME} in the Helm manifests will have the name prometheus-operator. 
+Consequently, you cannot directly upgrade to the version of kube-prometheus-stack that exists in the catalog.
 
 In addition, the image section of the overrides file must be modified to use the correct images required
 by Oracle Cloud Native Environment.
@@ -18,14 +17,18 @@ The steps are summarized below:
 1. export the Helm user-provided overrides to an overrides file
 2. modify the image sections of the overrides file
 3. change the Prometheus PV reclaim policy to Retain
-5. uninstall the prometheus-operator chart (which is really the kube-prometheus-stack)
+5. uninstall the prometheus-operator chart (which is really the kube-prometheus-stack) and node exporter
 6. install kube-state-metrics from the catalog using the override file from step 2 
 7. scale Prometheus server down to zero replicas
 8. migrate data using a pod that mounts both old and new PVs
 9. create or change other resources needed for auth-proxy access
 10. cleanup
 
-## Creatubg the Helm overrides file
+***NOTE***
+If you have a backup/restore process in place for Prometheus metrics, then we recommend that you back them up before
+starting this migration.
+
+## Creating the Helm overrides file
 
 Export the user supplied overrides of the current release to a file and remove the image overrides:
 ```text
@@ -37,28 +40,33 @@ sed -i '/alertmanagerDefaultBaseImageRegistry:/d' overrides.yaml
 sed -i '/prometheusDefaultBaseImage:/d' overrides.yaml
 sed -i '/prometheusDefaultBaseImageRegistry:/d' overrides.yaml
 sed -i '/prometheusConfigReloader:/d' overrides.yaml 
-
 sed -i '/image:/,+3d' overrides.yaml
 sed -i '/thanosImage:/,+3d' overrides.yaml
+sed -i '/nodeExporter:/,+2d' overrides.yaml
+
+cat >> overrides.yaml <<EOF
+nodeExporter:
+  enabled: false
+EOF
 ```
 ## Change the Prometheus PV reclaim policy
 
 Change reclaim policy to **Retain**.  
 ```text
-# get the pv-name (VOLUME NAME)
+# get the PV name (VOLUME NAME)
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
  
 # patch the PV 
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
 
-## Uninstall Verrazzano kube-prometheus-stack, node exportor
+## Uninstall Verrazzano kube-prometheus-stack, node exporter
 ```text
 helm delete -n verrazzano-monitoring prometheus-operator  
-helm delete -n verrazzano-monitoring prometheus-node-exporter
 ```
 
 ## Install kube-prometheus-stack from the catalog
+Install the kube-prometheus-stack, be sure to specify the overrides file.
 ```text
 ocne application install --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
 ```
@@ -71,20 +79,20 @@ prometheus-kube-prometheus-stack-prometheus-0   3/3     Running   0          90s
 ```
 
 ## Migrate metrics data from old PV to new PV
-In this section, the Prometheus metrics will be copied from the old pv to the new pv.
+In this section, the Prometheus metrics will be copied from the old PV to the new PV.
 
 First scale down Prometheus.
 ```text
  scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=0
 ```
 
-Create a pod YAML that mounts both pv's.
+**Create a pod YAML file that mounts both PV's.**
 ```text
 cat > pod.yaml <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
-  name: shared-pvc
+  name: migrate-data
   namespace: verrazzano-monitoring
   labels:
     sidecar.istio.io/inject: "false"
@@ -106,7 +114,6 @@ spec:
     persistentVolumeClaim:
       claimName: prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0 
  EOF
- 
 ```
 
 Create the pod
@@ -118,15 +125,15 @@ kubectl apply -f pod.yaml
 Connect to the pod and copy the data
 ```text
 
-kubectl exec -it -n  verrazzano-monitoring  shared-pvc  
+kubectl exec -it -n  verrazzano-monitoring  migrate-data  
 
-#remove Prometheus data from new pv
+# remove Prometheus data from new PV
 rm -fr prom-new/*
 
-# create archiver of data from old pv
+# create archiver of data from old PV
 tar -cvf prom.tar -C prom-old/ .
 
-# unpack data to new pv
+# unpack data to new PV
 tar -xvf prom.tar -C prom-new/ 
 
 # delete the pod
@@ -205,15 +212,15 @@ At this point, you should be able to see your pre-migration data and new data fr
 
 Delete the original PVC and PV:
 ```text
-# get the pv-name (VOLUME NAME)
+# get the PV name (VOLUME NAME)
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
  
+# delete the PVC
+kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
+
 # patch the PV so that it will delete when the PV is deleted
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
 
-# delete the pvc
-kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
-
-# delete the pv
+# delete the PV
 kk delete pv  $PV_NAME
 ```
