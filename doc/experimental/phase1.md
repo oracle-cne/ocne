@@ -149,15 +149,16 @@ ocne application install --namespace istio-system --name istio-egress --release 
 
 ### Restart all pods in the Istio mesh
 
-Restart all pods in the Istio mesh to start using the new Istio sidecar.  This can be achieved by rebooting the cluster, or by doing a rolling restart of each component within the Istio mesh.
+Restart all pods in the Istio mesh to use the new Istio sidecar. 
+This can be achieved by rebooting the cluster, or by doing a rolling restart of each component within the Istio mesh.
 
-The instructions below are only for manually doing a restart of components installed by Verrazzano. One way to check if any pods are left using the older proxy is:  
+#### Manual restart of pods with Istio sidecars:
+
+The instructions below are only for manually doing a restart of components installed by Verrazzano. One way to check if any pods are left using the older proxy is:
 
 ```text
 kubectl get pods -A -o yaml | grep image: | grep proxyv2 | grep ghcr
 ```
-
-Manual restart of pods with Istio sidecars:
 
 ```text
 kubectl rollout restart deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller
