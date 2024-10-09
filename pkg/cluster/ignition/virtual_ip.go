@@ -66,7 +66,7 @@ errorExit() {
 
 # update keepalived.conf/nginx.conf and restart keepalived.service/ocne-nginx.service if necessary
 refreshServices() {
-  NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1s --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
+  NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
   if [ $? -ne 0 ]; then
     return 0
   fi
