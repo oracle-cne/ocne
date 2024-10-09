@@ -21,7 +21,7 @@ Follow these [instructions](./disable-verrazzano.md) to disable the Verrazzano c
 
 ## Upgrade to Istio 1.19.9
 
-Follow these [instructions](./upgrade-istio.md) to upgrade to Istio 1.19.9.
+See [upgrade Istio](./upgrade-istio.md).
 
 ## Modify cert-manager Helm overrides
 
