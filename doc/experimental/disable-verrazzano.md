@@ -1,6 +1,6 @@
 # Remove Obsolete and Unused Verrazzano Components
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 
 The purpose of this document is to remove Verrazzano controllers that are obsolete and not used.  
 
@@ -60,4 +60,7 @@ kubectl get deployment -n verrazzano-system | grep operator | grep verrazzano
 
 # Delete associated WebHook Configurations
 kubectl delete mutatingwebhookconfiguration verrazzano-mysql-backup
+
+# Recreate service account required by StatefulSet vmi-system-es-master in namespace verrazzano-system
+kubectl create serviceaccount verrazzano-monitoring-operator -n verrazzano-system
 ```

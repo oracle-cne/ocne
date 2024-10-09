@@ -39,6 +39,7 @@ const (
 	KubeAPIServerBindPortAlt = uint16(6444)
 	PodSubnet                = "10.244.0.0/16"
 	ServiceSubnet            = "10.96.0.0/12"
+	InstanceMetadata         = "169.254.169.254"
 	ContainerRegistry        = "container-registry.oracle.com"
 
 	CertKey = "tls.crt"

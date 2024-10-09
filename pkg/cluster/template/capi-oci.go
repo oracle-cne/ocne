@@ -130,7 +130,7 @@ fi
 
 func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 	// Accept proxy configuration
-	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet)
+	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
 		return "", err
 	}
