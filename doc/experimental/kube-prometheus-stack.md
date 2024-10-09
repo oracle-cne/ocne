@@ -71,17 +71,15 @@ Install the kube-prometheus-stack, be sure to specify the overrides file.
 ```text
 ocne application install --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
 ```
-Wait until the prometheus server is running
+Wait until the prometheus servers are running
 ```text
 kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus-0 
+kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus-1
 ```
 
-NAME                                            READY   STATUS    RESTARTS   AGE
-prometheus-kube-prometheus-stack-prometheus-0   3/3     Running   0          90s
-
-## Fix accesss to the Prometheus server
-In the section, you need to create the service used by auth-proxy to access Prometheus. They
-name of that service is hard coded in the auth-proxy, so it is required.
+## Fix access to the Prometheus server
+In the section, you need to create the service used by auth-proxy to access Prometheus.
+This service is required because the name of the service is hard-coded in the auth-proxy.
 
 Create the YAML file that specifies the service:
 ```text
@@ -89,20 +87,8 @@ cat > vz-prom-service.yaml <<EOF
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    meta.helm.sh/release-name: kube-prometheus-stack
-    meta.helm.sh/release-namespace: verrazzano-monitoring
   labels:
-    app: kube-prometheus-stack-prometheus
-    app.kubernetes.io/instance: kube-prometheus-stack
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: kube-prometheus-stack
-    app.kubernetes.io/version: 45.25.0
-    chart: kube-prometheus-stack-45.25.0
-    heritage: Helm
-    release: kube-prometheus-stack
-    self-monitor: "true"
-    verrazzano-component: prometheus-operator
+    app: prometheus-operator-kube-p-prometheus
   name: prometheus-operator-kube-p-prometheus
   namespace: verrazzano-monitoring
 spec:
@@ -135,6 +121,9 @@ replace it with the new one as shown below:
 ```text
 kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheus-authzpol
 ```
+Replace `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`
+with `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator`
+as shown below in the principals section:
 ```text
   - from:
     - source:
@@ -221,6 +210,11 @@ kubectl delete -f pod.yaml
 ```text
 kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus --replicas=2
 ```
+
+## Validate access to Grafana and Prometheus
+At this point, you should be able to see your pre-migration data and new data from Grafana and Prometheus console.
+Log into those consoles and ensure there is data being scraped and that you can access your pre-migration data.
+
 
 ## Remove old PVCs and PVs
 Delete the old PVCs
