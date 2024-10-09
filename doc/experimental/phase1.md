@@ -8,6 +8,12 @@ The instructions must be performed in the sequence outlined in this document.
 
 Follow these [instructions](https://docs.oracle.com/en/operating-systems/olcne/2.0/cli/ocne_install_task.html#ocne_install) to install the 2.0 CLI on the cluster.
 
+## Install Oracle Cloud Native Environment 2.0 Catalog and UI
+
+```text
+ocne cluster start --provider none --kubeconfig $KUBECONFIG --auto-start-ui false
+kubectl -n ocne-system rollout status deployment ocne-catalog
+```
 ## Perform a Custer Dump
 
 Perform a cluster dump to take snapshot of the cluster state before the migration begins.
@@ -16,14 +22,7 @@ If you want to redact sensitive information, such as host names, or omit configm
 respective flags:
 
 ```text
-ocne cluster dump --skip-redaction --include-configmaps -d /tmp/dump/before-phase1
-```
-
-## Install Oracle Cloud Native Environment 2.0 Catalog and UI
-
-```text
-ocne cluster start --provider none --kubeconfig $KUBECONFIG --auto-start-ui false
-kubectl -n ocne-system rollout status deployment ocne-catalog
+ocne cluster dump --kubeconfig $KUBECONFIG --skip-redaction --include-configmaps -d /tmp/dump/before-phase1
 ```
 
 ## Turn off the Verrazzano controllers
@@ -316,5 +315,5 @@ If you want to redact sensitive information, such as host names, or omit configm
 respective flags:
 
 ```text
-ocne cluster dump --skip-redaction --include-configmaps -d /tmp/dump/after-phase1
+ocne cluster dump --kubeconfig $KUBECONFIG --skip-redaction --include-configmaps -d /tmp/dump/after-phase1
 ```

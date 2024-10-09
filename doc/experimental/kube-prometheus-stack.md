@@ -63,18 +63,18 @@ kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}
 
 ## Uninstall Verrazzano prometheus-operator (actually kube-prometheus-stack)
 ```text
-helm delete -n verrazzano-monitoring prometheus-operator  
+helm uninstall -n verrazzano-monitoring prometheus-operator --wait
 ```
 
 ## Install kube-prometheus-stack from the catalog
 Install the kube-prometheus-stack, be sure to specify the overrides file.
 ```text
-ocne application install --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
+ocne application install --kubeconfig $KUBECONFIG --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
 ```
-Wait until the prometheus servers are running
+Wait until the prometheus operator and servers are running
 ```text
-kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus-0 
-kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus-1
+kubectl rollout status deployment -n verrazzano-monitoring kube-prometheus-stack-operator
+kubectl rollout status statefulset -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 
 ## Fix access to the Prometheus server
@@ -138,6 +138,7 @@ In this section, the Prometheus metrics will be copied from the old PV to the ne
 
 First scale-in Prometheus.
 ```text
+TODO - kubectl wait until replicas 0
  scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=0
 ```
 
@@ -185,20 +186,14 @@ Connect to the pod and copy the data
 kubectl exec -it -n  verrazzano-monitoring  migrate-data  
 ```
 
-Remove Prometheus data from new PV
+Remove the old Prometheus data from new PV
 ```text
 rm -fr prom-new/*
 ```
 
-Create archive of data from old PV
+Copy the old Prometheus data to the new PV
 ```text
-tar -cvf prom.tar -C prom-old/ .
-```
-
-Unpack data into new PV and delete the tar file
-```text
-tar -xvf prom.tar -C prom-new/ 
-rm prom.tar
+cp -R /prom-old/. prom-new/ 
 ```
 
 Delete the pod
@@ -209,6 +204,7 @@ kubectl delete -f pod.yaml
 ## Scale-out Prometheus
 ```text
 kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus --replicas=2
+kubectl rollout status sts -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 
 ## Validate access to Grafana and Prometheus
