@@ -61,7 +61,7 @@ PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operato
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
 
-## Uninstall Verrazzano kube-prometheus-stack (named prometheus-operator)
+## Uninstall Verrazzano prometheus-operator (actually kube-prometheus-stack)
 ```text
 helm delete -n verrazzano-monitoring prometheus-operator  
 ```
