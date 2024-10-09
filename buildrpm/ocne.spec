@@ -62,6 +62,7 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 * Mon Sep 30 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.3-2
 - Fix command line and config file precedence for cluster delete
 - Validate required OCI-CCM configurations options when using oci provider
+- Increase the timeout in the keepalived livness script
 
 * Wed Sep 25 2024 George Aeillo <george.f.aeillo@oracle.com> - 2.0.3-1
 - Remove unused cluster update command
