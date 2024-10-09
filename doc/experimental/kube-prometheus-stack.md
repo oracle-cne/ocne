@@ -50,10 +50,14 @@ nodeExporter:
 EOF
 ```
 ## Change the Prometheus PV reclaim policy
+***NOTE*** The following instructions assume there are 2 Prometheus replicas
 
 Change reclaim policy to **Retain**.  
 ```text
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
+kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+
+PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1 -o jsonpath='{.spec.volumeName}')
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
 
@@ -74,79 +78,6 @@ kubectl get pod -n verrazzano-monitoring prometheus-kube-prometheus-stack-promet
 
 NAME                                            READY   STATUS    RESTARTS   AGE
 prometheus-kube-prometheus-stack-prometheus-0   3/3     Running   0          90s
-
-## Migrate metrics data from old PV to new PV
-In this section, the Prometheus metrics will be copied from the old PV to the new PV.
-
-First scale down Prometheus.
-```text
- scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=0
-```
-
-**Create a pod YAML file that mounts both PV's.**
-```text
-cat > pod.yaml <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: migrate-data
-  namespace: verrazzano-monitoring
-  labels:
-    sidecar.istio.io/inject: "false"
-spec:
-  containers:
-  - name: c1
-    image: container-registry.oracle.com/os/oraclelinux:8
-    command: ['sh', '-c', 'echo "The app is running!" && tail -f /dev/null']
-    volumeMounts:
-    - name: pvc-old
-      mountPath: /prom-old
-    - name: pvc-new
-      mountPath: /prom-new
-  volumes:    
-  - name: pvc-old
-    persistentVolumeClaim:
-      claimName: prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
-  - name: pvc-new
-    persistentVolumeClaim:
-      claimName: prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0 
- EOF
-```
-
-Create the pod
-```text
-kubectl apply -f pod.yaml
-```
-
-Connect to the pod and copy the data
-```text
-kubectl exec -it -n  verrazzano-monitoring  migrate-data  
-```
-
-Remove Prometheus data from new PV
-```text
-rm -fr prom-new/*
-```
-
-Create archive of data from old PV
-```text
-tar -cvf prom.tar -C prom-old/ .
-```
-
-Unpack data into new PV
-```text
-tar -xvf prom.tar -C prom-new/ 
-```
-
-Delete the pod
-```text
-kubectl delete -f pod.yaml
-```
-
-Scale Prometheus up 
-```text
-kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=1
-```
 
 ## Fix accesss to the Prometheus server
 In the section, you need to create the service used by auth-proxy to access Prometheus. They
@@ -213,17 +144,100 @@ kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheu
         - cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator
 ```
 
-## Final cleanup
-At this point, you should be able to see your pre-migration data and new data from Grafana and Prometheus console.
+## Migrate metrics data from old PV to new PV
+In this section, the Prometheus metrics will be copied from the old PV to the new PV.
 
-Delete the original PVC and PV:
+First scale-in Prometheus.
 ```text
-PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
+ scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=0
+```
+
+### Copy data from old PV to new PV
+***NOTE*** The following instructions assume there are 2 Prometheus replicas.
+Repeat this section once, changing the `claimName` field by replacing. the string `prometheus-0` with `prometheus-1`.
+
+Create a pod YAML file that mounts both PVCs.
+```text
+cat > pod.yaml <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: migrate-data
+  namespace: verrazzano-monitoring
+  labels:
+    sidecar.istio.io/inject: "false"
+spec:
+  containers:
+  - name: c1
+    image: container-registry.oracle.com/os/oraclelinux:8
+    command: ['sh', '-c', 'echo "The app is running!" && tail -f /dev/null']
+    volumeMounts:
+    - name: pvc-old
+      mountPath: /prom-old
+    - name: pvc-new
+      mountPath: /prom-new
+  volumes:    
+  - name: pvc-old
+    persistentVolumeClaim:
+      claimName: prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
+  - name: pvc-new
+    persistentVolumeClaim:
+      claimName: prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0 
+ EOF
+```
+
+Create the pod
+```text
+kubectl apply -f pod.yaml
+```
+
+Connect to the pod and copy the data
+```text
+kubectl exec -it -n  verrazzano-monitoring  migrate-data  
+```
+
+Remove Prometheus data from new PV
+```text
+rm -fr prom-new/*
+```
+
+Create archive of data from old PV
+```text
+tar -cvf prom.tar -C prom-old/ .
+```
+
+Unpack data into new PV and delete the tar file
+```text
+tar -xvf prom.tar -C prom-new/ 
+rm prom.tar
+```
+
+Delete the pod
+```text
+kubectl delete -f pod.yaml
+```
+
+## Scale-out Prometheus
+```text
+kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus --replicas=2
+```
+
+## Remove old PVCs and PVs
+Delete the old PVCs
+```text
+PV_0_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
 kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
+
+PV_1_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1 -o jsonpath='{.spec.volumeName}')
+kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1
 ```
 
-Delete the PV
+Delete the old PVs
 ```text
-kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
-kk delete pv  $PV_NAME
+kubectl delete pv  $PV_0_NAME
+kubeclt delete pv  $PV_1_NAME
 ```
+
+## Summary
+At this point, you should be able to see your pre-migration data and new data from Grafana and Prometheus console.
+All future upgrades to kube-prometheus-stack should be done directly from the catalog as with any other component.
