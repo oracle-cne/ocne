@@ -1,6 +1,6 @@
 # Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
@@ -8,10 +8,10 @@ Instructions for performing an in-place upgrade of a Kubernetes cluster from Ora
 ## Prerequisites
 Identify the VM type and Kubernetes of the existing Oracle Cloud Native Environment 1.x cluster and generate the OS image.
 
-### Scale down the Module Operator
-Scale down the verrazzano-module-operator so that it does not process any Module CRs.
+### Shutdown the Module Operator
+Scale-in the verrazzano-module-operator so that it does not process any Module CRs.
 ```text
-kubectl --kubeconfig $KUBECONFIG scale deployment verrazzano-module-operator --replicas=0
+kubectl scale deployment verrazzano-module-operator -n verrazzano-module-operator  --replicas=0
 ```
 
 ## Upgrade all nodes to OCK 2.*
