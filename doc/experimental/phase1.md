@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -33,8 +33,7 @@ and instead Helm will get the container image values from the defaults in the ca
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
-Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to specify the container images.  
-Update the existing installation to remove those overrides, and instead Helm will get the container images values from the defaults in the catalog.
+Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to specify the container images. Update the existing installation to remove those overrides, and instead Helm will get the container images values from the defaults in the catalog.
 
 The following example assumes WebLogic Kubernetes Operator 4.2.5 is already installed.
 
@@ -54,6 +53,22 @@ sed -i '/weblogicMonitoringExporterImage:/d' overrides.yaml
 Update the existing installation:
 ```text
 ocne application update --release weblogic-operator --namespace verrazzano-system --version 4.2.5 --catalog "WebLogic Kubernetes Operator" --reset-values --values overrides.yaml
+```
+
+## Modify Fluentd Helm overrides
+
+Verrazzano deployed Fluentd using Helm overrides to specify the container images. Update the existing installation to remove those overrides, and instead Helm will get the container images values from the defaults in the catalog.
+
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n verrazzano-system fluentd > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/fluentdImage:/d' overrides.yaml
+```
+
+Update the existing installation:
+```text
+ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml
 ```
 
 ## Modify ingress-nginx Helm overrides
