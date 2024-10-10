@@ -1,6 +1,9 @@
 # Phase Three: Unsupported Components that Require Migration
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
+
+## Prerequisites
+Set the environment variable KUBECONFIG to point to your cluster.
 
 ## Overview
 There are a few obsolete or unsupported components that are currently integrated with supported components.
