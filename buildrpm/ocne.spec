@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.0.2
-Release: 3%{dist}
+Version: 2.0.3
+Release: 5%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,24 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Oct 07 2024 Shih-Chang Chen <shih-chang.chen@oracle.com> - 2.0.3-5
+- Ensure that OCI metadata endpoint is in the no_proxy settings for the oci provider
+
+* Fri Oct 04 2024 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.0.3-4
+- Fix command line and config file precendence for cluster template
+
+* Tue Oct 01 2024 Zaid Abdulrehman <zaid.a.abdulrehman@oracle.com> - 2.0.3-3
+- Allow images to be created on clusters of different versions
+
+* Mon Sep 30 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.3-2
+- Fix command line and config file precedence for cluster delete
+- Validate required OCI-CCM configurations options when using oci provider
+- Increase the timeout in the keepalived livness script
+
+* Wed Sep 25 2024 George Aeillo <george.f.aeillo@oracle.com> - 2.0.3-1
+- Remove unused cluster update command
+- Allow for custom container image tags for OCK images
+
 * Mon Sep 23 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.2-3
 - Fixed an issue where specifying an ostree transport for the osRegistry configuration option would misconfigure the update service
 - Extended the set of supported ostree transports
