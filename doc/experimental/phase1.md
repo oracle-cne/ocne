@@ -4,6 +4,9 @@
 
 The instructions must be performed in the sequence outlined in this document.
 
+## Prerequisites
+Set the environment variable KUBECONFIG to point to your cluster.
+
 ## Install Oracle Cloud Native Environment 2.0 CLI
 
 Follow these [instructions](https://docs.oracle.com/en/operating-systems/olcne/2.0/cli/ocne_install_task.html#ocne_install) to install the 2.0 CLI on the cluster.

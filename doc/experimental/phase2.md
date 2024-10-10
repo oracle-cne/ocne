@@ -5,9 +5,14 @@
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
 
-## Prerequisite
-
+## Prerequisites
 Identify the VM type and Kubernetes of the existing Oracle Cloud Native Environment 1.x cluster and generate the OS image.
+
+### Scale down the Module Operator
+Scale down the verrazzano-module-operator so that it does not process any Module CRs.
+```text
+kubectl --kubeconfig $KUBECONFIG scale deployment verrazzano-module-operator --replicas=0
+```
 
 ## OCK 2.0 Upgrade Steps
 
@@ -135,3 +140,64 @@ control plane node different from the target node.
     ocne-worker-001          Ready    <none>          128m   v1.26.6+1.el8
     ocne-worker-002          Ready    <none>          134m   v1.26.6+1.el8
     ```
+
+## Finish upgrading all the nodes
+Repeat the previous sections until all the nodes in the cluster are using OCK images.
+
+To confirm this, run the following:
+```text
+ocne cluster info --kubeconfig $KUBECONFIG 
+```
+
+You should see information similar to the following for each cluster node.
+```text
+Node: ocne-control-plane-1
+  Registry and tag for ostree patch images:
+    registry: container-registry.oracle.com/olcne/ock-ostree
+    tag: 1.26
+    transport: ostree-unverified-registry
+  Ostree deployments:
+      ock 5d6e86d05fa0b9390c748a0a19288ca32bwer1eac42fef1c048050ce03ffb5ff9.1 (staged)
+    * ock 5d6e86d05fa0b9390c748a0a19288ca32bwer1eac42fef1c048050ce03ffb5ff9.0
+```
+
+Make sure this information is displayed for every node.  If it isn't, then
+go back and upgrade the node to use OCK.
+
+If the node is NOT using OCK then you will be missing the Registry and Ostree details like the following:
+```text
+Node: ocne-control-plane-1
+  Registry and tag for ostree patch images:
+  Ostree deployments:
+```
+
+## Uninstall the Module Operator and Delete Module CRs
+After the entire has been upgraded to OCK, then you can safely remove the verrazzano-module-operator and any CRs.
+
+```text
+ helm uninstall -n verrazzano-module-operator verrazzano-module-operator --wait
+```
+
+### Delete the Module CRs
+*TDB* - patch the CRs and remove the finalizer
+Delete each CR
+
+## Delete all the Verrazzano related CRDs
+```text
+kubectl delete crd ingresstraits.oam.verrazzano.io
+kubectl delete crd loggingtraits.oam.verrazzano.io
+kubectl delete crd metricsbindings.app.verrazzano.io
+kubectl delete crd metricstemplates.app.verrazzano.io
+kubectl delete crd metricstraits.oam.verrazzano.io
+kubectl delete crd modules.platform.verrazzano.io  
+kubectl delete crd multiclusterapplicationconfigurations.clusters.verrazzano.io
+kubectl delete crd multiclustercomponents.clusters.verrazzano.io
+kubectl delete crd multiclusterconfigmaps.clusters.verrazzano.io
+kubectl delete crd multiclustersecrets.clusters.verrazzano.io 
+kubectl delete crd verrazzanocoherenceworkloads.oam.verrazzano.io
+kubectl delete crd verrazzanohelidonworkloads.oam.verrazzano.io
+kubectl delete crd verrazzanomonitoringinstances.verrazzano.io
+kubectl delete crd verrazzanoprojects.clusters.verrazzano.io
+kubectl delete crd verrazzanos.install.verrazzano.io
+kubectl delete crd verrazzanoweblogicworkloads.oam.verrazzano.io
+```
