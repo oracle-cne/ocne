@@ -2,16 +2,19 @@
 
 ### Version: v0.0.1-draft
 
-The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator),
-to the catalog kube-prometheus-stack so that future upgrades can be done using the catalog. This migration preserves
-Prometheus metrics data and does not change any component versions.
+The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
+to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
+This migration preserves Prometheus metrics data and does not change any component versions.
 
-This migration is needed because Verrazzano installs the kube-prometheus-stack using a release named prometheus-operator.  
+This migration is needed because Verrazzano installs the kube-prometheus-stack using a Helm release named prometheus-operator.  
 As a result, all the related resources that use {RELEASE-NAME} in the Helm manifests will have the name prometheus-operator. 
 Consequently, you cannot directly upgrade to the version of kube-prometheus-stack that exists in the catalog.
 
 In addition, the image section of the overrides file must be modified to use the correct images required
 by Oracle Cloud Native Environment.
+
+***NOTE***
+These instructions assume there are 2 Prometheus replicas.  If the replica count is different, then adjust accordingly.
 
 The steps are summarized below:
 1. export the Helm user-provided overrides to an overrides file
@@ -22,15 +25,16 @@ The steps are summarized below:
 7. scale Prometheus server down to zero replicas
 8. migrate data using a pod that mounts both old and new PVs
 9. create or change other resources needed for auth-proxy access
-10. cleanup
+10. validate metrics using Grafana
+11. cleanup
 
 ***NOTE***
 If you have a backup/restore process in place for Prometheus metrics, then we recommend that you back them up before
 starting this migration.
 
 ## Creating the Helm overrides file
-
-Export the user supplied overrides of the current release to a file and remove the image overrides:
+Export the user supplied overrides of the current release to a file, 
+remove the image overrides and disable nodeExporter install:
 ```text
 helm get values -n verrazzano-monitoring prometheus-operator > overrides.yaml
 sed -i '1d' overrides.yaml
@@ -50,8 +54,6 @@ nodeExporter:
 EOF
 ```
 ## Change the Prometheus PV reclaim policy
-***NOTE*** The following instructions assume there are 2 Prometheus replicas
-
 Change reclaim policy to **Retain**.  
 ```text
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
@@ -119,7 +121,7 @@ Simply remove the existing principal for the verrazzano-monitoring namespace and
 replace it with the new one as shown below:
 
 ```text
-kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheus-authzpol
+kubectl edit AuthorizationPolicy -n verrazzano-monitoring vmi-system-prometheus-authzpol
 ```
 Replace `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`
 with `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator`
@@ -143,15 +145,17 @@ kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-promethe
 
 Make sure the stateful set has 0 pods ready
 ```text
-kubectl get statefulset  -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
+kubectl get statefulset -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 Results should be
+```text
 NAME                                          READY   ...
 prometheus-kube-prometheus-stack-prometheus   0/0     ...
+```
 
-### Copy data from old PV to new PV
-***NOTE*** The following instructions assume there are 2 Prometheus replicas.
-Repeat this section once, changing the `claimName` field by replacing. the string `prometheus-0` with `prometheus-1`.
+
+### Copy data from the old PV to new PV
+Repeat this section for each additional replica, changing both of the `claimName` fields by replacing the string `prometheus-0` with `prometheus-1`, for example.
 
 Create a pod YAML file that mounts both PVCs.
 ```text
@@ -190,7 +194,7 @@ kubectl apply -f pod.yaml
 
 Once the pod is ready, connect to the pod 
 ```text
-kubectl exec -it -n  verrazzano-monitoring  migrate-data bash
+kubectl exec -it -n verrazzano-monitoring  migrate-data bash
 ```
 
 Remove the old Prometheus data from new PV
