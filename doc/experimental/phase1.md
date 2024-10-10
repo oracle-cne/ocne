@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.8-draft
+### Version: v0.0.9-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -106,13 +106,8 @@ Export the user supplied overrides of the current release to a file and remove t
 ```text
 helm get values -n verrazzano-ingress-nginx ingress-controller > overrides.yaml
 sed -i '1d' overrides.yaml
+sed -i '/digest:/d' overrides.yaml
 sed -i '/image:/,+2d' overrides.yaml
-```
-
-Uninstall prometheus-node-exporter 1.3.1. This is required because the 1.6.1 helm chart contains a different value for `spec.selector.matchLabels`, which Kubernetes rejects as an immutable field.
-
-```text
-ocne application uninstall --release prometheus-node-exporter --namespace verrazzano-monitoring
 ```
 
 Install ingress-nginx 1.9.6 using the overrides extracted above:

@@ -1,6 +1,6 @@
 # Remove Obsolete and Unused Verrazzano Components
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 The purpose of this document is to remove Verrazzano controllers that are obsolete and not used.  
 
@@ -26,21 +26,36 @@ Once these operators are removed, the following custom resources will be ignored
 
 ## Remove the Verrazzano Platform Operator
 
+Scale the deployments to zero replicas:
+
 ```text
-# Scale the deployments to zero replicas
 kubectl scale deployment verrazzano-platform-operator --namespace verrazzano-install --replicas 0
 kubectl scale deployment verrazzano-platform-operator-webhook --namespace verrazzano-install --replicas 0
+```
 
-# Verify the deployments in verrazzano-install have zero ready pods
+Verify the deployments in verrazzano-install have zero ready pods:
+
+```text
 kubectl get deployment -n verrazzano-install
+```
+
+You should see output similar to this:
+
+```text
 NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
 verrazzano-platform-operator           0/0     0            0           34m
 verrazzano-platform-operator-webhook   0/0     0            0           34m
+```
 
-# Delete the verrazzano-install namespace
+Delete the verrazzano-install namespace:
+
+```text
 kubectl delete namespace verrazzano-install
+```
 
-# Delete associated WebHook configurations
+Delete associated WebHook configurations:
+
+```text
 kubectl delete validatingwebhookconfiguration verrazzano-platform-operator-webhook
 kubectl delete validatingwebhookconfiguration verrazzano-platform-requirements-validator
 kubectl delete validatingwebhookconfiguration verrazzano-platform-mysqlinstalloverrides
@@ -48,19 +63,29 @@ kubectl delete validatingwebhookconfiguration verrazzano-platform-mysqlinstallov
 
 ## Remove Remaining Verrazzano Controllers
 
+Remove operators deployed using Helm:
+
 ```text
-# Remove operators deployed using Helm
 helm delete -n verrazzano-system verrazzano-application-operator
 helm delete -n verrazzano-system verrazzano-cluster-operator
 helm delete -n verrazzano-system verrazzano-monitoring-operator
 helm delete -n verrazzano-system oam-kubernetes-runtime
+```
 
-# The following command should not return any results
+The following command should not return any results:
+
+```text
 kubectl get deployment -n verrazzano-system | grep operator | grep verrazzano
+```
 
-# Delete associated WebHook Configurations
+Delete associated WebHook Configurations:
+
+```text
 kubectl delete mutatingwebhookconfiguration verrazzano-mysql-backup
+```
 
-# Recreate service account required by StatefulSet vmi-system-es-master in namespace verrazzano-system
+Recreate the service account required by StatefulSet vmi-system-es-master in namespace verrazzano-system:
+
+```text
 kubectl create serviceaccount verrazzano-monitoring-operator -n verrazzano-system
 ```
