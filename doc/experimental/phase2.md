@@ -36,7 +36,8 @@ To confirm that the entire cluster is using OCK 2.*, run the following:
 ocne cluster info --kubeconfig $KUBECONFIG 
 ```
 
-You should see information similar to the following for each cluster node.
+Make sure the following information is displayed for each cluster node.  If it isn't, then
+go back and upgrade the node to use OCK.  
 ```text
 ...
 
@@ -61,9 +62,6 @@ Node: ocne-control-plane-2
 etc.      
 ```
 
-Make sure this information is displayed for every node.  If it isn't, then
-go back and upgrade the node to use OCK.
-
 If the node is NOT using OCK then you will be missing the Registry and Ostree details like the following:
 ```text
 Node: ocne-control-plane-1
@@ -72,15 +70,15 @@ Node: ocne-control-plane-1
 ```
 
 ## Uninstall the Module Operator and Delete Module CRs
-After the entire has been upgraded to OCK, then you can safely remove the verrazzano-module-operator and any CRs.
+After the entire has been upgraded to OCK, then you can safely remove the verrazzano-module-operator and Module CRs.
 
 ```text
  helm uninstall -n verrazzano-module-operator verrazzano-module-operator --wait
 ```
 
 ### Delete the Module CRs
-*TDB* - patch the CRs and remove the finalizer
-Delete each CR
+*TDB* Patch the CRs and remove the finalizer
+*TBD* Delete each CR
 
 ## Delete all the Verrazzano related CRDs
 ```text

@@ -1,13 +1,13 @@
-# Single Node OCK In-Place Upgrade
+# Single Node In-Place Upgrade from 1.* to OCK 2.*
 
 ### Version: v0.0.1-draft
 
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster node from Oracle Cloud Native Environment 1.x to OCK 2.x.
 
-## OCK 2.0 Upgrade Steps
+## OCK 2.* Upgrade Steps
 
-Set up a byo cluster for the existing Oracle Cloud Native Environment 1.x cluster using the 2.0 CLI.
+Set up a byo cluster for the existing Oracle Cloud Native Environment 1.x cluster using the 2.* CLI.
 The example below assumes Kubernetes 1.26, change it to your version.
 
 1. Create an OCI OCK image
@@ -139,7 +139,6 @@ To confirm that the node has been upgraded, run the following command:
 ocne cluster info -N <node-name>
 ```
 
-You should see information similar to the following for each cluster node.
 Make sure the output looks like the following, if not, then go back and upgrade the node again:
 ```text
 Node: <node-name>
