@@ -93,13 +93,29 @@ Update the existing installation:
 ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml
 ```
 
-## Modify ingress-nginx Helm overrides
+## Upgrade ingress-nginx from 1.7.1 to 1.9.6
 
 Verrazzano deployed ingress-nginx using Helm overrides to specify the container images.
 Update the existing installation to remove those overrides, 
 and instead Helm will get the container image values from the defaults in the catalog.
 
-**TBD**
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n verrazzano-ingress-nginx ingress-controller > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/image:/,+2d' overrides.yaml
+```
+
+Uninstall prometheus-node-exporter 1.3.1. This is required because the 1.6.1 helm chart contains a different value for `spec.selector.matchLabels`, which Kubernetes rejects as an immutable field.
+
+```text
+ocne application uninstall --release prometheus-node-exporter --namespace verrazzano-monitoring
+```
+
+Install ingress-nginx 1.9.6 using the overrides extracted above:
+```text
+ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml
+```
 
 ## Modify Grafana to be managed by Helm
 
