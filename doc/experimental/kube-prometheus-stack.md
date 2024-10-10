@@ -42,7 +42,7 @@ sed -i '/prometheusDefaultBaseImageRegistry:/d' overrides.yaml
 sed -i '/prometheusConfigReloader:/d' overrides.yaml 
 sed -i '/image:/,+3d' overrides.yaml
 sed -i '/thanosImage:/,+3d' overrides.yaml
-sed -i '/nodeExporter:/,+2d' overrides.yaml
+sed -i '/nodeExporter:/,+1d' overrides.yaml
 
 cat >> overrides.yaml <<EOF
 nodeExporter:
@@ -83,7 +83,7 @@ This service is required because the name of the service is hard-coded in the au
 
 Create the YAML file that specifies the service:
 ```text
-cat > vz-prom-service.yaml <<EOF
+cat <<EOF > vz-prom-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -106,7 +106,7 @@ spec:
     prometheus: kube-prometheus-stack-prometheus
   sessionAffinity: None
   type: ClusterIP
-  EOF
+EOF
 ```
 
 Create the service:
@@ -136,11 +136,18 @@ as shown below in the principals section:
 ## Migrate metrics data from old PV to new PV
 In this section, the Prometheus metrics will be copied from the old PV to the new PV.
 
-First scale-in Prometheus.
+Scale-in Prometheus so that all pods are shutdown
 ```text
-TODO - kubectl wait until replicas 0
- scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus  --replicas=0
+kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge' -p '{"spec":{"replicas":0}}'
 ```
+
+Make sure the stateful set has 0 pods ready
+```text
+kubectl get statefulset  -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
+```
+Results should be
+NAME                                          READY   ...
+prometheus-kube-prometheus-stack-prometheus   0/0     ...
 
 ### Copy data from old PV to new PV
 ***NOTE*** The following instructions assume there are 2 Prometheus replicas.
@@ -173,7 +180,7 @@ spec:
   - name: pvc-new
     persistentVolumeClaim:
       claimName: prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0 
- EOF
+EOF
 ```
 
 Create the pod
@@ -181,9 +188,9 @@ Create the pod
 kubectl apply -f pod.yaml
 ```
 
-Connect to the pod and copy the data
+Once the pod is ready, connect to the pod 
 ```text
-kubectl exec -it -n  verrazzano-monitoring  migrate-data  
+kubectl exec -it -n  verrazzano-monitoring  migrate-data bash
 ```
 
 Remove the old Prometheus data from new PV
@@ -198,13 +205,13 @@ cp -R /prom-old/. prom-new/
 
 Delete the pod
 ```text
-kubectl delete -f pod.yaml
+kubectl delete -f pod.yaml --force
 ```
 
 ## Scale-out Prometheus
 ```text
-kubectl scale sts -n  verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus --replicas=2
-kubectl rollout status sts -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
+kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge' -p '{"spec":{"replicas":2}}'
+kubectl rollout status statefulset -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 
 ## Validate access to Grafana and Prometheus
