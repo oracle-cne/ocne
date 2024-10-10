@@ -17,16 +17,16 @@ by Oracle Cloud Native Environment.
 These instructions assume there are 2 Prometheus replicas.  If the replica count is different, then adjust accordingly.
 
 The steps are summarized below:
-1. export the Helm user-provided overrides to an overrides file
-2. modify the image sections of the overrides file
-3. change the Prometheus PV reclaim policy to Retain
-5. uninstall the prometheus-operator chart (which is really the kube-prometheus-stack) and node exporter
-6. install kube-state-metrics from the catalog using the override file from step 2 
-7. scale Prometheus server down to zero replicas
-8. migrate data using a pod that mounts both old and new PVs
-9. create or change other resources needed for auth-proxy access
-10. validate metrics using Grafana
-11. cleanup
+1. Export the Helm user-provided overrides to an overrides file
+2. Modify the image sections of the overrides file
+3. Change the Prometheus PV reclaim policy to Retain
+5. Uninstall the prometheus-operator chart (which is really the kube-prometheus-stack) and node exporter
+6. Install kube-state-metrics from the catalog using the override file from step 2 
+7. Scale Prometheus server down to zero replicas
+8. Migrate data using a pod that mounts both old and new PVs
+9. Create or change other resources needed for auth-proxy access
+10. Validate metrics using Grafana
+11. Cleanup
 
 ***NOTE***
 If you have a backup/restore process in place for Prometheus metrics, then we recommend that you back them up before
