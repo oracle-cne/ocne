@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.6-draft
+### Version: v0.0.7-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -46,7 +46,7 @@ Export the user supplied overrides of the current release to a file and remove t
 ```text
 helm get values -n cert-manager cert-manager > overrides.yaml
 sed -i '1d' overrides.yaml
-sed -i '/image:/,+3d' overrides.yaml
+sed -i '/image:/,+2d' overrides.yaml
 sed -i 's,ghcr.io/verrazzano/cert-manager-acmesolver:v1.9.1-20240724165802-4c06aea1,olcne/cert-manager-acmesolver:v1.9.1,' overrides.yaml
 sed -i '1i installCRDs: false' overrides.yaml
 ```
@@ -115,9 +115,25 @@ The installed version of Grafana needs to be transformed to be manageable by Hel
 
 See [Migrate kube-prometheus-stack](./kube-prometheus-stack.md)
 
-## Modify prometheus-node-exporter Helm Overrides
+## Upgrade prometheus-node-exporter from 1.3.1 to to 1.6.1
 
-**TBD**
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n verrazzano-monitoring prometheus-node-exporter > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/image:/,+2d' overrides.yaml
+```
+
+Uninstall prometheus-node-exporter 1.3.1. This is required because the 1.6.1 helm chart contains a different value for `spec.selector.matchLabels`, which Kubernetes rejects as an immutable field.
+
+```text
+ocne application uninstall --release prometheus-node-exporter --namespace verrazzano-monitoring
+```
+
+Install prometheus-node-exporter 1.6.1 using the overrides extracted above:
+```text
+ocne application install --release prometheus-node-exporter --name prometheus-node-exporter --namespace verrazzano-monitoring --version 1.6.1 --values overrides.yaml
+```
 
 ## Modify kube-state-metrics to be managed by Helm
 
@@ -143,7 +159,11 @@ as a result of processing OAM resources. This must be done before you can remove
 [Generated Kubernetes Manifests from OAM](./oam-to-kubernetes.md)
 
 ### Remove OAM resources
-TDB
+**TBD**
+
+## Delete the Verrazzano custom resource
+
+**TBD**
 
 ## Perform another Cluster Dump
 
