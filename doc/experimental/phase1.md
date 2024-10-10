@@ -1,11 +1,11 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.7-draft
+### Version: v0.0.8-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
 ## Prerequisites
-Set the environment variable KUBECONFIG to point to your cluster.
+Set the environment variable KUBECONFIG to point to your cluster kubeconfig.
 
 ## Install Oracle Cloud Native Environment 2.0 CLI
 
@@ -161,8 +161,7 @@ as a result of processing OAM resources. This must be done before you can remove
 ### Remove OAM resources
 **TBD**
 
-## Delete the Verrazzano custom resource
-
+## Delete the Verrazzano custom resources
 **TBD**
 
 ## Perform another Cluster Dump
