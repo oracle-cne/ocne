@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.5-draft
+### Version: v0.0.6-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -39,7 +39,19 @@ Verrazzano deployed cert-manager using Helm overrides to specify the container i
 Update the existing installation to remove those overrides,
 and instead Helm will get the container image values from the defaults in the catalog.
 
-**TBD**
+Export the user supplied overrides of the current release to a file and remove the image overrides:
+```text
+helm get values -n cert-manager cert-manager > overrides.yaml
+sed -i '1d' overrides.yaml
+sed -i '/image:/,+3d' overrides.yaml
+sed -i 's,ghcr.io/verrazzano/cert-manager-acmesolver:v1.9.1-20240724165802-4c06aea1,olcne/cert-manager-acmesolver:v1.9.1,' overrides.yaml
+sed -i '1i installCRDs: false' overrides.yaml
+```
+
+Update the existing installation:
+```text
+ocne application update --release cert-manager --namespace cert-manager --version 1.9.1 --reset-values --values overrides.yaml
+```
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
