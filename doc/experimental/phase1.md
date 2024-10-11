@@ -53,7 +53,7 @@ sed -i '1i installCRDs: false' overrides.yaml
 
 Update the existing installation:
 ```text
-ocne application update --release cert-manager --namespace cert-manager --version 1.9.1 --reset-values --values overrides.yaml --catalog embedded
+ocne application update --release cert-manager --namespace cert-manager --version 1.9.1 --reset-values --values overrides.yaml
 ```
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
@@ -93,7 +93,7 @@ sed -i '/fluentdImage:/d' overrides.yaml
 
 Update the existing installation:
 ```text
-ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml --catalog embedded
+ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml
 ```
 
 ## Upgrade ingress-nginx from 1.7.1 to 1.9.6
@@ -112,7 +112,7 @@ sed -i '/image:/,+2d' overrides.yaml
 
 Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
 ```text
-ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml --catalog embedded
+ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml
 ```
 
 ## Modify Grafana to be managed by Helm
@@ -143,7 +143,7 @@ ocne application uninstall --release prometheus-node-exporter --namespace verraz
 
 Install prometheus-node-exporter 1.6.1 using the overrides extracted above:
 ```text
-ocne application install --release prometheus-node-exporter --name prometheus-node-exporter --namespace verrazzano-monitoring --version 1.6.1 --values overrides.yaml --catalog embedded
+ocne application install --release prometheus-node-exporter --name prometheus-node-exporter --namespace verrazzano-monitoring --version 1.6.1 --values overrides.yaml
 ```
 
 ## Modify kube-state-metrics to be managed by Helm
@@ -157,7 +157,7 @@ sed -i '/image:/,+3d' overrides.yaml
 
 Update the existing installation:
 ```text
-ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml --catalog embedded
+ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
 ```
 
 ## OAM Migration

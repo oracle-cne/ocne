@@ -71,7 +71,7 @@ helm uninstall -n verrazzano-monitoring prometheus-operator --wait
 ## Install kube-prometheus-stack from the catalog
 Install the kube-prometheus-stack, be sure to specify the overrides file.
 ```text
-ocne application install --kubeconfig $KUBECONFIG --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml --catalog embedded
+ocne application install --kubeconfig $KUBECONFIG --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
 ```
 Wait until the prometheus operator and servers are running
 ```text
