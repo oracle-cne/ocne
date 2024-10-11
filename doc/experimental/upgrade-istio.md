@@ -132,10 +132,10 @@ kubectl -n istio-system annotate RoleBinding istio-egressgateway-sds meta.helm.s
 ## Install Istio from the app-catalog
 
 ```text
-ocne application install --namespace istio-system --name istio-base --release istio-base --version 1.19.9
-ocne application install --namespace istio-system --name istiod --release istiod --version 1.19.9
-ocne application install --namespace istio-system --name istio-ingress --release istio-ingressgateway --version 1.19.9
-ocne application install --namespace istio-system --name istio-egress --release istio-egressgateway --version 1.19.9
+ocne application install --namespace istio-system --name istio-base --release istio-base --version 1.19.9 --catalog embedded
+ocne application install --namespace istio-system --name istiod --release istiod --version 1.19.9 --catalog embedded
+ocne application install --namespace istio-system --name istio-ingress --release istio-ingressgateway --version 1.19.9 --catalog embedded
+ocne application install --namespace istio-system --name istio-egress --release istio-egressgateway --version 1.19.9 --catalog embedded
 ```
 
 ## Restart all pods in the Istio mesh

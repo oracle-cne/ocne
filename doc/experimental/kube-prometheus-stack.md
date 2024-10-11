@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
@@ -71,7 +71,7 @@ helm uninstall -n verrazzano-monitoring prometheus-operator --wait
 ## Install kube-prometheus-stack from the catalog
 Install the kube-prometheus-stack, be sure to specify the overrides file.
 ```text
-ocne application install --kubeconfig $KUBECONFIG --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml
+ocne application install --kubeconfig $KUBECONFIG --name kube-prometheus-stack --namespace verrazzano-monitoring --values overrides.yaml --catalog embedded
 ```
 Wait until the prometheus operator and servers are running
 ```text
