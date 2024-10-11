@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.9-draft
+### Version: v0.0.10-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -113,6 +113,15 @@ sed -i '/image:/,+2d' overrides.yaml
 Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
 ```text
 ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml
+```
+
+### Patch verrazzano-authproxy to use ingress-nginx 1.9.6
+
+The helm chart for verrazzano-authproxy is not supported in Oracle Cloud Native Environment 2.0. For phase one the deployment will be patched to use ingress-nginx 1.9.6.  The verrazzano-authproxy will need to be migrated to a supported solution during phase three.
+
+```text
+kubectl patch deployment -n verrazzano-system verrazzano-authproxy -p '{"spec": {"template": {"spec": {"containers":[{"name": "verrazzano-authproxy","image": "olcne/ingress-nginx-controller:v1.9.6"}]}}}}' --type=strategic
+kubectl rollout status deployment -n verrazzano-system verrazzano-authproxy -w
 ```
 
 ## Modify Grafana to be managed by Helm
