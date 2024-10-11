@@ -14,7 +14,7 @@ In addition, the image section of the overrides file must be modified to use the
 by Oracle Cloud Native Environment.
 
 ***NOTE***
-These instructions assume there are 2 Prometheus replicas.  If the replica count is different, then adjust accordingly.
+These instructions assume there is 1 Prometheus replicas.  If the replica count is different, then adjust accordingly.
 
 The steps are summarized below:
 1. Export the Helm user-provided overrides to an overrides file
@@ -57,9 +57,6 @@ EOF
 Change reclaim policy to **Retain**.  
 ```text
 PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
-kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
-
-PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1 -o jsonpath='{.spec.volumeName}')
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
 
@@ -155,7 +152,7 @@ prometheus-kube-prometheus-stack-prometheus   0/0     ...
 
 
 ### Copy data from the old PV to new PV
-Repeat this section for each additional replica, changing both of the `claimName` fields by replacing the string `prometheus-0` with `prometheus-1`, for example.
+***NOTE*** Repeat this section for each additional replica, changing both of the `claimName` fields by replacing the string `prometheus-0` with `prometheus-1`, for example.
 
 Create a pod YAML file that mounts both PVCs.
 ```text
@@ -213,8 +210,12 @@ kubectl delete -f pod.yaml --force
 ```
 
 ## Scale-out Prometheus
+Scale-out Prometheus so that it starts all the replicas.  
+
+***NOTE*** If you have more than 1 replica, then adjust the "replicas:" values below.
+
 ```text
-kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge' -p '{"spec":{"replicas":2}}'
+kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge' -p '{"spec":{"replicas":1}}'
 kubectl rollout status statefulset -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 
@@ -223,20 +224,16 @@ At this point, you should be able to see your pre-migration data and new data fr
 Log into those consoles and ensure there is data being scraped and that you can access your pre-migration data.
 
 
-## Remove old PVCs and PVs
-Delete the old PVCs
+## Remove old PVC and PV
+Delete the old PVC
 ```text
-PV_0_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
-kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
-
-PV_1_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1 -o jsonpath='{.spec.volumeName}')
-kubeclt delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-1
+PV_NAME=$(kubectl get pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0 -o jsonpath='{.spec.volumeName}')
+kubectl delete pvc -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus-db-prometheus-prometheus-operator-kube-p-prometheus-0
 ```
 
-Delete the old PVs
+Delete the old PV
 ```text
-kubectl delete pv  $PV_0_NAME
-kubeclt delete pv  $PV_1_NAME
+kubectl delete pv $PV_NAME
 ```
 
 ## Summary
