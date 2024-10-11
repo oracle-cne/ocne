@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
@@ -14,7 +14,7 @@ In addition, the image section of the overrides file must be modified to use the
 by Oracle Cloud Native Environment.
 
 ***NOTE***
-These instructions assume there is 1 Prometheus replicas.  If the replica count is different, then adjust accordingly.
+These instructions assume there is one Prometheus replica.  If the replica count is different, then adjust accordingly.
 
 The steps are summarized below:
 1. Export the Helm user-provided overrides to an overrides file
@@ -212,7 +212,7 @@ kubectl delete -f pod.yaml --force
 ## Scale-out Prometheus
 Scale-out Prometheus so that it starts all the replicas.  
 
-***NOTE*** If you have more than 1 replica, then adjust the "replicas:" values below.
+***NOTE*** If you have more than one replica, then adjust the "replicas:" values below.
 
 ```text
 kubectl patch prometheus -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge' -p '{"spec":{"replicas":1}}'

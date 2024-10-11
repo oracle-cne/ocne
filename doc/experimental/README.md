@@ -1,6 +1,6 @@
 # Migration to Oracle Cloud Native Environment 2.0
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 This set of documents contains instructions to aid in the migration of an Oracle Cloud Native Environment 1.x with Verrazzano installed to Oracle Cloud Native Environment 2.0.
 
