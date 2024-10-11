@@ -1,6 +1,6 @@
 # Migration to Oracle Cloud Native Environment 2.0
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 
 This set of documents contains instructions to aid in the migration of an Oracle Cloud Native Environment 1.x with Verrazzano installed to Oracle Cloud Native Environment 2.0.
 
@@ -8,8 +8,8 @@ This set of documents contains instructions to aid in the migration of an Oracle
 
 ## [Introduction](./introduction.md)
 
-## [Phase One: Verrazzano Migration](./phase1.md)
+## [Phase One: Verrazzano Migration](phase1/phase1.md)
 
-## [Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration](./phase2.md)
+## [Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration](phase2/phase2.md)
 
-## [Phase Three: Unsupported Components that Require Migration](./phase3.md)
+## [Phase Three: Unsupported Components that Require Migration](phase3/phase3.md)

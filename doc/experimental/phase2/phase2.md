@@ -27,7 +27,7 @@ The example below assumes Kubernetes 1.26, change it to your version.
 ### Upgrade all the nodes
 Starting with the control plane nodes, upgrade all the cluster nodes to OCK 2.*.
 
-See [Upgrade Single Node to OCK 2.*](./ock-upgrade.md)
+See [Upgrade Single Node to OCK 2.*](../phase2/ock-upgrade.md)
 
 ## Verify that all the nodes are runnnig OCK 2.*
 
