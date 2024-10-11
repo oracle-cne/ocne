@@ -110,7 +110,7 @@ sed -i '/digest:/d' overrides.yaml
 sed -i '/image:/,+2d' overrides.yaml
 ```
 
-Install ingress-nginx 1.9.6 using the overrides extracted above:
+Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
 ```text
 ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml --catalog embedded
 ```
