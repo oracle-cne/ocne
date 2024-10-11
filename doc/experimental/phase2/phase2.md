@@ -1,6 +1,6 @@
 # Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
