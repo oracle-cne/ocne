@@ -1,0 +1,13 @@
+#! /usr/bin/env bats
+#
+# Copyright (c) 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+#
+
+setup_file() {
+    export BATS_NO_PARALLELIZE_WITHIN_FILE=true
+    unset KUBECONFIG
+}
+@test “Creating a cluster with capi as provider” {
+
+}
