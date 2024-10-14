@@ -37,9 +37,11 @@ as a result of processing OAM resources. This must be done before you can remove
 
 [Generate Kubernetes Manifests from OAM](../phase1/oam-to-kubernetes.md)
 
-## Remove the Verrazzano controllers
+### Remove the Verrazzano controllers
+Follow these [instructions](./phase1/disable-verrazzano.md) to remove the Verrazzano controllers on the cluster.
 
-Follow these [instructions](../phase1/disable-verrazzano.md) to remove the Verrazzano controllers on the cluster.
+### Remove OAM resources
+Follow these [instructions](./phase1/oam-to-kubernetes.md) to remove the OAM resources.
 
 ## Upgrade to Istio 1.19.9
 
@@ -177,9 +179,6 @@ Update the existing installation:
 ```text
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
 ```
-
-### Remove OAM resources
-**TBD**
 
 ## Delete the Verrazzano custom resources
 **TBD**
