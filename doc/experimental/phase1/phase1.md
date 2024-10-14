@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.10-draft
+### Version: v0.0.11-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -126,10 +126,7 @@ kubectl rollout status deployment -n verrazzano-system verrazzano-authproxy -w
 
 ## Modify Grafana to be managed by Helm
 
-Verrazzano does not deploy Grafana using a Helm chart.
-The installed version of Grafana needs to be transformed to be manageable by Helm.
-
-**TBD**
+See [Upgrade Grafana](../phase1/upgrade-grafana.md)
 
 ## Modify kube-prometheus-stack to be managed by Helm
 
