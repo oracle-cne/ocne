@@ -44,12 +44,7 @@ Now generate the Kubernetes manifests that comprise this application and save th
 vz export oam --name todo-appconf --namespace todo-list > todo.yaml
 ```
 
-You can use the output of the command vz export oam to deploy the application on another cluster:
-```text
-kubectl create namespace todo-list
-kubectl apply -f todo.yaml
-```
-
+You can use the output of the command vz export oam to deploy the application on another cluster.
 In addition, you can edit the todo.yaml to change any manifiest before deploying the application. 
 The extent to which the exported YAML may be edited will vary based on local requirements. 
 Here are some examples of changes that may be made to the exported YAML:

@@ -41,7 +41,7 @@ as a result of processing OAM resources. This must be done before you can remove
 [Generate Kubernetes Manifests from OAM](../phase1/oam-to-kubernetes.md)
 
 ### Remove OAM resources
-Follow these [instructions](../phase1/oam-to-kubernetes.md) to remove the OAM resources.
+Follow these [instructions](../phase1/oam-remove-objects.md) to remove the OAM resources.
 
 ## Upgrade to Istio 1.19.9
 
