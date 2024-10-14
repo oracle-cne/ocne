@@ -81,6 +81,16 @@ kubectl get deployment -n verrazzano-system | grep operator | grep verrazzano
 Delete associated WebHook Configurations:
 
 ```text
+kubectl delete validatingwebhookconfiguration verrazzano-application-ingresstrait-validator
+kubectl delete validatingwebhookconfiguration verrazzano-application-multiclusterapplicationconfiguration
+kubectl delete validatingwebhookconfiguration verrazzano-application-multiclustercomponent
+kubectl delete validatingwebhookconfiguration verrazzano-application-multiclusterconfigmap
+kubectl delete validatingwebhookconfiguration verrazzano-application-multiclustersecret
+kubectl delete validatingwebhookconfiguration verrazzano-application-verrazzanoproject
+
+kubectl delete mutatingwebhookconfiguration verrazzano-application-appconfig-defaulter 
+kubectl delete mutatingwebhookconfiguration verrazzano-application-istio-defaulter
+kubectl delete mutatingwebhookconfiguration verrazzano-application-metrics-binding 
 kubectl delete mutatingwebhookconfiguration verrazzano-mysql-backup
 ```
 
