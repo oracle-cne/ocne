@@ -28,6 +28,9 @@ respective flags:
 ocne cluster dump --kubeconfig $KUBECONFIG --skip-redaction --include-configmaps -d /tmp/dump/before-phase1
 ```
 
+## Remove the Verrazzano controllers
+Follow these [instructions](../phase1/disable-verrazzano.md) to remove the Verrazzano controllers on the cluster.
+
 ## OAM Migration
 
 ### Generate Kubernetes Manifests
@@ -37,11 +40,8 @@ as a result of processing OAM resources. This must be done before you can remove
 
 [Generate Kubernetes Manifests from OAM](../phase1/oam-to-kubernetes.md)
 
-### Remove the Verrazzano controllers
-Follow these [instructions](./phase1/disable-verrazzano.md) to remove the Verrazzano controllers on the cluster.
-
 ### Remove OAM resources
-Follow these [instructions](./phase1/oam-to-kubernetes.md) to remove the OAM resources.
+Follow these [instructions](../phase1/oam-to-kubernetes.md) to remove the OAM resources.
 
 ## Upgrade to Istio 1.19.9
 
