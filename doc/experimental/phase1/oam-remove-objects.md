@@ -6,8 +6,7 @@ This document explains how to remove the OAM objects.
 ***WARNING*** Before following these steps, you MUST complete the steps to remove Verrazzano controllers from the system, 
 see [instructions](../phase1/disable-verrazzano.md).  If you proceed without doing that your application WILL get deleted.
 
-The deletion happens in two steps: First delete the objects, but they won't be removed from etcd until the finalizers are
-removed, which is the second step.
+The deletion happens in two steps: First, remove the finalizers then delete the objects.
 
 ## Remove the finalizers
 
