@@ -42,18 +42,18 @@ Remove the finalizers for each object.  For example, here are some of the todo-l
 
 ## Delete OAM objects
 ```text
- kubectl delete --all --all-namespaces applicationconfigurations
- kubectl delete --all --all-namespaces components
- kubectl delete --all --all-namespaces containerizedworkloads
- kubectl delete --all --all-namespaces healthscopes
- kubectl delete --all --all-namespaces manualscalertraits
- kubectl delete --all --all-namespaces scopedefinitions
- kubectl delete --all --all-namespaces traitdefinitions
- kubectl delete --all --all-namespaces workloaddefinitions
- kubectl delete --all --all-namespaces ingresstraits
- kubectl delete --all --all-namespaces loggingtraits
- kubectl delete --all --all-namespaces metricstraits
- kubectl delete --all --all-namespaces verrazzanocoherenceworkloads
- kubectl delete --all --all-namespaces verrazzanohelidonworkloads
- kubectl delete --all --all-namespaces verrazzanoweblogicworkloads
+ kubectl delete --all --all-namespaces applicationconfigurations --cascade=orphan
+ kubectl delete --all --all-namespaces components --cascade=orphan
+ kubectl delete --all --all-namespaces containerizedworkloads --cascade=orphan
+ kubectl delete --all --all-namespaces healthscopes --cascade=orphan
+ kubectl delete --all --all-namespaces manualscalertraits --cascade=orphan
+ kubectl delete --all --all-namespaces scopedefinitions --cascade=orphan
+ kubectl delete --all --all-namespaces traitdefinitions --cascade=orphan
+ kubectl delete --all --all-namespaces workloaddefinitions --cascade=orphan
+ kubectl delete --all --all-namespaces ingresstraits --cascade=orphan
+ kubectl delete --all --all-namespaces loggingtraits --cascade=orphan
+ kubectl delete --all --all-namespaces metricstraits --cascade=orphan
+ kubectl delete --all --all-namespaces verrazzanocoherenceworkloads --cascade=orphan
+ kubectl delete --all --all-namespaces verrazzanohelidonworkloads --cascade=orphan
+ kubectl delete --all --all-namespaces verrazzanoweblogicworkloads --cascade=orphan
 ```
