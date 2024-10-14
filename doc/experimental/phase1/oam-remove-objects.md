@@ -57,3 +57,6 @@ Remove the finalizers for each object.  For example, here are some of the todo-l
  kubectl delete --all --all-namespaces verrazzanohelidonworkloads --cascade=orphan
  kubectl delete --all --all-namespaces verrazzanoweblogicworkloads --cascade=orphan
 ```
+
+## Check application the start the WebLogic operator
+Validate that the domain resource(s) exist and that the application is accessible.
