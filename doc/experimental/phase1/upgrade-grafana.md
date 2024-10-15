@@ -124,6 +124,34 @@ extraConfigmapMounts:
   - name: dashboards-provider-volume
     mountPath: /etc/grafana/provisioning/dashboards
     configMap: verrazzano-dashboard-provider
+extraContainers: |-
+  - name: k8s-sidecar
+    env:
+    - name: LABEL
+      value: grafana_dashboard
+    - name: LABEL_VALUE
+      value: "1"
+    - name: FOLDER
+      value: /etc/grafana/provisioning/dashboardjson
+    - name: NAMESPACE
+      value: ALL
+    image: ghcr.io/verrazzano/k8s-sidecar:v1.15.0-20230922083013-7adaf012
+    imagePullPolicy: IfNotPresent
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/grafana/provisioning/dashboardjson
+      name: dashboards-volume
 EOF
 ```
 
