@@ -35,14 +35,6 @@ kubectl -n verrazzano-system annotate Service vmi-system-grafana meta.helm.sh/re
 kubectl -n verrazzano-system label Ingress vmi-system-grafana app.kubernetes.io/managed-by=Helm
 kubectl -n verrazzano-system annotate Ingress vmi-system-grafana meta.helm.sh/release-name=vmi-system-grafana
 kubectl -n verrazzano-system annotate Ingress vmi-system-grafana meta.helm.sh/release-namespace=verrazzano-system
-
-kubectl -n verrazzano-system label pvc vmi-system-grafana app.kubernetes.io/managed-by=Helm
-kubectl -n verrazzano-system annotate pvc vmi-system-grafana meta.helm.sh/release-name=vmi-system-grafana
-kubectl -n verrazzano-system annotate pvc vmi-system-grafana meta.helm.sh/release-namespace=verrazzano-system
-
-kubectl -n verrazzano-system label secret grafana-admin app.kubernetes.io/managed-by=Helm
-kubectl -n verrazzano-system annotate secret grafana-admin meta.helm.sh/release-name=vmi-system-grafana
-kubectl -n verrazzano-system annotate secret grafana-admin meta.helm.sh/release-namespace=verrazzano-system
 ```
 
 ## Extract configuration information
@@ -58,6 +50,8 @@ Generate a Helm overrides file, based on Verrazzano's default install of Grafana
 ```text
 cat > overrides.yaml <<EOF
 nameOverride: system-grafana
+podLabels:
+  app: system-grafana
 deploymentStrategy:
   type: Recreate
 affinity:
@@ -123,6 +117,9 @@ containerSecurityContext:
   runAsUser: 472
 serviceAccount:
   name: verrazzano-monitoring-operator
+securityContext:
+  seccompProfile:
+    type: RuntimeDefault
 persistence:
   enabled: true
   existingClaim: vmi-system-grafana
