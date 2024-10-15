@@ -114,6 +114,16 @@ persistence:
 initChownData:
   image:
     sha:
+extraVolumeMounts:
+  - name: dashboards-volume
+    mountPath: /etc/grafana/provisioning/dashboardjson
+extraConfigmapMounts:
+  - name: datasources-volume
+    mountPath: /etc/grafana/provisioning/datasources
+    configMap: vmi-system-datasource
+  - name: dashboards-provider-volume
+    mountPath: /etc/grafana/provisioning/dashboards
+    configMap: verrazzano-dashboard-provider
 EOF
 ```
 
