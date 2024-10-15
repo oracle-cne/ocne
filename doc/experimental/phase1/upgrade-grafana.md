@@ -111,6 +111,9 @@ serviceAccount:
 persistence:
   enabled: true
   existingClaim: vmi-system-grafana
+initChownData:
+  image:
+    sha:
 EOF
 ```
 
