@@ -4,26 +4,29 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 # 
 
-CIPHER_SUITES="cipherSuites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-
 setup_file() {
 	export BATS_NO_PARALLELIZE_WITHIN_FILE=true
 	unset KUBECONFIG
-}
-
-@test "Creating a cluster with libvirt as provider" {
-	echo "$CIPHER_SUITES" > temp_config.yaml
-	ocne cluster start --config temp_config.yaml
 }	
 
-@test "Check for default tls-cipher-suite" {
-   ocne cluster console -d -N ocne-control-plane-1
-   tls_cipher_suites=$(cat /var/lib/kubelet/kubeadm-flags.env | grep tls-cipher-suites)
-   grep cipher /etc/kubernetes/manifests/*
-}
+@test "Check for cipher-suites on ocne cluster with libvirt" {
+	CLUSTER_NAME=myvirt
+	CLUSTER_CONFIG=test/bats/cipher-suites/config.yaml
+	ocne cluster start --config $CLUSTER_CONFIG -C $CLUSTER_NAME --auto-start-ui=false
 
-@test "Deleting delete" {
-	ocne cluster delete
-	rm temp_config.yaml
+	KUBECONFIG=$HOME/.kube/kubeconfig.$CLUSTER_NAME.local	
+	kubectl get node -o=jsonpath='{.items[0].metadata.name}' --kubeconfig $KUBECONFIG
+	NODE="$output"
+	echo "$output"
+
+	timeout 1m ocne cluster console --node $NODE --kubeconfig $KUBECONFIG --direct -- cat /var/lib/kubelet/kubeadm-flags.env | grep tls-cipher-suites
+	KUBEADM_CIPHER_SUITES="$output"
+	echo "$output"
+
+	timeout 1m ocne cluster console --node $NODE --kubeconfig $KUBECONFIG --direct -- grep cipher /etc/kubernetes/manifests/*
+	MANIFESTS_CIPHER_SUITES="$output"
+	echo "$output"
+	
+	ocne cluster delete -C $CLUSTER_NAME
 }
 
