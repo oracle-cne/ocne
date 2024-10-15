@@ -9,16 +9,56 @@ setup_file() {
     unset KUBECONFIG
 }
 
-@test “Creating a cluster with capi as provider” {
-CIPHER_SUITES_CONFIG=“
-name: oci
-cipherSuites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-providers:
-  oci:
-    compartment: COMPARTMENT_ID
-”
-echo “$CIPHER_SUITES_CONGIG” > temp_config.yaml
-ocne cluster template -c ~/.ocne/temp_config.yaml > capi_manifest.yaml
+@test "Check for cipher-suites on ocne cluster with capi" {
+  # Extract the cipherSuites value from capi_temp_config.yaml
+  cipherSuites=$(yq '.cipherSuites' test/bats/cipher-suite/capi_temp_config.yaml)
 
-yq '.spec.kubeadmConfigSpec.clusterConfiguration.apiServer.extraArgs.tls-cipher-suites' capi_manifest.yaml
+  # Generate the manifest
+  ocne cluster template -c test/bats/cipher-suite/capi_temp_config.yaml > capi_manifest.yaml
+
+  # Check output of each yq command separately against the cipherSuites value
+  api_server_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.apiServer.extraArgs.tls-cipher-suites' capi_manifest.yaml)
+  echo "$api_server_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in apiServer output."
+    return 1
+  fi
+
+  etcd_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.etcd.local.extraArgs.cipher-suites' capi_manifest.yaml)
+  echo "$etcd_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in etcd output."
+    return 1
+  fi
+
+  controller_manager_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.controllerManager.extraArgs.tls-cipher-suites' capi_manifest.yaml)
+  echo "$controller_manager_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in controllerManager output."
+    return 1
+  fi
+
+  scheduler_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.scheduler.extraArgs.tls-cipher-suites' capi_manifest.yaml)
+  echo "$scheduler_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in scheduler output."
+    return 1
+  fi
+
+  init_node_registration_output=$(yq '.spec.kubeadmConfigSpec.initConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' capi_manifest.yaml)
+  echo "$init_node_registration_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in initConfiguration nodeRegistration output."
+    return 1
+  fi
+
+  join_node_registration_output=$(yq '.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' capi_manifest.yaml)
+  echo "$join_node_registration_output" | grep "$cipherSuites"
+  if [ $? -ne 0 ]; then
+    echo "Test failed. '$cipherSuites' not found in joinConfiguration nodeRegistration output."
+    return 1
+  fi
+
+  # If all checks passed
+  echo "Test passed. '$cipherSuites' found in all relevant outputs."
 }
