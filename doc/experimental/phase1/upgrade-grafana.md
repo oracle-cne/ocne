@@ -45,12 +45,17 @@ kubectl -n verrazzano-system annotate secret grafana-admin meta.helm.sh/release-
 kubectl -n verrazzano-system annotate secret grafana-admin meta.helm.sh/release-namespace=verrazzano-system
 ```
 
+## Extract configuration information
+Extract some configuration information that will be required in the Helm overrides:
+```text
+GRAFANA_HOST=$(kubectl get ingress -n verrazzano-system vmi-system-grafana -o jsonpath='{.spec.rules[0].host}')
+```
+
 ## Create Helm Overrides File
 
 Generate a Helm overrides file, based on Verrazzano's default install of Grafana:
 
 ```text
-GRAFANA_HOST=$(kubectl get ingress -n verrazzano-system vmi-system-grafana -o jsonpath='{.spec.rules[0].host}')
 cat > overrides.yaml <<EOF
 nameOverride: system-grafana
 deploymentStrategy:
@@ -159,6 +164,19 @@ extraContainers: |-
     volumeMounts:
     - mountPath: /etc/grafana/provisioning/dashboardjson
       name: dashboards-volume
+service:
+  port: 8775
+ingress:
+  enabled: true
+  ingressClassName: verrazzano-nginx
+  path: /()(.*)
+  pathType: ImplementationSpecific
+  hosts: 
+    - ${GRAFANA_HOST}
+  tls:
+  - hosts:
+    - ${GRAFANA_HOST}
+    secretName: system-tls-grafana
 initChownData:
   image:
     sha:
