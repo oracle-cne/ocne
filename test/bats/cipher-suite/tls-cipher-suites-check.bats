@@ -104,3 +104,7 @@ hasMatchingCipherSuites() {
   # If all checks passed
   echo "Test passed. '$cipherSuites' found in all relevant outputs."
 }
+
+@test "Check for cipher-suites on ocne cluster with byo" {
+	ocne catalog add -u https://artifacthub.io -N "ArtifactHub Community Catalog" -p artifacthub
+}
