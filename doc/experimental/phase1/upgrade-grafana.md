@@ -74,6 +74,43 @@ env:
   GF_AUTH_PROXY_AUTO_SIGN_UP: true
   GF_SERVER_DOMAIN: ${GRAFANA_HOST}
   GF_SERVER_ROOT_URL: https:/${GRAFANA_HOST}
+livenessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /api/health
+    port: 3000
+    scheme: HTTP
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  successThreshold: 1
+  timeoutSeconds: 3
+readinessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /api/health
+    port: 3000
+    scheme: HTTP
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  successThreshold: 1
+  timeoutSeconds: 3
+resources:
+  requests:
+    memory: 48Mi
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  privileged: false
+  runAsGroup: 472
+  runAsNonRoot: true
+  runAsUser: 472
+serviceAccount:
+  name: verrazzano-monitoring-operator
+persistence:
+  enabled: true
+  existingClaim: vmi-system-grafana
 EOF
 ```
 
