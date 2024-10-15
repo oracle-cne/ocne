@@ -4,6 +4,20 @@
 
 Upgrade from Grafana 7.5.15 to 7.5.17.
 
+## Change the Grafana PV reclaim policy
+Change reclaim policy to **Retain**.
+```text
+PV_NAME=$(kubectl get pvc -n verrazzano-system vmi-system-grafana -o jsonpath='{.spec.volumeName}')
+kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+```
+
+## Delete the Grafana deployment
+The Grafana deployment needs to be deleted because the upgrade will fail due to the `matchLabels` content being different in the Helm chart.  The `matchLables` are an immutable field, therefore the deployment needs to be deleted and re-created.
+
+```text
+kubectl delete deployment vmi-system-grafana --namespace verrazzano-system
+```
+
 ## Modify the Grafana objects to be annotated as being managed by Helm
 
 Verrazzano does not deploy Grafana using a Helm chart.
@@ -13,10 +27,6 @@ The installed version of Grafana needs to be transformed to be manageable by Hel
 kubectl -n verrazzano-system label ServiceAccount verrazzano-monitoring-operator app.kubernetes.io/managed-by=Helm
 kubectl -n verrazzano-system annotate ServiceAccount verrazzano-monitoring-operator meta.helm.sh/release-name=vmi-system-grafana
 kubectl -n verrazzano-system annotate ServiceAccount verrazzano-monitoring-operator meta.helm.sh/release-namespace=verrazzano-system
-
-kubectl -n verrazzano-system label Deployment vmi-system-grafana app.kubernetes.io/managed-by=Helm
-kubectl -n verrazzano-system annotate Deployment vmi-system-grafana meta.helm.sh/release-name=vmi-system-grafana
-kubectl -n verrazzano-system annotate Deployment vmi-system-grafana meta.helm.sh/release-namespace=verrazzano-system
 
 kubectl -n verrazzano-system label Service vmi-system-grafana app.kubernetes.io/managed-by=Helm
 kubectl -n verrazzano-system annotate Service vmi-system-grafana meta.helm.sh/release-name=vmi-system-grafana
@@ -111,9 +121,6 @@ serviceAccount:
 persistence:
   enabled: true
   existingClaim: vmi-system-grafana
-initChownData:
-  image:
-    sha:
 extraVolumeMounts:
   - name: dashboards-volume
     mountPath: /etc/grafana/provisioning/dashboardjson
@@ -152,6 +159,11 @@ extraContainers: |-
     volumeMounts:
     - mountPath: /etc/grafana/provisioning/dashboardjson
       name: dashboards-volume
+initChownData:
+  image:
+    sha:
+    repository: olcne/grafana
+    tag: v7.5.17
 EOF
 ```
 
