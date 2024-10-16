@@ -166,14 +166,20 @@ service:
 ingress:
   enabled: true
   ingressClassName: verrazzano-nginx
-  path: /()(.*)
-  pathType: ImplementationSpecific
   hosts: 
     - ${GRAFANA_HOST}
   tls:
   - hosts:
     - ${GRAFANA_HOST}
     secretName: system-tls-grafana
+  extraPaths:
+    - path: /()(.*)
+      pathType: ImplementationSpecific
+      backend:
+        service:
+          name: verrazzano-authproxy
+          port:
+            number: 8775
 initChownData:
   image:
     sha:
