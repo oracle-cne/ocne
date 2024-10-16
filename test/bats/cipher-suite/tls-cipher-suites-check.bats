@@ -5,29 +5,47 @@
 #
 
 setup_file() {
-    export BATS_NO_PARALLELIZE_WITHIN_FILE=true
-    unset KUBECONFIG
+  export BATS_NO_PARALLELIZE_WITHIN_FILE=true
+  VIRT_CLUSTER_NAME=myvirt
+  CLUSTER_CONFIG=test/bats/cipher-suite/config.yaml
+  export CIPHER_SUITES="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+  echo "cipherSuites: $CIPHER_SUITES" > $CLUSTER_CONFIG
+
+  ocne cluster start --config $CLUSTER_CONFIG -C $VIRT_CLUSTER_NAME --auto-start-ui=false
+  export KUBECONFIG="$HOME/.kube/kubeconfig.$VIRT_CLUSTER_NAME.local"
+}
+
+teardown_file() {
+  ocne cluster delete -C $VIRT_CLUSTER_NAME
+
+  # Remove the temp cluster config file
+  rm $CLUSTER_CONFIG
 }
 
 @test "Check for cipher-suites on ocne cluster with libvirt" {
-	CLUSTER_NAME=myvirt
-	CLUSTER_CONFIG=test/bats/cipher-suites/config.yaml
-	ocne cluster start --config $CLUSTER_CONFIG -C $CLUSTER_NAME --auto-start-ui=false
+	NODE=$(kubectl get node --kubeconfig $KUBECONFIG -o=jsonpath='{.items[0].metadata.name}')
 
-	KUBECONFIG=$HOME/.kube/kubeconfig.$CLUSTER_NAME.local	
-	kubectl get node -o=jsonpath='{.items[0].metadata.name}' --kubeconfig $KUBECONFIG
-	NODE="$output"
-	echo "$output"
+  # Get the cipher-suites through an ocne cluster console for each component 
+	KUBEADM_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /var/lib/kubelet/kubeadm-flags.env)
+  ETCD_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/etcd.yaml | grep -o $CIPHER_SUITES)
+  API_SERVER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep -o $CIPHER_SUITES)
+  CONTROLLER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-controller-manager.yaml | grep -o $CIPHER_SUITES)
+  SCHEDULER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-scheduler.yaml | grep -o $CIPHER_SUITES)
 
-	timeout 1m ocne cluster console --node $NODE --kubeconfig $KUBECONFIG --direct -- cat /var/lib/kubelet/kubeadm-flags.env | grep tls-cipher-suites
-	KUBEADM_CIPHER_SUITES="$output"
-	echo "$output"
+  # kubeadm requires some trimming to extract the cipher-suites value
+  KUBEADM_CIPHER_SUITES_TRIMMED=$(echo $KUBEADM_CIPHER_SUITES | sed 's/ --/\n/g' | grep $CIPHER_SUITES | cut -d "=" -f 2)
+  hasMatchingCipherSuites $KUBEADM_CIPHER_SUITES_TRIMMED
+  hasMatchingCipherSuites $ETCD_CIPHER_SUITES
+  hasMatchingCipherSuites $API_SERVER_CIPHER_SUITES
+  hasMatchingCipherSuites $CONTROLLER_CIPHER_SUITES
+  hasMatchingCipherSuites $SCHEDULER_CIPHER_SUITES
+}
 
-	timeout 1m ocne cluster console --node $NODE --kubeconfig $KUBECONFIG --direct -- grep cipher /etc/kubernetes/manifests/*
-	MANIFESTS_CIPHER_SUITES="$output"
-	echo "$output"
-	
-	ocne cluster delete -C $CLUSTER_NAME
+hasMatchingCipherSuites() {
+  if [[ "$1" != "$CIPHER_SUITES" ]]; then
+    echo "The default tls-cipher-suites were not found"
+    return 1
+  fi
 }
 
 @test "Check for cipher-suites on ocne cluster with capi" {
