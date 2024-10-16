@@ -166,6 +166,7 @@ service:
 ingress:
   enabled: true
   ingressClassName: verrazzano-nginx
+  path: /ignore
   hosts: 
     - ${GRAFANA_HOST}
   tls:
