@@ -1,6 +1,6 @@
 # Remove Obsolete and Unused Verrazzano Components
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 The purpose of this document is to remove Verrazzano controllers that are obsolete and not used.  
 
