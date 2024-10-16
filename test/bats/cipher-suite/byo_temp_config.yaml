@@ -1,5 +1,14 @@
 provider: byo
+name: mybyo
+loadBalancer: 100.100.248.223
 cipherSuites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+extraIgnitionInline: |
+  variant: fcos
+  version: 1.1.0
+  systemd:
+    units:
+      - name: iscsid.service
+        enabled: true
 providers:
-  oci:
-    compartment: ocid1.compartment.oc1..testexample
+  byo:
+    networkInterface: ens3
