@@ -51,7 +51,7 @@ hasMatchingCipherSuites() {
   NODE=$(kubectl get node --kubeconfig $KUBECONFIG -o=jsonpath='{.items[0].metadata.name}')
 
   # Get the cipher-suites through an ocne cluster console for each component
-  KUBEADM_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /var/lib/kubelet/kubeadm-flags.env)
+  KUBELET_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /var/lib/kubelet/kubeadm-flags.env)
   ETCD_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/etcd.yaml | grep -o $CIPHER_SUITES)
   API_SERVER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep -o $CIPHER_SUITES)
   CONTROLLER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-controller-manager.yaml | grep -o $CIPHER_SUITES)
