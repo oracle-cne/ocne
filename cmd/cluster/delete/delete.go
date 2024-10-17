@@ -30,7 +30,9 @@ const (
 )
 
 var config types.Config
-var clusterConfig types.ClusterConfig
+var clusterConfig types.ClusterConfig = types.ClusterConfig{
+	ControlPlaneNodes: 1,
+}
 var clusterConfigPath string
 
 func NewCmd() *cobra.Command {

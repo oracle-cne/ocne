@@ -59,10 +59,9 @@ spec:
         list:
         - name: control-plane-endpoint
           role: control-plane-endpoint
-          flimflam: asdf
           egressRules:
           - egressRule:
-              description: Kubernetes API traffic to Control Plane (asdfasdfasdf)
+              description: Kubernetes API traffic to Control Plane
               destination: "10.0.0.0/29"
               destinationType: CIDR_BLOCK
               isStateless: false

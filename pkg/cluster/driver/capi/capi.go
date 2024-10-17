@@ -4,6 +4,8 @@
 package capi
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -136,28 +138,6 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 		return nil, err
 	}
 
-	// Once the kubeconfig is available, the OCICluster will be populated
-	// with enough information to extract some important values.  In
-	// particular, the OCID of the VCN
-	ociClusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
-		if u.GetKind() == "OCICluster" {
-			return true
-		}
-		return false
-	})
-	ociCluster, err := k8s.GetResourceByIdentifier(restConfig, "infrastructure.cluster.x-k8s.io", "v1beta2", "OCICluster", ociClusterObj.GetName(), ociClusterObj.GetNamespace())
-	if err != nil {
-		return nil, err
-	}
-
-	vcnId, found, err := unstructured.NestedString(ociCluster.Object, "spec", "networkSpec", "vcn", "id")
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return nil, fmt.Errorf("could not find VCN OCID in OCICluster")
-	}
-
 	authCreds := map[string]interface{}{
 		"auth": map[string]interface{}{
 			"region":                ociConfig.Region,
@@ -169,7 +149,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 			"useInstancePrincipals": ociConfig.UseInstancePrincipal,
 		},
 		"compartment": compartmentId,
-		"vcn":         vcnId,
+		"vcn":         cad.ClusterConfig.Providers.Oci.Vcn,
 		"loadBalancer": map[string]interface{}{
 			"subnet1":                    cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1,
 			"subnet2":                    cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2,
@@ -222,6 +202,98 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 	}
 
 	return ret, nil
+}
+
+func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
+	// If the values are already set, don't try to set them.  This accounts
+	// for two cases: this fuction has already been called, or there are
+	// specific values set in the cluster configuration.
+	if cad.ClusterConfig.Providers.Oci.Vcn != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 != "" {
+		return nil
+	}
+
+	// The values are not populated.  Go get the OCICluster associated
+	// with the Cluster and find the values.
+	ociCluster, err := cad.getOCIClusterObject()
+	if err != nil {
+		return err
+	}
+
+	ociClusterNs := ociCluster.GetNamespace()
+	ociClusterName := ociCluster.GetName()
+
+	err = k8s.GetResource(restConfig, &ociCluster)
+	if err != nil {
+		return err
+	}
+
+
+	// The values that are required are buried inside .spec.networkSpec.vcn
+	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
+	if err != nil {
+		return err
+	}
+
+	networkSpec, err := getMapVal(spec, "networkSpec", ociClusterNs, ociClusterName)
+	if err != nil {
+		return err
+	}
+
+	vcn, err := getMapVal(networkSpec, "vcn", ociClusterNs, ociClusterName)
+	if err != nil {
+		return err
+	}
+
+	vcnId, err := getStringVal(vcn, "id", ociClusterNs, ociClusterName)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Found VCN OCID %s", vcnId)
+
+	if vcnId == "" {
+		return fmt.Errorf("OCICluster %s/%s has an empty vcn id", ociCluster.GetNamespace(), ociCluster.GetName())
+	}
+
+	subnets, err := getListVal(vcn, "subnets", ociClusterNs, ociClusterName)
+	if err != nil {
+		return err
+	}
+
+	var serviceSubnets []string
+	for _, snIface := range subnets {
+		sn, ok := snIface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		log.Debugf("Checking subnet %+v", sn)
+		role, err := getStringVal(sn, "role", ociClusterNs, ociClusterName)
+		if err != nil {
+			continue
+		}
+
+		if role != "service-lb" {
+			continue
+		}
+
+		subnetId, err := getStringVal(sn, "id", ociClusterNs, ociClusterName)
+		if err != nil {
+			continue
+		}
+
+		serviceSubnets = append(serviceSubnets, subnetId)
+		log.Debugf("Found service-lb subnet OCID %s", subnetId)
+	}
+
+	if len(serviceSubnets) == 0 {
+		return fmt.Errorf("OCICluster %s/%s does not have a service-lb subnet", ociCluster.GetNamespace(), ociCluster.GetName())
+	}
+
+	cad.ClusterConfig.Providers.Oci.Vcn = vcnId
+	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 = serviceSubnets[0]
+	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 = serviceSubnets[len(serviceSubnets)-1]
+
+	return nil
 }
 
 func (cad *ClusterApiDriver) waitForControllers(kubeClient kubernetes.Interface) error {
@@ -278,6 +350,111 @@ func (cad *ClusterApiDriver) getClusterObject() (unstructured.Unstructured, erro
 	return clusterObj, err
 }
 
+func getMapVal(source map[string]interface{}, val string, ns string, name string) (map[string]interface{}, error) {
+	valRef, ok := source[val]
+	if !ok {
+		return nil, fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
+	}
+
+	value, ok := valRef.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
+	}
+
+	return value, nil
+}
+
+func getListVal(source map[string]interface{}, val string, ns string, name string) ([]interface{}, error) {
+	valRef, ok := source[val]
+	if !ok {
+		return nil, fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
+	}
+
+	value, ok := valRef.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
+	}
+
+	return value, nil
+}
+
+func getStringVal(source map[string]interface{}, val string, ns string, name string) (string, error) {
+	valRef, ok := source[val]
+	if !ok {
+		return "", fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
+	}
+
+	value, ok := valRef.(string)
+	if !ok {
+		return "", fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
+	}
+
+	return value, nil
+}
+
+func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, error) {
+	clusterObj, err := cad.getClusterObject()
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+
+	// The Cluster should have an infrastructure ref that points
+	// to the OCICluster.  It looks like:
+	//
+	// spec:
+	//  infrastructureRef:
+	//   kind:
+	//   name:
+	clusterNs := clusterObj.GetNamespace()
+	clusterName := clusterObj.GetName()
+	clusterSpec, err := getMapVal(clusterObj.Object, "spec", clusterNs, clusterName)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+
+	infraRef, err := getMapVal(clusterSpec, "infrastructureRef", clusterNs, clusterName)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+
+	kind, err := getStringVal(infraRef, "kind", clusterNs, clusterName)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+
+	name, err := getStringVal(infraRef, "name", clusterNs, clusterName)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+
+	// Validate the reference
+	if kind != "OCICluster" {
+		return unstructured.Unstructured{}, fmt.Errorf("Cluster %s/%s points to an unsupported infrastructure reference %s", clusterNs, clusterName, kind)
+	}
+
+	// Find the OCICluster in the templates
+	ociClusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
+		if u.GetKind() != kind {
+			return false
+		}
+		if u.GetName() != name {
+			return false
+		}
+		return true
+	})
+
+	if err != nil {
+		if k8s.IsNotExist(err) {
+			return unstructured.Unstructured{}, fmt.Errorf("Cluster resources do not include a valid cluster.x-k8s.io/v1beta1/Cluster")
+		} else {
+			return unstructured.Unstructured{}, err
+		}
+	}
+
+	return ociClusterObj, err
+}
+
+
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
@@ -315,12 +492,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// OCI-CCM configuration.
 	if clusterConfig.Providers.Oci.Compartment == "" {
 		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
-	}
-	if clusterConfig.Providers.Oci.Vcn == "" {
-		return nil, fmt.Errorf("the oci provider requires a vcn in the provider configuration to use with OCI-CCM")
-	}
-	if clusterConfig.Providers.Oci.LoadBalancer.Subnet1 == "" || clusterConfig.Providers.Oci.LoadBalancer.Subnet2 == "" {
-		return nil, fmt.Errorf("the oci provider requires two subnets in the provider configuration to use with OCI-CCM")
 	}
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
@@ -538,6 +709,22 @@ func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clus
 	return kubeconfig, nil
 }
 
+func (cad *ClusterApiDriver) applyResources(restConfig *rest.Config) error {
+	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
+	if err != nil {
+		return err
+	}
+
+	for _, r := range resources {
+		err = k8s.CreateResourceIfNotExist(restConfig, &r)
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
@@ -581,13 +768,8 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 		return false, false, err
 	}
 
-	ya, err := k8s.NewYAMLApplier(restConfig, "")
-	if err != nil {
-		return false, false, err
-	}
-
 	log.Info("Applying Cluster API resources")
-	err = ya.ApplyS(cad.ClusterResources)
+	err = cad.applyResources(restConfig)
 	if err != nil {
 		return false, false, err
 	}
@@ -623,6 +805,13 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 
 	// Wait for the cluster to start
 	_, err = k8s.WaitUntilGetNodesSucceeds(kubeClient)
+	if err != nil {
+		return false, false, err
+	}
+
+	// Populate the OCI-CCM configuration based on the contents of
+	// the OCICluster object.
+	err = cad.getOciCcmOptions(restConfig)
 	if err != nil {
 		return false, false, err
 	}
@@ -703,6 +892,60 @@ func (cad *ClusterApiDriver) Stop() error {
 	return fmt.Errorf("ClusterApiDriver.Stop() is not implemented")
 }
 
+func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string) error {
+	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = util.LinearRetryTimeout(func(i interface{}) (interface{}, bool, error) {
+		u, err := k8s.GetResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, cad.ResourceNamespace)
+		if u != nil {
+			log.Debugf("Found cluster %s/%s with UID %s", cad.ResourceNamespace, clusterName, u.GetUID())
+		} else {
+			log.Debugf("Resource for cluster %s/%s was nil", cad.ResourceNamespace, clusterName)
+		}
+		if err != nil{
+			if strings.Contains(err.Error(), "not found") {
+				return nil, false, nil
+			}
+
+			return nil, false, err
+		}
+
+		return nil, false, fmt.Errorf("Cluster %s/%s is not yet deleted", cad.ResourceNamespace, clusterName)
+
+	}, nil, 20*time.Minute)
+	return err
+}
+
+func (cad *ClusterApiDriver) deleteCluster(clusterName string) error {
+	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Deleting Cluster %s/%s", cad.ResourceNamespace, clusterName)
+	err = k8s.DeleteResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, cad.ResourceNamespace)
+	if err != nil {
+		return err
+	}
+
+	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		{
+			Message: "Waiting for deletion",
+			WaitFunction: func(i interface{}) error{
+				return cad.waitForClusterDeletion(clusterName)
+			},
+		},
+	})
+
+	if haveError {
+		return fmt.Errorf("Error deleting cluster")
+	}
+	return nil
+}
+
 func (cad *ClusterApiDriver) Delete() error {
 	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
 	cad.Deleted = true
@@ -724,7 +967,7 @@ func (cad *ClusterApiDriver) Delete() error {
 	// No need to check if the label exists again.  The filter function
 	// already verified that.
 	cad.ResourceNamespace = clusterObj.GetNamespace()
-	resourceName := clusterObj.GetName()
+	clusterName := clusterObj.GetName()
 
 	// If this is a self-managed cluster, pivot back into the bootstrap cluster.
 	if cad.ClusterConfig.Providers.Oci.SelfManaged {
@@ -745,21 +988,7 @@ func (cad *ClusterApiDriver) Delete() error {
 		}
 	}
 
-	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Deleting Cluster %s/%s", cad.ResourceNamespace, resourceName)
-	err = k8s.DeleteResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", resourceName, cad.ResourceNamespace)
-	if err != nil {
-		return err
-	}
-
-	// Wait here for cluster resources to be deleted.  See
-	// comment in cad.Close() below for an explanation.
-
-	return nil
+	return cad.deleteCluster(clusterName)
 }
 
 func (cad *ClusterApiDriver) Close() error {
