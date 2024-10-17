@@ -110,9 +110,13 @@ hasMatchingCipherSuites() {
   # Extract the cipherSuites value from byo_temp_config.yaml
   cipherSuites=$(yq ‘.cipherSuites’ test/bats/cipher-suite/byo_temp_config.yaml)
   BYO_CONFIG=test/bats/cipher-suite/byo_temp_config.yaml
+  BYO_WORKER_IGN=test/bats/cipher-suite/byo_worker_ignition.json
+
   rm -f ~/.kube/kubeconfig.byocluster
   ocne cluster start -c $BYO_CONFIG > test/bats/cipher-suite/byo_cluster_ignition.json
   cp $KUBECONFIG ~/.kube/kubeconfig.byocluster
   ocne cluster join -c $BYO_CONFIG -k $KUBECONFIG -n 1 > test/bats/cipher-suite/byo_control_plane_ignition.json
-  ocne cluster join -c $BYO_CONFIG -k $KUBECONFIG -w 1 > test/bats/cipher-suite/byo_worker_ignition.json
+  ocne cluster join -c $BYO_CONFIG -k $KUBECONFIG -w 1 > $BYO_WORKER_IGN
+
+  WORKER_CIPHER_ENCODED=$(jq '.storage.files[-1].contents.source' $BYO_WORKER_IGN)
 }
