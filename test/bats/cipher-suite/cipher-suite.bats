@@ -67,7 +67,7 @@ hasMatchingCipherSuites() {
 }
 
 @test "Check for cipher-suites on ocne cluster with capi" {
-  # Extract the cipherSuites value from capi_temp_config.yaml
+  # Extract the cipherSuites value from capi_config.yaml
   cipherSuites=$(yq '.cipherSuites' $CAPI_CONFIG)
 
   # Generate the manifest
