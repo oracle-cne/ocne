@@ -1,6 +1,6 @@
 # OAM to Kubernetes Mappings
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 This document explains how to generate Kuberenetes YAML files from OAM-related objects that are running in a Kubernetes cluster.
 
 ## Installing Verrazzano 1.6.11 CLI on a Linux AMD64 machine
@@ -29,20 +29,25 @@ The command vz export oam will output the YAML for each Kubernetes object that w
 The generated YAML is sanitized so that it can be used to deploy the application.  
 Fields such as creationTimestamp, resourceVersion, uid, and status are not included in the output.
 
-For example, the following CLI command exports the YAML from the hello-helidon OAM sample application.
+For example, the following CLI command exports the YAML from the ToDo List OAM sample application,
+described at https://verrazzano.io/latest/docs/examples/wls-coh/todo-list/
 
+In this case the ApplicationConfiguration is todo-appconf.
 ```text
-vz export oam --name hello-helidon --namespace hello-helidon > myapp.yaml
+kubectl get appconfig -A
+NAMESPACE   NAME           AGE
+todo-list   todo-appconf   160m
+```
+
+Now generate the Kubernetes manifests that comprise this application and save them in todo.yaml:
+```text
+vz export oam --name todo-appconf --namespace todo-list > todo.yaml
 ```
 
 You can use the output of the command vz export oam to deploy the application on another cluster.
-
-```text
-kubectl create namespace hello-helidon
-kubectl apply -f myapp.yaml
-```
-
-In addition, you can edit the output of the command vz export oam before deploying the application. The extent to which the exported YAML may be edited will vary based on local requirements. Here are some examples of changes that may be made to the exported YAML:
+In addition, you can edit the todo.yaml to change any manifiest before deploying the application. 
+The extent to which the exported YAML may be edited will vary based on local requirements. 
+Here are some examples of changes that may be made to the exported YAML:
 
 * The Kubernetes namespace of where to deploy the application
 * Add or modify labels or annotations on objects

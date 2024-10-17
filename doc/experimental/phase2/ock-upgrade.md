@@ -1,17 +1,13 @@
-# Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
+# Single Node In-Place Upgrade from 1.* to OCK 2.*
 
 ### Version: v0.0.1-draft
 
 ## Overview
-Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
+Instructions for performing an in-place upgrade of a Kubernetes cluster node from Oracle Cloud Native Environment 1.x to OCK 2.x.
 
-## Prerequisite
+## OCK 2.* Upgrade Steps
 
-Identify the VM type and Kubernetes of the existing Oracle Cloud Native Environment 1.x cluster and generate the OS image.
-
-## OCK 2.0 Upgrade Steps
-
-Set up a byo cluster for the existing Oracle Cloud Native Environment 1.x cluster using the 2.0 CLI. 
+Set up a byo cluster for the existing Oracle Cloud Native Environment 1.x cluster using the 2.* CLI.
 The example below assumes Kubernetes 1.26, change it to your version.
 
 1. Create an OCI OCK image
@@ -47,7 +43,7 @@ The example below assumes Kubernetes 1.26, change it to your version.
 ## Prepare the upgrade
 
 1. Find the networkInterface bound by the target node IP and update it in ~/.ocne/byo.yaml if necessary.
-2. Find the Kubernetes node name for the target node and record it to use later, e.g., $TARGET_NODE 
+2. Find the Kubernetes node name for the target node and record it to use later, e.g., $TARGET_NODE
     ```
     KUBECONFIG=~/.kube/kubeconfig.ocne1x
     kubectl get nodes
@@ -77,16 +73,16 @@ The example below assumes Kubernetes 1.26, change it to your version.
     cz-ocne-worker-002          Ready                         <none>          106m   v1.26.6+1.el8
     ```
 6. Generate the ignition file by running CLI
-The CLI cluster join command will display two messages that have the cert-key and token string.
-You must use those values in section 7a and 7b.Also be sure to create run those commands on a 
-control plane node different from the target node.
+   The CLI cluster join command will display two messages that have the cert-key and token string.
+   You must use those values in section 7a and 7b.Also be sure to create run those commands on a
+   control plane node different from the target node.
 
    6a. If the target node is a **control plane node**, and the control-plane.ign is never generated or the control-plane.ign was generated over two hours ago
     ```
     # for control plane node
     ocne cluster join -c ~/.ocne/byo.yaml -k ~/.kube/kubeconfig.ocne1x -n 1 > control-plane.ign
     ```
-   
+
    6b. If the target node is a **worker node**, and the worker.ign is never generated or the worker.ign was generated over two hours ago
     ```
     # for worker node
@@ -100,7 +96,7 @@ control plane node different from the target node.
     echo "chroot /hostroot kubeadm init phase upload-certs --certificate-key **** --upload-certs" | ocne cluster console --node [control-plane-node]
     echo "chroot /hostroot kubeadm token create ****" | ocne cluster console --node [control-plane-node]
     ```
-   
+
    7b. If the target node is a **worker node**, and the commands were never executed or executed over two hours ago
     ```
     kubeadm token create ****
@@ -112,9 +108,9 @@ control plane node different from the target node.
 
    1a. Replace the boot volume with the compatible OCK image.
 
-   1b. Add an item of the Metadata user_data with base64 encoded ignition. Push the Save button. If the instance is running, pushing the Save button will reboot the instance.  
+   1b. Add an item of the Metadata user_data with base64 encoded ignition. Push the Save button. If the instance is running, pushing the Save button will reboot the instance.
 
-2. (Optional) If the target node host machine was shutdown, start it. The target node will eventually become Ready: 
+2. (Optional) If the target node host machine was shutdown, start it. The target node will eventually become Ready:
     ```
     kubectl get nodes
     NAME                      STATUS                     ROLES           AGE    VERSION
@@ -135,3 +131,29 @@ control plane node different from the target node.
     ocne-worker-001          Ready    <none>          128m   v1.26.6+1.el8
     ocne-worker-002          Ready    <none>          134m   v1.26.6+1.el8
     ```
+
+
+## Validate that the node is upgraded
+To confirm that the node has been upgraded, run the following command:
+```text
+ocne cluster info -N <node-name>
+```
+
+Make sure the output looks like the following, if not, then go back and upgrade the node again:
+```text
+Node: <node-name>
+  Registry and tag for ostree patch images:
+    registry: container-registry.oracle.com/olcne/ock-ostree
+    tag: 1.26
+    transport: ostree-unverified-registry
+  Ostree deployments:
+      ock 5d6e86d05fa0b9390c748a0a19288ca32bwer1eac42fef1c048050ce03ffb5ff9.1 (staged)
+    * ock 5d6e86d05fa0b9390c748a0a19288ca32bwer1eac42fef1c048050ce03ffb5ff9.0
+```
+
+If the node is NOT using OCK then you will be missing the Registry and Ostree details as shown below:
+```text
+Node: <node-name>
+  Registry and tag for ostree patch images:
+  Ostree deployments:
+```

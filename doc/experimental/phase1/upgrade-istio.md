@@ -1,6 +1,6 @@
 # Upgrade Istio
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 
 Upgrade from Istio 1.19.3 to 1.19.9.
 
@@ -9,8 +9,9 @@ Upgrade from Istio 1.19.3 to 1.19.9.
 Verrazzano does not deploy Istio using a Helm chart.
 The installed version of Istio needs to be transformed to be manageable by Helm.
 
+istio-base:
+
 ```text
-# istio-base
 kubectl -n istio-system label ServiceAccount istio-reader-service-account app.kubernetes.io/managed-by=Helm
 kubectl -n istio-system annotate ServiceAccount istio-reader-service-account meta.helm.sh/release-name=istio-base
 kubectl -n istio-system annotate ServiceAccount istio-reader-service-account meta.helm.sh/release-namespace=istio-system
@@ -18,8 +19,11 @@ kubectl -n istio-system annotate ServiceAccount istio-reader-service-account met
 kubectl label ValidatingWebhookConfiguration istiod-default-validator app.kubernetes.io/managed-by=Helm
 kubectl annotate ValidatingWebhookConfiguration istiod-default-validator meta.helm.sh/release-name=istio-base
 kubectl annotate ValidatingWebhookConfiguration istiod-default-validator meta.helm.sh/release-namespace=istio-system
+```
 
-# istiod
+istiod:
+
+```text
 kubectl -n istio-system label ServiceAccount istiod app.kubernetes.io/managed-by=Helm
 kubectl -n istio-system annotate ServiceAccount istiod meta.helm.sh/release-name=istiod
 kubectl -n istio-system annotate ServiceAccount istiod meta.helm.sh/release-namespace=istio-system
@@ -75,8 +79,11 @@ kubectl -n istio-system annotate Deployment istiod meta.helm.sh/release-namespac
 kubectl label MutatingWebhookConfiguration istio-sidecar-injector app.kubernetes.io/managed-by=Helm
 kubectl annotate MutatingWebhookConfiguration istio-sidecar-injector meta.helm.sh/release-name=istiod
 kubectl annotate MutatingWebhookConfiguration istio-sidecar-injector meta.helm.sh/release-namespace=istio-system
+```
 
-# istio-ingress
+istio-ingress:
+
+```text
 kubectl -n istio-system label ServiceAccount istio-ingressgateway-service-account app.kubernetes.io/managed-by=Helm
 kubectl -n istio-system annotate ServiceAccount istio-ingressgateway-service-account meta.helm.sh/release-name=istio-ingressgateway
 kubectl -n istio-system annotate ServiceAccount istio-ingressgateway-service-account meta.helm.sh/release-namespace=istio-system
@@ -96,8 +103,11 @@ kubectl -n istio-system annotate Role istio-ingressgateway-sds meta.helm.sh/rele
 kubectl -n istio-system label RoleBinding istio-ingressgateway-sds app.kubernetes.io/managed-by=Helm
 kubectl -n istio-system annotate RoleBinding istio-ingressgateway-sds meta.helm.sh/release-name=istio-ingressgateway
 kubectl -n istio-system annotate RoleBinding istio-ingressgateway-sds meta.helm.sh/release-namespace=istio-system
+```
 
-# istio-egress
+istio-egress:
+
+```text
 kubectl -n istio-system label ServiceAccount istio-egressgateway-service-account app.kubernetes.io/managed-by=Helm
 kubectl -n istio-system annotate ServiceAccount istio-egressgateway-service-account meta.helm.sh/release-name=istio-egressgateway
 kubectl -n istio-system annotate ServiceAccount istio-egressgateway-service-account meta.helm.sh/release-namespace=istio-system
