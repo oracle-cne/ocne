@@ -709,6 +709,8 @@ func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clus
 	return kubeconfig, nil
 }
 
+// applyResources creates resources in a cluster if the resource does not
+// already exist.  If the resource already exists, it is not modified.
 func (cad *ClusterApiDriver) applyResources(restConfig *rest.Config) error {
 	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
 	if err != nil {
@@ -892,18 +894,18 @@ func (cad *ClusterApiDriver) Stop() error {
 	return fmt.Errorf("ClusterApiDriver.Stop() is not implemented")
 }
 
-func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string) error {
+func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
 		return err
 	}
 
 	_, _, err = util.LinearRetryTimeout(func(i interface{}) (interface{}, bool, error) {
-		u, err := k8s.GetResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, cad.ResourceNamespace)
+		u, err := k8s.GetResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, clusterNs)
 		if u != nil {
-			log.Debugf("Found cluster %s/%s with UID %s", cad.ResourceNamespace, clusterName, u.GetUID())
+			log.Debugf("Found cluster %s/%s with UID %s", clusterNs, clusterName, u.GetUID())
 		} else {
-			log.Debugf("Resource for cluster %s/%s was nil", cad.ResourceNamespace, clusterName)
+			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
 		if err != nil{
 			if strings.Contains(err.Error(), "not found") {
@@ -913,20 +915,20 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string) error {
 			return nil, false, err
 		}
 
-		return nil, false, fmt.Errorf("Cluster %s/%s is not yet deleted", cad.ResourceNamespace, clusterName)
+		return nil, false, fmt.Errorf("Cluster %s/%s is not yet deleted", clusterNs, clusterName)
 
 	}, nil, 20*time.Minute)
 	return err
 }
 
-func (cad *ClusterApiDriver) deleteCluster(clusterName string) error {
+func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("Deleting Cluster %s/%s", cad.ResourceNamespace, clusterName)
-	err = k8s.DeleteResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, cad.ResourceNamespace)
+	log.Infof("Deleting Cluster %s/%s", clusterNs, clusterName)
+	err = k8s.DeleteResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterName, clusterNs)
 	if err != nil {
 		return err
 	}
@@ -935,7 +937,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string) error {
 		{
 			Message: "Waiting for deletion",
 			WaitFunction: func(i interface{}) error{
-				return cad.waitForClusterDeletion(clusterName)
+				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},
 	})
@@ -988,7 +990,7 @@ func (cad *ClusterApiDriver) Delete() error {
 		}
 	}
 
-	return cad.deleteCluster(clusterName)
+	return cad.deleteCluster(clusterName, clusterObj.GetNamespace())
 }
 
 func (cad *ClusterApiDriver) Close() error {
