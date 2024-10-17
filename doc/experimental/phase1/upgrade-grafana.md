@@ -10,6 +10,11 @@ Change reclaim policy to **Retain**.
 PV_NAME=$(kubectl get pvc -n verrazzano-system vmi-system-grafana -o jsonpath='{.spec.volumeName}')
 kubectl patch pv $PV_NAME -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 ```
+## Export a copy of the verrazzano-grafana-dashboards deployment
+The Grafana dashboards packaged with Verrazzano were deployed using an internal Verrazzano Helm chart. We recommend exporting a copy of the Helm manfest for backup.
+```text
+helm get manifest verrazzano-grafana-dashboards -n verrazzano-system > verrazzano-grafana-dashboards.manifest
+```
 
 ## Delete the Grafana deployment
 The Grafana deployment needs to be deleted because the upgrade will fail due to the `matchLabels` content being different in the Helm chart.  The `matchLables` are an immutable field, therefore the deployment needs to be deleted and re-created.
