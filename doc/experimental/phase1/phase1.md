@@ -180,8 +180,16 @@ Update the existing installation:
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
 ```
 
-## Delete the Verrazzano custom resources
-**TBD**
+## Delete the Verrazzano custom resource
+This section describes how to delete the Verrazzano custom resource, which is no longer needed.
+
+```text
+VZCR=<verrazzano-cr-name>
+VZCR_NS=<verrazzano-cr-namespace>
+
+kubectl patch vz -n $VZCR_NS $VZCR -p '{"metadata":{"finalizers":[]}}' --type=merge
+kubectl delete vz -n $VZCR_NS $VZCR
+```
 
 ## Perform another Cluster Dump
 
