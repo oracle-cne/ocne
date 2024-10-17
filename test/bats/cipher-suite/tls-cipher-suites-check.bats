@@ -11,6 +11,8 @@ setup_file() {
   BYO_CLUSTER_NAME=byocluster
   
   export BYO_CONFIG="test/bats/cipher-suite/byo_temp_config.yaml"
+  export CAPI_CONFIG="test/bats/cipher-suite/capi_temp_config.yaml"
+  export CAPI_MANIFEST= "test/bats/cipher-suite/capi_manifest.yaml"
   export BYO_WORKER_IGN="test/bats/cipher-suite/byo_worker_ignition.json"
   export BYO_CLUSTER_IGN="test/bats/cipher-suite/byo_cluster_ignition.json"
   export BYO_CONTROL_IGN="test/bats/cipher-suite/byo_control_plane_ignition.json"
@@ -35,6 +37,7 @@ teardown_file() {
   rm $BYO_CONTROL_IGN
   rm $BYO_WORKER_IGN
   rm $KUBEADM_EXTRACTED
+  rm $CAPI_MANIFEST
 }
 
 hasMatchingCipherSuites() {
@@ -65,56 +68,53 @@ hasMatchingCipherSuites() {
 
 @test "Check for cipher-suites on ocne cluster with capi" {
   # Extract the cipherSuites value from capi_temp_config.yaml
-  cipherSuites=$(yq '.cipherSuites' test/bats/cipher-suite/capi_temp_config.yaml)
+  cipherSuites=$(yq '.cipherSuites' $CAPI_CONFIG)
 
   # Generate the manifest
-  ocne cluster template -c test/bats/cipher-suite/capi_temp_config.yaml > test/bats/cipher-suite/capi_manifest.yaml
+  ocne cluster template -c $CAPI_CONFIG > $CAPI_MANIFEST
 
   # Check output of each yq command separately against the cipherSuites value
-  api_server_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.apiServer.extraArgs.tls-cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  api_server_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.apiServer.extraArgs.tls-cipher-suites' $CAPI_MANIFEST)
   echo "$api_server_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in apiServer output."
     return 1
   fi
 
-  etcd_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.etcd.local.extraArgs.cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  etcd_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.etcd.local.extraArgs.cipher-suites' $CAPI_MANIFEST)
   echo "$etcd_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in etcd output."
     return 1
   fi
 
-  controller_manager_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.controllerManager.extraArgs.tls-cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  controller_manager_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.controllerManager.extraArgs.tls-cipher-suites' $CAPI_MANIFEST)
   echo "$controller_manager_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in controllerManager output."
     return 1
   fi
 
-  scheduler_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.scheduler.extraArgs.tls-cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  scheduler_output=$(yq '.spec.kubeadmConfigSpec.clusterConfiguration.scheduler.extraArgs.tls-cipher-suites' $CAPI_MANIFEST)
   echo "$scheduler_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in scheduler output."
     return 1
   fi
 
-  init_node_registration_output=$(yq '.spec.kubeadmConfigSpec.initConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  init_node_registration_output=$(yq '.spec.kubeadmConfigSpec.initConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' $CAPI_MANIFEST)
   echo "$init_node_registration_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in initConfiguration nodeRegistration output."
     return 1
   fi
 
-  join_node_registration_output=$(yq '.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' test/bats/cipher-suite/capi_manifest.yaml)
+  join_node_registration_output=$(yq '.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.kubeletExtraArgs.tls-cipher-suites' $CAPI_MANIFEST)
   echo "$join_node_registration_output" | grep "$cipherSuites"
   if [ $? -ne 0 ]; then
     echo "Test failed. '$cipherSuites' not found in joinConfiguration nodeRegistration output."
     return 1
   fi
-
-  #remove capi_manifest.yaml
-  rm test/bats/cipher-suite/capi_manifest.yaml
 
   # If all checks passed
   echo "Test passed. '$cipherSuites' found in all relevant outputs."
