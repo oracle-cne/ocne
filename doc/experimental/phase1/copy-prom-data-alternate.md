@@ -1,4 +1,4 @@
-# Copy Prometheus Data Accross PVs
+# Copy Prometheus Data Between PVs via Local System
 
 ### Version: v0.0.1-draft
 
@@ -90,8 +90,8 @@ kubectl cp --retries=5 verrazzano-monitoring/migrate-data-old:/prom-old ./prom-d
 
 Copy the old data from your local system to the new pod
 ```text
-kubectl exec -it -n verrazzano-monitoring migrate-data-new:prom-new rm -fr prom-new/*
-kubectl cp --retries=5 ./prom-data verrazzano-monitoring/migrate-data-new:/prom-new
+kubectl exec -it -n verrazzano-monitoring migrate-data-new  -- bash -c "rm -fr /prom-new/*"
+kubectl cp --retries=5 ./prom-data/. verrazzano-monitoring/migrate-data-new:/prom-new
 rm -fr ./prom-data
 ```
 
