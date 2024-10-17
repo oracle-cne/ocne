@@ -10,8 +10,8 @@ setup_file() {
   VIRT_CLUSTER_NAME=myvirt
   BYO_CLUSTER_NAME=byocluster
   
-  export BYO_CONFIG="test/bats/cipher-suite/byo_temp_config.yaml"
-  export CAPI_CONFIG="test/bats/cipher-suite/capi_temp_config.yaml"
+  export BYO_CONFIG="test/bats/cipher-suite/byo_config.yaml"
+  export CAPI_CONFIG="test/bats/cipher-suite/capi_config.yaml"
   export CAPI_MANIFEST="test/bats/cipher-suite/capi_manifest.yaml"
   export BYO_WORKER_IGN="test/bats/cipher-suite/byo_worker_ignition.json"
   export BYO_CLUSTER_IGN="test/bats/cipher-suite/byo_cluster_ignition.json"
