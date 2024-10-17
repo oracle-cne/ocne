@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
@@ -153,6 +153,11 @@ prometheus-kube-prometheus-stack-prometheus   0/0     ...
 
 ### Copy data from the old PV to new PV
 ***NOTE*** Repeat this section for each additional replica, changing both of the `claimName` fields by replacing the string `prometheus-0` with `prometheus-1`, for example.
+
+***NOTE***
+The pod YAML specified below will only start if the pod can mount both PVs at the same time.
+If that is not the case, then the pod will not start. Use the alternate method for copying
+Prometheus data as described [Copy Prometheus data via local system](../phase1/copy-prom-data-alternate.md)
 
 Create a pod YAML file that mounts both PVCs.
 ```text
