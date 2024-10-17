@@ -214,3 +214,10 @@ EOF
 ```text
 ocne application install --release vmi-system-grafana --name grafana --namespace verrazzano-system --version 7.5.17 --values overrides.yaml
 ```
+
+Wait for the update to complete:
+
+```text
+kubectl rollout status deployment --namespace verrazzano-system vmi-system-grafana -w
+```
+
