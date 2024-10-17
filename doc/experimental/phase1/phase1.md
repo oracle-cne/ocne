@@ -67,6 +67,13 @@ Update the existing installation:
 ocne application update --release cert-manager --namespace cert-manager --version 1.9.1 --reset-values --values overrides.yaml
 ```
 
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace cert-manager cert-manager -w
+kubectl rollout status deployment --namespace cert-manager cert-manager-cainjector -w
+kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
+```
+
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
 Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to specify the container images. Update the existing installation to remove those overrides, and instead Helm will get the container images values from the defaults in the catalog.
@@ -107,6 +114,11 @@ Update the existing installation:
 ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml
 ```
 
+Wait for the update to complete:
+```text
+kubectl rollout status daemonset --namespace verrazzano-system fluentd -w
+```
+
 ## Upgrade ingress-nginx from 1.7.1 to 1.9.6
 
 Verrazzano deployed ingress-nginx using Helm overrides to specify the container images.
@@ -124,6 +136,12 @@ sed -i '/image:/,+2d' overrides.yaml
 Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
 ```text
 ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml
+```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller -w
+kubectl rollout status deployment --namespace verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend -w
 ```
 
 ### Patch verrazzano-authproxy to use ingress-nginx 1.9.6
