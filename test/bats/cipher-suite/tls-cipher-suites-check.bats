@@ -17,6 +17,7 @@ setup_file() {
 
 teardown_file() {
   ocne cluster delete -C $VIRT_CLUSTER_NAME
+  #ocne cluster delete -C byocluster
 
   # Remove the temp cluster config file
   rm $CLUSTER_CONFIG
@@ -26,7 +27,7 @@ teardown_file() {
 	NODE=$(kubectl get node --kubeconfig $KUBECONFIG -o=jsonpath='{.items[0].metadata.name}')
 
   # Get the cipher-suites through an ocne cluster console for each component 
-	KUBEADM_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /var/lib/kubelet/kubeadm-flags.env)
+  KUBEADM_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /var/lib/kubelet/kubeadm-flags.env)
   ETCD_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/etcd.yaml | grep -o $CIPHER_SUITES)
   API_SERVER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep -o $CIPHER_SUITES)
   CONTROLLER_CIPHER_SUITES=$(ocne cluster console --kubeconfig $KUBECONFIG --node $NODE --direct -- cat /etc/kubernetes/manifests/kube-controller-manager.yaml | grep -o $CIPHER_SUITES)
@@ -105,6 +106,13 @@ hasMatchingCipherSuites() {
   echo "Test passed. '$cipherSuites' found in all relevant outputs."
 }
 
-@test "Check for cipher-suites on ocne cluster with byo" {
-	ocne catalog add -u https://artifacthub.io -N "ArtifactHub Community Catalog" -p artifacthub
+@test “Check for cipher-suites on ocne cluster with byo” {
+  # Extract the cipherSuites value from byo_temp_config.yaml
+  cipherSuites=$(yq ‘.cipherSuites’ test/bats/cipher-suite/byo_temp_config.yaml)
+  BYO_CONFIG=test/bats/cipher-suite/byo_temp_config.yaml
+  rm -f ~/.kube/kubeconfig.byocluster
+  ocne cluster start -c $BYO_CONFIG > test/bats/cipher-suite/byo_cluster_ignition.json
+  cp $KUBECONFIG ~/.kube/kubeconfig.byocluster
+  ocne cluster join -c $BYO_CONFIG -k $KUBECONFIG -n 1 > test/bats/cipher-suite/byo_control_plane_ignition.json
+  ocne cluster join -c $BYO_CONFIG -k $KUBECONFIG -w 1 > test/bats/cipher-suite/byo_worker_ignition.json
 }
