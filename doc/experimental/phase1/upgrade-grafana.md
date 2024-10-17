@@ -198,6 +198,14 @@ initChownData:
     sha:
     repository: olcne/grafana
     tag: v7.5.17
+rbac:
+  extraClusterRoleRules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - watch
 EOF
 ```
 
