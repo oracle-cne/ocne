@@ -67,22 +67,29 @@ admin:
   existingSecret: grafana-admin
   userKey: username
   passwordKey: password
+grafana.ini:
+  server:
+    domain: ${GRAFANA_HOST}
+    root_url: https://${GRAFANA_HOST}
+    enable_gzip: true
+  users:
+    allow_sign_up: false
+    auto_assign_org: true
+    auto_assign_org_role: Viewer
+  auth:
+    disable_login_form: true
+    disable_signout_menu: true
+  auth.basic:
+    enabled: false
+  auth.anonymous:
+    enabled: false
+  auth.proxy:
+    enabled: true
+    header_name: X-WEBAUTH-USER
+    header_property: username
+    auto_sign_up: true
 env:
-  GF_SERVER_ENABLE_GZIP: true
   PROMETHEUS_TARGETS: http://vmi-system-prometheus:9090
-  GF_AUTH_ANONYMOUS_ENABLED: false
-  GF_AUTH_BASIC_ENABLED: false
-  GF_USERS_ALLOW_SIGN_UP: false
-  GF_USERS_AUTO_ASSIGN_ORG: true
-  GF_USERS_AUTO_ASSIGN_ORG_ROLE: Viewer
-  GF_AUTH_DISABLE_LOGIN_FORM: true
-  GF_AUTH_DISABLE_SIGNOUT_MENU: true
-  GF_AUTH_PROXY_ENABLED: true
-  GF_AUTH_PROXY_HEADER_NAME: X-WEBAUTH-USER
-  GF_AUTH_PROXY_HEADER_PROPERTY: username
-  GF_AUTH_PROXY_AUTO_SIGN_UP: true
-  GF_SERVER_DOMAIN: ${GRAFANA_HOST}
-  GF_SERVER_ROOT_URL: https:/${GRAFANA_HOST}
 livenessProbe:
   failureThreshold: 3
   httpGet:
