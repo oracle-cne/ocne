@@ -19,8 +19,7 @@ setup_suite() {
 		echo "There is no management cluster for the oci provider"
 	fi
 
-	export CAPI_NAME=oci-capi-default
-	ocne cluster start -C "$CAPI_NAME" --provider oci --auto-start-ui=false $(echo $K8S_VERSION_FLAG)
+	OCNE_DEFAULTS="$OCI_CAPI_DEFAULTS" ocne cluster start -C "$CAPI_NAME" --provider oci --auto-start-ui=false $(echo $K8S_VERSION_FLAG)
 	export KUBECONFIG=$(ocne cluster show -C "$CAPI_NAME")
 
 	# wait for cluster to come up

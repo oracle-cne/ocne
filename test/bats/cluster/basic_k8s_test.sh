@@ -256,7 +256,7 @@ function run_sniff_tests {
     nodePort=$(kubectl get svc nginx -o jsonpath='{.spec.ports[0].nodePort}')
     logInfo "Node Port: ${nodePort}"
 
-    for node in $(kubectl get no --no-headers -o wide | awk '{ print $6 }'); do
+    for node in $(kubectl get no --selector='!node-role.kubernetes.io/control-plane' --no-headers -o wide | awk '{ print $6 }'); do
         logInfo "Testing Node Port Curl ${node}:${nodePort}"
         # "${CURL[@]}" "${node}:${nodePort}"
         exit_code=$(curl_test "${node}:${nodePort}")

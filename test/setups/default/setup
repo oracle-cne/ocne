@@ -3,7 +3,6 @@
 setup_suite() {
 	ocne cluster start --auto-start-ui=false $(echo $K8S_VERSION_FLAG)
 	export KUBECONFIG=~/.kube/kubeconfig.ocne.local
-	export CAPI_NAME=capi-default
 
 	# wait for cluster to come up
 	kubectl rollout status deployment -n kube-system coredns
