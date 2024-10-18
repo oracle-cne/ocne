@@ -180,6 +180,10 @@ Install prometheus-node-exporter 1.6.1 using the overrides extracted above:
 ```text
 ocne application install --release prometheus-node-exporter --name prometheus-node-exporter --namespace verrazzano-monitoring --version 1.6.1 --values overrides.yaml
 ```
+Wait for the update to complete:
+```text
+kubectl rollout status daemonset --namespace verrazzano-monitoring prometheus-node-exporter -w
+```
 
 ## Modify kube-state-metrics to be managed by Helm
 
@@ -193,6 +197,11 @@ sed -i '/image:/,+3d' overrides.yaml
 Update the existing installation:
 ```text
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
+```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-monitoring kube-state-metrics -w
 ```
 
 ## Delete the Verrazzano custom resource
