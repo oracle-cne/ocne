@@ -41,6 +41,7 @@ type OciProvider struct {
 	LoadBalancer      LoadBalancer     `yaml:"loadBalancer"`
 	Vcn               string           `yaml:"vcn"`
 	ImageBucket       string           `yaml:"imageBucket"`
+	Proxy             Proxy            `yaml:"proxy"`
 }
 
 type ByoProvider struct {
@@ -365,6 +366,7 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 		SelfManaged:       iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
 		SelfManagedPtr:    iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
 		Vcn:               ies(def.Vcn, ovr.Vcn),
+		Proxy:             MergeProxy(&def.Proxy, &ovr.Proxy),
 	}
 }
 

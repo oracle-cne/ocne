@@ -23,7 +23,7 @@ base_dump_dir=/tmp/dump
 
 @test "ocne cluster dump -d /tmp/dump -N node with redaction" {
 	dump_dir=$base_dump_dir-$RANDOM
-	target_node=$(kubectl --kubeconfig $KUBECONFIG get nodes | grep Ready | awk '{print $1}' | grep control-plane-1)
+	target_node=$(kubectl --kubeconfig $KUBECONFIG get nodes --no-headers | grep Ready | awk '{print $1}' | head -1)
 	ocne cluster dump -d $dump_dir -N $target_node
 	if [ ! -d $dump_dir/nodes/REDACTED* ]; then
 		exit 1

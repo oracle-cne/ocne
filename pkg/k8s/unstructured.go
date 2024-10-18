@@ -28,7 +28,25 @@ func GetResource(restConf *rest.Config, u *unstructured.Unstructured) error {
 		Namespace: u.GetNamespace(),
 		Name:      u.GetName(),
 	}, u)
-	return nil
+	return err
+}
+
+func CreateResource(restConf *rest.Config, u *unstructured.Unstructured) error {
+	client, err := crtpkg.New(restConf, crtpkg.Options{})
+	if err != nil {
+		return err
+	}
+
+	return client.Create(context.TODO(), u, &crtpkg.CreateOptions{})
+}
+
+func CreateResourceIfNotExist(restConf *rest.Config, u *unstructured.Unstructured) error {
+	err := GetResource(restConf, u)
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return err
+	}
+
+	return CreateResource(restConf, u)
 }
 
 func GetResourceByIdentifier(restConf *rest.Config, group string, version string, kind string, name string, namespace string) (*unstructured.Unstructured, error) {

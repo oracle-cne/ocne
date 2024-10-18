@@ -4,7 +4,6 @@
 setup_suite() {
 	ocne cluster start --auto-start-ui=false --cluster-name=namedtest $(echo $K8S_VERSION_FLAG)
 	export KUBECONFIG=~/.kube/kubeconfig.namedtest.local
-	export CAPI_NAME=capi-named
 
 	# wait for cluster to come up
 	kubectl rollout status deployment -n kube-system coredns

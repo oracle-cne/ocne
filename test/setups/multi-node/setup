@@ -14,7 +14,6 @@ setup_suite() {
 		ocne cluster start --auto-start-ui false --session "$OCNE_LIBVIRT_URI" --cluster-name remoteworkers --control-plane-nodes 2 --worker-nodes 2 $(echo $K8S_VERSION_FLAG)
 	fi
 	export KUBECONFIG=~/.kube/kubeconfig.$CLUSTER_NAME.local
-	export CAPI_NAME=capi-multi-node
 
 	# wait for cluster to come up
 	kubectl rollout status deployment -n kube-system coredns
