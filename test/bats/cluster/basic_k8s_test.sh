@@ -228,11 +228,12 @@ function testResourceCleanup() {
 
 function curl_test {
     max_attempts=10
-    url="$1"
+    node="$1"
+    url="$2"
     attempt=1
     while [[ $attempt -le $max_attempts ]]; do
         logInfo "Attempt ${attempt} Testing  Curl ${url}"
-        "${CURL[@]}" "${node}:${nodePort}"
+        ocne cluster console --node "$node" -- "${CURL[@]}" "${url}"
         exit_code=$?
         if [[ $exit_code -eq 0 ]]; then
             logInfo $exit_code
@@ -256,11 +257,13 @@ function run_sniff_tests {
     nodePort=$(kubectl get svc nginx -o jsonpath='{.spec.ports[0].nodePort}')
     logInfo "Node Port: ${nodePort}"
 
+    srcNode=$(kubectl get no --selector='!node-role.kubernetes.io/control-plane' --no-headers -o wide | head -1 | awk '{ print $1 }')
+
     for node in $(kubectl get no --selector='!node-role.kubernetes.io/control-plane' --no-headers -o wide | awk '{ print $6 }'); do
         logInfo "Testing Node Port Curl ${node}:${nodePort}"
         # "${CURL[@]}" "${node}:${nodePort}"
-        exit_code=$(curl_test "${node}:${nodePort}")
-        check_exit_code $exit_code "Checking access to cluster nodeport"
+	curl_test "$srcNode" "${node}:${nodePort}"
+        check_exit_code $? "Checking access to cluster nodeport"
     done
 
     kubernetes_cluster_ip=$(kubectl get svc kubernetes -o jsonpath='{.spec.clusterIP}')
