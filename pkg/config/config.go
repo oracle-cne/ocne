@@ -114,7 +114,15 @@ func GetDefaultConfig() (*types.Config, error) {
 	}
 	defaultConfig.SshPublicKeyPath = sshKeyPath
 
-	configFileDefaults, err := ParseConfigFile(filepath.Join(homedir, constants.UserConfigDefaults))
+	// Load in the defaults.  Prefer the path set by OCNE_DEFAULTS_FILE.
+	// If that is not set, use the default path.
+	defaultPath := filepath.Join(homedir, constants.UserConfigDefaults)
+	defaultPathOvr := os.Getenv(constants.UserConfigDefaultsEnvironmentVariable)
+	if defaultPathOvr != "" {
+		defaultPath = defaultPathOvr
+	}
+
+	configFileDefaults, err := ParseConfigFile(defaultPath)
 	if os.IsNotExist(err) {
 		return &defaultConfig, nil
 	} else if err != nil {

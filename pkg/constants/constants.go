@@ -4,12 +4,13 @@
 package constants
 
 const (
-	DarwinLibvirtSocketPath = ".cache/libvirt/libvirt-sock"
-	UserConfigDir           = ".ocne"
-	UserConfigDefaults      = ".ocne/defaults.yaml"
-	UserImageCacheDir       = "images"
-	UserContainerConfigDir  = "config"
-	UserIPData              = "ips.yaml"
+	DarwinLibvirtSocketPath               = ".cache/libvirt/libvirt-sock"
+	UserConfigDir                         = ".ocne"
+	UserConfigDefaults                    = ".ocne/defaults.yaml"
+	UserConfigDefaultsEnvironmentVariable = "OCNE_DEFAULTS"
+	UserImageCacheDir                     = "images"
+	UserContainerConfigDir                = "config"
+	UserIPData                            = "ips.yaml"
 
 	BootVolumeContainerImage = "docker://container-registry.oracle.com/olcne/ock"
 
