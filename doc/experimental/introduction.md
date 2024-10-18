@@ -68,4 +68,5 @@ You may continue to use these components at your own discretion.
 * Thanos
 
 ---
-[Next: Phase One](./phase1/phase1.md)
+[Next: Phase One](./phase1/phase1.md)  
+[Previous: README](./README.md)

@@ -238,4 +238,5 @@ ocne cluster dump --kubeconfig $KUBECONFIG --skip-redaction --include-configmaps
 ```
 
 ---
-[Next: Phase Two](../phase2/phase2.md)
+[Next: Phase Two](../phase2/phase2.md)  
+[Previous: Introduction](../introduction.md)

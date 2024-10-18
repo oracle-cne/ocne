@@ -101,4 +101,5 @@ kubectl delete crd verrazzanoweblogicworkloads.oam.verrazzano.io
 ```
 
 ---
-[Next: Phase Three](../phase3/phase3.md)
+[Next: Phase Three](../phase3/phase3.md)  
+[Previous: Phase One](../phase1/phase1.md)
