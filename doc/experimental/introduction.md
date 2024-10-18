@@ -5,9 +5,9 @@
 ## Migration Summary
 
 Migration is divided into three main phases:
-1. Verrazzano migration
-2. Oracle Cloud Native Environment 2.0 OCK in-place upgrade
-3. Migration from unsupported components.
+1. Verrazzano migration.
+2. Oracle Cloud Native Environment 2.0 OCK in-place upgrade.
+3. Migration from auth-proxy.
 
 These phases must be done in order. The phases describe discreet segments of the migration where the system remains
 stable and the end of each phase, providing a methodical migration with no disruption of service.  For example, 
@@ -46,9 +46,9 @@ This phase will require in-place migration where no new nodes are added, instead
 
 The **acceptance criteria** for this phase being done follows:
 
-1. All nodes in the cluster are running OCK 2.0 images
-2. All Oracle Cloud Native Environment 2.0 CLI functionality can be used
-3. Kubernetes version upgrade is not required if the existing 1.x system has Kubernetes 1.26-1.30
+1. All nodes in the cluster are running OCK 2.0 images.
+2. All Oracle Cloud Native Environment 2.0 CLI functionality can be used.
+3. Kubernetes version upgrade is not required if the existing 1.x system has Kubernetes 1.26-1.30.
 
 ###  Phase Three: Migration From auth-proxy
 This phase is focused on a replacement of auth-proxy to provide OAuth2 functionality.
