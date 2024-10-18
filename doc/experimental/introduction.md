@@ -1,6 +1,6 @@
 # Introduction
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 
 ## Migration Summary
 
@@ -66,3 +66,7 @@ You may continue to use these components at your own discretion.
 * Coherence
 * Rancher
 * Thanos
+
+---
+[Next: Phase One](./phase1/phase1.md)  
+[Previous: README](./README.md)
