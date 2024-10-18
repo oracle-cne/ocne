@@ -1,6 +1,6 @@
 # Upgrade Istio
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 Upgrade from Istio 1.19.3 to 1.19.9.
 
@@ -145,11 +145,7 @@ This can be achieved by rebooting the cluster, or by doing a rolling restart of 
 
 ### Manual restart of pods with Istio sidecars:
 
-The instructions below are only for manually doing a restart of components installed by Verrazzano. One way to check if any pods are left using the older proxy is:
-
-```text
-kubectl get pods -A -o yaml | grep image: | grep proxyv2 | grep ghcr
-```
+The instructions below are only for manually doing a restart of components installed by Verrazzano. 
 
 ```text
 kubectl rollout restart deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller
@@ -208,4 +204,9 @@ kubectl rollout status deployment -n verrazzano-system verrazzano-console -w
  
 kubectl rollout restart deployment -n verrazzano-system weblogic-operator
 kubectl rollout status deployment -n verrazzano-system weblogic-operator -w
+```
+
+The following command should not return any results once the restart of the Istio mesh is completed.
+```text
+kubectl get pods -A -o yaml | grep image: | grep proxyv2 | grep ghcr
 ```

@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.12-draft
+### Version: v0.0.13-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -45,7 +45,7 @@ Follow these [instructions](../phase1/oam-remove-objects.md) to remove the OAM r
 
 ## Upgrade to Istio 1.19.9
 
-See [upgrade Istio](../phase1/upgrade-istio.md).
+Follow these [instructions](../phase1/upgrade-istio.md) to upgrade Istio.
 
 ## Modify cert-manager Helm overrides
 
@@ -65,6 +65,13 @@ sed -i '1i installCRDs: false' overrides.yaml
 Update the existing installation:
 ```text
 ocne application update --release cert-manager --namespace cert-manager --version 1.9.1 --reset-values --values overrides.yaml
+```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace cert-manager cert-manager -w
+kubectl rollout status deployment --namespace cert-manager cert-manager-cainjector -w
+kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
 ```
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
@@ -107,6 +114,11 @@ Update the existing installation:
 ocne application update --release fluentd --namespace verrazzano-system --version 1.14.5 --reset-values --values overrides.yaml
 ```
 
+Wait for the update to complete:
+```text
+kubectl rollout status daemonset --namespace verrazzano-system fluentd -w
+```
+
 ## Upgrade ingress-nginx from 1.7.1 to 1.9.6
 
 Verrazzano deployed ingress-nginx using Helm overrides to specify the container images.
@@ -126,6 +138,12 @@ Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
 ocne application update --release ingress-controller --namespace verrazzano-ingress-nginx --version 1.9.6 --reset-values --values overrides.yaml
 ```
 
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller -w
+kubectl rollout status deployment --namespace verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend -w
+```
+
 ### Patch verrazzano-authproxy to use ingress-nginx 1.9.6
 
 The helm chart for verrazzano-authproxy is not supported in Oracle Cloud Native Environment 2.0. For phase one the deployment will be patched to use ingress-nginx 1.9.6.  The verrazzano-authproxy will need to be migrated to a supported solution during phase three.
@@ -136,15 +154,12 @@ kubectl rollout status deployment -n verrazzano-system verrazzano-authproxy -w
 ```
 
 ## Modify Grafana to be managed by Helm
-
-Verrazzano does not deploy Grafana using a Helm chart.
-The installed version of Grafana needs to be transformed to be manageable by Helm.
-
-**TBD**
+ 
+Follow these [instructions](../phase1/upgrade-grafana.md) to migrate Grafana to be managed by Helm.
 
 ## Modify kube-prometheus-stack to be managed by Helm
 
-See [Migrate kube-prometheus-stack](../phase1/kube-prometheus-stack.md)
+Follow these [instructions](../phase1/kube-prometheus-stack.md) to migrate the kube-prometheus-stack.
 
 ## Upgrade prometheus-node-exporter from 1.3.1 to to 1.6.1
 
@@ -165,6 +180,10 @@ Install prometheus-node-exporter 1.6.1 using the overrides extracted above:
 ```text
 ocne application install --release prometheus-node-exporter --name prometheus-node-exporter --namespace verrazzano-monitoring --version 1.6.1 --values overrides.yaml
 ```
+Wait for the update to complete:
+```text
+kubectl rollout status daemonset --namespace verrazzano-monitoring prometheus-node-exporter -w
+```
 
 ## Modify kube-state-metrics to be managed by Helm
 
@@ -178,6 +197,11 @@ sed -i '/image:/,+3d' overrides.yaml
 Update the existing installation:
 ```text
 ocne application update --release kube-state-metrics --namespace verrazzano-monitoring --version 2.8.2 --reset-values --values overrides.yaml
+```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-monitoring kube-state-metrics -w
 ```
 
 ## Delete the Verrazzano custom resource
