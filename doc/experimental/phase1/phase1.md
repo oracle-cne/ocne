@@ -80,7 +80,7 @@ Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to spe
 
 The following example assumes WebLogic Kubernetes Operator 4.2.5 is already installed.
 
-Add the WebLogic Kubernetes Operator helm chart:
+Add the WebLogic Kubernetes Operator Helm chart:
 ```text
 helm repo add weblogic-operator https://oracle.github.io/weblogic-kubernetes-operator/charts --force-update  
 ```
