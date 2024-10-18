@@ -98,10 +98,16 @@ sed -i '/image:/d' overrides.yaml
 sed -i '/weblogicMonitoringExporterImage:/d' overrides.yaml
 ```
 
-Update the existing installation:
+Update the existing WebLogic Operator:
 ```text
-helm upgrade  weblogic-operator ./weblogic-operator-4.2.5.tgz --namespace verrazzano-system  --reset-values --values overrides.yaml
+helm upgrade weblogic-operator ./weblogic-operator-4.2.5.tgz --namespace verrazzano-system  --reset-values --values overrides.yaml
 ```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-system weblogic-operator -w
+```
+
 
 ## Modify Fluentd Helm overrides
 
