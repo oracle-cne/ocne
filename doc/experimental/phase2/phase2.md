@@ -1,6 +1,6 @@
 # Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
 
-### Version: v0.0.4-draft
+### Version: v0.0.5-draft
 
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
@@ -99,3 +99,6 @@ kubectl delete crd verrazzanoprojects.clusters.verrazzano.io
 kubectl delete crd verrazzanos.install.verrazzano.io
 kubectl delete crd verrazzanoweblogicworkloads.oam.verrazzano.io
 ```
+
+---
+[Next: Phase Three](../phase3/phase3.md)
