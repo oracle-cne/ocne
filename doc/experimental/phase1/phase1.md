@@ -45,7 +45,7 @@ Follow these [instructions](../phase1/oam-remove-objects.md) to remove the OAM r
 
 ## Upgrade to Istio 1.19.9
 
-See [upgrade Istio](../phase1/upgrade-istio.md).
+Follow these [instructions](../phase1/upgrade-istio.md) to upgrade Istio.
 
 ## Modify cert-manager Helm overrides
 
@@ -159,7 +159,7 @@ Follow these [instructions](../phase1/upgrade-grafana.md) to migrate Grafana to 
 
 ## Modify kube-prometheus-stack to be managed by Helm
 
-See [Migrate kube-prometheus-stack](../phase1/kube-prometheus-stack.md)
+Follow these [instructions](../phase1/kube-prometheus-stack.md) to migrate the kube-prometheus-stack.
 
 ## Upgrade prometheus-node-exporter from 1.3.1 to to 1.6.1
 
