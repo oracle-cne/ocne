@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.13-draft
+### Version: v0.0.14-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -80,9 +80,14 @@ Verrazzano deployed the WebLogic Kubernetes Operator using Helm overrides to spe
 
 The following example assumes WebLogic Kubernetes Operator 4.2.5 is already installed.
 
-Add the WebLogic Kubernetes Operator helm chart catalog:
+Add the WebLogic Kubernetes Operator Helm repo:
 ```text
-ocne catalog add --uri https://oracle.github.io/weblogic-kubernetes-operator --name "WebLogic Kubernetes Operator"
+helm repo add weblogic-operator https://oracle.github.io/weblogic-kubernetes-operator/charts --force-update  
+```
+
+Pull the chart from the repo:
+```text
+helm pull weblogic-operator/weblogic-operator --version 4.2.5
 ```
 
 Export the user supplied overrides of the current release to a file and remove the image overrides:
@@ -93,10 +98,16 @@ sed -i '/image:/d' overrides.yaml
 sed -i '/weblogicMonitoringExporterImage:/d' overrides.yaml
 ```
 
-Update the existing installation:
+Update the existing WebLogic Operator:
 ```text
-ocne application update --release weblogic-operator --namespace verrazzano-system --version 4.2.5 --catalog "WebLogic Kubernetes Operator" --reset-values --values overrides.yaml
+helm upgrade weblogic-operator ./weblogic-operator-4.2.5.tgz --namespace verrazzano-system  --reset-values --values overrides.yaml
 ```
+
+Wait for the update to complete:
+```text
+kubectl rollout status deployment --namespace verrazzano-system weblogic-operator -w
+```
+
 
 ## Modify Fluentd Helm overrides
 
