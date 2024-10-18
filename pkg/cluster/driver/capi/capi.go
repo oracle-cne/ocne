@@ -67,6 +67,12 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		return nil, err
 	}
 
+	proxyValues := map[string]interface{}{
+		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
+		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+	}
+
 	return []install.ApplicationDescription{
 		install.ApplicationDescription{
 			Application: &types.Application{
@@ -84,6 +90,9 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				Release:   constants.CoreCAPIRelease,
 				Version:   constants.CoreCAPIVersion,
 				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"proxy": proxyValues,
+				},
 			},
 		},
 		install.ApplicationDescription{
@@ -103,6 +112,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 						"useInstancePrincipal": fmt.Sprintf("%t", ociConfig.UseInstancePrincipal),
 						"user":                 ociConfig.User,
 					},
+					"proxy": proxyValues,
 				},
 			},
 		},
@@ -113,6 +123,9 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				Release:   constants.KubeadmBootstrapCAPIRelease,
 				Version:   constants.KubeadmBootstrapCAPIVersion,
 				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"proxy": proxyValues,
+				},
 			},
 		},
 		install.ApplicationDescription{
@@ -122,6 +135,9 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				Release:   constants.KubeadmControlPlaneCAPIRelease,
 				Version:   constants.KubeadmControlPlaneCAPIVersion,
 				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"proxy": proxyValues,
+				},
 			},
 		},
 	}, nil
@@ -495,6 +511,11 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// to pass in a cluster definition.
 	if clusterConfig.WorkerNodes == 0 {
 		clusterConfig.WorkerNodes = 1
+	}
+
+	// It's also not feasible to have zero control plane nodes.
+	if clusterConfig.ControlPlaneNodes == 0 {
+		clusterConfig.ControlPlaneNodes = 1
 	}
 
 	// Validate the provider configuration.  For OCI-CCM several pieces of
