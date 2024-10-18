@@ -156,7 +156,7 @@ extraContainers: |-
       value: /etc/grafana/provisioning/dashboardjson
     - name: NAMESPACE
       value: ALL
-    image: ghcr.io/verrazzano/k8s-sidecar:v1.15.0-20230922083013-7adaf012
+    image: verrazzano/k8s-sidecar:v1.15.0-20230922083013-7adaf012
     imagePullPolicy: IfNotPresent
     resources: {}
     securityContext:
