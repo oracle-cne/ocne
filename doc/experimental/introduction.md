@@ -1,6 +1,6 @@
 # Introduction
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 ## Migration Summary
 
@@ -26,7 +26,7 @@ and configured by Verrazzano will continue to work, except for certain obsolete 
 
 ***NOTE***
 Verrazzano CAPI is not supported in Oracle Cloud Native Environment 2.0. If you have an Oracle Cloud Native Environment 1.7 CAPI
-cluster then you will need to recreated it with Oracle Cloud Native Environment 2.0 CLI.
+cluster then you will need to recreate it with Oracle Cloud Native Environment 2.0 CLI.
 
 The **acceptance criteria** for this phase being done follows:
  
