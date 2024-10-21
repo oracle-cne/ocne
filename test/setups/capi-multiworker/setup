@@ -1,0 +1,45 @@
+# Copyright (c) 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+export CAPI_NAME=oci-capi-multinode
+
+setup_suite() {
+	# Make sure all relevant environment variables are set
+	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
+		if [ ! -f "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
+			echo "The OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION file, $OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION, does not exist"
+			exit 1
+		fi
+		ocne cluster start -C oci-capi-management-multinode -c "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" --auto-start-ui=false
+
+		# Temporarily set the KUBECONFIG so that it can be used to start the next cluster
+		export KUBECONFIG=$(ocne cluster show -C oci-capi-management-multinode)
+	elif [ -n "$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
+		export KUBECONFIG="$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
+	else
+		echo "There is no management cluster for the oci provider"
+		skip
+	fi
+
+	OCNE_DEFAULTS="$OCI_CAPI_DEFAULTS" ocne cluster start -C "$CAPI_NAME" --provider oci --auto-start-ui=false --worker-nodes 3 $(echo $K8S_VERSION_FLAG)
+	export KUBECONFIG=$(ocne cluster show -C "$CAPI_NAME")
+
+	# wait for cluster to come up
+	kubectl rollout status deployment -n kube-system coredns
+	kubectl rollout status deployment -n ocne-system ocne-catalog
+}
+
+teardown_suite() {
+	# Ensure that the KUBECONFIG points back to the management cluster
+	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
+		export KUBECONFIG=$(ocne cluster show -C oci-capi-management-multinode)
+	elif [ -n "$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
+		export KUBECONFIG="$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
+	fi
+
+	ocne cluster delete -C "$CAPI_NAME"
+
+	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
+		ocne cluster delete -C oci-capi-management-multinode -c "$CAPI_MANAGEMENT_CLUSTER_DEFINITION"
+	fi
+}
+
