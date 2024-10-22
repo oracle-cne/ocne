@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.4-draft
+### Version: v0.0.5-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 

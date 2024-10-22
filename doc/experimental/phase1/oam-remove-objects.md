@@ -1,6 +1,6 @@
 # Remove OAM objects
 
-### Version: v0.0.1-draft
+### Version: v0.0.2-draft
 This document explains how to remove the OAM objects.
 
 ***WARNING*** Before following these steps, you MUST complete the steps to remove Verrazzano controllers from the system, 

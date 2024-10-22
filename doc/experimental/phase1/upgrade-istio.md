@@ -1,6 +1,6 @@
 # Upgrade Istio
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 Upgrade from Istio 1.19.3 to 1.19.9.
 
