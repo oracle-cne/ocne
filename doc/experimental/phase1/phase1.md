@@ -168,7 +168,7 @@ kubectl rollout status deployment -n verrazzano-system verrazzano-authproxy -w
  
 Follow these [instructions](../phase1/upgrade-grafana.md) to migrate Grafana to be managed by Helm.
 
-## Modify kube-prometheus-stack to be managed by Helm
+## Migrate to kube-prometheus-stack
 
 Follow these [instructions](../phase1/kube-prometheus-stack.md) to migrate the kube-prometheus-stack.
 
