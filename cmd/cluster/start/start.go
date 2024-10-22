@@ -86,7 +86,7 @@ func RunCmd(cmd *cobra.Command) error {
 		cc.Name = "ocne"
 	}
 	if cc.Provider == "" {
-		cc.Provider = "libvirt"
+		cc.Provider = pkgconst.ProviderTypeLibVirt
 	}
 	if cc.ControlPlaneNodes == 0 {
 		cc.ControlPlaneNodes = 1
@@ -111,7 +111,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 	// if the provider is libvirt, update fields in the config otherwise the changes to the clusterConfig fields
 	// will be overwritten
-	if cc.Provider == "libvirt" {
+	if cc.Provider == pkgconst.ProviderTypeLibVirt {
 		c.BootVolumeContainerImage = cc.BootVolumeContainerImage
 		c.KubeVersion = cc.KubeVersion
 		c.OsTag = cc.OsTag

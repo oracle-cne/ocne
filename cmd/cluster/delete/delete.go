@@ -4,13 +4,14 @@
 package delete
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	delete2 "github.com/oracle-cne/ocne/pkg/commands/cluster/delete"
 	config2 "github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -99,7 +100,7 @@ func RunCmd(cmd *cobra.Command) error {
 		cc.Name = "ocne"
 	}
 	if cc.Provider == "" {
-		cc.Provider = "libvirt"
+		cc.Provider = pkgconst.ProviderTypeLibVirt
 	}
 
 	err = delete2.Delete(c, cc)
