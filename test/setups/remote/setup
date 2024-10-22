@@ -8,7 +8,6 @@ setup_suite() {
 
 	ocne cluster start --auto-start-ui false --session "$OCNE_LIBVIRT_URI" --cluster-name defaultremote $(echo $K8S_VERSION_FLAG)
 	export KUBECONFIG=~/.kube/kubeconfig.defaultremote.local
-	export CAPI_NAME=capi-remote
 
 	# wait for cluster to come up
 	kubectl rollout status deployment -n kube-system coredns
