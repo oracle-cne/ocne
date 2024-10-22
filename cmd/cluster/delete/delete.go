@@ -100,7 +100,7 @@ func RunCmd(cmd *cobra.Command) error {
 		cc.Name = "ocne"
 	}
 	if cc.Provider == "" {
-		cc.Provider = pkgconst.ProviderTypeLibVirt
+		cc.Provider = pkgconst.ProviderTypeLibvirt
 	}
 
 	err = delete2.Delete(c, cc)

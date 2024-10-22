@@ -68,7 +68,7 @@ const (
 	K8sLabelControlPlane = "node-role.kubernetes.io/control-plane"
 
 	// Provider Types
-	ProviderTypeLibVirt = "libvirt"
+	ProviderTypeLibvirt = "libvirt"
 	ProviderTypeOCI     = "oci"
 	ProviderTypeNone    = "none"
 )

@@ -137,8 +137,20 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		}
 	}
 
+	// Determine if the image registry needs to be overridden
+	helmOverride := map[string]interface{}{}
+	if clusterConfig.Provider == constants.ProviderTypeNone &&
+		clusterConfig.Registry != constants.ContainerRegistry {
+		helmOverride = map[string]interface{}{
+			"image": map[string]interface{}{
+				"registry": clusterConfig.Registry,
+			},
+		}
+	}
+
 	if !clusterConfig.Headless {
 		log.Debugf("Installing UI")
+
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {
 				err := cluster.CreateCert(kubeClient, constants.UINamespace)
@@ -150,7 +162,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Release:   constants.UIRelease,
 				Version:   constants.UIVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{},
+				Config:    helmOverride,
 			},
 		})
 	} else {
@@ -166,7 +178,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Release:   constants.CatalogRelease,
 				Version:   constants.CatalogVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{},
+				Config:    helmOverride,
 			},
 		})
 	}
