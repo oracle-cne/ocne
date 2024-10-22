@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 )
 
 //go:embed all:templates
@@ -21,7 +22,7 @@ func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (stri
 	var tmpl string
 	var err error
 	switch clusterConfig.Provider {
-	case "oci":
+	case constants.ProviderTypeOCI:
 		tmpl, err = GetOciTemplate(config, clusterConfig)
 	default:
 		return "", fmt.Errorf("templates not implemented for provider %s", clusterConfig.Provider)

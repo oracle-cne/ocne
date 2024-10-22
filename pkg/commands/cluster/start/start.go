@@ -5,28 +5,27 @@ package start
 
 import (
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster"
 	"runtime"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/release"
+	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/cluster"
+	"github.com/oracle-cne/ocne/pkg/cluster/cache"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/add"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/ls"
-	"github.com/oracle-cne/ocne/pkg/helm"
-	"github.com/oracle-cne/ocne/pkg/k8s/client"
-
-	log "github.com/sirupsen/logrus"
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/catalog"
-	"github.com/oracle-cne/ocne/pkg/cluster/cache"
-	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s"
+	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/unix"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	log "github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/release"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -49,7 +48,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	if err != nil {
 		return "", err
 	}
-	if clusterConfig.Provider != "none" {
+	if clusterConfig.Provider != constants.ProviderTypeNone {
 		cachedClusterConfig := clusterCache.Get(clusterConfig.Name)
 		if cachedClusterConfig != nil {
 			if cachedClusterConfig.ClusterConfig.Provider != clusterConfig.Provider {
@@ -100,7 +99,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
 	var applications []install.ApplicationDescription
-	if clusterConfig.Provider != "none" {
+	if clusterConfig.Provider != constants.ProviderTypeNone {
 		switch clusterConfig.CNI {
 		case "", constants.CNIFlannel:
 			log.Debugf("Flannel will be installed as the CNI")
@@ -138,8 +137,20 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		}
 	}
 
+	// Determine if the image registry needs to be overridden
+	helmOverride := map[string]interface{}{}
+	if clusterConfig.Provider == constants.ProviderTypeNone &&
+		clusterConfig.Registry != constants.ContainerRegistry {
+		helmOverride = map[string]interface{}{
+			"image": map[string]interface{}{
+				"registry": clusterConfig.Registry,
+			},
+		}
+	}
+
 	if !clusterConfig.Headless {
 		log.Debugf("Installing UI")
+
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {
 				err := cluster.CreateCert(kubeClient, constants.UINamespace)
@@ -151,7 +162,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Release:   constants.UIRelease,
 				Version:   constants.UIVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{},
+				Config:    helmOverride,
 			},
 		})
 	} else {
@@ -167,7 +178,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Release:   constants.CatalogRelease,
 				Version:   constants.CatalogVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{},
+				Config:    helmOverride,
 			},
 		})
 	}
