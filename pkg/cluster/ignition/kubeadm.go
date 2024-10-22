@@ -175,6 +175,7 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 				Address:           "0.0.0.0",
 				AuthorizationMode: "AlwaysAllow",
 				VolumePluginDir:   VolumePluginDir,
+				TLSCipherSuites:   ci.TLSCipherSuites,
 			},
 		},
 		CertificateKey: ci.UploadCertificateKey,
@@ -205,6 +206,7 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 				Address:           "0.0.0.0",
 				AuthorizationMode: "AlwaysAllow",
 				VolumePluginDir:   VolumePluginDir,
+				TLSCipherSuites:   cj.TLSCipherSuites,
 			},
 		},
 		Discovery: Discovery{
@@ -258,6 +260,7 @@ func GenerateClusterConfiguration(ci *ClusterInit, kubeVersions versions.Kuberne
 				},
 				ExtraArgs: EtcdExtraArgs{
 					ListenMetricsURLs: "http://0.0.0.0:2381",
+					TLSCipherSuites:   ci.TLSCipherSuites,
 				},
 			},
 		},
@@ -269,18 +272,21 @@ func GenerateClusterConfiguration(ci *ClusterInit, kubeVersions versions.Kuberne
 		},
 		ControllerManager: ControllerManager{
 			ExtraArgs: ControllerManagerExtraArgs{
-				TLSMinVersion: tmv,
+				TLSMinVersion:   tmv,
+				TLSCipherSuites: ci.TLSCipherSuites,
 			},
 		},
 		ApiServer: ApiServer{
 			ExtraArgs: ApiServerExtraArgs{
-				TLSMinVersion: tmv,
+				TLSMinVersion:   tmv,
+				TLSCipherSuites: ci.TLSCipherSuites,
 			},
 			CertSans: ci.KubeAPIExtraSans,
 		},
 		Scheduler: Scheduler{
 			ExtraArgs: SchedulerExtraArgs{
-				TLSMinVersion: tmv,
+				TLSMinVersion:   tmv,
+				TLSCipherSuites: ci.TLSCipherSuites,
 			},
 		},
 	}
