@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.0.3
-Release: 5%{dist}
+Version: 2.0.4
+Release: 1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,11 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Tue Oct 22 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.4-1
+- Fixed an issue where Flannel-based pod networking did not function with a default oci provider configuration
+- The oci provider can now automatically configure OCI-CCM
+- Deleting clusters that use the oci provider is now synchronous
+
 * Mon Oct 07 2024 Shih-Chang Chen <shih-chang.chen@oracle.com> - 2.0.3-5
 - Ensure that OCI metadata endpoint is in the no_proxy settings for the oci provider
 
