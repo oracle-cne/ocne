@@ -118,9 +118,9 @@ You need to update several AuthorizationPolicies policies.
 This is a one line change to each policy done using kubectl edit.  
 
 Replace old `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`  
-with new `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator`  
+with new `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-prometheus`  
 
-For example, replace the old principal with the new one as shown below:
+For example, the old principal was replaced with the new one as shown below:
 
 ```text
 kubectl edit AuthorizationPolicy -n verrazzano-monitoring vmi-system-prometheus-authzpol
@@ -128,22 +128,36 @@ kubectl edit AuthorizationPolicy -n verrazzano-monitoring vmi-system-prometheus-
 ```text
       ...
         principals:
-        - cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator
+        - cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-prometheus
 ```
 
 Do the same for the following AuthorizationPolicies
 
-kubectl edit -n verrazzano-monitoring   vmi-system-prometheus-authzpol
-kubectl edit -n verrazzano-system       verrazzano-authproxy-authzpol
-kubectl edit -n verrazzano-system       vmi-system-es-ingest-authzpol
-kubectl edit -n verrazzano-system       vmi-system-es-master-authzpol
-kubectl edit -n verrazzano-system       vmi-system-grafana-authzpol
-kubectl edit -n verrazzano-system       vmi-system-kiali-authzpol
-kubectl edit -n verrazzano-system       vmi-system-osd-authzpol
+kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheus-authzpol  
+
+kubectl edit  AuthorizationPolicy -n verrazzano-system       verrazzano-authproxy-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-es-ingest-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-es-master-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-grafana-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-kiali-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-osd-authzpol  
 
 Delete the obsolete AuthorizationPolicy
 ```text
-kubectl delete -n verrazzano-system verrazzano-console-authzpol
+kubectl delete AuthorizationPolicy -n verrazzano-system verrazzano-console-authzpol
+```
+
+### Update Application AuthorizationPolicies
+Do the same for all applications that you deployed with Verrazzano.
+
+Run this command to find the policies, then edit each and change the principal as described above:
+```text
+kubectl get AuthorizationPolicy -A -o yaml | grep prometheus-operator-kube-p-prometheus -B20
 ```
 
 
