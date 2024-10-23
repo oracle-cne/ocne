@@ -244,10 +244,10 @@ kubectl delete -f pod.yaml --force
 ```
 
 ## Patch ServiceMonitors and PodMonitors
-Both the ServiceMonitors and PodMonitors need to be patched so that they can be processed by the Prometheus operator
+Both the ServiceMonitors and PodMonitors need to be patched so that they can be processed by the Prometheus operator.
 
-### Patch the system resources
-Following is the list of system resources that need to be patched: 
+### Patch the system ServiceMonitors and PodMonitors
+Patch the following objects: 
 ```text
 kubectl patch servicemonitor -n verrazzano-monitoring authproxy --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
 kubectl patch servicemonitor -n verrazzano-monitoring fluentd --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
@@ -270,8 +270,9 @@ kubectl patch servicemonitor -n verrazzano-monitoring prometheus-node-exporter -
 kubectl patch podmonitor -n verrazzano-monitoring envoy-stats --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
 kubectl patch podmonitor -n verrazzano-monitoring  nginx-ingress-controller --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
 ```
-### Patch the system resources
-You also need to patch your application resources. For example
+
+### Patch the application ServiceMonitors and PodMonitors
+You also need to patch your application objects. For example:
 ```text
 kubectl patch servicemonitor -n todo-list todo-appconf-todo-list-todo-domain --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
 kubectl patch servicemonitor -n todo-list todo-appconf-todo-list-todo-mysql-deployment --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
