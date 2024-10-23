@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.3-draft
+### Version: v0.0.5-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
@@ -76,7 +76,7 @@ kubectl rollout status deployment -n verrazzano-monitoring kube-prometheus-stack
 kubectl rollout status statefulset -n verrazzano-monitoring prometheus-kube-prometheus-stack-prometheus
 ```
 
-## Fix access to the Prometheus server
+## Create service needed by auth-proxy to access the Prometheus server
 In the section, you need to create the service used by auth-proxy to access Prometheus.
 This service is required because the name of the service is hard-coded in the auth-proxy.
 
@@ -113,24 +113,53 @@ Create the service:
 kubectl apply -f vz-prom-service.yaml
 ```
 
-Update the AuthorizationPolicy.  This is a one line change done using kubectl edit.
-Simply remove the existing principal for the verrazzano-monitoring namespace and
-replace it with the new one as shown below:
+## Update AuthorizationPolicies
+You need to update several AuthorizationPolicies policies.
+This is a one line change to each policy done using kubectl edit.  
+
+Replace old `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`  
+with new `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-prometheus`  
+
+For example, the old principal was replaced with the new one as shown below:
 
 ```text
 kubectl edit AuthorizationPolicy -n verrazzano-monitoring vmi-system-prometheus-authzpol
 ```
-Replace `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`
-with `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator`
-as shown below in the principals section:
 ```text
-  - from:
-    - source:
-        namespaces:
-        - verrazzano-monitoring
+      ...
         principals:
-        - cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-operator
+        - cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-prometheus
 ```
+
+Do the same for the following AuthorizationPolicies
+
+kubectl edit AuthorizationPolicy -n verrazzano-monitoring   vmi-system-prometheus-authzpol  
+
+kubectl edit  AuthorizationPolicy -n verrazzano-system       verrazzano-authproxy-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-es-ingest-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-es-master-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-grafana-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-kiali-authzpol  
+
+kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-osd-authzpol  
+
+Delete the obsolete AuthorizationPolicy
+```text
+kubectl delete AuthorizationPolicy -n verrazzano-system verrazzano-console-authzpol
+```
+
+### Update Application AuthorizationPolicies
+Do the same for all applications that you deployed with Verrazzano.
+
+Run this command to find the policies, then edit each and change the principal as described above:
+```text
+kubectl get AuthorizationPolicy -A -o yaml | grep prometheus-operator-kube-p-prometheus -B20
+```
+
 
 ## Migrate metrics data from old PV to new PV
 In this section, the Prometheus metrics will be copied from the old PV to the new PV.
@@ -153,6 +182,11 @@ prometheus-kube-prometheus-stack-prometheus   0/0     ...
 
 ### Copy data from the old PV to new PV
 ***NOTE*** Repeat this section for each additional replica, changing both of the `claimName` fields by replacing the string `prometheus-0` with `prometheus-1`, for example.
+
+***NOTE***
+The pod YAML specified below will only start if the pod can mount both PVs at the same time.
+If that is not the case, then the pod will not start. Use the alternate method for copying
+Prometheus data as described [Copy Prometheus data via local system](../phase1/copy-prom-data-alternate.md)
 
 Create a pod YAML file that mounts both PVCs.
 ```text

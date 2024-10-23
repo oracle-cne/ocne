@@ -5,11 +5,15 @@
 #
 # bats file_tags=CLUSTER, CLUSTER_CLUSTER
 
+@test "Sanity Check" {
+	"$BATS_TEST_DIRNAME/basic_k8s_test.sh"
+}
+
 @test "Verify UI Service" {
 	kubectl -n ocne-system get service ui
 }
 
-@test "Verify Catalog Service {
+@test "Verify Catalog Service" {
 	kubectl -n ocne-system get service ocne-catalog
 }
 
@@ -29,15 +33,15 @@
 
     run ocne cluster info
     [ "$status" -eq 0 ]
-    echo $output | grep 'Registry and tag for ostree patch images'
+    echo "$output" | grep 'Registry and tag for ostree patch images'
 
     run ocne cluster info --nodes $NODE
     [ "$status" -eq 0 ]
-    echo $output | grep 'Registry and tag for ostree patch images'
+    echo "$output" | grep 'Registry and tag for ostree patch images'
 
     run ocne cluster info --skip-nodes
     [ "$status" -eq 0 ]
-    echo $output | grep -v 'Registry and tag for ostree patch images'
+    echo "$output" | grep -v 'Registry and tag for ostree patch images'
 }
 
 @test "Verify Cluster Show" {

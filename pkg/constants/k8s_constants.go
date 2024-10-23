@@ -56,11 +56,12 @@ const (
 	CatalogVersion   = "2.0.0"
 	CatalogName      = "Oracle Cloud Native Environment Application Catalog"
 
-	UIRelease       = "ui"
-	UINamespace     = "ocne-system"
-	UIChart         = "ui"
-	UIVersion       = ""
-	UIinitContainer = "ui-plugins"
+	UIRelease        = "ui"
+	UINamespace      = "ocne-system"
+	UIChart          = "ui"
+	UIVersion        = ""
+	UIInitContainer  = "ui-plugins"
+	UIPluginsVersion = "v2.0.0"
 
 	CertManagerRelease   = "cert-manager"
 	CertManagerNamespace = "cert-manager"

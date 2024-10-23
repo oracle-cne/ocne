@@ -4,12 +4,13 @@
 package constants
 
 const (
-	DarwinLibvirtSocketPath = ".cache/libvirt/libvirt-sock"
-	UserConfigDir           = ".ocne"
-	UserConfigDefaults      = ".ocne/defaults.yaml"
-	UserImageCacheDir       = "images"
-	UserContainerConfigDir  = "config"
-	UserIPData              = "ips.yaml"
+	DarwinLibvirtSocketPath               = ".cache/libvirt/libvirt-sock"
+	UserConfigDir                         = ".ocne"
+	UserConfigDefaults                    = ".ocne/defaults.yaml"
+	UserConfigDefaultsEnvironmentVariable = "OCNE_DEFAULTS"
+	UserImageCacheDir                     = "images"
+	UserContainerConfigDir                = "config"
+	UserIPData                            = "ips.yaml"
 
 	BootVolumeContainerImage = "docker://container-registry.oracle.com/olcne/ock"
 
@@ -31,8 +32,6 @@ const (
 	EphemeralNodeStorage         = "20Gi"
 	EphemeralClusterName         = "ocne-ephemeral"
 	EphemeralClusterPreserve     = true
-
-	NetworkName = "default"
 
 	// Kubernetes defaults`
 	KubeAPIServerBindPort    = uint16(6443)
@@ -67,6 +66,11 @@ const (
 
 	// Kubernetes Labels
 	K8sLabelControlPlane = "node-role.kubernetes.io/control-plane"
+
+	// Provider Types
+	ProviderTypeLibvirt = "libvirt"
+	ProviderTypeOCI     = "oci"
+	ProviderTypeNone    = "none"
 )
 
 var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160}

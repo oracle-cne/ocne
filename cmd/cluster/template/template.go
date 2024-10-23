@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 	cmdutil.SilenceUsage(cmd)
 
 	cmd.Flags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
-	cmd.Flags().StringVarP(&opts.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "oci", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&opts.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, pkgconst.ProviderTypeOCI, constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	return cmd
 }
