@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.4
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -50,6 +50,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Wed Oct 23 2024 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.0.4-2
+- Install Catalog and UI with custom container image registry when using the "none" provider
+
 * Tue Oct 22 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.4-1
 - Fixed an issue where Flannel-based pod networking did not function with a default oci provider configuration
 - The oci provider can now automatically configure OCI-CCM
