@@ -137,19 +137,33 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		}
 	}
 
-	// Determine if the image registry needs to be overridden
-	helmOverride := map[string]interface{}{}
-	if clusterConfig.Provider == constants.ProviderTypeNone &&
-		clusterConfig.Registry != constants.ContainerRegistry {
-		helmOverride = map[string]interface{}{
-			"image": map[string]interface{}{
-				"registry": clusterConfig.Registry,
-			},
-		}
-	}
-
 	if !clusterConfig.Headless {
 		log.Debugf("Installing UI")
+
+		// Determine if the image registry needs to be overridden
+		helmOverride := map[string]interface{}{}
+		if clusterConfig.Provider == constants.ProviderTypeNone &&
+			clusterConfig.Registry != constants.ContainerRegistry {
+			helmOverride = map[string]interface{}{
+				"image": map[string]interface{}{
+					"registry": clusterConfig.Registry,
+				},
+				"initContainers": []map[string]interface{}{
+					{
+						"name":            constants.UIInitContainer,
+						"image":           fmt.Sprintf("%s/olcne/ui-plugins:%s", clusterConfig.Registry, constants.UIPluginsVersion),
+						"imagePullPolicy": "IfNotPresent",
+						"command":         []string{"/bin/sh", "-c", "mkdir -p /build/plugins && cp -r /headlamp-plugins/* /build/plugins/"},
+						"volumeMounts": []map[string]interface{}{
+							{
+								"name":      "ui-plugins",
+								"mountPath": "/build/plugins",
+							},
+						},
+					},
+				},
+			}
+		}
 
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {
@@ -171,6 +185,17 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	if clusterConfig.Catalog {
 		log.Debugf("Installing Oracle Catalog")
+
+		// Determine if the image registry needs to be overridden
+		helmOverride := map[string]interface{}{}
+		if clusterConfig.Provider == constants.ProviderTypeNone &&
+			clusterConfig.Registry != constants.ContainerRegistry {
+			helmOverride = map[string]interface{}{
+				"image": map[string]interface{}{
+					"registry": clusterConfig.Registry,
+				},
+			}
+		}
 		applications = append(applications, install.ApplicationDescription{
 			Application: &types.Application{
 				Name:      constants.CatalogChart,
