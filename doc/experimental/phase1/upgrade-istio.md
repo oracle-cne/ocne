@@ -1,6 +1,6 @@
 # Upgrade Istio
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 
 Upgrade from Istio 1.19.3 to 1.19.9.
 
@@ -150,63 +150,87 @@ The instructions below are only for manually doing a restart of components insta
 ```text
 kubectl rollout restart deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller
 kubectl rollout status deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller -w
- 
+```
+```text
 kubectl rollout restart deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend
 kubectl rollout status deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend -w
- 
+```
+```text 
 kubectl rollout restart deployment -n mysql-operator mysql-operator
 kubectl rollout status deployment -n mysql-operator mysql-operator -w
- 
+```
+```text 
 kubectl rollout restart deployment -n keycloak mysql-router
 kubectl rollout status deployment -n keycloak mysql-router -w
- 
+```
+```text 
 kubectl rollout restart statefulset -n keycloak mysql
 kubectl rollout status statefulset -n keycloak mysql -w
- 
+```
+```text 
 kubectl rollout restart statefulset -n keycloak keycloak
 kubectl rollout status statefulset -n keycloak keycloak -w
- 
+```
+```text 
 kubectl rollout restart statefulset -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus
 kubectl rollout status statefulset -n verrazzano-monitoring prometheus-prometheus-operator-kube-p-prometheus -w
- 
+```
+```text 
 kubectl rollout restart statefulset -n verrazzano-system vmi-system-es-master
 kubectl rollout status statefulset -n verrazzano-system vmi-system-es-master -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-ingest
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-ingest -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system vmi-system-osd
 kubectl rollout status deployment -n verrazzano-system vmi-system-osd -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-0
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-0 -w
-
+```
+```text
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-1
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-1 -w
-
+```
+```text
 kubectl rollout restart deployment -n verrazzano-system vmi-system-es-data-2
 kubectl rollout status deployment -n verrazzano-system vmi-system-es-data-2 -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system vmi-system-kiali
 kubectl rollout status deployment -n verrazzano-system vmi-system-kiali -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system vmi-system-grafana
 kubectl rollout status deployment -n verrazzano-system vmi-system-grafana -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system verrazzano-authproxy
 kubectl rollout status deployment -n verrazzano-system verrazzano-authproxy -w
- 
+```
+```text 
 kubectl rollout restart daemonset -n verrazzano-system fluentd
 kubectl rollout status daemonset -n verrazzano-system fluentd -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system verrazzano-console
 kubectl rollout status deployment -n verrazzano-system verrazzano-console -w
- 
+```
+```text 
 kubectl rollout restart deployment -n verrazzano-system weblogic-operator
 kubectl rollout status deployment -n verrazzano-system weblogic-operator -w
 ```
 
-The following command should not return any results once the restart of the Istio mesh is completed.
+### Restart applications
+
+You must also restart your applications in the mesh so that they replace the old Istio sidecar proxy
+with the new one.
+
+### Verify that only the new sidecar proxy is used
+
 ```text
 kubectl get pods -A -o yaml | grep image: | grep proxyv2 | grep ghcr
 ```
