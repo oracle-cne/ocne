@@ -13,7 +13,8 @@ import (
 const (
 	CommandName = "console"
 	helpShort   = "Launch a console on a node"
-	helpLong    = `Launch an administration console on nodes in a Kubernetes cluster, chrooted into the local filesytem of the target node`
+	helpLong    = `Launch an administration console on nodes in a Kubernetes cluster. Use the --direct option
+  to access the local filesystem of the target node.`
 	helpExample = `
 ocne cluster console --node mynode --toolbox
 `

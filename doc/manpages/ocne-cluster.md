@@ -241,8 +241,8 @@ SUBCOMMANDS
   Display additional detailed information related to the analysis.
 
 `console` [OPTIONS]...
-  Launch an administration console on nodes in a Kubernetes cluster, `chroot`ed
-  into the local filesystem of the target node.
+  Launch an administration console on nodes in a Kubernetes cluster. Use the --direct option
+  to access the local filesystem of the target node.
 
 `-N`, `--node` *node-name*
     The Kubernetes cluster node where the console is to be launched. [required]
