@@ -36,7 +36,7 @@ func ParseConfigFile(configPath string) (*types.Config, error) {
 
 	conf, err := ParseConfig(string(configBytes))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing config file %s: %s", configPath, err.Error())
+		return nil, fmt.Errorf("could not parse config file %s: %s", configPath, err.Error())
 	}
 	return conf, nil
 }
@@ -158,7 +158,7 @@ func ParseClusterConfigFile(configPath string) (*types.ClusterConfig, error) {
 	}
 	ret, err := ParseClusterConfig(string(configBytes))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing config file %s: %s", configPath, err.Error())
+		return nil, fmt.Errorf("could not parse config file %s: %s", configPath, err.Error())
 	}
 
 	// If the directory is not set, then set it to the
