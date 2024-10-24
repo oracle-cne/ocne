@@ -12,6 +12,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"fmt"
 )
 
 // ParseConfig takes a yaml-encoded string and parses it
@@ -33,7 +34,11 @@ func ParseConfigFile(configPath string) (*types.Config, error) {
 		return nil, err
 	}
 
-	return ParseConfig(string(configBytes))
+	conf, err := ParseConfig(string(configBytes))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing config file %s: %s", configPath, err.Error())
+	}
+	return conf, nil
 }
 
 // GetDefaultConfig returns the global default config.  It starts
@@ -153,7 +158,7 @@ func ParseClusterConfigFile(configPath string) (*types.ClusterConfig, error) {
 	}
 	ret, err := ParseClusterConfig(string(configBytes))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing config file %s: %s", configPath, err.Error())
 	}
 
 	// If the directory is not set, then set it to the
