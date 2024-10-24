@@ -19,6 +19,7 @@ BuildRequires: gpgme-devel
 BuildRequires: btrfs-progs-devel
 BuildRequires: device-mapper-devel
 BuildRequires: libassuan-devel
+BuildRequires: yq
 Requires: bash-completion
 Requires: containers-common
 
