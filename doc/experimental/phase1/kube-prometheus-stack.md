@@ -1,6 +1,6 @@
 # Migrate to kube-prometheus-stack
 
-### Version: v0.0.5-draft
+### Version: v0.0.6-draft
 
 The purpose of this document is describe how to migrate the Verrazzano kube-prometheus-stack (named prometheus-operator)
 to the catalog kube-prometheus-stack. Once this is done, upgrades to kube-prometheus-stack can be done using the catalog. 
@@ -143,8 +143,6 @@ kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-es-master
 
 kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-grafana-authzpol  
 
-kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-kiali-authzpol  
-
 kubectl edit AuthorizationPolicy -n verrazzano-system       vmi-system-osd-authzpol  
 
 Delete the obsolete AuthorizationPolicy
@@ -159,6 +157,8 @@ Run this command to find the policies, then edit each and change the principal a
 ```text
 kubectl get AuthorizationPolicy -A -o yaml | grep prometheus-operator-kube-p-prometheus -B20
 ```
+For each policy, replace old `cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus`  
+with new `cluster.local/ns/verrazzano-monitoring/sa/kube-prometheus-stack-prometheus`
 
 
 ## Migrate metrics data from old PV to new PV
@@ -241,6 +241,41 @@ cp -R /prom-old/. prom-new/
 Delete the pod
 ```text
 kubectl delete -f pod.yaml --force
+```
+
+## Patch ServiceMonitors and PodMonitors
+Both the ServiceMonitors and PodMonitors need to be patched so that they can be processed by the Prometheus operator.
+
+### Patch the system ServiceMonitors and PodMonitors
+Patch the following objects: 
+```text
+kubectl patch servicemonitor -n verrazzano-monitoring authproxy --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring fluentd --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring jaeger --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring jaeger-operator --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-apiserver --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-coredns --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-kube-controller-manager --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-kube-etcd --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-kube-proxy --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-kube-scheduler --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-kubelet --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-operator --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-prometheus-stack-prometheus --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring kube-state-metrics --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring opensearch --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring pilot --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n verrazzano-monitoring prometheus-node-exporter --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+
+kubectl patch podmonitor -n verrazzano-monitoring envoy-stats --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch podmonitor -n verrazzano-monitoring  nginx-ingress-controller --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+```
+
+### Patch the application ServiceMonitors and PodMonitors
+You also need to patch your application objects. For example:
+```text
+kubectl patch servicemonitor -n todo-list todo-appconf-todo-list-todo-domain --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
+kubectl patch servicemonitor -n todo-list todo-appconf-todo-list-todo-mysql-deployment --type='merge'  -p '{"metadata":{"labels":{"release":"kube-prometheus-stack"}}}'
 ```
 
 ## Scale-out Prometheus
