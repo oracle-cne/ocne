@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Add adds a catalog to the cluster.  It is assumed that all
@@ -36,13 +38,19 @@ func Add(kubeconfig string, name string, namespace string, externalUri string, p
 	scheme := exUrl.Scheme
 	portStr := exUrl.Port()
 
+	if scheme == "file" {
+		return addLocalCatalog(name, externalUri, friendlyName)
+	}
+
+	if scheme != "http" && scheme != "https" {
+		return fmt.Errorf("URI scheme %s is not supported", scheme)
+	}
+
 	if portStr == "" {
 		if scheme == "http" {
 			portStr = "80"
 		} else if scheme == "https" {
 			portStr = "443"
-		} else {
-			return fmt.Errorf("URI scheme %s is not supported", scheme)
 		}
 	}
 
@@ -78,4 +86,25 @@ func Add(kubeconfig string, name string, namespace string, externalUri string, p
 	}
 
 	return k8s.CreateService(kubeClient, svc)
+}
+
+func addLocalCatalog(name string, externalUri string, friendlyName string) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("unable to get user home diirectory: %v", err)
+	}
+
+	catalogDir := filepath.Join(homeDir, ".ocne")
+	catalogFile := filepath.Join(catalogDir, name+".yaml")
+	catalogData := fmt.Sprintf("name: %s\nuri: %s\nfriendlyName: %s\n", name, externalUri, friendlyName)
+
+	// Write the catalog data to the file
+	err = os.WriteFile(catalogFile, []byte(catalogData), 0644)
+	if err != nil {
+		return fmt.Errorf("unable to write catalog file: %v", err)
+	}
+
+	fmt.Printf("Local catalog saved at %s\n", catalogFile)
+	return nil
+
 }
