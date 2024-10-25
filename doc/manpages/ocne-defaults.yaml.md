@@ -184,7 +184,7 @@ ephemeralCluster:
 
 # The container image registry and tag that contains a
 # bootable OCK image
-bootVolumeContainerImage: container-registry.oracle.com/olcne/ock:1.30
+bootVolumeContainerImage: container-registry.oracle.com/olcne/ock:1.31
 
 # The kubeconfig to use for operations that require a running cluster
 kubeconfig: /home/myuser/.kube/kubeconfig.utilitycluster

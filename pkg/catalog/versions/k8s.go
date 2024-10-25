@@ -45,6 +45,12 @@ var kubernetesVersions = map[string]KubernetesVersions{
 		Etcd:       "3.5.12",
 		CoreDNS:    "v1.11.1",
 	},
+	"1.31.1": {
+		Kubernetes: "1.31.1",
+		Pause:      "3.10",
+		Etcd:       "3.5.15",
+		CoreDNS:    "v1.11.3",
+	},
 }
 
 func init() {
@@ -54,6 +60,7 @@ func init() {
 	kubernetesVersions["1.28"] = kubernetesVersions["1.28.8"]
 	kubernetesVersions["1.29"] = kubernetesVersions["1.29.3"]
 	kubernetesVersions["1.30"] = kubernetesVersions["1.30.3"]
+	kubernetesVersions["1.31"] = kubernetesVersions["1.31.1"]
 }
 
 func GetKubernetesVersions(ver string) (KubernetesVersions, error) {

@@ -51,7 +51,7 @@ func Stage(o StageOptions) error {
 	//check that the user is supplying a major.minor version
 	match, err := regexp.MatchString("^[1-9]\\.[0-9][0-9]$", o.KubeVersion)
 	if !match {
-		return errors.New("version in major.minor format is not provided. Please choose a version of Kubernetes in the form of major.minor, such as 1.30")
+		return errors.New("version in major.minor format is not provided. Please choose a version of Kubernetes in the form of major.minor, such as 1.31")
 	}
 	// check that it is a major/minor version that we support
 	if _, err := versions.GetKubernetesVersions(o.KubeVersion); err != nil {

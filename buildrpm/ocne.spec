@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.4
-Release: 2%{dist}
+Release: 2.k8s1.31.1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -51,6 +51,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Fri Oct 25 2024 Murali Annamneni <murali.annamneni@oracle.com> - 2.0.4-2.k8s1.31.1
+- Add kuberntes-1.31.1
+
 * Wed Oct 23 2024 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.0.4-2
 - Install Catalog and UI with custom container image registry when using the "none" provider
 

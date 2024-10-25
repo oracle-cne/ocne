@@ -161,6 +161,10 @@ execute_upgrade() {
 		execute_upgrade "1.30" "3.5.12" "1.11.1"
 		k8s_version="v1.30"
 	fi
+	if [[ "$k8s_version" == v1.30 ]]; then
+		execute_upgrade "1.31" "3.5.15" "1.11.3"
+		k8s_version="v1.31"
+	fi
 }
 
 

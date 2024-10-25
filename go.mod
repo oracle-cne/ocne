@@ -36,7 +36,7 @@ require (
 	k8s.io/cluster-bootstrap v0.30.3
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubectl v0.30.3
-	k8s.io/kubernetes v1.30.3
+	k8s.io/kubernetes v1.31.1
 	sigs.k8s.io/cluster-api v1.8.0
 	sigs.k8s.io/controller-runtime v0.18.4
 	sigs.k8s.io/yaml v1.4.0
