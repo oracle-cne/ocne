@@ -94,7 +94,7 @@ func addLocalCatalog(name string, externalUri string, friendlyName string) error
 		return fmt.Errorf("unable to get user home diirectory: %v", err)
 	}
 
-	catalogDir := filepath.Join(homeDir, ".ocne")
+	catalogDir := filepath.Join(homeDir, ".ocne", "catalogs")
 	catalogFile := filepath.Join(catalogDir, name+".yaml")
 	catalogData := fmt.Sprintf("name: %s\nuri: %s\nfriendlyName: %s\n", name, externalUri, friendlyName)
 
