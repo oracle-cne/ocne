@@ -45,7 +45,7 @@ type HelmOverrides struct {
 	FileOverride       string // for -f
 }
 
-type ActionConfigFnType func(kubeInfo *client.KubeInfo, settings *cli.EnvSettings, namespace string) (*action.Configuration, error)
+type ActionConfigFnType func(kubeInfo *client.KubeInfo, namespace string) (*action.Configuration, error)
 
 var actionConfigFn ActionConfigFnType = getActionConfig
 
@@ -76,9 +76,7 @@ func SetDefaultLoadChartFunction() {
 
 // GetRelease will run 'helm get all' command and return the output from the command.
 func GetRelease(kubeInfo *client.KubeInfo, releaseName string, namespace string) (*release.Release, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -89,9 +87,7 @@ func GetRelease(kubeInfo *client.KubeInfo, releaseName string, namespace string)
 
 // GetValuesMap will run 'helm get values' command and return the output from the command.
 func GetValuesMap(kubeInfo *client.KubeInfo, releaseName string, namespace string) (map[string]interface{}, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +103,7 @@ func GetValuesMap(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 
 // GetMetadata will run 'helm get metadata' command and return the output from the command.
 func GetMetadata(kubeInfo *client.KubeInfo, releaseName string, namespace string) (*action.Metadata, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +119,7 @@ func GetMetadata(kubeInfo *client.KubeInfo, releaseName string, namespace string
 
 // GetAllValuesMap will run 'helm get values -a' command and return the output from the command.
 func GetAllValuesMap(kubeInfo *client.KubeInfo, releaseName string, namespace string) (map[string]interface{}, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -185,14 +177,14 @@ func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, name
 // UpgradeChart installs a release into a cluster or upgrades an existing one.
 func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, theChart *chart.Chart, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool) (*release.Release, error) {
 	var err error
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
+	if err != nil {
+		return nil, err
+	}
 	settings := cli.New()
 	settings.KubeConfig = kubeInfo.KubeconfigPath
 	settings.KubeTLSServerName = kubeInfo.KubeApiServerIP
 	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
-	if err != nil {
-		return nil, err
-	}
 
 	p := getter.All(settings)
 	p = append(p, NewGitProvider())
@@ -257,17 +249,16 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 
 // Template templates a chart using the provided overrides and returns the generated yamls as a string
 func Template(kubeInfo *client.KubeInfo, theChart *chart.Chart, overrides []HelmOverrides, k8sVersion *semver.Version) (string, error) {
+	actionConfig, err := actionConfigFn(kubeInfo, "")
+	if err != nil {
+		return "", err
+	}
 	settings := cli.New()
 	settings.SetNamespace("")
 	if kubeInfo != nil {
 		settings.KubeConfig = kubeInfo.KubeconfigPath
 		settings.KubeTLSServerName = kubeInfo.KubeApiServerIP
 	}
-	actionConfig, err := actionConfigFn(kubeInfo, settings, "")
-	if err != nil {
-		return "", err
-	}
-
 	installClient := action.NewInstall(actionConfig)
 	installClient.Namespace = "dummyNamespace"
 	installClient.ReleaseName = theChart.Name()
@@ -306,9 +297,7 @@ func Template(kubeInfo *client.KubeInfo, theChart *chart.Chart, overrides []Helm
 
 // Uninstall will uninstall the helmRelease in the specified namespace using helm uninstall
 func Uninstall(kubeInfo *client.KubeInfo, releaseName string, namespace string, dryRun bool) (err error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return err
 	}
@@ -375,9 +364,7 @@ func GetReleaseStatus(kubeInfo *client.KubeInfo, releaseName string, namespace s
 
 // IsReleaseInstalled returns true if the helmRelease is installed
 func IsReleaseInstalled(kubeInfo *client.KubeInfo, releaseName string, namespace string) (found bool, err error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return false, err
 	}
@@ -395,9 +382,7 @@ func IsReleaseInstalled(kubeInfo *client.KubeInfo, releaseName string, namespace
 
 // GetHelmReleaseStatus extracts the Helm deployment status of the specified chart from the JSON output as a string
 func GetHelmReleaseStatus(kubeInfo *client.KubeInfo, releaseName string, namespace string) (string, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return "", err
 	}
@@ -496,9 +481,7 @@ func getReleaseAppVersion(kubeInfo *client.KubeInfo, releaseName string, namespa
 }
 
 func getReleases(kubeInfo *client.KubeInfo, namespace string, allNamespaces bool) ([]*release.Release, error) {
-	settings := cli.New()
-	settings.SetNamespace(namespace)
-	actionConfig, err := actionConfigFn(kubeInfo, settings, namespace)
+	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +516,7 @@ func GetReleasesAllNamespaces(kubeInfo *client.KubeInfo) ([]*release.Release, er
 func debugLog(format string, v ...interface{}) {
 }
 
-func getActionConfig(kubeInfo *client.KubeInfo, settings *cli.EnvSettings, namespace string) (*action.Configuration, error) {
+func getActionConfig(kubeInfo *client.KubeInfo, namespace string) (*action.Configuration, error) {
 	actionConfig := new(action.Configuration)
 
 	config := &genericclioptions.ConfigFlags{}
@@ -541,6 +524,8 @@ func getActionConfig(kubeInfo *client.KubeInfo, settings *cli.EnvSettings, names
 		config.KubeConfig = &kubeInfo.KubeconfigPath
 		config.BearerToken = &kubeInfo.RestConfig.BearerToken
 		config.TLSServerName = &kubeInfo.KubeApiServerIP
+		config.Namespace = &namespace
+
 	}
 
 	if err := actionConfig.Init(config, namespace, os.Getenv("HELM_DRIVER"), debugLog); err != nil {
