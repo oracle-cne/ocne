@@ -9,6 +9,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
