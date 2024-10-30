@@ -23,6 +23,7 @@ type ociData struct {
 	ExtraConfig     string
 	KubeVersions    *versions.KubernetesVersions
 	VolumePluginDir string
+	CipherSuite     string
 }
 
 const (
@@ -305,6 +306,7 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		ExtraConfig:     ign,
 		KubeVersions:    &kubeVer,
 		VolumePluginDir: ignition.VolumePluginDir,
+		CipherSuite:     clusterConfig.CipherSuites,
 	}, map[string]any{
 		"shapeImage": imageFromShape,
 	})

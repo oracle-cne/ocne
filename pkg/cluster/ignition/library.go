@@ -170,6 +170,7 @@ type ClusterInit struct {
 	NetInterface         string
 	UploadCertificateKey string
 	KubeVersion          string
+	TLSCipherSuites      string
 }
 
 type ClusterJoin struct {
@@ -187,6 +188,7 @@ type ClusterJoin struct {
 	ProxyMode            string
 	NetInterface         string
 	UploadCertificateKey string
+	TLSCipherSuites      string
 }
 
 type combinedConfig struct {
