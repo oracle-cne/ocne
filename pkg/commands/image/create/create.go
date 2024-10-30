@@ -6,6 +6,7 @@ package create
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
@@ -33,12 +34,19 @@ const (
 	localVMImage    = "boot.qcow2"
 	tempDir         = "create-images"
 	envProviderType = "IGNITION_PROVIDER_TYPE"
+	envKargs        = "KARGS_APPEND_STANZA"
+
+	ociDefaultIgnition  = "oci"
+	qemuDefaultIgnition = "qemu"
 )
 
 // CreateOptions are the options for the create image command
 type CreateOptions struct {
 	// IgnitionProvider is the provider type for ignition
 	IgnitionProvider string
+
+	// KernelArguments is any extra kernel command line arguments to append
+	KernelArguments string
 
 	// ProviderConfigPath is the path for the provider config (e.g ~/.oci/config)
 	ProviderConfigPath string
@@ -54,8 +62,9 @@ type CreateOptions struct {
 }
 
 type providerFuncs struct {
-	createConfigMap func(string, string) *corev1.ConfigMap
-	createImage     func(*copyConfig) error
+	defaultProvider string
+	createConfigMap       func(string, string) *corev1.ConfigMap
+	createImage           func(*copyConfig) error
 }
 
 // Create creates a qcow2 image for the specified provider type
@@ -102,12 +111,24 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		return err
 	}
 
+	ignitionProvider := options.IgnitionProvider
+	if ignitionProvider == "" {
+		ignitionProvider = providers[options.ProviderType].defaultProvider
+	} else if strings.ContainsAny(ignitionProvider, " \t\n") {
+		return fmt.Errorf("'%s' is not a valid ignition provider", ignitionProvider)
+	}
+
+	kargsStanza, err := generateKernelArgsStanza(options.KernelArguments)
+	if err != nil {
+		return err
+	}
+
 	// create the pod, first delete the pod if it exists
 	if err := k8s.DeletePod(kubeClient, namespace, podName); err != nil {
 		return err
 	}
 	defer k8s.DeletePod(kubeClient, namespace, podName)
-	if err := createPod(kubeClient, namespace, podName, constants.DefaultPodImage, options.ProviderType); err != nil {
+	if err := createPod(kubeClient, namespace, podName, constants.DefaultPodImage, ignitionProvider, kargsStanza); err != nil {
 		return err
 	}
 
@@ -142,7 +163,7 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 }
 
 // createPod creates a pod that mounts the config map with the same name as the pod
-func createPod(client kubernetes.Interface, namespace string, name string, imageName string, providerType string) error {
+func createPod(client kubernetes.Interface, namespace string, name string, imageName string, providerType string, kargs string) error {
 	privileged := true
 	builderVolumeName := "builder"
 	hostVolumeName := "host-root"
@@ -168,6 +189,7 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 					Command: []string{"sleep", "10d"},
 					Env: []corev1.EnvVar{
 						{Name: envProviderType, Value: providerType},
+						{Name: envKargs, Value: kargs},
 					},
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &privileged,
@@ -258,12 +280,14 @@ func createOciImage(cc *copyConfig) error {
 
 var providers = map[string]providerFuncs{
 	ProviderTypeOCI: providerFuncs{
-		createConfigMap: createOciConfigMap,
-		createImage:     createOciImage,
+		defaultProvider:       ociDefaultIgnition,
+		createConfigMap:       createOciConfigMap,
+		createImage:           createOciImage,
 	},
 	ProviderTypeOstree: providerFuncs{
-		createConfigMap: createOstreeConfigMap,
-		createImage:     createOstreeImage,
+		defaultProvider:       qemuDefaultIgnition,
+		createConfigMap:       createOstreeConfigMap,
+		createImage:           createOstreeImage,
 	},
 }
 
@@ -286,4 +310,50 @@ func createImage(cc *copyConfig) error {
 	}
 
 	return pf.createImage(cc)
+}
+
+// generateKernelArgsStanza creates a sed command that appends
+// a string to the end of the kernel command line in a grub
+// entry
+func generateKernelArgsStanza(args string) (string, error) {
+	// Sed supports arbitrary expression separators for
+	// replacement expressions.  The input string can have
+	// any set of characters in it.  Find a character that is
+	// not in the string and use that.  The reason for doing
+	// this is that there is no need to try escaping characters
+	// in the input string.  The downside is that it cannot
+	// support the case where the input string contains all
+	// printable characters.  That seems unlikely.
+
+	// If there are no args, then there is no stanza
+	if args == "" {
+		return "", nil
+	}
+
+	// This is the range of printable characters, more or less.
+	var bang byte = 33
+	var tilde byte = 126
+
+	sep := ""
+	for sepByte := bang; sepByte <= tilde; sepByte = sepByte + 1 {
+		sepCandidate := string([]byte{sepByte})
+
+		if !strings.Contains(args, sepCandidate) {
+			sep = sepCandidate
+			break
+		}
+	}
+
+	// No acceptable character was found.  It's hard to imagine this
+	// actually happening, but stranger things do.
+	if sep == "" {
+		return "", fmt.Errorf("extra kernel arguments use all printable characters")
+	}
+
+	// Build a sed command that appends something to the end of the options
+	// line.  Assume that the separator is '|' and the input string is
+	// "foo bar baz".  The result will be:
+	//
+	// /^options / s|$| foo bar baz|
+	return fmt.Sprintf("/^options / s%s$%s %s%s", sep, sep, args, sep), nil
 }
