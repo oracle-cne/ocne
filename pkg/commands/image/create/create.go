@@ -27,17 +27,17 @@ const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
 
 const (
-	podName           = "ocne-image-builder"
-	cmName            = "ocne-image-builder"
-	imageMountPath    = "/ocne-image-build"
-	remoteFilePath    = "/tmp/boot.qcow2"
-	localVMImage      = "boot.qcow2"
-	tempDir           = "create-images"
-	envIgnitionStanza = "IGNITION_STANZA"
-	envKargs          = "KARGS_APPEND_STANZA"
+	podName         = "ocne-image-builder"
+	cmName          = "ocne-image-builder"
+	imageMountPath  = "/ocne-image-build"
+	remoteFilePath  = "/tmp/boot.qcow2"
+	localVMImage    = "boot.qcow2"
+	tempDir         = "create-images"
+	envProviderType = "IGNITION_PROVIDER_TYPE"
+	envKargs        = "KARGS_APPEND_STANZA"
 
-	ociDefaultIgnition  = "ignition.platform.id=oci"
-	qemuDefaultIgnition = "ignition.platform.id=qemu"
+	ociDefaultIgnition  = "oci"
+	qemuDefaultIgnition = "qemu"
 )
 
 // CreateOptions are the options for the create image command
@@ -62,7 +62,7 @@ type CreateOptions struct {
 }
 
 type providerFuncs struct {
-	defaultIgnitionStanza string
+	defaultProvider string
 	createConfigMap       func(string, string) *corev1.ConfigMap
 	createImage           func(*copyConfig) error
 }
@@ -111,9 +111,11 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		return err
 	}
 
-	ignitionStanza := options.IgnitionProvider
-	if ignitionStanza == "" {
-		ignitionStanza = providers[options.ProviderType].defaultIgnitionStanza
+	ignitionProvider := options.IgnitionProvider
+	if ignitionProvider == "" {
+		ignitionProvider = providers[options.ProviderType].defaultProvider
+	} else if strings.ContainsAny(ignitionProvider, " \t\n") {
+		return fmt.Errorf("'%s' is not a valid ignition provider", ignitionProvider)
 	}
 
 	kargsStanza, err := generateKernelArgsStanza(options.KernelArguments)
@@ -126,7 +128,7 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		return err
 	}
 	defer k8s.DeletePod(kubeClient, namespace, podName)
-	if err := createPod(kubeClient, namespace, podName, constants.DefaultPodImage, ignitionStanza, kargsStanza); err != nil {
+	if err := createPod(kubeClient, namespace, podName, constants.DefaultPodImage, ignitionProvider, kargsStanza); err != nil {
 		return err
 	}
 
@@ -161,7 +163,7 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 }
 
 // createPod creates a pod that mounts the config map with the same name as the pod
-func createPod(client kubernetes.Interface, namespace string, name string, imageName string, ignitionStanza string, kargs string) error {
+func createPod(client kubernetes.Interface, namespace string, name string, imageName string, providerType string, kargs string) error {
 	privileged := true
 	builderVolumeName := "builder"
 	hostVolumeName := "host-root"
@@ -186,7 +188,7 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 					Image:   imageName,
 					Command: []string{"sleep", "10d"},
 					Env: []corev1.EnvVar{
-						{Name: envIgnitionStanza, Value: ignitionStanza},
+						{Name: envProviderType, Value: providerType},
 						{Name: envKargs, Value: kargs},
 					},
 					SecurityContext: &corev1.SecurityContext{
@@ -278,12 +280,12 @@ func createOciImage(cc *copyConfig) error {
 
 var providers = map[string]providerFuncs{
 	ProviderTypeOCI: providerFuncs{
-		defaultIgnitionStanza: ociDefaultIgnition,
+		defaultProvider:       ociDefaultIgnition,
 		createConfigMap:       createOciConfigMap,
 		createImage:           createOciImage,
 	},
 	ProviderTypeOstree: providerFuncs{
-		defaultIgnitionStanza: qemuDefaultIgnition,
+		defaultProvider:       qemuDefaultIgnition,
 		createConfigMap:       createOstreeConfigMap,
 		createImage:           createOstreeImage,
 	},
