@@ -37,6 +37,14 @@ const (
 	flagProviderType      = "type"
 	flagProviderTypeShort = "t"
 	flagProviderTypeHelp  = "The provider type, default is oci"
+
+	flagIgnitionProvider      = "ignition-provider"
+	flagIgnitionProviderShort = "i"
+	flagIgnitionProviderHelp  = "The kernel command line arguments to configure the ignition provider"
+
+	flagKargs      = "kernel-args"
+	flagKargsShort = "K"
+	flagKargsHelp  = "Additional kernel command line arguments to append to the end of the argument list"
 )
 
 func NewCmd() *cobra.Command {
@@ -56,6 +64,8 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
+	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
+	cmd.Flags().StringVarP(&createOptions.KernelArguments, flagKargs, flagKargsShort, "", flagKargsHelp)
 	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
 
 	return cmd
