@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
@@ -20,6 +19,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -99,6 +99,7 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
 			UploadCertificateKey: bd.UploadCertificateKey,
 			KubeVersion:          bd.Config.KubeVersion,
+			TLSCipherSuites:      bd.Config.CipherSuites,
 		})
 	} else {
 		// Worker nodes do not get two networks.  On remote clusters,
@@ -122,6 +123,7 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 			ProxyMode:            bd.Config.KubeProxyMode,
 			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
 			UploadCertificateKey: bd.UploadCertificateKey,
+			TLSCipherSuites:      bd.Config.CipherSuites,
 		})
 	}
 
