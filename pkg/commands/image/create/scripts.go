@@ -93,7 +93,10 @@ while mount -o rw /dev/nbd0p2 $HOST_BUILD_DIR/p2; [[ $? -ne 0 ]]; do
 done
 
 # Change the ignition platform ID
-sed -i "s/ignition.platform.id=qemu/ignition.platform.id=${IGNITION_PROVIDER_TYPE}/g" $HOST_BUILD_DIR/p2/loader/entries/ostree-1-ock.conf
+sed -i "s/ignition.platform.id=qemu/${IGNITION_STANZA}/g" $HOST_BUILD_DIR/p2/loader/entries/ostree-1-ock.conf
+if [ -n "${KARGS_APPEND_STANZA}" ]; then
+	sed -i "${KARGS_APPEND_STANZA}" $HOST_BUILD_DIR/p2/loader/entries/ostree-1-ock.conf
+fi
 
 # Change the UUIDs
 sed -i "s/$OLD_ROOT_UUID/$ROOT_UUID/g" $HOST_BUILD_DIR/p2/loader/entries/ostree-1-ock.conf
