@@ -39,7 +39,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne info" command
 func RunCmd(cmd *cobra.Command) error {
-	fmt.Printf("Environment Variable\n")
+	fmt.Printf("Environment Variables\n")
 
 	envVars := map[string]string{
 		"OCNE_DEFAULTS": "This environment variable sets the location of the default configuration file.",
