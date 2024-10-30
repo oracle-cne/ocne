@@ -5,8 +5,10 @@ package info
 
 import (
 	"fmt"
+	"github.com/gosuri/uitable"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 const (
@@ -37,9 +39,22 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne info" command
 func RunCmd(cmd *cobra.Command) error {
-	fmt.Println("The OCNE_DEFAULTS environment variable sets the location of the default configuration file.")
-	fmt.Println("The KUBECONFIG environment variable sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands.")
-	fmt.Println("The EDITOR environment variable sets the default document editor.")
+	fmt.Printf("Environment Variable\n")
+
+	envVars := map[string]string{
+		"OCNE_DEFAULTS": "This environment variable sets the location of the default configuration file.",
+		"KUBECONFIG":    "This sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands.",
+		"EDITOR":        "This sets the default document editor",
+	}
+
+	table := uitable.New()
+
+	table.AddRow("Environment Variable", "Description", "Current Value")
+	for envVar, description := range envVars {
+		table.AddRow(envVar, description, os.Getenv(envVar))
+	}
+	fmt.Println(table)
+
 	return nil
 
 }
