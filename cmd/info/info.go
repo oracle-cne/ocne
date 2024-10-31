@@ -48,8 +48,10 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 
 	table := uitable.New()
+	table.Wrap = true
+	table.MaxColWidth = 50
 
-	table.AddRow("Environment Variable", "Description", "Current Value")
+	table.AddRow("Name", "Description", "Current Value")
 	for envVar, description := range envVars {
 		table.AddRow(envVar, description, os.Getenv(envVar))
 	}
