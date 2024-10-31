@@ -44,7 +44,7 @@ func RunCmd(cmd *cobra.Command) error {
 	envVars := map[string]string{
 		"OCNE_DEFAULTS": "Sets the location of the default configuration file.",
 		"KUBECONFIG":    "Sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands.",
-		"EDITOR":        "Sets the default document editor",
+		"EDITOR":        "Sets the default document editor.",
 	}
 
 	table := uitable.New()
