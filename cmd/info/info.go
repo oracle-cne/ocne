@@ -14,7 +14,7 @@ import (
 const (
 	CommandName = "info"
 	helpShort   = "Display usage information"
-	helpLong    = `Display usage information that may be difficult to find.`
+	helpLong    = `Display usage information for options that are not available from individual commands.`
 	helpExample = `
 ocne info
 `
