@@ -13,8 +13,8 @@ import (
 
 const (
 	CommandName = "info"
-	helpShort   = "Display information about OCNE "
-	helpLong    = `Display information about OCNE that may be difficult to find.`
+	helpShort   = "Display usage information"
+	helpLong    = `Display usage information that may be difficult to find.`
 	helpExample = `
 ocne info
 `
