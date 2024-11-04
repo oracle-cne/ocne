@@ -29,7 +29,7 @@ const (
 	DefaultCatalogName = "Oracle Cloud Native Environment Application Catalog"
 
 	// CatalogServiceName is the default OCNE catalog service name
-	CatalogServiceName = "app-catalog"
+	CatalogServiceName = "ocne-catalog"
 
 	// UIServiceName is the default OCNE UI service name
 	UIServiceName = "ui"
@@ -55,6 +55,10 @@ const (
 	CatalogChart     = "ocne-catalog"
 	CatalogVersion   = "2.0.0"
 	CatalogName      = "Oracle Cloud Native Environment Application Catalog"
+
+	CommunityCatalogName      = "ArtifactHub Community Catalog"
+	CommunityCatalogURI       = "https://artifacthub.io"
+	CommunityCatalogNamespace = OCNESystemNamespace
 
 	UIRelease        = "ui"
 	UINamespace      = "ocne-system"
