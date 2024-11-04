@@ -433,6 +433,8 @@ func MergeConfig(def *Config, ovr *Config) Config {
 		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
 		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
 		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
+		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, false),
+		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
 		EphemeralConfig:          MergeEphemeralConfig(&def.EphemeralConfig, &ovr.EphemeralConfig),
 		Quiet:                    iebp(def.QuietPtr, ovr.QuietPtr, false),
 		QuietPtr:                 iebpp(def.QuietPtr, ovr.QuietPtr),
