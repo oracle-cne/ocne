@@ -29,7 +29,7 @@ const (
 	DefaultCatalogName = "Oracle Cloud Native Environment Application Catalog"
 
 	// CatalogServiceName is the default OCNE catalog service name
-	CatalogServiceName = "app-catalog"
+	CatalogServiceName = "ocne-catalog"
 
 	// UIServiceName is the default OCNE UI service name
 	UIServiceName = "ui"
