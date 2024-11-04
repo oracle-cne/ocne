@@ -56,6 +56,10 @@ const (
 	CatalogVersion   = "2.0.0"
 	CatalogName      = "Oracle Cloud Native Environment Application Catalog"
 
+	CommunityCatalogName      = "ArtifactHub Community Catalog"
+	CommunityCatalogURI       = "https://artifacthub.io"
+	CommunityCatalogNamespace = OCNESystemNamespace
+
 	UIRelease        = "ui"
 	UINamespace      = "ocne-system"
 	UIChart          = "ui"
