@@ -33,7 +33,7 @@ GIT_COMMIT:=$(shell git rev-parse HEAD)
 BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
 CLI_VERSION:=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)-$(shell grep Release: Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2 | cut -d '%' -f 1)
 
-ifneq (,$(findstring linux-gnu,$(OSTYPE)))
+ifneq (,$(findstring linux-gnu,${OSTYPE}))
 	CLI_VERSION=$(shell rpmspec -q --queryformat='%{VERSION}-%{RELEASE}' ${MAKEFILE_DIR}/buildrpm/ocne.spec)
 endif
 ifndef RELEASE_BRANCH
