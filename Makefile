@@ -31,7 +31,7 @@ NAME:=ocne
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
-CLI_VERSION:=$(shell grep Version: ${OCNE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)
+CLI_VERSION:=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)
 
 ifdef RELEASE_VERSION
 	CLI_VERSION=${RELEASE_VERSION}
