@@ -118,6 +118,8 @@ type Config struct {
 	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
 	Catalog                  bool                   `yaml:"catalogfake"`
 	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
+	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
 	EphemeralConfig          EphemeralClusterConfig `yaml:"ephemeralCluster"`
 	Quiet                    bool                   `yaml:"quiteFake"`
 	QuietPtr                 *bool                  `yaml:"quiet,omitempty"`
@@ -154,6 +156,8 @@ type ClusterConfig struct {
 	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
 	Catalog                  bool                   `yaml:"catalogfake"`
 	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
+	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
 	Catalogs                 []Catalog              `yaml:"catalogs"`
 	Applications             []Application          `yaml:"applications"`
 	KubeVersion              string                 `yaml:"kubernetesVersion"`
@@ -468,10 +472,12 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		Headless:                 iebp(def.HeadlessPtr, ovr.HeadlessPtr, false),
 		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
 		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
+		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, true),
 		BootVolumeContainerImage: ies(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
 		Applications:             MergeApplications(def.Applications, ovr.Applications),
 		Catalogs:                 MergeCatalogs(def.Catalogs, ovr.Catalogs),
 		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
+		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
 		KubeVersion:              ies(def.KubeVersion, ovr.KubeVersion),
 		SshPublicKeyPath:         ies(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
 		SshPublicKey:             ies(def.SshPublicKey, ovr.SshPublicKey),
@@ -513,6 +519,8 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		HeadlessPtr:              iebpp(c.HeadlessPtr, cc.HeadlessPtr),
 		Catalog:                  iebp(c.CatalogPtr, cc.CatalogPtr, true),
 		CatalogPtr:               iebpp(c.CatalogPtr, cc.CatalogPtr),
+		CommunityCatalog:         iebp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr, true),
+		CommunityCatalogPtr:      iebpp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr),
 		Applications:             MergeApplications(cc.Applications, nil),
 		Catalogs:                 MergeCatalogs(cc.Catalogs, nil),
 		KubeVersion:              ies(c.KubeVersion, cc.KubeVersion),

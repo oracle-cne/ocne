@@ -6,6 +6,8 @@ package catalog
 import (
 	"fmt"
 
+	"github.com/oracle-cne/ocne/pkg/config/types"
+
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -28,4 +30,14 @@ func WaitForInternalCatalogInstall(kubeClient kubernetes.Interface, logFn func(s
 		return fmt.Errorf("Oracle Catalog failed to start")
 	}
 	return nil
+}
+
+// NewCommunityCatalog returns the definition for adding the community catalog
+func NewCommunityCatalog() types.Catalog {
+	return types.Catalog{
+		Protocol:  ArtifacthubProtocol,
+		URI:       constants.CommunityCatalogURI,
+		Name:      constants.CommunityCatalogName,
+		Namespace: constants.CommunityCatalogNamespace,
+	}
 }
