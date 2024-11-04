@@ -13,8 +13,8 @@ import (
 
 const (
 	CommandName = "info"
-	helpShort   = "Display usage and build information"
-	helpLong    = `Display usage information for options that are not available from individual commands along with build information.`
+	helpShort   = "Displays version and setting information"
+	helpLong    = `Displays settings for options that are not available from individual commands along with version information.`
 	helpExample = `
 ocne info
 `
