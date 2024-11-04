@@ -6,7 +6,7 @@ GOPATH ?= $(shell go env GOPATH)
 
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-OCNE_DIR:=github.com/oracle-cne$(shell echo ${MAKEFILE_DIR} | sed 's/.*github.com//')
+OCNE_DIR:=github.com$(shell echo ${MAKEFILE_DIR} | sed 's/.*github.com//')
 INFO_DIR:=${OCNE_DIR}/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
@@ -31,6 +31,7 @@ NAME:=ocne
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
+CLI_VERSION:=$(shell grep version: ${OCNE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)
 
 ifdef RELEASE_VERSION
 	CLI_VERSION=${RELEASE_VERSION}
@@ -60,7 +61,7 @@ help: ## Display this help.
 
 .PHONY: run
 run:
-	$(GO) run -ldflags "${CLI_GO_LDFLAGS}" ${GOPATH}/src/${OCNE_DIR}/main.go
+	$(GO) run ${GOPATH}/src/${OCNE_DIR}/main.go
 #
 # Go build related tasks
 #

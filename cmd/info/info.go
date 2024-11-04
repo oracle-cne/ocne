@@ -61,6 +61,8 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 	fmt.Println(table)
 
+	fmt.Println()
+
 	fmt.Printf("CLI Info\n")
 
 	infoArgs := map[string]string{
@@ -75,9 +77,9 @@ func RunCmd(cmd *cobra.Command) error {
 
 	infoTable.AddRow("Name", "Value")
 	for name, value := range infoArgs {
-		table.AddRow(name, value)
+		infoTable.AddRow(name, value)
 	}
-	fmt.Println(table)
+	fmt.Println(infoTable)
 	return nil
 
 }
