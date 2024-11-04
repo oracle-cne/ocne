@@ -13,8 +13,8 @@ import (
 
 const (
 	CommandName = "info"
-	helpShort   = "Display usage information"
-	helpLong    = `Display usage information for options that are not available from individual commands.`
+	helpShort   = "Display usage and build information"
+	helpLong    = `Display usage information for options that are not available from individual commands along with build information.`
 	helpExample = `
 ocne info
 `
@@ -66,9 +66,9 @@ func RunCmd(cmd *cobra.Command) error {
 	fmt.Printf("CLI Info\n")
 
 	infoArgs := map[string]string{
-		"CLI_VERSION": cliVersion,
-		"BUILD_DATE":  buildDate,
-		"GIT_COMMIT":  gitCommit,
+		"Version":   cliVersion,
+		"BuildDate": buildDate,
+		"GitCommit": gitCommit,
 	}
 
 	infoTable := uitable.New()
