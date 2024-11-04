@@ -7,6 +7,7 @@ GOPATH ?= $(shell go env GOPATH)
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 OCNE_DIR:=github.com/oracle-cne$(shell echo ${MAKEFILE_DIR} | sed 's/.*github.com//')
+INFO_DIR:=${OCNE_DIR}/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
@@ -42,6 +43,9 @@ DIST_DIR:=dist
 ENV_NAME=ocne
 GO=GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
 
+CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
+
+
 export GOCOVERDIR
 export BATS_RESULT_DIR
 
@@ -56,7 +60,7 @@ help: ## Display this help.
 
 .PHONY: run
 run:
-	$(GO) run ${GOPATH}/src/${OCNE_DIR}/main.go
+	$(GO) run -ldflags "${CLI_GO_LDFLAGS}" ${GOPATH}/src/${OCNE_DIR}/main.go
 #
 # Go build related tasks
 #
@@ -77,11 +81,11 @@ $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
 
 .PHONY: build-cli
 build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current system and architecture
-	$(GO) build -trimpath -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
+	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
 
 # Build an instrumented CLI for the current system and architecture
 build-cli-instrumented: $(CHARTS_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
-	$(GO) build -cover -trimpath -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
+	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
 
 .PHONY: cli
 cli: build-cli ## Build and install the CLI

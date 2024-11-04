@@ -20,6 +20,10 @@ ocne info
 `
 )
 
+var cliVersion string
+var buildDate string
+var gitCommit string
+
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   CommandName,
@@ -57,6 +61,23 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 	fmt.Println(table)
 
+	fmt.Printf("CLI Info\n")
+
+	infoArgs := map[string]string{
+		"CLI_VERSION": cliVersion,
+		"BUILD_DATE":  buildDate,
+		"GIT_COMMIT":  gitCommit,
+	}
+
+	infoTable := uitable.New()
+	infoTable.Wrap = true
+	infoTable.MaxColWidth = 50
+
+	infoTable.AddRow("Name", "Value")
+	for name, value := range infoArgs {
+		table.AddRow(name, value)
+	}
+	fmt.Println(table)
 	return nil
 
 }
