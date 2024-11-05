@@ -118,6 +118,8 @@ type Config struct {
 	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
 	Catalog                  bool                   `yaml:"catalogfake"`
 	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
+	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
 	EphemeralConfig          EphemeralClusterConfig `yaml:"ephemeralCluster"`
 	Quiet                    bool                   `yaml:"quiteFake"`
 	QuietPtr                 *bool                  `yaml:"quiet,omitempty"`
@@ -154,12 +156,15 @@ type ClusterConfig struct {
 	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
 	Catalog                  bool                   `yaml:"catalogfake"`
 	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
+	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
 	Catalogs                 []Catalog              `yaml:"catalogs"`
 	Applications             []Application          `yaml:"applications"`
 	KubeVersion              string                 `yaml:"kubernetesVersion"`
 	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
 	SshPublicKey             string                 `yaml:"sshPublicKey"`
 	Password                 string                 `yaml:"password"`
+	CipherSuites             string                 `yaml:"cipherSuites"`
 	ClusterDefinitionInline  string                 `yaml:"clusterDefinitionInline"`
 	ClusterDefinition        string                 `yaml:"clusterDefinition"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
@@ -428,6 +433,8 @@ func MergeConfig(def *Config, ovr *Config) Config {
 		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
 		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
 		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
+		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, false),
+		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
 		EphemeralConfig:          MergeEphemeralConfig(&def.EphemeralConfig, &ovr.EphemeralConfig),
 		Quiet:                    iebp(def.QuietPtr, ovr.QuietPtr, false),
 		QuietPtr:                 iebpp(def.QuietPtr, ovr.QuietPtr),
@@ -467,14 +474,17 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		Headless:                 iebp(def.HeadlessPtr, ovr.HeadlessPtr, false),
 		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
 		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
+		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, false),
 		BootVolumeContainerImage: ies(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
 		Applications:             MergeApplications(def.Applications, ovr.Applications),
 		Catalogs:                 MergeCatalogs(def.Catalogs, ovr.Catalogs),
 		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
+		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
 		KubeVersion:              ies(def.KubeVersion, ovr.KubeVersion),
 		SshPublicKeyPath:         ies(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
 		SshPublicKey:             ies(def.SshPublicKey, ovr.SshPublicKey),
 		Password:                 ies(def.Password, ovr.Password),
+		CipherSuites:             ies(def.CipherSuites, ovr.CipherSuites),
 		ClusterDefinitionInline:  ies(def.ClusterDefinitionInline, ovr.ClusterDefinitionInline),
 		ClusterDefinition:        ies(def.ClusterDefinition, ovr.ClusterDefinition),
 		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
@@ -511,12 +521,15 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		HeadlessPtr:              iebpp(c.HeadlessPtr, cc.HeadlessPtr),
 		Catalog:                  iebp(c.CatalogPtr, cc.CatalogPtr, true),
 		CatalogPtr:               iebpp(c.CatalogPtr, cc.CatalogPtr),
+		CommunityCatalog:         iebp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr, false),
+		CommunityCatalogPtr:      iebpp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr),
 		Applications:             MergeApplications(cc.Applications, nil),
 		Catalogs:                 MergeCatalogs(cc.Catalogs, nil),
 		KubeVersion:              ies(c.KubeVersion, cc.KubeVersion),
 		SshPublicKeyPath:         ies(c.SshPublicKeyPath, cc.SshPublicKeyPath),
 		SshPublicKey:             ies(c.SshPublicKey, cc.SshPublicKey),
 		Password:                 ies(c.Password, cc.Password),
+		CipherSuites:             cc.CipherSuites,
 		ClusterDefinitionInline:  cc.ClusterDefinitionInline,
 		ClusterDefinition:        cc.ClusterDefinition,
 		ExtraIgnition:            ies(c.ExtraIgnition, cc.ExtraIgnition),

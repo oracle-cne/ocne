@@ -4,13 +4,14 @@
 package root
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/application"
 	"github.com/oracle-cne/ocne/cmd/catalog"
 	"github.com/oracle-cne/ocne/cmd/cluster"
 	"github.com/oracle-cne/ocne/cmd/image"
+	"github.com/oracle-cne/ocne/cmd/info"
 	"github.com/oracle-cne/ocne/cmd/node"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -51,6 +52,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(cluster.NewCmd())
 	cmd.AddCommand(node.NewCmd())
 	cmd.AddCommand(image.NewCmd())
+	cmd.AddCommand(info.NewCmd())
 
 	cmd.PersistentFlags().StringVarP(&logLevel, flagLogLevel, flagLogLevelShort, "info", flagLogLevelHelp)
 

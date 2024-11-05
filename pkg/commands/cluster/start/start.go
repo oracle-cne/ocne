@@ -370,6 +370,11 @@ func getCatalogsToAdd(kubeConfig string, clusterConfig *types.ClusterConfig) ([]
 			catalogToInstall = append(catalogToInstall, clusterConfig.Catalogs[index])
 		}
 	}
+
+	if clusterConfig.CommunityCatalog {
+		catalogToInstall = append(clusterConfig.Catalogs, catalog.NewCommunityCatalog())
+	}
+
 	return catalogToInstall, nil
 }
 

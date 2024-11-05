@@ -414,6 +414,8 @@ spec:
       imageRepository: container-registry.oracle.com/olcne
       apiServer:
         certSANs: [localhost, 127.0.0.1]
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
       dns:
         imageRepository: container-registry.oracle.com/olcne
         imageTag: {{.KubeVersions.CoreDNS}}
@@ -421,8 +423,15 @@ spec:
         local:
           imageRepository: container-registry.oracle.com/olcne
           imageTag: {{.KubeVersions.Etcd}}
+          extraArgs:
+            cipher-suites: {{.CipherSuite}}
       networking: {}
-      scheduler: {}
+      controllerManager:
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
+      scheduler:
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
@@ -430,6 +439,7 @@ spec:
           cloud-provider: external
           provider-id: oci://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
+          tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
       discovery: {}
       nodeRegistration:
@@ -438,6 +448,7 @@ spec:
           cloud-provider: external
           provider-id: oci://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
+          tls-cipher-suites: {{.CipherSuite}}
 ---
 kind: OCIMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
@@ -494,6 +505,7 @@ spec:
             cloud-provider: external
             provider-id: oci://{{"{{ ds[\"id\"] }}"}}
             volume-plugin-dir: "{{.VolumePluginDir}}"
+            tls-cipher-suites: {{.CipherSuite}}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment

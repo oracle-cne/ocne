@@ -94,6 +94,10 @@ kubeApiServerBindPort: 6443
 # load balancer.
 kubeApiServerBindPortAlt: 6444
 
+# Specifies the cipher suites used by Kubernetes cluster, If omitted,
+# the default Go cipher suites will be used.
+cipherSuites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+
 # For clusters that use complex configuration that is not
 # provided by this configuration file, this is the path
 # to the file with the extra configuration.
