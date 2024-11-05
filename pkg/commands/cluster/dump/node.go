@@ -34,12 +34,6 @@ func dumpNodes(o Options, kubeClient kubernetes.Interface) error {
 	podSet := make(map[string]*k8s.PodOptions)
 	namespace := constants.OCNESystemNamespace
 
-	// resolves the name
-	nodeNames, err := determineNodeNames(o, kubeClient)
-	if err != nil {
-		return err
-	}
-
 	// create the configmap with the scripts that will run on the pod. First delete cm if exists.
 	// the pod mounts this configmap
 	if err := k8s.DeleteConfigmap(kubeClient, namespace, cmName); err != nil {

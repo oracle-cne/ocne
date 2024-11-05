@@ -96,6 +96,12 @@ func Dump(o Options) error {
 		return err
 	}
 
+	// If the user specifies a node name that is not present, return
+	_, err = determineNodeNames(o, kubeClient)
+	if err != nil {
+		return err
+	}
+
 	// Populate the map of the nodes and their hashes, in case sanitization is needed later
 	err = populateNodeMap(kubeClient)
 	if err != nil {
