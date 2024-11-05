@@ -24,6 +24,11 @@ var cliVersion string
 var buildDate string
 var gitCommit string
 
+type infoStruct struct {
+	name  string
+	value string
+}
+
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   CommandName,
@@ -46,10 +51,10 @@ func RunCmd(cmd *cobra.Command) error {
 
 	fmt.Printf("CLI Info\n")
 
-	infoArgs := map[string]string{
-		"Version":   cliVersion,
-		"BuildDate": buildDate,
-		"GitCommit": gitCommit,
+	infoArgs := []infoStruct{
+		{name: "Version", value: cliVersion},
+		{name: "BuildDate", value: buildDate},
+		{name: "GitCommit", value: gitCommit},
 	}
 
 	infoTable := uitable.New()
@@ -57,8 +62,8 @@ func RunCmd(cmd *cobra.Command) error {
 	infoTable.MaxColWidth = 50
 
 	infoTable.AddRow("Name", "Value")
-	for name, value := range infoArgs {
-		infoTable.AddRow(name, value)
+	for _, pair := range infoArgs {
+		infoTable.AddRow(pair.name, pair.value)
 	}
 	fmt.Println(infoTable)
 
@@ -66,10 +71,10 @@ func RunCmd(cmd *cobra.Command) error {
 
 	fmt.Printf("Environment Variables\n")
 
-	envVars := map[string]string{
-		"OCNE_DEFAULTS": "Sets the location of the default configuration file.",
-		"KUBECONFIG":    "Sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands.",
-		"EDITOR":        "Sets the default document editor.",
+	envVars := []infoStruct{
+		{name: "OCNE_DEFAULTS", value: "Sets the location of the default configuration file."},
+		{name: "KUBECONFIG", value: "Sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands."},
+		{name: "EDITOR", value: "Sets the default document editor."},
 	}
 
 	table := uitable.New()
@@ -77,8 +82,8 @@ func RunCmd(cmd *cobra.Command) error {
 	table.MaxColWidth = 50
 
 	table.AddRow("Name", "Description", "Current Value")
-	for envVar, description := range envVars {
-		table.AddRow(envVar, description, os.Getenv(envVar))
+	for _, pair := range envVars {
+		table.AddRow(pair.name, pair.value, os.Getenv(pair.name))
 	}
 	fmt.Println(table)
 

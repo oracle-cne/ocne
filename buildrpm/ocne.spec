@@ -20,6 +20,7 @@ BuildRequires: btrfs-progs-devel
 BuildRequires: device-mapper-devel
 BuildRequires: libassuan-devel
 BuildRequires: yq
+BuildRequires: rpm-build
 Requires: bash-completion
 Requires: containers-common
 
