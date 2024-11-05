@@ -31,4 +31,4 @@ Command displays the current value of this environment variable.
 AUTHOR
 ------
 
-George Aeillo <george.f.aeilloi@oracle.com>
+George Aeillo <george.f.aeillo@oracle.com>
