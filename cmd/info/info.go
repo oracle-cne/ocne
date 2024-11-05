@@ -13,12 +13,21 @@ import (
 
 const (
 	CommandName = "info"
-	helpShort   = "Display usage information"
-	helpLong    = `Display usage information for options that are not available from individual commands.`
+	helpShort   = "Displays version and setting information"
+	helpLong    = `Displays settings for options that are not available from individual commands along with version information.`
 	helpExample = `
 ocne info
 `
 )
+
+var cliVersion string
+var buildDate string
+var gitCommit string
+
+type infoStruct struct {
+	name  string
+	value string
+}
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -39,12 +48,33 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne info" command
 func RunCmd(cmd *cobra.Command) error {
+
+	fmt.Printf("CLI Info\n")
+
+	infoArgs := []infoStruct{
+		{name: "Version", value: cliVersion},
+		{name: "BuildDate", value: buildDate},
+		{name: "GitCommit", value: gitCommit},
+	}
+
+	infoTable := uitable.New()
+	infoTable.Wrap = true
+	infoTable.MaxColWidth = 50
+
+	infoTable.AddRow("Name", "Value")
+	for _, pair := range infoArgs {
+		infoTable.AddRow(pair.name, pair.value)
+	}
+	fmt.Println(infoTable)
+
+	fmt.Println()
+
 	fmt.Printf("Environment Variables\n")
 
-	envVars := map[string]string{
-		"OCNE_DEFAULTS": "Sets the location of the default configuration file.",
-		"KUBECONFIG":    "Sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands.",
-		"EDITOR":        "Sets the default document editor.",
+	envVars := []infoStruct{
+		{name: "OCNE_DEFAULTS", value: "Sets the location of the default configuration file."},
+		{name: "KUBECONFIG", value: "Sets the location of the kubeconfig file. This behaves the same way as the --kubeconfig option for most ocne commands."},
+		{name: "EDITOR", value: "Sets the default document editor."},
 	}
 
 	table := uitable.New()
@@ -52,8 +82,8 @@ func RunCmd(cmd *cobra.Command) error {
 	table.MaxColWidth = 50
 
 	table.AddRow("Name", "Description", "Current Value")
-	for envVar, description := range envVars {
-		table.AddRow(envVar, description, os.Getenv(envVar))
+	for _, pair := range envVars {
+		table.AddRow(pair.name, pair.value, os.Getenv(pair.name))
 	}
 	fmt.Println(table)
 
