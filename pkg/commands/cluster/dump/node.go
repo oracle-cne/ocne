@@ -29,7 +29,7 @@ const (
 )
 
 // dumpNodes dumps data from the specified nodes in the cluster
-func dumpNodes(o Options, kubeClient kubernetes.Interface) error {
+func dumpNodes(o Options, kubeClient kubernetes.Interface, nodeNames []string) error {
 	// create a set to keep track of which nodes are dumped
 	podSet := make(map[string]*k8s.PodOptions)
 	namespace := constants.OCNESystemNamespace

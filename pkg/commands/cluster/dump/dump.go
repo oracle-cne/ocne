@@ -97,7 +97,7 @@ func Dump(o Options) error {
 	}
 
 	// If the user specifies a node name that is not present, return
-	_, err = determineNodeNames(o, kubeClient)
+	nodeNames, err := determineNodeNames(o, kubeClient)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func Dump(o Options) error {
 		wg.Add(1)
 		log.Infof("Collecting node data")
 		go func() {
-			err := dumpNodes(o, kubeClient)
+			err := dumpNodes(o, kubeClient, nodeNames)
 			if err != nil {
 				log.Errorf("Error dumping nodes: %s", err.Error())
 			}
