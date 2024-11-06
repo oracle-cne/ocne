@@ -96,6 +96,12 @@ func Dump(o Options) error {
 		return err
 	}
 
+	// If the user specifies a node name that is not present, return
+	nodeNames, err := determineNodeNames(o, kubeClient)
+	if err != nil {
+		return err
+	}
+
 	// Populate the map of the nodes and their hashes, in case sanitization is needed later
 	err = populateNodeMap(kubeClient)
 	if err != nil {
@@ -110,7 +116,7 @@ func Dump(o Options) error {
 		wg.Add(1)
 		log.Infof("Collecting node data")
 		go func() {
-			err := dumpNodes(o, kubeClient)
+			err := dumpNodes(o, kubeClient, nodeNames)
 			if err != nil {
 				log.Errorf("Error dumping nodes: %s", err.Error())
 			}
@@ -141,7 +147,7 @@ func Dump(o Options) error {
 	if !o.SkipCluster {
 		// cluster info cannot be captured until all the node files have been dumped
 		// so do it after all the goroutines are done
-		capture.CaptureClusterInfo(o.SkipNodes, kubeClient, o.OutDir, o.SkipRedact)
+		capture.CaptureClusterInfo(o.SkipNodes, kubeClient, o.OutDir, o.SkipRedact, nodeNames)
 	}
 	if o.ArchiveFile != "" {
 		err = CreateReportArchive(o.OutDir, o.ArchiveFile)

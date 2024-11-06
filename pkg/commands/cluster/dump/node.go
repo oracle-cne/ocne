@@ -29,16 +29,10 @@ const (
 )
 
 // dumpNodes dumps data from the specified nodes in the cluster
-func dumpNodes(o Options, kubeClient kubernetes.Interface) error {
+func dumpNodes(o Options, kubeClient kubernetes.Interface, nodeNames []string) error {
 	// create a set to keep track of which nodes are dumped
 	podSet := make(map[string]*k8s.PodOptions)
 	namespace := constants.OCNESystemNamespace
-
-	// resolves the name
-	nodeNames, err := determineNodeNames(o, kubeClient)
-	if err != nil {
-		return err
-	}
 
 	// create the configmap with the scripts that will run on the pod. First delete cm if exists.
 	// the pod mounts this configmap
