@@ -1,0 +1,134 @@
+// Copyright (c) 2024, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+package update
+
+import (
+	"fmt"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
+	"github.com/oracle-cne/ocne/pkg/util/script"
+)
+
+func processImage(registry string, tag string, img *v1.ContainerImage) (string, bool, bool) {
+	haveCurrent := false
+	exactMatch := false
+	ret := ""
+
+	imgName := fmt.Sprintf("%s:%s", registry, tag)
+	imgPrefix := fmt.Sprintf("%s:", registry)
+	currentName := fmt.Sprintf("%s:%s", registry, constants.CurrentTag)
+	for _, name := range img.Names {
+		if name == currentName {
+			haveCurrent = true
+			continue
+		}
+		if name == imgName {
+			exactMatch = true
+			ret = name
+			continue
+		}
+
+		// If there is already an exact match, don't
+		// look at this image
+		if exactMatch {
+			continue
+		}
+		if strings.HasPrefix(name, imgPrefix) {
+			ret = name
+		}
+	}
+
+	return ret, haveCurrent, exactMatch
+}
+
+func findTaggableImage(registry string, tag string, imgs []v1.ContainerImage) string {
+	ret := ""
+	foundExact := false
+	for _, img := range imgs {
+		imgName, haveCurrent, exactMatch := processImage(registry, tag, &img)
+
+		// If there is a current image, don't tag something new
+		if haveCurrent {
+			log.Debugf("Have current image for %s", imgName)
+			return ""
+		}
+
+		if exactMatch {
+			ret = imgName
+			foundExact = true
+		} else if !foundExact {
+			ret = imgName
+		} else if ret == "" {
+			ret = imgName
+		}
+	}
+	return ret
+}
+
+func tagCommand(imgName string, registry string) string {
+	return fmt.Sprintf("chroot /hostroot podman tag %s %s:%s", imgName, registry, constants.CurrentTag)
+}
+
+func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string) error {
+	namespace := constants.OCNESystemNamespace
+
+	log.Debugf("Finding images to tag on %s", node.ObjectMeta.Name)
+
+	kubeProxyImg := findTaggableImage(constants.KubeProxyImage, "1.30.3", node.Status.Images)
+	corednsImg := findTaggableImage(constants.CoreDNSImage, "v1.11.1", node.Status.Images)
+
+	// If there is nothing to tag, then don't try.
+	if kubeProxyImg  == "" && corednsImg == "" {
+		return nil
+	}
+
+	kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, namespace, []string{}, false)
+	if err != nil {
+		return err
+	}
+
+	// Build the script to run on the node
+	tagScript := "#! /bin/bash"
+	if kubeProxyImg != "" {
+		log.Debugf("Tagging %s", kubeProxyImg)
+		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(kubeProxyImg, constants.KubeProxyImage))
+	}
+	if corednsImg != "" {
+		log.Debugf("Tagging %s", corednsImg)
+		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(corednsImg, constants.CoreDNSImage))
+	}
+
+	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
+}
+
+func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
+	// Check for presence of "current" tags for kube-proxy
+	// and coredns.  Nodes that don't have them, need them.
+	haveError := false
+	haveSuccess := false
+	for _, node := range nodes.Items {
+		err := tagOnNode(&node, restConfig, client, kubeConfigPath)
+		if err != nil {
+			haveError = true
+			log.Errorf("Could not set image tags on %s: %v", node.ObjectMeta.Name, err)
+		} else {
+			haveSuccess = true
+		}
+	}
+
+	if !haveSuccess && haveError {
+		return fmt.Errorf("Could not tag images on any nodes")
+	}
+
+	// Once at least some nodes have the current tags, update the
+	// kube-proxy daemonset and coredns deployment to use them.
+	return nil
+}

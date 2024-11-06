@@ -100,4 +100,8 @@ const (
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
+
+	CoreDNSImage   = "container-registry.oracle.com/olcne/coredns"
+	KubeProxyImage = "container-registry.oracle.com/olcne/kube-proxy"
+	CurrentTag     = "current"
 )

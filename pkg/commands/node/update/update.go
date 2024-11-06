@@ -66,6 +66,9 @@ func Update(o UpdateOptions) error {
 		return err
 	}
 
+	// Do any pre-upgrade work
+	err = preUpdate(restConfig, kubeClient, o.KubeConfigPath, nodeList)
+
 	desiredVersion, err := getVersionsFromKubeadmConfigMap(kubeClient)
 	if err != nil {
 		return err
