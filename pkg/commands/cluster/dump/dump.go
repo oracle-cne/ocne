@@ -147,7 +147,7 @@ func Dump(o Options) error {
 	if !o.SkipCluster {
 		// cluster info cannot be captured until all the node files have been dumped
 		// so do it after all the goroutines are done
-		capture.CaptureClusterInfo(o.SkipNodes, kubeClient, o.OutDir, o.SkipRedact)
+		capture.CaptureClusterInfo(o.SkipNodes, kubeClient, o.OutDir, o.SkipRedact, nodeNames)
 	}
 	if o.ArchiveFile != "" {
 		err = CreateReportArchive(o.OutDir, o.ArchiveFile)

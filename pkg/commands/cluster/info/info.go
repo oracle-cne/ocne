@@ -12,6 +12,7 @@ import (
 	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/strings/slices"
 	"os"
 	"path/filepath"
 )
@@ -112,6 +113,11 @@ func Info(o Options) error {
 		return err
 	}
 	for i, node := range nodeList.Items {
+		// This is a check that filters out node names that haven't been specified by the user
+		// When the nodeNames list is empty, all nodes are assumed to be captured, so this check is skipped
+		if !slices.Contains(o.NodeNames, node.Name) && len(o.NodeNames) > 0 {
+			continue
+		}
 		nodeDumpInfo, err := extractNodeInfo(o.SkipNodes, o.RootDumpDir, node.Name)
 		if err != nil {
 			return err
