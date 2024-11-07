@@ -70,7 +70,7 @@ $(CHART_EMBED): $(CHART_BUILD_OUT_DIR)
 	cp $(CHART_BUILD_OUT_DIR)/* $@
 
 $(CHART_BUILD_DIR): $(BUILD_DIR)
-	git clone -b release/2.0  $(CATALOG_REPO) $@
+	git clone -b 37-add-flannel-0257-to-the-catalog  $(CATALOG_REPO) $@
 
 $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
 	cd $< && make

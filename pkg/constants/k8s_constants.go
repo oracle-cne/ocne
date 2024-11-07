@@ -47,8 +47,8 @@ const (
 	CNIFlannelRelease   = "flannel"
 	CNIFlannelNamespace = "kube-flannel"
 	CNIFlannelChart     = "flannel"
-	CNIFlannelVersion   = "0.22.3"
-	CNIFlannelImageTag  = "v0.22.3-2"
+	CNIFlannelVersion   = "0.25.7"
+	CNIFlannelImageTag  = "v0.25.7"
 
 	CatalogRelease   = "ocne-catalog"
 	CatalogNamespace = "ocne-system"
