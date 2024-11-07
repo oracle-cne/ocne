@@ -10,10 +10,15 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
 )
+
+type CatalogList struct {
+	Catalogs []catalog.CatalogInfo `yaml:"catalogs"`
+}
 
 // Ls gets a logs of catalogs
 func Ls(kubeconfig string) ([]catalog.CatalogInfo, error) {
@@ -55,39 +60,28 @@ func Ls(kubeconfig string) ([]catalog.CatalogInfo, error) {
 			Type:        service.Spec.Type,
 		})
 	}
-	// Add local catalogs from ~/.ocne/catalogs
+	// Get local catalogs from ~/.ocne/catalogs.yaml
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf("unable to access home directory: %v", err)
+		return nil, fmt.Errorf("failed to retrieve home directory: %v", err)
 	}
+	catalogFilePath := filepath.Join(homeDir, ".ocne", "catalogs.yaml")
 
-	localCatalogPath := filepath.Join(homeDir, ".ocne", "catalogs")
-	files, err := os.ReadDir(localCatalogPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read local catalogs: %v", err)
-	}
-
-	// Parse each file as a local catalog
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		filePath := filepath.Join(localCatalogPath, file.Name())
-		content, err := os.ReadFile(filePath)
+	// Check if local catalogs file exists
+	if _, err := os.Stat(catalogFilePath); err == nil {
+		// Read and parse catalogs.yaml
+		data, err := ioutil.ReadFile(catalogFilePath)
 		if err != nil {
-			fmt.Printf("Failed to read catalog file %s: %v\n", filePath, err)
-			continue
+			return nil, fmt.Errorf("failed to read local catalogs file: %v", err)
 		}
 
-		var localCatalog catalog.CatalogInfo
-		if err := yaml.Unmarshal(content, &localCatalog); err != nil {
-			fmt.Printf("Failed to parse catalog file %s: %v\n", filePath, err)
-			continue
+		var localCatalogs CatalogList
+		if err := yaml.Unmarshal(data, &localCatalogs); err != nil {
+			return nil, fmt.Errorf("failed to parse local catalogs file: %v", err)
 		}
 
-		// Add local catalog to the list
-		catalogs = append(catalogs, localCatalog)
+		// Append local catalogs to the catalog list
+		catalogs = append(catalogs, localCatalogs.Catalogs...)
 	}
 
 	return catalogs, nil

@@ -4,9 +4,9 @@
 package catalog
 
 import (
+	"github.com/oracle-cne/ocne/pkg/helm"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"github.com/oracle-cne/ocne/pkg/helm"
 	"time"
 )
 
@@ -73,6 +73,9 @@ type CatalogInfo struct {
 
 	// Type is the type of service
 	Type v1.ServiceType
+
+	// Namespace is the catalog namespace
+	Namespace string `yaml:"namespace"`
 }
 
 // SearchOptions are the options for search

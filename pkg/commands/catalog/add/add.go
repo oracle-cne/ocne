@@ -5,7 +5,9 @@ package add
 
 import (
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -22,14 +24,85 @@ import (
 // in-cluster catalogs.  In-cluster catalogs should be added
 // by manually adding the appropriate Service to the cluster
 // as part of the deployment itself.
+
+// CatalogList defines the structure of catalogs.yaml
+type CatalogList struct {
+	Catalogs []catalog.CatalogInfo `yaml:"catalogs"`
+}
+
+// Add adds a catalog to the cluster or local system based on URI scheme
 func Add(kubeconfig string, name string, namespace string, externalUri string, protocol string, friendlyName string) error {
-	// Get a kubernetes client
-	_, kubeClient, err := client.GetKubeClient(kubeconfig)
+	// Parse the URI
+	exUrl, err := url.Parse(externalUri)
 	if err != nil {
 		return err
 	}
 
-	exUrl, err := url.Parse(externalUri)
+	switch exUrl.Scheme {
+	case "file":
+		return addLocalCatalog(name, namespace, externalUri, protocol)
+	case "http", "https":
+		return addClusterCatalog(kubeconfig, name, namespace, exUrl, protocol, friendlyName)
+	default:
+		return fmt.Errorf("URI scheme %s is not supported", exUrl.Scheme)
+	}
+}
+
+// addLocalCatalog adds a local catalog to ~/.ocne/catalogs.yaml
+func addLocalCatalog(name string, namespace string, uri string, protocol string) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	catalogFilePath := filepath.Join(homeDir, ".ocne", "catalogs.yaml")
+
+	// ~/.ocne directory check
+	catalogDir := filepath.Dir(catalogFilePath)
+	if _, err := os.Stat(catalogDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(catalogDir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", catalogDir, err)
+		}
+	}
+
+	// Initialize or read existing catalogs.yaml
+	var catalogList CatalogList
+	if _, err := os.Stat(catalogFilePath); os.IsNotExist(err) {
+		// If file doesn't exist, create an empty catalog list
+		catalogList = CatalogList{}
+	} else {
+		// Read and unmarshal existing catalogs.yaml
+		data, err := os.ReadFile(catalogFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read catalog file: %v", err)
+		}
+		if err := yaml.Unmarshal(data, &catalogList); err != nil {
+			return fmt.Errorf("failed to parse catalog file: %v", err)
+		}
+	}
+
+	catalogEntry := catalog.CatalogInfo{
+		CatalogName: name,
+		Namespace:   namespace,
+		Uri:         uri,
+		Protocol:    protocol,
+		Scheme:      "file",
+	}
+	catalogList.Catalogs = append(catalogList.Catalogs, catalogEntry)
+
+	// Write updated catalog list back to file
+	data, err := yaml.Marshal(&catalogList)
+	if err != nil {
+		return fmt.Errorf("failed to marshal catalog list: %v", err)
+	}
+	if err := os.WriteFile(catalogFilePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write catalog file: %v", err)
+	}
+	return nil
+}
+
+// addClusterCatalog creates a cluster service to represent the catalog
+func addClusterCatalog(kubeconfig string, name string, namespace string, exUrl *url.URL, protocol string, friendlyName string) error {
+	_, kubeClient, err := client.GetKubeClient(kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -38,25 +111,19 @@ func Add(kubeconfig string, name string, namespace string, externalUri string, p
 	scheme := exUrl.Scheme
 	portStr := exUrl.Port()
 
-	if scheme == "file" {
-		return addLocalCatalog(name, externalUri, friendlyName)
-	}
-
-	if scheme != "http" && scheme != "https" {
-		return fmt.Errorf("URI scheme %s is not supported", scheme)
-	}
-
 	if portStr == "" {
 		if scheme == "http" {
 			portStr = "80"
 		} else if scheme == "https" {
 			portStr = "443"
+		} else {
+			return fmt.Errorf("URI scheme %s is not supported", scheme)
 		}
 	}
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return nil
+		return fmt.Errorf("invalid port: %v", err)
 	}
 
 	svc := &v1.Service{
@@ -68,7 +135,7 @@ func Add(kubeconfig string, name string, namespace string, externalUri string, p
 			},
 			Annotations: map[string]string{
 				constants.OCNECatalogAnnotationKey: friendlyName,
-				constants.OCNECatalogURIKey:        externalUri,
+				constants.OCNECatalogURIKey:        exUrl.String(),
 				constants.OCNECatalogProtoKey:      protocol,
 			},
 		},
@@ -86,25 +153,4 @@ func Add(kubeconfig string, name string, namespace string, externalUri string, p
 	}
 
 	return k8s.CreateService(kubeClient, svc)
-}
-
-func addLocalCatalog(name string, externalUri string, friendlyName string) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("unable to get user home diirectory: %v", err)
-	}
-
-	catalogDir := filepath.Join(homeDir, ".ocne", "catalogs")
-	catalogFile := filepath.Join(catalogDir, name+".yaml")
-	catalogData := fmt.Sprintf("name: %s\nuri: %s\nfriendlyName: %s\n", name, externalUri, friendlyName)
-
-	// Write the catalog data to the file
-	err = os.WriteFile(catalogFile, []byte(catalogData), 0644)
-	if err != nil {
-		return fmt.Errorf("unable to write catalog file: %v", err)
-	}
-
-	fmt.Printf("Local catalog saved at %s\n", catalogFile)
-	return nil
-
 }
