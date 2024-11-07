@@ -5,7 +5,6 @@ package byo
 
 import (
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,16 +34,16 @@ type ByoDriver struct {
 	UploadCertificateKey string
 }
 
-func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, *cache.ClusterCache, error) {
+func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
 
 	kubeconfigPath, err := client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", clusterConfig.Name))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	uploadCertificateKey, err := util.CreateUploadCertificateKey()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	return &ByoDriver{
@@ -52,7 +51,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		Config:               *clusterConfig,
 		KubeconfigPath:       kubeconfigPath,
 		UploadCertificateKey: uploadCertificateKey,
-	}, nil, nil
+	}, nil
 }
 
 func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string) ([]byte, error) {

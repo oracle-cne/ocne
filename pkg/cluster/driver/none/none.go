@@ -4,7 +4,6 @@ package none
 
 import (
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -19,14 +18,14 @@ type NoneDriver struct {
 	KubeConfig string
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, *cache.ClusterCache, error) {
+func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	if clusterConfig.Provider == constants.ProviderTypeNone && config.KubeConfig == "" {
-		return nil, nil, fmt.Errorf("When the none provider is used, an existing kubeconfig file must be specified")
+		return nil, fmt.Errorf("When the none provider is used, an existing kubeconfig file must be specified")
 	}
 	ret := &NoneDriver{
 		KubeConfig: config.KubeConfig,
 	}
-	return ret, nil, nil
+	return ret, nil
 
 }
 func (nd *NoneDriver) Start() (bool, bool, error) {

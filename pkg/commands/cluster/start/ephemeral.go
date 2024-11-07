@@ -4,7 +4,6 @@
 package start
 
 import (
-	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/libvirt"
 	delete2 "github.com/oracle-cne/ocne/pkg/commands/cluster/delete"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -16,7 +15,7 @@ import (
 // EnsureCluster returns the kubeconfig to a functioning cluster.  If there is
 // a kubeconfig provided, it will return that.  If not, it will create a
 // cluster using the libvirt provider that mostly uses the default configuration.
-func EnsureCluster(kubeconfigPath string, config *types.Config, clusterConfig *types.ClusterConfig) (string, bool, *cache.ClusterCache, error) {
+func EnsureCluster(kubeconfigPath string, config *types.Config, clusterConfig *types.ClusterConfig) (string, bool, error) {
 	// Try to get a valid kubeconfig.  If one exists, then a cluster
 	// is available.
 
@@ -24,15 +23,15 @@ func EnsureCluster(kubeconfigPath string, config *types.Config, clusterConfig *t
 	path, isDefault, err := client.GetKubeConfigLocation(kubeconfigPath)
 	log.Debugf("Processed kubeconfig at \"%s\": %+v", path, err)
 	if !isDefault {
-		return path, false, nil, err
+		return path, false, err
 	}
 
-	kubeConfigPath, ephemeralCache, err := StartEphemeralCluster(config, clusterConfig)
-	return kubeConfigPath, true, ephemeralCache, err
+	kubeConfigPath, err := StartEphemeralCluster(config, clusterConfig)
+	return kubeConfigPath, true, err
 }
 
 // StartEphemeralCluster
-func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterConfig) (string, *cache.ClusterCache, error) {
+func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 	log.Debugf("Starting ephemeral cluster %s", config.EphemeralConfig.Name)
 
 	// Make local copies of the configuration that is passed
@@ -63,9 +62,9 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 	// If there was no valid kubeconfig, then a cluster is needed.  Make
 	// an ephemeral cluster that has basic functionality.  That is, there
 	// is a basic CNI in the form of flannel and nothing else.
-	kubeConfigPath, ephemeralCache, err := Start(config, clusterConfig)
+	kubeConfigPath, err := Start(config, clusterConfig)
 	if err != nil {
-		return "", ephemeralCache, err
+		return "", err
 	}
 
 	// Set the configuration kubeconfig to this kubeconfig.  This
@@ -74,7 +73,7 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 	// used.
 	origConfig.KubeConfig = kubeConfigPath
 
-	return kubeConfigPath, ephemeralCache, nil
+	return kubeConfigPath, nil
 }
 
 // StopEphemeralCluster
