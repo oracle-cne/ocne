@@ -5,7 +5,7 @@ package driver
 
 import (
 	"fmt"
-
+	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 )
 
@@ -22,7 +22,7 @@ type ClusterDriver interface {
 	DefaultCNIInterfaces() []string
 }
 
-type DriverCreateFunc func(*types.Config, *types.ClusterConfig) (ClusterDriver, error)
+type DriverCreateFunc func(*types.Config, *types.ClusterConfig) (ClusterDriver, *cache.ClusterCache, error)
 
 var drivers = map[string]DriverCreateFunc{}
 
@@ -30,10 +30,10 @@ func RegisterDriver(name string, ftor DriverCreateFunc) {
 	drivers[name] = ftor
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (ClusterDriver, error) {
+func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (ClusterDriver, *cache.ClusterCache, error) {
 	ftor, ok := drivers[clusterConfig.Provider]
 	if !ok {
-		return nil, fmt.Errorf("No implementation exists for the %s driver", clusterConfig.Provider)
+		return nil, nil, fmt.Errorf("No implementation exists for the %s driver", clusterConfig.Provider)
 	}
 
 	return ftor(config, clusterConfig)

@@ -8,18 +8,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/template"
@@ -34,6 +28,13 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 )
 
@@ -69,8 +70,8 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
@@ -242,7 +243,6 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
 
 	// The values that are required are buried inside .spec.networkSpec.vcn
 	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
@@ -470,15 +470,14 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	return ociClusterObj, err
 }
 
-
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, *cache.ClusterCache, error) {
 	var err error
 	doTemplate := false
 	cd := clusterConfig.ClusterDefinition
 	cdi := clusterConfig.ClusterDefinitionInline
 	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
-		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
+		return nil, nil, fmt.Errorf("cluster configuration has file-based and inline resources")
 	} else if cd == "" && cdi == "" {
 		// If no configuration is provided, make one.  We may need to upload an
 		// image.
@@ -492,12 +491,12 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 			cd = filepath.Join(clusterConfig.WorkingDirectory, cd)
 			cd, err = filepath.Abs(cd)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		cdiBytes, err := os.ReadFile(cd)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		cdi = string(cdiBytes)
 	}
@@ -523,7 +522,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// two subnets (which can be the same).  These values are fed into the
 	// OCI-CCM configuration.
 	if clusterConfig.Providers.Oci.Compartment == "" {
-		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
+		return nil, nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
 	}
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
@@ -538,9 +537,9 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.Providers.Oci.KubeConfigPath, config, clusterConfig)
+	bootstrapKubeConfig, isEphemeral, cacheFromEphemeralCluster, err := start.EnsureCluster(config.Providers.Oci.KubeConfigPath, config, clusterConfig)
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
 	cad.Ephemeral = isEphemeral
@@ -549,17 +548,17 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// Install any necessary components into the admin cluster
 	capiApplications, err := cad.getApplications()
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
 	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, config.Quiet)
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
 	_, kubeClient, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
 	// Wait for all controllers to come online.  This is done
@@ -568,15 +567,15 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// linear
 	err = cad.waitForControllers(kubeClient)
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
 	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", cad.ClusterConfig.Name))
 	if err != nil {
-		return nil, err
+		return nil, cacheFromEphemeralCluster, err
 	}
 
-	return cad, nil
+	return cad, cacheFromEphemeralCluster, nil
 }
 
 func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
@@ -939,7 +938,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil{
+		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -968,7 +967,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error{
+			WaitFunction: func(i interface{}) error {
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},

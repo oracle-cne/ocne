@@ -38,7 +38,7 @@ const (
 
 // Start starts a cluster based on the given configuration and returns the
 // canonical kubeconfig
-func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, *cache.ClusterCache, error) {
 	// Check to see if the cluster already exists.  If it does, make
 	// sure it is the "same cluster" for some appropriate definition
 	// of same cluster.
@@ -46,16 +46,16 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	clusterCache, err := cache.GetCache()
 	if err != nil {
-		return "", err
+		return "", clusterCache, err
 	}
 	if clusterConfig.Provider != constants.ProviderTypeNone {
 		cachedClusterConfig := clusterCache.Get(clusterConfig.Name)
 		if cachedClusterConfig != nil {
 			if cachedClusterConfig.ClusterConfig.Provider != clusterConfig.Provider {
-				return "", fmt.Errorf("the provider of the existing cluster is %s. The target provider is %s", cachedClusterConfig.ClusterConfig.Provider, clusterConfig.Provider)
+				return "", clusterCache, fmt.Errorf("the provider of the existing cluster is %s. The target provider is %s", cachedClusterConfig.ClusterConfig.Provider, clusterConfig.Provider)
 			}
 			if cachedClusterConfig != nil && cachedClusterConfig.ClusterConfig.KubeVersion != clusterConfig.KubeVersion {
-				return "", fmt.Errorf("the Kubernetes version of the existing cluster is %s. The target Kubernetes version is %s", cachedClusterConfig.ClusterConfig.KubeVersion, clusterConfig.KubeVersion)
+				return "", clusterCache, fmt.Errorf("the Kubernetes version of the existing cluster is %s. The target Kubernetes version is %s", cachedClusterConfig.ClusterConfig.KubeVersion, clusterConfig.KubeVersion)
 			}
 		}
 	}
@@ -67,15 +67,21 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		infoFunc = func(args ...interface{}) {}
 		infofFunc = func(s string, a ...any) {}
 	}
-	drv, err := driver.CreateDriver(config, clusterConfig)
+
+	drv, secondCache, err := driver.CreateDriver(config, clusterConfig)
 	if err != nil {
-		return "", err
+		return "", clusterCache, err
+	}
+	if secondCache != nil {
+		for _, clusters := range secondCache.Clusters {
+			clusterCache.Add(&clusters.ClusterConfig, clusters.KubeconfigPath)
+		}
 	}
 	defer drv.Close()
 
 	wasRunning, skipInstall, err := drv.Start()
 	if err != nil {
-		return "", err
+		return "", clusterCache, err
 	}
 
 	localKubeConfig := drv.GetKubeconfigPath()
@@ -83,17 +89,17 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	if !wasRunning {
 		err = clusterCache.Add(clusterConfig, localKubeConfig)
 		if err != nil {
-			return localKubeConfig, err
+			return localKubeConfig, clusterCache, err
 		}
 	}
 
 	if skipInstall {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	_, kubeClient, err := client.GetKubeClient(localKubeConfig)
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	// Install charts that are baked in to this application and from
@@ -211,20 +217,20 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Get all the installed applications
 	releases, err := getAllReleases(localKubeConfig)
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	// Get the list of applications to install
 	appsToInstall := getAppsToInstall(applications, releases)
 	err = install.InstallApplications(appsToInstall, localKubeConfig, config.Quiet)
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	// Get all the external catalogs to add
 	catalogsToAdd, err := getCatalogsToAdd(localKubeConfig, clusterConfig)
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	for _, c := range catalogsToAdd {
@@ -236,7 +242,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		}
 		err = add.Add(localKubeConfig, svcName, c.Namespace, c.URI, c.Protocol, c.Name)
 		if err != nil {
-			return localKubeConfig, err
+			return localKubeConfig, clusterCache, err
 		}
 	}
 
@@ -258,14 +264,14 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		}
 		if len(app.Application.Catalog) == 0 || app.Application.Catalog == constants.DefaultCatalogName {
 			if err := catalog.WaitForInternalCatalogInstall(kubeClient, infoFuncWait); err != nil {
-				return localKubeConfig, err
+				return localKubeConfig, clusterCache, err
 			}
 			break
 		}
 	}
 	err = install.InstallApplications(appsToInstall, localKubeConfig, config.Quiet)
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 
 	// Do any cluster stuff that requires other applications to be installed.  For example
@@ -273,7 +279,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// to work.
 	err = drv.PostStart()
 	if err != nil {
-		return localKubeConfig, err
+		return localKubeConfig, clusterCache, err
 	}
 	drv.Close()
 
@@ -283,7 +289,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Determine if port forwards need to be setup and a browser started
 	if config.AutoStartUI == "true" {
 		if err := autoStartUI(kubeClient, localKubeConfig, infoFuncWait); err != nil {
-			return localKubeConfig, err
+			return localKubeConfig, clusterCache, err
 		}
 	}
 
@@ -297,7 +303,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	} else {
 		infofFunc("Post install information:\n\n%s\n", drv.PostInstallHelpStanza())
 	}
-	return localKubeConfig, nil
+	return localKubeConfig, clusterCache, nil
 }
 
 func autoStartUI(client kubernetes.Interface, localKubeConfig string, infoFunc func(string)) error {

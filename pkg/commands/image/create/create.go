@@ -11,11 +11,11 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -63,15 +63,15 @@ type CreateOptions struct {
 
 type providerFuncs struct {
 	defaultProvider string
-	createConfigMap       func(string, string) *corev1.ConfigMap
-	createImage           func(*copyConfig) error
+	createConfigMap func(string, string) *corev1.ConfigMap
+	createImage     func(*copyConfig) error
 }
 
 // Create creates a qcow2 image for the specified provider type
 func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
 	namespace := constants.OCNESystemNamespace
 
-	kubeConfig, isEphemeral, err := start.EnsureCluster(startConfig.KubeConfig, startConfig, clusterConfig)
+	kubeConfig, isEphemeral, _, err := start.EnsureCluster(startConfig.KubeConfig, startConfig, clusterConfig)
 	if err != nil {
 		return err
 	}
@@ -280,14 +280,14 @@ func createOciImage(cc *copyConfig) error {
 
 var providers = map[string]providerFuncs{
 	ProviderTypeOCI: providerFuncs{
-		defaultProvider:       ociDefaultIgnition,
-		createConfigMap:       createOciConfigMap,
-		createImage:           createOciImage,
+		defaultProvider: ociDefaultIgnition,
+		createConfigMap: createOciConfigMap,
+		createImage:     createOciImage,
 	},
 	ProviderTypeOstree: providerFuncs{
-		defaultProvider:       qemuDefaultIgnition,
-		createConfigMap:       createOstreeConfigMap,
-		createImage:           createOstreeImage,
+		defaultProvider: qemuDefaultIgnition,
+		createConfigMap: createOstreeConfigMap,
+		createImage:     createOstreeImage,
 	},
 }
 

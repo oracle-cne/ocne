@@ -131,7 +131,7 @@ type LibvirtDriver struct {
 	UploadCertificateKey     string
 }
 
-func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, *cache.ClusterCache, error) {
 	cc := conftypes.OverlayConfig(clusterConfig, config)
 	clusterConfig = &cc
 	lp := clusterConfig.Providers.Libvirt
@@ -144,7 +144,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	//        libvirt install.
 	uri, err := url.Parse(lp.SessionURI)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Different steps are required depending on whether the
@@ -153,7 +153,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	// remote
 	hostIP, isLocal, err := util.ResolveURIToIP(uri)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if uri.Scheme == "" && uri.User.Username() == "" && uri.Host == "" && uri.Path != "" {
@@ -167,7 +167,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		uri, err = url.Parse(lp.SessionURI)
 		hostIP, isLocal, err = util.ResolveURIToIP(uri)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else if isLocal && runtime.GOOS == "darwin" {
 		// Mac handling.  Fix the URI and reparse.  There is
@@ -175,7 +175,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		// address is still local
 		homedir, err := os.UserHomeDir()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		lp.SessionURI = fmt.Sprintf("%s?socket=%s", lp.SessionURI, filepath.Join(homedir, constants.DarwinLibvirtSocketPath))
@@ -185,7 +185,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	log.Debugf("Connecting to %s", uri.String())
 	connection, err := libvirt.ConnectToURI(uri)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	localKubeconfigName := fmt.Sprintf("kubeconfig.%s.local", clusterConfig.Name)
@@ -193,17 +193,17 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 
 	vmKubeConfig, err := client.GetKubeconfigPath(vmKubeconfigName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	localKubeConfig, err := client.GetKubeconfigPath(localKubeconfigName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	architecture, err := getLibvirtCPUArchitecture(connection)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	info := log.Info
 	infof := log.Infof
@@ -214,7 +214,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 
 	uploadCertificateKey, err := util.CreateUploadCertificateKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ret := &LibvirtDriver{
@@ -238,7 +238,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		UploadCertificateKey:     uploadCertificateKey,
 	}
 
-	return ret, nil
+	return ret, nil, nil
 }
 
 func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, join bool, joinToken string, caCertHashes []string, bridgeNetwork bool, userNetwork bool) ([]byte, error) {
