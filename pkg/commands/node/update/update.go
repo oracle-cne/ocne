@@ -25,6 +25,10 @@ import (
 const (
 	envNodeName        = "NODE_NAME"
 	envCoreDNSImageTag = "CORE_DNS_IMAGE_TAG"
+
+	PreUpdateModeDefault = "default"
+	PreUpdateModeOnly = "only"
+	PreUpdateModeSkip = "skip"
 )
 
 // UpdateOptions are the options for the update command
@@ -43,6 +47,9 @@ type UpdateOptions struct {
 
 	// Timeout to wait for the node to drain
 	Timeout string
+
+	// PreUpdateMode determines how to handle the preupdate process
+	PreUpdateMode string
 }
 
 // Update updates a cluster node with a new CrateOS image and restarts the node
@@ -67,7 +74,16 @@ func Update(o UpdateOptions) error {
 	}
 
 	// Do any pre-upgrade work
-	err = preUpdate(restConfig, kubeClient, o.KubeConfigPath, nodeList)
+	if o.PreUpdateMode != PreUpdateModeSkip {
+		err = preUpdate(restConfig, kubeClient, o.KubeConfigPath, nodeList)
+		if err != nil {
+			return err
+		}
+	}
+
+	if o.PreUpdateMode == PreUpdateModeOnly {
+		return nil
+	}
 
 	desiredVersion, err := getVersionsFromKubeadmConfigMap(kubeClient)
 	if err != nil {

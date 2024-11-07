@@ -101,7 +101,12 @@ const (
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
 
+	CoreDNSDeployment = "coredns"
+	CoreDNSNamespace = "kube-system"
 	CoreDNSImage   = "container-registry.oracle.com/olcne/coredns"
+
+	KubeProxyDaemonSet = "kube-proxy"
+	KubeProxyNamespace = "kube-system"
 	KubeProxyImage = "container-registry.oracle.com/olcne/kube-proxy"
 	CurrentTag     = "current"
 )

@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/image"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"github.com/oracle-cne/ocne/pkg/util/script"
 )
@@ -82,8 +84,17 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 
 	log.Debugf("Finding images to tag on %s", node.ObjectMeta.Name)
 
-	kubeProxyImg := findTaggableImage(constants.KubeProxyImage, "1.30.3", node.Status.Images)
-	corednsImg := findTaggableImage(constants.CoreDNSImage, "v1.11.1", node.Status.Images)
+	kubeProxyTag, err := getKubeProxyTag(client)
+	if err != nil {
+		return err
+	}
+	corednsTag, err := getCoreDNSTag(client)
+	if err != nil {
+		return nil
+	}
+
+	kubeProxyImg := findTaggableImage(constants.KubeProxyImage, kubeProxyTag, node.Status.Images)
+	corednsImg := findTaggableImage(constants.CoreDNSImage, corednsTag, node.Status.Images)
 
 	// If there is nothing to tag, then don't try.
 	if kubeProxyImg  == "" && corednsImg == "" {
@@ -109,6 +120,128 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
 }
 
+func updateKubeProxy(client kubernetes.Interface) error {
+	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
+	if err != nil {
+		return err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for i, c := range proxyDep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return err
+		}
+
+		if imgInfo.BaseImage != constants.KubeProxyImage {
+			continue
+		}
+
+		// kube-proxy is already using current tag.  Nothing to do.
+		if imgInfo.Tag == constants.CurrentTag {
+			break
+		}
+
+		log.Debugf("Updating kube-proxy tag from %s to %s", imgInfo.Tag, constants.CurrentTag)
+		proxyDep.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s:%s", constants.KubeProxyImage, constants.CurrentTag)
+
+		// Once the daemonset is updated, the work is done.  Return
+		_, err = k8s.UpdateDaemonSet(client, proxyDep, constants.KubeProxyNamespace)
+		break
+	}
+
+	return err
+}
+
+func getKubeProxyTag(client kubernetes.Interface) (string, error) {
+	ret := ""
+
+	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
+	if err != nil {
+		return "", err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for _, c := range proxyDep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return "", err
+		}
+
+		if imgInfo.BaseImage != constants.KubeProxyImage {
+			continue
+		}
+
+		log.Debugf("Found kube-proxy tag %s", imgInfo.Tag)
+		ret = imgInfo.Tag
+		break
+	}
+
+	return ret, err
+}
+
+func updateCoreDNS(client kubernetes.Interface) error {
+	dnsDep, err := k8s.GetDeployment(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment)
+	if err != nil {
+		return err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for i, c := range dnsDep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return err
+		}
+
+
+		if imgInfo.BaseImage != constants.CoreDNSImage {
+			continue
+		}
+
+		// kube-proxy is already using current tag.  Nothing to do.
+		if imgInfo.Tag == constants.CurrentTag {
+			break
+		}
+
+		log.Debugf("Updating CoreDNS tag from %s to %s", imgInfo.Tag, constants.CurrentTag)
+		dnsDep.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s:%s", constants.CoreDNSImage, constants.CurrentTag)
+
+		// Once the daemonset is updated, the work is done.  Return
+		_, err = k8s.UpdateDeployment(client, dnsDep, constants.CoreDNSNamespace)
+		break
+	}
+
+	return err
+}
+
+func getCoreDNSTag(client kubernetes.Interface) (string, error) {
+	ret := ""
+	dnsDep, err := k8s.GetDeployment(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment)
+	if err != nil {
+		return "", err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for _, c := range dnsDep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return "", err
+		}
+
+		if imgInfo.BaseImage != constants.CoreDNSImage {
+			continue
+		}
+
+
+		log.Debugf("Found CoreDNS tag %s", imgInfo.Tag)
+		ret = imgInfo.Tag
+		break
+	}
+
+	return ret, err
+}
+
+
 func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
 	// Check for presence of "current" tags for kube-proxy
 	// and coredns.  Nodes that don't have them, need them.
@@ -130,5 +263,14 @@ func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 
 	// Once at least some nodes have the current tags, update the
 	// kube-proxy daemonset and coredns deployment to use them.
+	err := updateKubeProxy(client)
+	if err != nil {
+		return err
+	}
+
+	err = updateCoreDNS(client)
+	if err != nil {
+		return nil
+	}
 	return nil
 }

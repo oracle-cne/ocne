@@ -14,11 +14,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// getDeployment returns the specified deployment
-func getDeployment(client kubernetes.Interface, namespace string, name string) (*v1.Deployment, error) {
+// GetDeployment returns the specified deployment
+func GetDeployment(client kubernetes.Interface, namespace string, name string) (*v1.Deployment, error) {
 	deployment, err := client.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 
 	return deployment, err
+}
+
+// UpdateDeployment updates an existing deployment in a namespace
+func UpdateDeployment(client kubernetes.Interface, dep *v1.Deployment, namespace string) (*v1.Deployment, error) {
+	return client.AppsV1().Deployments(namespace).Update(context.TODO(), dep, metav1.UpdateOptions{})
 }
 
 // WaitForDeployment - wait for deployment to be ready
@@ -26,7 +31,7 @@ func WaitForDeployment(client kubernetes.Interface, namespace string, name strin
 	count := 0
 	maxRetry := 48
 	for {
-		deployment, err := getDeployment(client, namespace, name)
+		deployment, err := GetDeployment(client, namespace, name)
 		if err == nil {
 			if deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas >= expectedReplicas && deployment.Status.AvailableReplicas >= expectedReplicas {
 				return nil
