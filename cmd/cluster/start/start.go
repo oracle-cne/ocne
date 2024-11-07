@@ -117,7 +117,7 @@ func RunCmd(cmd *cobra.Command) error {
 		c.OsTag = cc.OsTag
 	}
 
-	_, err = start.Start(c, cc)
+	_, _, err = start.Start(c, cc)
 
 	return err
 }
