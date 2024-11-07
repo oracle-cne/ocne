@@ -115,8 +115,12 @@ func GetConfig() (*OciConfig, error) {
 	}
 
 	var ret *OciConfig
+	ociProfile := os.Getenv("OCI_CONFIG_PROFILE")
 	for _, o := range sections {
-		if o.Name == "DEFAULT" {
+		if o.Name == "DEFAULT" && (ociProfile == "" || ociProfile == "DEFAULT") {
+			ret = o
+			break
+		} else if o.Name == ociProfile {
 			ret = o
 			break
 		}

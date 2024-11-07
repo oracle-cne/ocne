@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.0.4
-Release: 3%{dist}
+Release: 3.ociprofile%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -52,6 +52,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Thu Nov 07 2024 Murali Annamneni <murali.annamneni@oracle.com> - 2.0.4-3.ociprofile
+- Add option oci prifile for ocne cluster commands
+
 * Mon Oct 28 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.4-3
 - Added TLS cipher suites support
 
