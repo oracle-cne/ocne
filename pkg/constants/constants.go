@@ -55,6 +55,7 @@ const (
 
 	// OCI shapes compatible with ARM images
 	OciVmStandardA1Flex = "VM.Standard.A1.Flex"
+	OciVmStandardA2Flex = "VM.Standard.A2.Flex"
 	OciBmStandardA1160  = "BM.Standard.A1.160"
 
 	// OCI Image Identifier Tags
@@ -73,4 +74,4 @@ const (
 	ProviderTypeNone    = "none"
 )
 
-var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160}
+var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160, OciVmStandardA2Flex}

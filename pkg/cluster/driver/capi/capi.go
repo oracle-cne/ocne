@@ -69,8 +69,8 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
@@ -242,7 +242,6 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
 
 	// The values that are required are buried inside .spec.networkSpec.vcn
 	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
@@ -470,7 +469,6 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	return ociClusterObj, err
 }
 
-
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
@@ -528,7 +526,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
-	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA1Flex {
+	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && (clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA1Flex || clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA2Flex) {
 		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
 
@@ -939,7 +937,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil{
+		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -968,7 +966,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error{
+			WaitFunction: func(i interface{}) error {
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},
