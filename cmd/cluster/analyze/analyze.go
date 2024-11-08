@@ -108,7 +108,6 @@ func dumpCluster(outDir string) error {
 	dumpOptions.IncludeConfigMap = true
 	dumpOptions.OutDir = outDir
 	dumpOptions.SkipRedact = true
-	dumpOptions.ToJSON = true
 
 	return dump.Dump(dumpOptions)
 }
