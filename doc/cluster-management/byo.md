@@ -24,8 +24,8 @@ It is necessary to have access to the following infrastructure:
 * A means to serve the OCK OSTree archive
 * A means to serve Ignition files
 
-An easy way to achieve the first four bullet points is to download [https://yum.oracle.com/oracle-linux-isos.html](Oracle Linux installation media)
-and following the [https://docs.oracle.com/en/operating-systems/oracle-linux/8/install/install-AutomatinganOracleLinuxInstallationbyUsingKickstart.html](automated installation guide).
+An easy way to achieve the first four bullet points is to download [https://yum.oracle.com/oracle-linux-isos.html] (Oracle Linux installation media)
+and following the [https://docs.oracle.com/en/operating-systems/oracle-linux/8/install/install-AutomatinganOracleLinuxInstallationbyUsingKickstart.html] (automated installation guide).
 Any of the Oracle Linux 8 or Oracle Linux 9 installation media is acceptable.
 Only the kernel, initrd, and root filesystem from the media is used.  All
 installed content comes from the OCK OSTree archive.
@@ -36,7 +36,7 @@ a container runtime such as Podman or inside a Kubernetes cluster.  It is also
 possible to generate an OSTree archive manually and serve it over any http
 server.
 
-Ignition files can be served using any of the [https://coreos.github.io/ignition/supported-platforms/](supported Ignition providers).
+Ignition files can be served using any of the [https://coreos.github.io/ignition/supported-platforms/] (supported Ignition providers).
 It is also possible to embed the Ignition configuration file directly on to
 the root filesystem of the host if the installation is done reasonably close
 to when the Ignition configuration was generated.
