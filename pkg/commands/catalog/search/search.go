@@ -9,18 +9,25 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/ls"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
 )
+
+type CatalogList struct {
+	Catalogs []catalog.CatalogInfo `yaml:"catalogs"`
+}
 
 // Search searches for applications in the catalog and returns the local port number that is used for a port-forwarding
 func Search(opt catalog.SearchOptions) (*catalog.Catalog, error) {
@@ -39,6 +46,11 @@ func Search(opt catalog.SearchOptions) (*catalog.Catalog, error) {
 		return nil, err
 	}
 
+	// Check if it's a local catalog
+	if strings.HasPrefix(catalogInfo.Uri, "file://") {
+		return loadLocalCatalog(catalogInfo, opt.Pattern)
+	}
+
 	cc, err := catalog.NewConnection(opt.KubeConfigPath, catalogInfo)
 	if err != nil {
 		return nil, err
@@ -53,6 +65,35 @@ func Search(opt catalog.SearchOptions) (*catalog.Catalog, error) {
 
 	err = filterCharts(catalog, opt.Pattern)
 	return catalog, err
+}
+
+// loadLocalCatalog reads from local catalogs.yaml to match charts based on the pattern
+func loadLocalCatalog(catalogInfo *catalog.CatalogInfo, pattern string) (*catalog.Catalog, error) {
+	// Parse charts.yaml or local catalog file for chart data based on pattern
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	catalogFilePath := filepath.Join(homeDir, ".ocne", "catalogs.yaml")
+
+	data, err := os.ReadFile(catalogFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read catalog file: %v", err)
+	}
+
+	var catalogList CatalogList
+	if err := yaml.Unmarshal(data, &catalogList); err != nil {
+		return nil, fmt.Errorf("failed to parse catalog file: %v", err)
+	}
+
+	// Iterate to match catalog name
+	for _, c := range catalogList.Catalogs {
+		if c.CatalogName == catalogInfo.CatalogName {
+			// Now apply filtering logic to the charts in this catalog
+			// Code to match charts using `pattern` within local catalog structure
+		}
+	}
+	return nil, fmt.Errorf("no matching charts found in local catalog %s", catalogInfo.CatalogName)
 }
 
 // filterCharts removes charts from the catalog that don't match the regular expression
