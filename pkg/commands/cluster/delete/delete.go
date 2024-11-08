@@ -4,10 +4,10 @@
 package delete
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
-	log "github.com/sirupsen/logrus"
 )
 
 func Delete(config *types.Config, clusterConfig *types.ClusterConfig) error {
