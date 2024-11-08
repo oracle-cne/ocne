@@ -34,6 +34,8 @@ type CaptureParams struct {
 	IncludeConfigMaps bool
 	SkipPodLogs       bool
 	Redact            bool
+	Managed           bool
+	ToJSON            bool
 }
 
 type PodLogs struct {
@@ -55,9 +57,9 @@ func CaptureCuratedResources(cp CaptureParams) error {
 
 	for _, ns := range cp.Namespaces {
 		// background goroutine will log any errors, but they are not fatal
-		captureByNamespace(&cs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, namespacesDir, ns), ns, cp.Redact)
+		captureByNamespace(&cs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, namespacesDir, ns), ns, cp.Redact, cp.Managed, cp.ToJSON)
 	}
-	captureClusterWide(&cs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, clusterWideDir), cp.Redact)
+	captureClusterWide(&cs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, clusterWideDir), cp.Redact, cp.Managed, cp.ToJSON)
 
 	// capture podLogs last
 	if !cp.SkipPodLogs {
@@ -86,9 +88,9 @@ func CaptureAllResources(cp CaptureParams) error {
 
 	for _, ns := range cp.Namespaces {
 		// background goroutine will log any errors, but they are not fatal
-		goCaptureDynamicRes(&cs, namespacedGVRS, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, namespacesDir, ns), ns, cp.Redact)
+		goCaptureDynamicRes(&cs, namespacedGVRS, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, namespacesDir, ns), ns, cp.Redact, cp.Managed, cp.ToJSON)
 	}
-	goCaptureDynamicRes(&cs, clusterGVRs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, clusterWideDir), "", cp.Redact)
+	goCaptureDynamicRes(&cs, clusterGVRs, cp.DynamicClient, filepath.Join(cp.ClusterDumpDir, clusterWideDir), "", cp.Redact, cp.Managed, cp.ToJSON)
 
 	// capture podLogs last
 	if !cp.SkipPodLogs {
