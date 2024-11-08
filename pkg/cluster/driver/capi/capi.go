@@ -70,7 +70,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
 		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":  cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
@@ -243,6 +243,7 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 		return err
 	}
 
+	
 	// The values that are required are buried inside .spec.networkSpec.vcn
 	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
 	if err != nil {
