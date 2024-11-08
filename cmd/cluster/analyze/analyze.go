@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/file"
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 const (
@@ -40,6 +40,10 @@ const (
 	flagVerbose      = "verbose"
 	flagVerboseShort = "v"
 	flagVerboseHelp  = "Display additional detailed information related to the analysis."
+
+	flagIsJSON      = "is-json"
+	flagIsJSONShort = "j"
+	flagIsJSONHelp  = "Used when the Kubernetes cluster dump being analyzed has resources in JSON format"
 )
 
 var dumpOptions dump.Options
@@ -63,6 +67,7 @@ func NewCmd() *cobra.Command {
 	// Analyze options
 	cmd.Flags().StringVarP(&options.RootDumpDir, flagDumpDir, flagDumpDirShort, "", flagDumpDirHelp)
 	cmd.Flags().BoolVarP(&options.Verbose, flagVerbose, flagVerboseShort, false, flagVerboseHelp)
+	cmd.Flags().BoolVarP(&options.IsJSON, flagIsJSON, flagIsJSONShort, false, flagIsJSONHelp)
 
 	// Dump options
 	cmd.Flags().BoolVarP(&dumpOptions.SkipNodes, flagSkipNodes, flagSkipNodesShort, false, flagSkipNodesHelp)
@@ -103,6 +108,7 @@ func dumpCluster(outDir string) error {
 	dumpOptions.IncludeConfigMap = true
 	dumpOptions.OutDir = outDir
 	dumpOptions.SkipRedact = true
+	dumpOptions.ToJSON = true
 
 	return dump.Dump(dumpOptions)
 }

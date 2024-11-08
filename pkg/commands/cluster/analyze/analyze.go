@@ -5,9 +5,9 @@ package analyze
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze/dumpfiles"
 	"github.com/oracle-cne/ocne/pkg/file"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 )
@@ -27,6 +27,9 @@ type Options struct {
 
 	// Verbose controls displaying of analyze details like events
 	Verbose bool
+
+	// IsYaml indicates whether the Kubernetes resources in the cluster dump have Kubernetes json or yaml resources
+	IsJSON bool
 }
 
 // Analyze analyzes a cluster dump
@@ -52,6 +55,7 @@ func Analyze(o Options) error {
 		nodesDir:       filepath.Join(dumpDir, "nodes"),
 		verbose:        o.Verbose,
 		writer:         os.Stdout,
+		isJSON:         o.IsJSON,
 	}
 	if err := analyzeCluster(&p); err != nil {
 		// keep going if error
@@ -83,23 +87,31 @@ func unpackArchive(archivePath string, dumpDir string) error {
 	return nil
 }
 
-// readClusterWideJSONFile reads cluster-wide json data files and unmarshals them into resources.
+// readClusterWideJSONFile reads cluster-wide json or yaml data files and unmarshals them into resources.
 // For example, read nodes.json
-func readClusterWideJSONFile[T any](p *analyzeParams, fileName string) (*T, error) {
-	return dumpfiles.ReadClusterWideJSONFile[T](p.clusterWideDir, fileName)
+func readClusterWideJSONOrYAMLFile[T any](p *analyzeParams, fileName string) (*T, error) {
+	if p.isJSON {
+		return dumpfiles.ReadClusterWideJSONOrYAMLFile[T](p.clusterWideDir, fileName+".json")
+	} else {
+		return dumpfiles.ReadClusterWideJSONOrYAMLFile[T](p.clusterWideDir, fileName+".yaml")
+	}
 }
 
-// readNamespacedJSONFiles reads namespaced json data files and unmarshals them into resources, then
+// readNamespacedJSONOrYAMLFiles reads namespaced json or yaml data files and unmarshals them into resources, then
 // puts the lists in a map where the namespace is the key.
 // For example, read pods.json in all namespaces.
-func readNamespacedJSONFiles[T any](p *analyzeParams, fileName string) (map[string]T, error) {
-	return dumpfiles.ReadJSONFiles[T](p.clusterDir, fileName)
+func readNamespacedJSONOrYAMLFiles[T any](p *analyzeParams, fileName string) (map[string]T, error) {
+	if p.isJSON {
+		return dumpfiles.ReadJSONOrYAMLFiles[T](p.clusterDir, fileName+".json")
+	} else {
+		return dumpfiles.ReadJSONOrYAMLFiles[T](p.clusterDir, fileName+".yaml")
+	}
 }
 
 // readNodeSpecificJSONFiles reads json data files for each node and unmarshals them into resources
 // For example, podman-inspect-all.json
 func readNodeSpecificJSONFiles[T any](p *analyzeParams, fileName string) (map[string]T, error) {
-	return dumpfiles.ReadJSONFiles[T](p.nodesDir, fileName)
+	return dumpfiles.ReadJSONOrYAMLFiles[T](p.nodesDir, fileName)
 }
 
 // readClusterWideTextFile reads cluster-wide json data files and unmarshals them into resources.
