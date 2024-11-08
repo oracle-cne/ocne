@@ -16,7 +16,7 @@ import (
 
 const clusterInfoFile = "cluster-info.out"
 
-func CaptureClusterInfo(kubeClient kubernetes.Interface, outDir string, skipRedact bool) {
+func CaptureClusterInfo(skipNodes bool, kubeClient kubernetes.Interface, outDir string, skipRedact bool, nodeNames []string) {
 	b := bytes.Buffer{}
 	writer := bufio.NewWriter(&b)
 
@@ -25,6 +25,8 @@ func CaptureClusterInfo(kubeClient kubernetes.Interface, outDir string, skipReda
 		KubeClient:  kubeClient,
 		RootDumpDir: outDir,
 		Writer:      writer,
+		SkipNodes:   skipNodes,
+		NodeNames:   nodeNames,
 	})
 	if err != nil {
 		log.Errorf(err.Error())
