@@ -69,8 +69,8 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":  cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
@@ -468,6 +468,7 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 
 	return ociClusterObj, err
 }
+
 
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
@@ -937,7 +938,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil {
+		if err != nil{
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -966,7 +967,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error {
+			WaitFunction: func(i interface{}) error{
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},
