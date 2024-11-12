@@ -39,7 +39,7 @@ pushd $GOPATH/src/%{MOD_PATH}/ocne
 
 # Check if code changes require updates to go.mod and/or the vendor folder
 go mod tidy
-go mod vendor
+go mod vendor -e
 %if "$(git status --porcelain)" == "1"
 git status
 git diff
