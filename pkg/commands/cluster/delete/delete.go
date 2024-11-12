@@ -11,10 +11,6 @@ import (
 )
 
 func Delete(config *types.Config, clusterConfig *types.ClusterConfig) error {
-	clusterCache, err := cache.GetCache()
-	if err != nil {
-		return err
-	}
 
 	drv, err := driver.CreateDriver(config, clusterConfig)
 	if err != nil {
@@ -23,6 +19,11 @@ func Delete(config *types.Config, clusterConfig *types.ClusterConfig) error {
 
 	log.Debugf("Deleting cluster %s", clusterConfig.Name)
 	err = drv.Delete()
+	if err != nil {
+		return err
+	}
+
+	clusterCache, err := cache.GetCache()
 	if err != nil {
 		return err
 	}
