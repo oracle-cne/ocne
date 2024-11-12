@@ -37,6 +37,20 @@ mkdir -p $GOPATH/src/%{MOD_PATH}
 ln -s `pwd` $GOPATH/src/%{MOD_PATH}/ocne
 pushd $GOPATH/src/%{MOD_PATH}/ocne
 
+# Check if code changes require updates to go.mod and/or the vendor folder
+go mod tidy
+go mod vendor
+%if "$(git status --porcelain)" == "1"
+git status
+git diff
+echo "******************************************************************************"
+echo "* ERROR: The result of a 'go mod tidy' or 'go mod vendor' resulted           *"
+echo "* in files being modified. These changes need to be included in your PR.     *"
+echo "******************************************************************************"
+exit 1
+%endif
+
+# Build the CLI
 make CATALOG_REPO=%{catalog_repo} cli
 
 %install
