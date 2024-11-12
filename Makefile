@@ -6,6 +6,7 @@ GOPATH ?= $(shell go env GOPATH)
 
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+INFO_DIR:=github.com/oracle-cne/ocne/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
@@ -80,12 +81,10 @@ $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
 
 .PHONY: build-cli
 build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current system and architecture
-    INFO_DIR:=$(shell go list ./... | grep cmd/info)
 	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
 
 # Build an instrumented CLI for the current system and architecture
 build-cli-instrumented: $(CHARTS_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
-    INFO_DIR:=$(shell go list ./... | grep cmd/info)
 	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
 
 .PHONY: cli
