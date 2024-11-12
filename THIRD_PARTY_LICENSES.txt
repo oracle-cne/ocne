@@ -4,11 +4,8 @@
 SPDX:UPL-1.0
 
 ---------------------------------- Copyright -----------------------------------
-Copyright (C) 2021, 2024, Oracle and/or its affiliates.
 Copyright (C) 2022 Oracle. All rights reserved.
-Copyright (c) 2021, 2023, Oracle and/or its affiliates.
-Copyright (c) 2022, 2024, Oracle and/or its affiliates.
-Copyright (c) 2023, Oracle and/or its affiliates.
+Copyright (c) 2023 Oracle and/or its affiliates.
 Copyright (c) 2024 Oracle and/or its affiliates.
 Copyright (c) 2024, Oracle and/or its affiliates.
 
@@ -50,7 +47,6 @@ SPDX:MIT
 
 == Copyright
 Copyright (c) 2013 TOML authors
-Copyright (c) 2018 TOML authors
 Copyright 2010 The Go Authors.  All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
@@ -430,7 +426,7 @@ See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/containerd/log
+github.com/containerd/errdefs
 
 == License Type
 SPDX:Apache-2.0
@@ -441,13 +437,13 @@ SPDX:Apache-2.0
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/containerd/stargz-snapshotter/estargz
+github.com/containerd/log
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2019 The Go Authors. All rights reserved.
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -730,7 +726,8 @@ SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
 Copyright (C) 2014-2015 Docker Inc & Go Authors. All rights reserved.
-Copyright (C) 2017 SUSE LLC. All rights reserved.
+Copyright (C) 2017-2024 SUSE LLC. All rights reserved.
+Copyright (C) 2024 SUSE LLC. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -823,7 +820,7 @@ United States and other governments.
 It is your responsibility to ensure that your use and/or transfer does not
 violate applicable laws.
 
-For more information, please see https://www.bis.doc.gov
+For more information, see https://www.bis.doc.gov
 
 See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
 
@@ -848,7 +845,6 @@ github.com/docker/docker
 SPDX:Apache-2.0
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
 Copyright (c) 2015 John Howard (Microsoft)
 Copyright 2012-2017 Docker, Inc.
 Copyright 2013-2018 Docker, Inc.
@@ -1246,7 +1242,7 @@ Copyright 2012 James Cooper. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/go-jose/go-jose/v3
+github.com/go-jose/go-jose/v4
 
 == License Type
 SPDX:Apache-2.0
@@ -1262,6 +1258,7 @@ Copyright 2016 Square, Inc.
 Copyright 2016 Zbigniew Mandziejewicz
 Copyright 2017 Square Inc.
 Copyright 2018 Square Inc.
+Copyright 2019 Square Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2555,16 +2552,13 @@ github.com/letsencrypt/boulder
 SPDX:MPL-2.0
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
 Copyright (c) 2014 CloudFlare Inc.
-Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2016 ISRG.  All rights reserved
 Copyright 2016 ISRG.  All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
 Copyright 2017 gRPC authors.
 Copyright 2018 gRPC authors.
 Copyright 2020 gRPC authors.
-Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2023 gRPC authors.
 
 --------------------------------- (separator) ----------------------------------
@@ -2735,17 +2729,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 == Copyright
 Copyright (c) 2013 Miek Gieben. All rights reserved.
 Copyright 2013 Miek Gieben. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/mistifyio/go-zfs/v3
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright (c) 2014, OmniTI Computer Consulting, Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3408,6 +3391,7 @@ Copyright 2019 The Prometheus Authors
 Copyright 2020 The Prometheus Authors
 Copyright 2021 The Prometheus Authors
 Copyright 2022 The Prometheus Authors
+Copyright 2023 Prometheus Team
 Copyright 2023 The Prometheus Authors
 
 == Notices
@@ -3770,6 +3754,7 @@ Copyright (c) 2021-2023, Sylabs Inc. All rights reserved.
 Copyright (c) 2021-2024, Sylabs Inc. All rights reserved.
 Copyright (c) 2022, Sylabs Inc. All rights reserved.
 Copyright (c) 2022-2023, Sylabs Inc. All rights reserved.
+Copyright (c) 2022-2024, Sylabs Inc. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4105,10 +4090,39 @@ Copyright 2021 The Bazel Authors. All rights reserved.
 golang.org/x/crypto
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2010 The Go Authors. All rights reserved.
 Copyright 2011 The Go Authors. All rights reserved.
@@ -4157,16 +4171,46 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/exp
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2011 The Go Authors. All rights reserved.
 Copyright 2012 The Go Authors.  All rights reserved.
 Copyright 2012 The Go Authors. All rights reserved.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2014 The Go Authors.  All rights reserved.
+Copyright 2014 The Go Authors. All rights reserved.
 Copyright 2015 The Go Authors. All rights reserved.
 Copyright 2016 The Go Authors. All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
@@ -4209,10 +4253,39 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/net
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2010 The Go Authors. All rights reserved.
 Copyright 2011 The Go Authors. All rights reserved.
@@ -4261,10 +4334,39 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/oauth2
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2014 The Go Authors. All rights reserved.
 Copyright 2015 The Go Authors. All rights reserved.
 Copyright 2015 The oauth2 Authors. All rights reserved.
@@ -4286,10 +4388,39 @@ Copyright 2024 The Go Authors. All rights reserved.
 golang.org/x/sync
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2016 The Go Authors. All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
@@ -4327,10 +4458,39 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/sys
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2009,2010 The Go Authors. All rights reserved.
 Copyright 2010 The Go Authors. All rights reserved.
@@ -4381,10 +4541,39 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/term
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2011 The Go Authors. All rights reserved.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
@@ -4421,10 +4610,39 @@ shall terminate as of the date such litigation is filed.
 golang.org/x/text
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+=== BSD-3-Clause--modified-by-Google-7998cb33
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2011 The Go Authors. All rights reserved.
 Copyright 2012 The Go Authors. All rights reserved.
@@ -4624,26 +4842,6 @@ infringement, or inducement of patent infringement, then any patent
 rights granted to you under this License for this implementation of Go
 shall terminate as of the date such litigation is filed.
 
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-gopkg.in/go-jose/go-jose.v2
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright (c) 2012 The Go Authors. All rights reserved.
-Copyright 2010 The Go Authors.  All rights reserved.
-Copyright 2010 The Go Authors. All rights reserved.
-Copyright 2011 The Go Authors.  All rights reserved.
-Copyright 2011 The Go Authors. All rights reserved.
-Copyright 2014 Square Inc.
-Copyright 2016 Square, Inc.
-Copyright 2016 Zbigniew Mandziejewicz
-Copyright 2017 Square Inc.
-Copyright 2018 Square Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -6182,5 +6380,5 @@ For more information, please refer to <http://unlicense.org/>
 
 
 === ATTRIBUTION-HELPER-GENERATED:
-=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-08-27T15:06:48Z GoVersion:go1.22.5 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  b2f9e6d52fb8ae8e6ae44192c1298287
+=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-02-28T16:52:52Z GoVersion:go1.21.9 Compiler:gc Platform:darwin/amd64}
+=== License file based on go.mod with md5 sum:  a6592029b7a0e3e51f6a19cd9f188495
