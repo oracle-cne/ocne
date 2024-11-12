@@ -19,6 +19,8 @@ CHART_GIT_DIR:=build/charts
 
 CHART_EMBED:=pkg/catalog/embedded/charts
 
+CATALOG_BRANCH?=release/2.0
+
 TEST_PATTERN:=.*
 TEST_FILTERS:=
 TEST_DIR:=$(OUT_DIR)/tests
@@ -75,7 +77,7 @@ $(CHART_EMBED): $(CHART_BUILD_OUT_DIR)
 	cp $(CHART_BUILD_OUT_DIR)/* $@
 
 $(CHART_BUILD_DIR): $(BUILD_DIR)
-	git clone -b release/2.0  $(CATALOG_REPO) $@
+	git clone -b ${CATALOG_BRANCH}  $(CATALOG_REPO) $@
 
 $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
 	cd $< && make
@@ -85,7 +87,7 @@ build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current syste
 	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
 
 # Build an instrumented CLI for the current system and architecture
-build-cli-instrumented: $(CHARTS_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
+build-cli-instrumented: $(CHART_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
 	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
 
 .PHONY: cli
