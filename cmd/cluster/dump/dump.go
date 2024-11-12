@@ -87,9 +87,9 @@ const (
 	flagManagedShort = "f"
 	flagManagedHelp  = "Remove managedField data from Kubernetes resource output"
 
-	flagToJSON      = "to-json"
-	flagToJSONShort = "j"
-	flagToJSONHelp  = "Output Kubernetes resources in JSON format"
+	flagJSON      = "json"
+	flagJSONShort = "j"
+	flagJSONHelp  = "Output Kubernetes resources in JSON format"
 )
 
 func NewCmd() *cobra.Command {
@@ -119,7 +119,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&options.SkipRedact, flagSkipRedaction, flagSkipRedactionShort, false, flagSkipRedactionHelp)
 	cmd.Flags().StringVarP(&options.ArchiveFile, flagGenerateArchive, flagGenerateArchiveShort, "", flagGenerateClusterHelp)
 	cmd.Flags().BoolVarP(&options.Managed, flagManaged, flagManagedShort, false, flagManagedHelp)
-	cmd.Flags().BoolVarP(&options.ToJSON, flagToJSON, flagToJSONShort, false, flagToJSONHelp)
+	cmd.Flags().BoolVarP(&options.JSON, flagJSON, flagJSONShort, false, flagJSONHelp)
 
 	cmd.MarkFlagsMutuallyExclusive(flagOut, flagGenerateArchive)
 	cmd.MarkFlagsMutuallyExclusive(flagSkipCluster, flagCurated)

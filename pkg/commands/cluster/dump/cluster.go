@@ -37,7 +37,7 @@ func dumpCluster(o Options, cli kubernetes.Interface, dynCli dynamic.Interface) 
 		SkipPodLogs:       o.SkipPodLogs,
 		Redact:            !o.SkipRedact,
 		Managed:           o.Managed,
-		ToJSON:            o.ToJSON,
+		ToJSON:            o.JSON,
 	}
 	if o.CuratedResources {
 		if err = capture.CaptureCuratedResources(cp); err != nil {

@@ -28,8 +28,8 @@ type Options struct {
 	// Verbose controls displaying of analyze details like events
 	Verbose bool
 
-	// IsYaml indicates whether the Kubernetes resources in the cluster dump have Kubernetes json or yaml resources
-	IsJSON bool
+	// JSON indicates whether the Kubernetes resources in the cluster dump have Kubernetes Resources in JSON format
+	JSON bool
 }
 
 // Analyze analyzes a cluster dump
@@ -55,7 +55,7 @@ func Analyze(o Options) error {
 		nodesDir:       filepath.Join(dumpDir, "nodes"),
 		verbose:        o.Verbose,
 		writer:         os.Stdout,
-		isJSON:         o.IsJSON,
+		isJSON:         o.JSON,
 	}
 	if err := analyzeCluster(&p); err != nil {
 		// keep going if error
