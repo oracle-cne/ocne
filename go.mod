@@ -275,7 +275,6 @@ require (
 replace (
 	github.com/coreos/butane => github.com/coreos/butane v0.20.0
 	github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-	github.com/etcd-io/bbolt => go.etcd.io/bbolt v1.3.5
 	github.com/spf13/cobra => github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag => github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.1
