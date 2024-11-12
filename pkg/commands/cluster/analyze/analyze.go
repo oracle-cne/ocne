@@ -57,6 +57,9 @@ func Analyze(o Options) error {
 		writer:         os.Stdout,
 		isJSON:         o.JSON,
 	}
+	if _, err := os.Stat(dumpDir); err != nil {
+		return err
+	}
 	if err := analyzeCluster(&p); err != nil {
 		// keep going if error
 		log.Errorf("Error analyzing cluster: %v", err)
