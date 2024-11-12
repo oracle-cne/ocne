@@ -6,8 +6,7 @@ GOPATH ?= $(shell go env GOPATH)
 
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-OCNE_DIR:=github.com$(shell echo ${MAKEFILE_DIR} | sed 's/.*github.com//')
-INFO_DIR:=${OCNE_DIR}/cmd/info
+INFO_DIR:=$(shell go list ./... | grep cmd/info)
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
