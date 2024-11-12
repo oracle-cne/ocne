@@ -279,8 +279,6 @@ replace (
 	github.com/spf13/pflag => github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.1
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.30.3
-	k8s.io/controller-manager => k8s.io/controller-manager v0.30.3
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.30.3
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.30.3
 	k8s.io/endpointslice => k8s.io/endpointslice v0.30.3
