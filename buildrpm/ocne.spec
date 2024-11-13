@@ -50,6 +50,8 @@ if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
   echo "******************************************************************************"
   exit 1
 fi
+# Cleanup the download from "go mod tidy", it causes cannot find module providing packages errors
+rm -rf $GOPATH/pkg
 
 # Build the CLI
 make CATALOG_REPO=%{catalog_repo} cli
