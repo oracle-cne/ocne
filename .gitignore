@@ -6,4 +6,3 @@ build
 pkg/image/docker:__container-registry.oracle.com_os_oraclelinux:8-slim
 test/tests
 .vscode/
-go/
