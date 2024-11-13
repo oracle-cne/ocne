@@ -6,12 +6,13 @@ package oci
 import (
 	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"strings"
 
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
-	"github.com/oracle-cne/ocne/pkg/constants"
 )
 
 // EnsureImage makes sure that an image with a given display name exists.  If
@@ -20,17 +21,19 @@ import (
 // description.  A work request OCID is returned to as well to allow the
 // caller to monitor pogress.
 func EnsureImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string) (string, string, error) {
-	ocid, err := GetImage(imageName, k8sVersion, arch, compartmentId)
+	// TODO, get the OCIProfile from clusterconfig when this function really used
+	ociConfig, _ := GetOCIConfig(types.OCIProfile{})
+	ocid, err := GetImage(imageName, k8sVersion, arch, compartmentId, ociConfig)
 	if err == nil {
 		return ocid, "", nil
 	}
-	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName)
+	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName, ociConfig)
 }
 
 // GetImage fetches the OCID of an image by name.
-func GetImage(imageName string, k8sVersion string, arch string, compartmentId string) (string, error) {
+func GetImage(imageName string, k8sVersion string, arch string, compartmentId string, ociConfig common.ConfigurationProvider) (string, error) {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return "", err
 	}
@@ -71,14 +74,14 @@ func GetImage(imageName string, k8sVersion string, arch string, compartmentId st
 
 // ImportImage creates a custom compute image from the contents of an
 // object storage bucket.
-func ImportImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string) (string, string, error) {
+func ImportImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string, ociConfig common.ConfigurationProvider) (string, string, error) {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return "", "", err
 	}
 
-	namespace, err := GetNamespace()
+	namespace, err := GetNamespace(ociConfig)
 	if err != nil {
 		return "", "", err
 	}
@@ -111,9 +114,9 @@ func ImportImage(imageName string, k8sVersion string, arch string, compartmentId
 	return *resp.Image.Id, *resp.OpcWorkRequestId, nil
 }
 
-func CreateEFIImageSchema(compartmentId string, imageId string) error {
+func CreateEFIImageSchema(compartmentId string, imageId string, ociConfig common.ConfigurationProvider) error {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return err
 	}
@@ -155,13 +158,13 @@ func CreateEFIImageSchema(compartmentId string, imageId string) error {
 
 // EnsureCompatibleImageShapes ensures that the image has the correct list of compatible image shapes,
 // based on the image architecture.
-func EnsureCompatibleImageShapes(imageId string, arch string) error {
+func EnsureCompatibleImageShapes(imageId string, arch string, ociConfig common.ConfigurationProvider) error {
 	// amd-based images already have the correct shapes, so we only have work to do if this is arm
 	if arch != "arm64" {
 		return nil
 	}
 
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return err
 	}

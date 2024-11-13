@@ -5,6 +5,8 @@ package upload
 
 import (
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
 	"path/filepath"
 
@@ -20,13 +22,13 @@ import (
 const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
 
-func setCompartmentId(options *UploadOptions) error {
+func setCompartmentId(options *UploadOptions, ociConfig common.ConfigurationProvider) error {
 	// Compartment ID is already resolved.
 	if options.compartmentId != "" {
 		return nil
 	}
 
-	compartmentId, err := oci.GetCompartmentId(options.CompartmentName)
+	compartmentId, err := oci.GetCompartmentId(options.CompartmentName, ociConfig)
 	if err != nil {
 		return err
 	}
@@ -37,8 +39,8 @@ func setCompartmentId(options *UploadOptions) error {
 
 // UploadAsync uploads a VM image to object storage and then begins
 // the import process.  A work request is returned for the import.
-func UploadAsync(options UploadOptions) (string, string, error) {
-	err := setCompartmentId(&options)
+func UploadAsync(options UploadOptions, ociConfig common.ConfigurationProvider) (string, string, error) {
+	err := setCompartmentId(&options, ociConfig)
 	if err != nil {
 		return "", "", err
 	}
@@ -69,7 +71,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 			Message: "Uploading image to object storage",
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.BucketName, options.filename, uo.size, uo.file, nil)
+				return oci.UploadObject(uo.BucketName, options.filename, uo.size, uo.file, nil, ociConfig)
 			},
 		},
 	})
@@ -77,19 +79,19 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", fmt.Errorf("Failed to upload image to object storage")
 	}
 
-	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.BucketName, options.filename)
+	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.BucketName, options.filename, ociConfig)
 }
 
 // EnsureImageDetails sets important configuration options for the custom image.
 // In particular, it sets the image schema to allow EFI and sets the image shapes
 // to match the architecture.
-func EnsureImageDetails(compartmentId string, imageId string, arch string) error {
+func EnsureImageDetails(compartmentId string, imageId string, arch string, ociConfig common.ConfigurationProvider) error {
 	// Set schema.  compartmentId is set by UploadAsync
-	if err := oci.CreateEFIImageSchema(compartmentId, imageId); err != nil {
+	if err := oci.CreateEFIImageSchema(compartmentId, imageId, ociConfig); err != nil {
 		return err
 	}
 
-	if err := oci.EnsureCompatibleImageShapes(imageId, arch); err != nil {
+	if err := oci.EnsureCompatibleImageShapes(imageId, arch, ociConfig); err != nil {
 		return err
 	}
 	return nil
@@ -98,12 +100,14 @@ func EnsureImageDetails(compartmentId string, imageId string, arch string) error
 // UploadOci uploads a boot image to an OCI bucket and imports
 // it as a custom compute image.
 func UploadOci(options UploadOptions) error {
-	err := setCompartmentId(&options)
+	// TODO, inject OCIProfile into UploadOption
+	ociConfig, _ := oci.GetOCIConfig(types.OCIProfile{})
+	err := setCompartmentId(&options, ociConfig)
 	if err != nil {
 		return err
 	}
 
-	imageId, workRequestId, err := UploadAsync(options)
+	imageId, workRequestId, err := UploadAsync(options, ociConfig)
 	if err != nil {
 		return err
 	}
@@ -114,12 +118,12 @@ func UploadOci(options UploadOptions) error {
 	}
 
 	// Wait for the operation to complete
-	if err = oci.WaitForWorkRequest(workRequestId, "Importing compute image"); err != nil {
+	if err = oci.WaitForWorkRequest(workRequestId, "Importing compute image", ociConfig); err != nil {
 		return err
 	}
 
 	// Set schema.  compartmentId is set by UploadAsync
-	if err = EnsureImageDetails(options.compartmentId, imageId, options.ImageArchitecture); err != nil {
+	if err = EnsureImageDetails(options.compartmentId, imageId, options.ImageArchitecture, ociConfig); err != nil {
 		return err
 	}
 

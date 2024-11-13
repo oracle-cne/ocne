@@ -262,7 +262,7 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		return "", err
 	}
 
-	if clusterConfig.ControlPlaneNodes % 2 == 0 {
+	if clusterConfig.ControlPlaneNodes%2 == 0 {
 		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
@@ -272,11 +272,12 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		return "", err
 	}
 
+	ociConfig, _ := oci.GetOCIConfig(clusterConfig.Providers.Oci.Profile)
 	// If the compartment name is non-empty
 	// resolve it to an ID.
 	cid := clusterConfig.Providers.Oci.Compartment
 	if cid != "" {
-		newCid, err := oci.GetCompartmentId(cid)
+		newCid, err := oci.GetCompartmentId(cid, ociConfig)
 		if err != nil {
 			return "", err
 		}
@@ -284,12 +285,12 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		cid = newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
+		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid, ociConfig)
 		if err == nil {
 			clusterConfig.Providers.Oci.Images.Amd64 = imageId
 		}
 
-		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
+		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid, ociConfig)
 		if err == nil {
 			clusterConfig.Providers.Oci.Images.Arm64 = imageId
 		}

@@ -4,10 +4,14 @@
 package oci
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type OciConfig struct {
@@ -21,119 +25,105 @@ type OciConfig struct {
 	User                 string
 }
 
-func parseOciConfig(filename string) ([]*OciConfig, error) {
-	contents, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
+// Convert rsa private key to string
+func privateKeyToString(privateKey *rsa.PrivateKey) (string, error) {
+	bytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	block := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: bytes,
 	}
-
-	ret := []*OciConfig{}
-	var cur *OciConfig
-	for _, l := range strings.Split(string(contents), "\n") {
-		l = strings.Trim(l, " \t")
-
-		// Blank lines get ignored
-		if len(l) == 0 {
-			continue
-		}
-
-		// If there is a section header, start a new
-		// section.  If there was an old section, add
-		// it to the list.
-		if suf, ok := strings.CutPrefix(l, "["); ok {
-			if section, ok := strings.CutSuffix(suf, "]"); ok {
-				if cur != nil {
-					ret = append(ret, cur)
-				}
-				cur = &OciConfig{
-					Name:                 section,
-					UseInstancePrincipal: false,
-				}
-			} else {
-				return nil, fmt.Errorf("%s is not a valid OCI configuration file element", l)
-			}
-			continue
-		}
-
-		// There isn't a section header.  If this is a comment, then
-		// skip
-		if strings.HasPrefix(l, "#") {
-			continue
-		}
-
-		// There isn't a section header.  If there is an equals
-		// sign, get the key and the value and put them in
-		// the right place
-		elements := strings.Split(l, "=")
-		if len(elements) != 2 {
-			return nil, fmt.Errorf("%s is not a valid OCI configuration file element", l)
-		}
-
-		key := strings.Trim(elements[0], " \n")
-		val := strings.Trim(elements[1], " \n")
-
-		switch key {
-		case "user":
-			cur.User = val
-		case "fingerprint":
-			cur.Fingerprint = val
-		case "tenancy":
-			cur.Tenancy = val
-		case "region":
-			cur.Region = val
-		case "key_file":
-			valBytes, err := os.ReadFile(val)
-			if err != nil {
-				return nil, err
-			}
-			cur.Key = string(valBytes)
-		case "passphrase":
-			cur.Passphrase = val
-		}
-	}
-
-	if cur == nil {
-		return ret, nil
-	}
-	// The final section is never added to the list
-	// because a new section is not started after it
-	// Add it now
-	ret = append(ret, cur)
-
-	return ret, nil
+	return string(pem.EncodeToMemory(block)), nil
 }
 
-func GetConfig() (*OciConfig, error) {
+/** Read OCI config file from -
+* 1) Default path ~/.oci/config
+* 2) File specified with OCI_CONFIG_FILE
+*  And, the profile set with OCI_CONFIG_PROFILE, otherwise DEFAULT
+ */
+
+func readOCIConfigFromDisk() (common.ConfigurationProvider, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return nil, nil
+	}
+	ociConfigFilePath := filepath.Join(homedir, ".oci", "config")
+	if pathFromEnv := os.Getenv("OCI_CONFIG_FILE"); pathFromEnv != "" {
+		ociConfigFilePath = pathFromEnv
 	}
 
-	sections, err := parseOciConfig(filepath.Join(homedir, ".oci", "config"))
-	if err != nil {
-		return nil, err
+	profileName := "DEFAULT"
+	if ociProfile := os.Getenv("OCI_CONFIG_PROFILE"); ociProfile != "" {
+		profileName = ociProfile
 	}
+	return common.CustomProfileConfigProvider(
+		ociConfigFilePath,
+		profileName,
+	), nil
+}
 
-	var ret *OciConfig
-	ociProfile := os.Getenv("OCI_CONFIG_PROFILE")
-	for _, o := range sections {
-		if o.Name == "DEFAULT" && (ociProfile == "" || ociProfile == "DEFAULT") {
-			ret = o
-			break
-		} else if o.Name == ociProfile {
-			ret = o
-			break
+// GetOCIConfig reads the OCI config specified either via providers.oci.profile or from the disk
+// Returns an object to ConfigurationProvider, otherwise an error
+func GetOCIConfig(profile types.OCIProfile) (common.ConfigurationProvider, error) {
+	var provider common.ConfigurationProvider
+	if profile != (types.OCIProfile{}) {
+		valBytes, err := os.ReadFile(profile.Key)
+		if err != nil {
+			return nil, fmt.Errorf("Error in reading OCI pem file: %w", err)
 		}
+		key := string(valBytes)
+		provider = common.NewRawConfigurationProvider(
+			profile.Tenancy,
+			profile.User,
+			profile.Region,
+			profile.Fingerprint,
+			key,
+			&profile.Passphrase,
+		)
+	} else {
+		provider, _ = readOCIConfigFromDisk()
 	}
 
-	if ret == nil {
-		return nil, fmt.Errorf("no default section found in OCI configuration file")
+	return provider, nil
+}
+
+// GetConfig reads the OCI config specified either via providers.oci.profile or from the disk
+// Returns an object to OciConfig, otherwise an error
+func GetConfig(profile types.OCIProfile) (*OciConfig, error) {
+	provider, err := GetOCIConfig(profile)
+	if provider == nil {
+		return nil, fmt.Errorf("Failed to read OCI configuration: %w", err)
 	}
 
-	// HACK - remove this when the oci-capi chart accepts empty passphrases
-	if ret.Passphrase == "" {
-		ret.Passphrase = "fiddlesticks"
+	var ret OciConfig
+
+	if tenancy, err := provider.TenancyOCID(); err == nil {
+		ret.Tenancy = tenancy
+	} else {
+		return nil, fmt.Errorf("failed to retrieve Tenancy OCID: %w", err)
 	}
 
-	return ret, nil
+	if user, err := provider.UserOCID(); err == nil {
+		ret.User = user
+	} else {
+		return nil, fmt.Errorf("failed to retrieve User OCID: %w", err)
+	}
+
+	if reg, err := provider.Region(); err == nil {
+		ret.Region = reg
+	} else {
+		return nil, fmt.Errorf("failed to retrieve Region: %w", err)
+	}
+
+	if fp, err := provider.KeyFingerprint(); err == nil {
+		ret.Fingerprint = fp
+	} else {
+		return nil, fmt.Errorf("failed to retrieve Fingerprint: %w", err)
+	}
+
+	if key, err := provider.PrivateRSAKey(); err == nil {
+		ret.Key, _ = privateKeyToString(key)
+	} else {
+		return nil, fmt.Errorf("failed to retrieve Private Key Path: %w", err)
+	}
+	return &ret, nil
 }

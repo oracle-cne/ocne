@@ -5,18 +5,19 @@ package oci
 
 import (
 	"context"
+	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"io"
 	"net/http"
 
-	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/objectstorage"
 	log "github.com/sirupsen/logrus"
 )
 
 // GetNamespace returns the object storage namespace for this tenancy
-func GetNamespace() (string, error) {
+func GetNamespace(ociConfig common.ConfigurationProvider) (string, error) {
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return "", err
 	}
@@ -34,13 +35,14 @@ func GetNamespace() (string, error) {
 // is the same, then the function simply returns.  If not, it uploads the
 // object to the given bucket and object name.
 func EnsureObject(bucketName string, objectName string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
-	namespace, err := GetNamespace()
+	ociConfig, _ := GetOCIConfig(types.OCIProfile{})
+	namespace, err := GetNamespace(ociConfig)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return err
 	}
@@ -63,18 +65,19 @@ func EnsureObject(bucketName string, objectName string, contentLen int64, conten
 		}
 	}
 
-	return UploadObject(bucketName, objectName, contentLen, content, metadata)
+	return UploadObject(bucketName, objectName, contentLen, content, metadata, ociConfig)
 }
 
 // UploadObject uploads the contents of a stream to an object storage bucket
-func UploadObject(bucketName string, objectName string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
-	namespace, err := GetNamespace()
+func UploadObject(bucketName string, objectName string, contentLen int64, content io.ReadCloser, metadata map[string]string, ociConfig common.ConfigurationProvider) error {
+	namespace, err := GetNamespace(ociConfig)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(ociConfig)
 	if err != nil {
 		return err
 	}

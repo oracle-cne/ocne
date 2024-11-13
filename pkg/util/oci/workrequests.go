@@ -45,8 +45,8 @@ func GetWorkRequestStatus(workRequestId string) (workrequests.WorkRequestStatusE
 // WaitForWorkRequest waits for a work request to complete, while pretty
 // printing the progress.  If the work request fails, then an error
 // is returned.
-func WaitForWorkRequest(workRequestId string, prefix string) error {
-	return WaitForWorkRequests(map[string]string{workRequestId: prefix})
+func WaitForWorkRequest(workRequestId string, prefix string, ociConfig common.ConfigurationProvider) error {
+	return WaitForWorkRequests(map[string]string{workRequestId: prefix}, ociConfig)
 }
 
 func waitForWorkRequest(wIface interface{}) error {
@@ -83,7 +83,7 @@ func workRequestProgress(wIface interface{}) string {
 // WaitForWorkRequestswaits for a set of work requests, to complete,
 // while pretty printing the progress.  If any work requests fail, an
 // error is returned.
-func WaitForWorkRequests(requests map[string]string) error {
+func WaitForWorkRequests(requests map[string]string, ociConfig common.ConfigurationProvider) error {
 	var waits []*logutils.Waiter
 	for id, msg := range requests {
 		w := workRequestWait{

@@ -29,6 +29,16 @@ type OciImageSet struct {
 	Arm64 string `yaml:"arm64"`
 }
 
+type OCIProfile struct {
+	Fingerprint          string `yaml:"fingerprint"`
+	Key                  string `yaml:"key"`
+	Passphrase           string `yaml:"passphrase"`
+	Region               string `yaml:"region"`
+	Tenancy              string `yaml:"tenancy"`
+	UseInstancePrincipal bool   `yaml:"useInstancePrincipal"`
+	User                 string `yaml:"user"`
+}
+
 type OciProvider struct {
 	KubeConfigPath    string           `yaml:"kubeconfig"`
 	Compartment       string           `yaml:"compartment"`
@@ -42,6 +52,7 @@ type OciProvider struct {
 	Vcn               string           `yaml:"vcn"`
 	ImageBucket       string           `yaml:"imageBucket"`
 	Proxy             Proxy            `yaml:"proxy"`
+	Profile           OCIProfile       `yaml:"profile"`
 }
 
 type ByoProvider struct {
@@ -252,6 +263,26 @@ func MergeProxy(def *Proxy, ovr *Proxy) Proxy {
 	}
 }
 
+// MergeOCIProfile takes two profiles and merges them into a third.
+// The default values for the result come from the first argument.  If a value
+// is set in the second argument, that value takes precedence.
+func MergeOCIProfile(def *OCIProfile, ovr *OCIProfile) OCIProfile {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
+
+	return OCIProfile{
+		Fingerprint:          ies(def.Fingerprint, ovr.Fingerprint),
+		Key:                  ies(def.Key, ovr.Key),
+		Passphrase:           ies(def.Passphrase, ovr.Passphrase),
+		Region:               ies(def.Region, ovr.Region),
+		Tenancy:              ies(def.Tenancy, ovr.Tenancy),
+		UseInstancePrincipal: iebp(&def.UseInstancePrincipal, &ovr.UseInstancePrincipal, false),
+		User:                 ies(def.User, ovr.User),
+	}
+}
+
 // MergeCatalogs takes two Catalogs and merges them into a third.
 // The two lists are appended to one another, and a unique slice
 // is returned
@@ -372,6 +403,7 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 		SelfManagedPtr:    iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
 		Vcn:               ies(def.Vcn, ovr.Vcn),
 		Proxy:             MergeProxy(&def.Proxy, &ovr.Proxy),
+		Profile:           MergeOCIProfile(&def.Profile, &ovr.Profile),
 	}
 }
 
