@@ -37,7 +37,9 @@ mkdir -p $GOPATH/src/%{MOD_PATH}
 ln -s `pwd` $GOPATH/src/%{MOD_PATH}/ocne
 pushd $GOPATH/src/%{MOD_PATH}/ocne
 
-# Check if code changes require updates to go.mod and/or the vendor folder
+# Check if code changes require updates to go.mod and/or the vendor folder.
+git add "go"
+git commit -m "commit folder to be excluded from status check"
 go mod tidy
 # go mod vendor -e
 if [[ -n $(git status --porcelain) ]]; then
@@ -46,6 +48,7 @@ if [[ -n $(git status --porcelain) ]]; then
   echo "******************************************************************************"
   echo "* ERROR: The result of a 'go mod tidy' or 'go mod vendor' resulted           *"
   echo "* in files being modified. These changes need to be included in your PR.     *"
+  echo "* Verify you have PLS approval for changes to go.mod.                        *"
   echo "******************************************************************************"
   exit 1
 fi
