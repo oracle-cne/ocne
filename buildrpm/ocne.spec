@@ -39,7 +39,7 @@ pushd $GOPATH/src/%{MOD_PATH}/ocne
 
 # Check if code changes require updates to go.mod and/or the vendor folder.
 git add "go"
-git commit --author "root <>" -m "commit folder to be excluded from status check"
+git commit --author "ocne <>" --no-verify -m "commit folder to be excluded from status check"
 go mod tidy
 # go mod vendor -e
 if [[ -n $(git status --porcelain) ]]; then
