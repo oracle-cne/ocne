@@ -283,18 +283,18 @@ replace (
 )
 
 exclude (
- 	k8s.io/cloud-provider v0.0.0
- 	k8s.io/controller-manager v0.0.0
- 	k8s.io/csi-translation-lib v0.0.0
- 	k8s.io/dynamic-resource-allocation v0.0.0
- 	k8s.io/endpointslice v0.0.0
- 	k8s.io/kube-aggregator v0.0.0
- 	k8s.io/kube-controller-manager v0.0.0
- 	k8s.io/kube-proxy v0.0.0
- 	k8s.io/kube-scheduler v0.0.0
- 	k8s.io/kubelet v0.0.0
- 	k8s.io/legacy-cloud-providers v0.0.0
- 	k8s.io/mount-utils v0.0.0
- 	k8s.io/pod-security-admission v0.0.0
- 	k8s.io/sample-apiserver v0.0.0
- )
+	k8s.io/cloud-provider v0.0.0
+	k8s.io/controller-manager v0.0.0
+	k8s.io/csi-translation-lib v0.0.0
+	k8s.io/dynamic-resource-allocation v0.0.0
+	k8s.io/endpointslice v0.0.0
+	k8s.io/kube-aggregator v0.0.0
+	k8s.io/kube-controller-manager v0.0.0
+	k8s.io/kube-proxy v0.0.0
+	k8s.io/kube-scheduler v0.0.0
+	k8s.io/kubelet v0.0.0
+	k8s.io/legacy-cloud-providers v0.0.0
+	k8s.io/mount-utils v0.0.0
+	k8s.io/pod-security-admission v0.0.0
+	k8s.io/sample-apiserver v0.0.0
+)
