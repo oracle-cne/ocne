@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"os"
 	"regexp"
@@ -210,10 +211,11 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		// Reuse the original set of input values as the base set of helm overrides
 		helmValues := map[string]interface{}{}
 		if !resetValues {
-			helmValues, err = GetValuesMap(kubeInfo, releaseName, namespace)
+			helmValuesTemp, err := GetValuesMap(kubeInfo, releaseName, namespace)
 			if err != nil {
 				return nil, err
 			}
+			maps.Copy(helmValues, helmValuesTemp)
 		}
 
 		// Append the new override values
