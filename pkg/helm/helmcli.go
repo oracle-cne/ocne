@@ -452,9 +452,11 @@ func GetReleaseValues(kubeInfo *client.KubeInfo, valueKeys []string, releaseName
 		if err != nil {
 			return map[string]interface{}{}, err
 		}
-		for _, valueKey := range valueKeys {
-			if mapVal, ok := valuesMap[valueKey]; ok {
-				values[valueKey] = mapVal
+		if valuesMap != nil {
+			for _, valueKey := range valueKeys {
+				if mapVal, ok := valuesMap[valueKey]; ok {
+					values[valueKey] = mapVal
+				}
 			}
 		}
 	}
