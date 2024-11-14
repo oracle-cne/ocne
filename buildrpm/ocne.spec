@@ -38,10 +38,11 @@ ln -s `pwd` $GOPATH/src/%{MOD_PATH}/ocne
 pushd $GOPATH/src/%{MOD_PATH}/ocne
 
 # Check if code changes require updates to go.mod and/or the vendor folder.
+# After each step cleanup the download from "go mod tidy" and "go mod vendor,
+# it causes cannot find module providing packages errors
 go mod tidy
 rm -rf $GOPATH/pkg
 go mod vendor
-# Cleanup the download from "go mod tidy", it causes cannot find module providing packages errors
 rm -rf $GOPATH/pkg
 if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
   git status
