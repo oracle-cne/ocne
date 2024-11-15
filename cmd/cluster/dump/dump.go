@@ -83,13 +83,11 @@ const (
 	flagGenerateArchiveShort = "z"
 	flagGenerateClusterHelp  = "Generate an archive instead of dumping files to an output directory.  The filename must end with .tgz or .tar.gz"
 
-	flagManaged      = "managed"
-	flagManagedShort = "f"
-	flagManagedHelp  = "Remove managedField data from Kubernetes resource output"
+	flagManaged     = "managed"
+	flagManagedHelp = "Remove managedField data from Kubernetes resource output"
 
-	flagJSON      = "json"
-	flagJSONShort = "j"
-	flagJSONHelp  = "Output Kubernetes resources in JSON format"
+	flagJSON     = "json"
+	flagJSONHelp = "Output Kubernetes resources in JSON format"
 )
 
 func NewCmd() *cobra.Command {
@@ -118,8 +116,8 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&options.SkipPodLogs, flagSkipPodLogs, flagSkipPodLogsShort, false, flagSkipPodLogsHelp)
 	cmd.Flags().BoolVarP(&options.SkipRedact, flagSkipRedaction, flagSkipRedactionShort, false, flagSkipRedactionHelp)
 	cmd.Flags().StringVarP(&options.ArchiveFile, flagGenerateArchive, flagGenerateArchiveShort, "", flagGenerateClusterHelp)
-	cmd.Flags().BoolVarP(&options.Managed, flagManaged, flagManagedShort, false, flagManagedHelp)
-	cmd.Flags().BoolVarP(&options.JSON, flagJSON, flagJSONShort, false, flagJSONHelp)
+	cmd.Flags().BoolVar(&options.Managed, flagManaged, false, flagManagedHelp)
+	cmd.Flags().BoolVar(&options.JSON, flagJSON, false, flagJSONHelp)
 
 	cmd.MarkFlagsMutuallyExclusive(flagOut, flagGenerateArchive)
 	cmd.MarkFlagsMutuallyExclusive(flagSkipCluster, flagCurated)

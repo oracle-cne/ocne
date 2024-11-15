@@ -41,9 +41,8 @@ const (
 	flagVerboseShort = "v"
 	flagVerboseHelp  = "Display additional detailed information related to the analysis."
 
-	flagJSON      = "json"
-	flagJSONShort = "j"
-	flagJSONHelp  = "Used when the Kubernetes cluster dump being analyzed has resources in JSON format"
+	flagJSON     = "json"
+	flagJSONHelp = "Used when the Kubernetes cluster dump being analyzed has resources in JSON format"
 )
 
 var dumpOptions dump.Options
@@ -67,7 +66,7 @@ func NewCmd() *cobra.Command {
 	// Analyze options
 	cmd.Flags().StringVarP(&options.RootDumpDir, flagDumpDir, flagDumpDirShort, "", flagDumpDirHelp)
 	cmd.Flags().BoolVarP(&options.Verbose, flagVerbose, flagVerboseShort, false, flagVerboseHelp)
-	cmd.Flags().BoolVarP(&options.JSON, flagJSON, flagJSONShort, false, flagJSONHelp)
+	cmd.Flags().BoolVar(&options.JSON, flagJSON, false, flagJSONHelp)
 
 	// Dump options
 	cmd.Flags().BoolVarP(&dumpOptions.SkipNodes, flagSkipNodes, flagSkipNodesShort, false, flagSkipNodesHelp)
