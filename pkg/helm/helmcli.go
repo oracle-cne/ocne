@@ -155,6 +155,9 @@ func GetValues(kubeInfo *client.KubeInfo, releaseName string, namespace string) 
 	if err != nil {
 		return nil, err
 	}
+	if vals == nil {
+		return nil, nil
+	}
 
 	yamlValues, err := yaml.Marshal(vals)
 	if err != nil {
