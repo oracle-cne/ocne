@@ -37,6 +37,25 @@ mkdir -p $GOPATH/src/%{MOD_PATH}
 ln -s `pwd` $GOPATH/src/%{MOD_PATH}/ocne
 pushd $GOPATH/src/%{MOD_PATH}/ocne
 
+# Check if code changes require updates to go.mod and/or the vendor folder.
+# After each step cleanup the download from "go mod tidy" and "go mod vendor,
+# it causes cannot find module providing packages errors
+go mod tidy
+rm -rf $GOPATH/pkg
+go mod vendor
+rm -rf $GOPATH/pkg
+if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+  git status
+  git diff
+  echo "******************************************************************************"
+  echo "* ERROR: The result of a 'go mod tidy' or 'go mod vendor' resulted           *"
+  echo "* in files being modified. These changes need to be included in your PR.     *"
+  echo "* Verify you have PLS approval for changes to go.mod.                        *"
+  echo "******************************************************************************"
+  exit 1
+fi
+
+# Build the CLI
 make CATALOG_REPO=%{catalog_repo} cli
 
 %install
