@@ -98,6 +98,10 @@ func GetValuesMap(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		return nil, err
 	}
 
+	if vals == nil {
+		vals = map[string]interface{}{}
+	}
+
 	return vals, nil
 }
 
