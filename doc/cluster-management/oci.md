@@ -4,7 +4,7 @@ Clusters are deployed to Oracle Cloud Infrastructure (OCI) using the OCI
 Cluster API Provider.  Cluster API is an API implemented as Kubernetes custom
 resources that are serviced by applications running in a Kubernetes cluster.
 
-Cluster API has a large interface.  Please refer to the [https://cluster-api.sigs.k8s.io/](community documentation)
+Cluster API has a large interface.  Please refer to the [community documentation](https://cluster-api.sigs.k8s.io/)
 for a complete description of the configuration options that are available.
 
 
