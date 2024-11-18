@@ -16,7 +16,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-	"strings"
 )
 
 func createOstreeImage(cc *copyConfig) error {
@@ -108,12 +107,7 @@ func createOstreeImage(cc *copyConfig) error {
 	return nil
 }
 
-func createOstreeConfigMap(namespace string, name string, registry string) (*corev1.ConfigMap, error) {
-	newImage, err := image.ChangeImageDomain("container-registry.oracle.com/os/oraclelinux:8-slim", registry)
-	if err != nil {
-		return nil, err
-	}
-	strings.Replace(ostreeImageDockerfile, "BASE_IMAGE_PLACEHOLDER", newImage.DockerReference().String(), 1)
+func createOstreeConfigMap(namespace string, name string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -126,5 +120,5 @@ func createOstreeConfigMap(namespace string, name string, registry string) (*cor
 			ostreeScriptName:        ostreeScript,
 			ostreeArchiveScriptName: ostreeArchiveScript,
 		},
-	}, nil
+	}
 }
