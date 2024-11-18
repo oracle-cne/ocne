@@ -939,7 +939,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil {
+		if err != nil{
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -968,7 +968,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error {
+			WaitFunction: func(i interface{}) error{
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},
