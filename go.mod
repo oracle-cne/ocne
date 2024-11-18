@@ -14,7 +14,7 @@ require (
 	github.com/coreos/butane v0.0.0-00010101000000-000000000000
 	github.com/coreos/ignition/v2 v2.19.0
 	github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-	github.com/go-git/go-billy/v5 v5.5.0
+	github.com/go-git/go-billy/v5 v5.6.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-logr/logr v1.4.2
 	github.com/gosuri/uitable v0.0.4
