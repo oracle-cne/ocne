@@ -149,6 +149,16 @@ Environment=http_proxy={{.HttpProxy}}
 Environment=no_proxy={{.NoProxy}}
 {{- end}}
 `
+	IfcfgPath = "/etc/sysconfig/network-scripts/ifcfg-%s"
+	IfcfgTmpl = `BOOTPROTO=none
+DEVICE=%s
+GATEWAY=%s
+IPADDR=%s
+NETMASK=255.255.255.0
+ONBOOT=yes
+TYPE=Ethernet
+USERCTL=no
+`
 )
 
 type ClusterInit struct {
@@ -288,6 +298,16 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	// there are no conflicts made specifically in this function.
 	AddFile(ret, updateFile)
 	AddFile(ret, ocneShFile)
+
+	ifcfgFile := &File{
+		Path: fmt.Sprintf(IfcfgPath, "enp1s0"),
+		Mode: 0555,
+		Contents: FileContents{
+			Source: fmt.Sprintf(IfcfgTmpl, "enp1s0", "100.101.70.1", "100.101.70.205"),
+		},
+	}
+	AddFile(ret, ifcfgFile)
+
 	ret = AddUnit(ret, ocneUpdateUnit)
 	ret = AddUnit(ret, ocneUnit)
 	ret = Merge(ret, container)
