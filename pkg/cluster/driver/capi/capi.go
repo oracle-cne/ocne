@@ -1057,7 +1057,5 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 }
 
 func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
-	// ens3 is the default OCI vNIC name for x86
-	// enp0s6 is the default for arm
 	return []string{}
 }
