@@ -77,8 +77,13 @@ After the entire has been upgraded to OCK, then you can safely remove the verraz
 ```
 
 ### Delete the Module CRs
-*TDB* Patch the CRs and remove the finalizer
-*TBD* Delete each CR
+There are several CRs of type Module. Once all the nodes have moved to OCK, then they are no longer needed.  
+They can be found by the following kubectl command 
+```text
+kubectl get Module -A
+```
+At this point, the module operator should be removed from the system, so the finalizers have to be deleted. 
+We have instructions for other resources with similar requirements. See https://github.com/oracle-cne/ocne/blob/main/doc/experimental/phase1/oam-remove-objects.md
 
 ## Delete all the Verrazzano related CRDs
 ```text
