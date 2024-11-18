@@ -933,7 +933,7 @@ github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/oracle/oci-go-sdk/v65 v65.65.1
+# github.com/oracle/oci-go-sdk/v65 v65.78.1
 ## explicit; go 1.13
 github.com/oracle/oci-go-sdk/v65/common
 github.com/oracle/oci-go-sdk/v65/common/auth

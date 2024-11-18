@@ -19,7 +19,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/korylprince/ipnetgen v1.0.1
-	github.com/oracle/oci-go-sdk/v65 v65.65.1
+	github.com/oracle/oci-go-sdk/v65 v65.78.1
 	github.com/seancfoley/ipaddress-go v1.5.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
