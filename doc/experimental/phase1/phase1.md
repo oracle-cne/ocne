@@ -19,8 +19,7 @@ kubectl -n ocne-system rollout status deployment ocne-catalog
 ```
 
 ## Perform an ETCD Backup
-Follow these [instructions](../../cluster-management/etcd-backup.md) to backup the ETCD database. 
-These backups should also be done periodically after the migration.
+Follow these [instructions](../../cluster-management/etcd-backup.md) to backup the ETCD database.
 
 ## Perform a Cluster Dump
 
