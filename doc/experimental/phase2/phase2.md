@@ -96,7 +96,7 @@ Remove the finalizers for each Module object. A potential example is listed belo
  ```
 
 ## Confirm that the Module objects are deleted
-The following command should return `no resources found`.  If not, repeat the previous steps of removing the finalizers.
+The following command should return `no resources found`. If not, repeat the previous steps of removing the finalizers.
 
 ```text
  kubectl get --all-namespaces modules
