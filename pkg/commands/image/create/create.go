@@ -63,8 +63,8 @@ type CreateOptions struct {
 
 type providerFuncs struct {
 	defaultProvider string
-	createConfigMap       func(string, string) *corev1.ConfigMap
-	createImage           func(*copyConfig) error
+	createConfigMap func(string, string, string) (*corev1.ConfigMap, error)
+	createImage     func(*copyConfig) error
 }
 
 // Create creates a qcow2 image for the specified provider type
@@ -235,7 +235,7 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 	return err
 }
 
-func createOciConfigMap(namespace string, name string) *corev1.ConfigMap {
+func createOciConfigMap(namespace string, name string, _ string) (*corev1.ConfigMap, error) {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -250,7 +250,7 @@ func createOciConfigMap(namespace string, name string) *corev1.ConfigMap {
 			OciDhclientScriptPath: OciDhclientScript,
 			OciDhclientPath:       OciDhclient,
 		},
-	}
+	}, nil
 }
 
 func createOciImage(cc *copyConfig) error {
@@ -280,26 +280,30 @@ func createOciImage(cc *copyConfig) error {
 
 var providers = map[string]providerFuncs{
 	ProviderTypeOCI: providerFuncs{
-		defaultProvider:       ociDefaultIgnition,
-		createConfigMap:       createOciConfigMap,
-		createImage:           createOciImage,
+		defaultProvider: ociDefaultIgnition,
+		createConfigMap: createOciConfigMap,
+		createImage:     createOciImage,
 	},
 	ProviderTypeOstree: providerFuncs{
-		defaultProvider:       qemuDefaultIgnition,
-		createConfigMap:       createOstreeConfigMap,
-		createImage:           createOstreeImage,
+		defaultProvider: qemuDefaultIgnition,
+		createConfigMap: createOstreeConfigMap,
+		createImage:     createOstreeImage,
 	},
 }
 
 // createConfigMap that has the scripts to be run by the pod
-func createConfigMap(client kubernetes.Interface, namespace string, name string, provider string) error {
+func createConfigMap(client kubernetes.Interface, namespace string, name string, provider string, registry string) error {
 	pf, ok := providers[provider]
 	if !ok {
 		return fmt.Errorf("%s is not a supported provider", provider)
 	}
 
-	cm := pf.createConfigMap(namespace, name)
-	err := k8s.CreateConfigmap(client, cm)
+	cm, err := pf.createConfigMap(namespace, name, registry)
+	if err != nil {
+		return fmt.Errorf("could not generate required scripts for %s provider: %v", provider, err)
+	}
+
+	err = k8s.CreateConfigmap(client, cm)
 	return err
 }
 

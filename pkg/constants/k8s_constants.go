@@ -96,7 +96,7 @@ const (
 	OCICAPIVersion    = ""
 	OCICAPIDeployment = "capoci-controller-manager"
 
-	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
+	DefaultPodImage = "os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"

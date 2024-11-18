@@ -6,7 +6,6 @@ package create
 const (
 	setProviderScriptName = "set-provider.sh"
 	modifyImageScriptName = "modify-image.sh"
-
 	// The setProvider script changes the ignition provider type inside the boot qcow2 image.
 	// The script runs both before, during, and after chroot.  The modprobe needs chroot to work
 	// and if qemu-nbd is not run in chroot then it cannot find the nbd device.
@@ -152,7 +151,7 @@ exit
 	dockerfileName = "Dockerfile"
 
 	ostreeImageDockerfile = `
-FROM container-registry.oracle.com/os/oraclelinux:8-slim
+FROM BASE_IMAGE_PLACEHOLDER
 
 ARG PODMAN_IMG
 ARG ARCH
