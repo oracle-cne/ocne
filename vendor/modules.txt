@@ -659,7 +659,6 @@ github.com/gogo/protobuf/sortkeys
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.5.4
 ## explicit; go 1.17
-github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
@@ -1340,8 +1339,8 @@ google.golang.org/genproto/googleapis/api/httpbody
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.64.1 => google.golang.org/grpc v1.56.3
-## explicit; go 1.17
+# google.golang.org/grpc v1.64.1
+## explicit; go 1.19
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -1373,10 +1372,12 @@ google.golang.org/grpc/internal/grpclog
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/grpcutil
+google.golang.org/grpc/internal/idle
 google.golang.org/grpc/internal/metadata
 google.golang.org/grpc/internal/pretty
 google.golang.org/grpc/internal/resolver
 google.golang.org/grpc/internal/resolver/dns
+google.golang.org/grpc/internal/resolver/dns/internal
 google.golang.org/grpc/internal/resolver/passthrough
 google.golang.org/grpc/internal/resolver/unix
 google.golang.org/grpc/internal/serviceconfig
@@ -1388,6 +1389,7 @@ google.golang.org/grpc/keepalive
 google.golang.org/grpc/metadata
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
+google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
@@ -1420,6 +1422,7 @@ google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
 google.golang.org/protobuf/internal/version
 google.golang.org/protobuf/proto
+google.golang.org/protobuf/protoadapt
 google.golang.org/protobuf/reflect/protodesc
 google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
@@ -2228,4 +2231,3 @@ sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 # github.com/coreos/butane => github.com/coreos/butane v0.20.0
 # github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-# google.golang.org/grpc => google.golang.org/grpc v1.56.3

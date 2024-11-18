@@ -275,7 +275,6 @@ require (
 replace (
 	github.com/coreos/butane => github.com/coreos/butane v0.20.0
 	github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
 
 exclude (
