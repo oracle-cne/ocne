@@ -1995,7 +1995,7 @@ k8s.io/kubernetes/cmd/kubeadm/app/util
 k8s.io/kubernetes/cmd/kubeadm/app/util/apiclient
 k8s.io/kubernetes/cmd/kubeadm/app/util/kubeconfig
 k8s.io/kubernetes/cmd/kubeadm/app/util/pubkeypin
-# k8s.io/utils v0.0.0-20231127182322-b307cd553661
+# k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
 ## explicit; go 1.18
 k8s.io/utils/buffer
 k8s.io/utils/clock
