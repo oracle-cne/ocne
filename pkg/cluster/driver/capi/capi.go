@@ -527,7 +527,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
-
 	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
 		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
