@@ -1,5 +1,5 @@
 //
-// Copyright 2022 Sean C Foley
+// Copyright 2022-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ const (
 	remap                           // alters nodes based on the existing nodes and their values
 	lookup                          // find node for E, traversing all containing elements along the way
 	near                            // closest match, going down trie to get element considered closest. Whether one thing is closer than another is determined by the sorted order.
-	containing                      // find a single node whose keys contain E
+	containing                      // find a single node whose key contains E
 	allContaining                   // list the nodes whose keys contain E
 	insertedDelete                  // Remove node for E
 	subtreeDelete                   // Remove nodes whose keys are contained by E
@@ -173,79 +173,6 @@ func (result *opResult[E, V]) addContaining(containingSub *BinTrieNode[E, V]) {
 	}
 }
 
-type TrieKeyIterator[E TrieKey[E]] interface {
-	HasNext
-
-	Next() E
-
-	// Remove removes the last iterated element from the underlying trie, and returns that element.
-	// If there is no such element, it returns the zero value.
-	Remove() E
-}
-
-type trieKeyIterator[E TrieKey[E]] struct {
-	keyIterator[E]
-}
-
-func (iter trieKeyIterator[E]) Next() E {
-	return iter.keyIterator.Next()
-}
-
-func (iter trieKeyIterator[E]) Remove() E {
-	return iter.keyIterator.Remove()
-}
-
-type TrieNodeIterator[E TrieKey[E], V any] interface {
-	HasNext
-
-	Next() *BinTrieNode[E, V]
-}
-
-type TrieNodeIteratorRem[E TrieKey[E], V any] interface {
-	TrieNodeIterator[E, V]
-
-	// Remove removes the last iterated element from the underlying trie, and returns that element.
-	// If there is no such element, it returns the zero value.
-	Remove() *BinTrieNode[E, V]
-}
-
-type trieNodeIteratorRem[E TrieKey[E], V any] struct {
-	nodeIteratorRem[E, V]
-}
-
-func (iter trieNodeIteratorRem[E, V]) Next() *BinTrieNode[E, V] {
-	return toTrieNode(iter.nodeIteratorRem.Next())
-}
-
-func (iter trieNodeIteratorRem[E, V]) Remove() *BinTrieNode[E, V] {
-	return toTrieNode(iter.nodeIteratorRem.Remove())
-}
-
-type trieNodeIterator[E TrieKey[E], V any] struct {
-	nodeIterator[E, V]
-}
-
-func (iter trieNodeIterator[E, V]) Next() *BinTrieNode[E, V] {
-	return toTrieNode(iter.nodeIterator.Next())
-}
-
-type CachingTrieNodeIterator[E TrieKey[E], V any] interface {
-	TrieNodeIteratorRem[E, V]
-	CachingIterator
-}
-
-type cachingTrieNodeIterator[E TrieKey[E], V any] struct {
-	cachingNodeIterator[E, V] // an interface
-}
-
-func (iter *cachingTrieNodeIterator[E, V]) Next() *BinTrieNode[E, V] {
-	return toTrieNode(iter.cachingNodeIterator.Next())
-}
-
-func (iter *cachingTrieNodeIterator[E, V]) Remove() *BinTrieNode[E, V] {
-	return toTrieNode(iter.cachingNodeIterator.Remove())
-}
-
 // KeyCompareResult has callbacks for a key comparison of a new key with a key pre-existing in the trie.
 // At most one of the two methods should be called when comparing keys.
 // If existing key is shorter, and the new key matches all bits in the existing key, then neither method should be called.
@@ -258,11 +185,7 @@ type KeyCompareResult interface {
 	BitsMatchPartially() bool
 
 	// BitsDoNotMatch should be called when at least one bit in the new key does not match the same bit in the existing key.
-	// You can skip calling it if a prior call to MismatchCallbackRequired returns true.
 	BitsDoNotMatch(matchedBits BitCount)
-
-	// MismatchCallbackRequired indicates if you need to call BitsDoNotMatch for a mismatch
-	MismatchCallbackRequired() bool
 }
 
 // TrieKey represents a key for a trie.
@@ -346,6 +269,8 @@ type TrieKey[E any] interface {
 	GetTrieKeyData() *TrieKeyData
 }
 
+// Providing TrieKeyData for trie keys makes lookup faster.
+// However, it is optional, tries will work without it.
 type TrieKeyData struct {
 	Is32Bits, Is128Bits bool
 
@@ -716,7 +641,12 @@ func (node *BinTrieNode[E, V]) matchBitsFromIndex(bitIndex int, result *opResult
 	newKeyData := newKey.GetTrieKeyData()
 
 	op := result.op
-	simpleMatch := !(op == insert || op == near || op == remap)
+	var simpleMatch bool
+	switch op {
+	case insert, near, remap:
+	default:
+		simpleMatch = true
+	}
 
 	// having these allocated in result eliminates gc activity
 	result.nodeComp.result = result
@@ -792,11 +722,6 @@ func (comp nodeCompare[E, V]) BitsMatch() {
 
 func (comp nodeCompare[E, V]) BitsDoNotMatch(matchedBits BitCount) {
 	comp.node.handleSplitNode(comp.result, matchedBits)
-}
-
-func (comp nodeCompare[E, V]) MismatchCallbackRequired() bool {
-	op := comp.result.op
-	return op == insert || op == near || op == remap
 }
 
 func (comp nodeCompare[E, V]) BitsMatchPartially() bool {

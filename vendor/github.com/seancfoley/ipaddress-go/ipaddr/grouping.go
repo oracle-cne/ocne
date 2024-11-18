@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -351,11 +351,12 @@ func (grouping *addressDivisionGroupingInternal) matchesMACSectionType() bool {
 }
 
 // Format implements the [fmt.Formatter] interface. It accepts the formats
-//  - 'v' for the default address and section format (either the normalized or canonical string),
-//  - 's' (string) for the same,
-//  - 'b' (binary), 'o' (octal with 0 prefix), 'O' (octal with 0o prefix),
-//  - 'd' (decimal), 'x' (lowercase hexadecimal), and
-//  - 'X' (uppercase hexadecimal).
+//   - 'v' for the default address and section format (either the normalized or canonical string),
+//   - 's' (string) for the same,
+//   - 'b' (binary), 'o' (octal with 0 prefix), 'O' (octal with 0o prefix),
+//   - 'd' (decimal), 'x' (lowercase hexadecimal), and
+//   - 'X' (uppercase hexadecimal).
+//
 // Also supported are some of fmt's format flags for integral types.
 // Sign control is not supported since addresses and sections are never negative.
 // '#' for an alternate format is supported, which adds a leading zero for octal, and for hexadecimal it adds
@@ -642,7 +643,7 @@ func (grouping *addressDivisionGroupingInternal) Bytes() []byte {
 	if grouping.hasNoDivisions() {
 		return emptyBytes
 	}
-	return cloneBytes(grouping.getBytes())
+	return clone(grouping.getBytes())
 }
 
 // UpperBytes returns the highest individual division grouping in this grouping as a byte slice.
@@ -650,7 +651,7 @@ func (grouping *addressDivisionGroupingInternal) UpperBytes() []byte {
 	if grouping.hasNoDivisions() {
 		return emptyBytes
 	}
-	return cloneBytes(grouping.getUpperBytes())
+	return clone(grouping.getUpperBytes())
 }
 
 // CopyBytes copies the value of the lowest division grouping in the range into a byte slice.

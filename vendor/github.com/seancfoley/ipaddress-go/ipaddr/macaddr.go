@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -551,11 +551,11 @@ func (addr *MACAddress) ToSinglePrefixBlockOrAddress() *MACAddress {
 
 func (addr *MACAddress) toSinglePrefixBlockOrAddress() (*MACAddress, addrerr.IncompatibleAddressError) {
 	if addr == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	res := addr.ToSinglePrefixBlockOrAddress()
 	if res == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	return res, nil
 }
@@ -622,6 +622,11 @@ func (addr *MACAddress) PrefixContains(other AddressType) bool {
 	return addr.init().prefixContains(other)
 }
 
+// containsSame returns whether this address contains all addresses in the given address or subnet of the same type.
+func (addr *MACAddress) containsSame(other *MACAddress) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is the same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
 func (addr *MACAddress) Contains(other AddressType) bool {
 	if addr == nil {
@@ -629,6 +634,14 @@ func (addr *MACAddress) Contains(other AddressType) bool {
 	}
 	// note: we don't use the same optimization as in IPv4/6 because we do need to check segment count with MAC
 	return addr.init().contains(other)
+}
+
+// Overlaps returns true if this address overlaps the given address or address collection
+func (addr *MACAddress) Overlaps(other AddressType) bool {
+	if addr == nil {
+		return true
+	}
+	return addr.init().overlaps(other)
 }
 
 // Equal returns whether the given address or address collection is equal to this address or address collection.
@@ -825,6 +838,34 @@ func (addr *MACAddress) IncrementBoundary(increment int64) *MACAddress {
 // On address overflow or underflow, Increment returns nil.
 func (addr *MACAddress) Increment(increment int64) *MACAddress {
 	return addr.init().increment(increment).ToMAC()
+}
+
+// Enumerate indicates where an address sits relative to the address collection ordering.
+//
+// Determines how many address elements of the address collection precede the given address element, if the address is in the address collection.
+// If above the address collection range, it is the distance to the upper boundary added to the count less one, and if below the address collection range, the distance to the lower boundary.
+//
+// In other words, if the given address is not in the address collection but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of address collection addresses.  If the given address is not in the address collection but below it, returns the number of addresses following the address to the lower address collection boundary.
+//
+// If the argument is not in the address collection, but neither above nor below the range, then nil is returned.
+//
+// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address.
+//
+// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+//
+// Enumerate is the inverse of the increment method:
+//   - subnet.Enumerate(subnet.Increment(inc)) = inc
+//   - subnet.Increment(subnet.Enumerate(newAddr)) = newAddr
+//
+// If the given address does not have the same MAC address type and size, then nil is returned.
+func (addr *MACAddress) Enumerate(other AddressType) *big.Int {
+	if other != nil {
+		if otherAddr := other.ToAddressBase(); otherAddr != nil {
+			return addr.GetSection().Enumerate(otherAddr.GetSection())
+		}
+	}
+	return nil
 }
 
 // ReverseBytes returns a new address with the bytes reversed.  Any prefix length is dropped.
@@ -1213,11 +1254,6 @@ func (addr *MACAddress) ToAddressBase() *Address {
 	if addr != nil {
 		addr = addr.init()
 	}
-	return (*Address)(addr)
-}
-
-// toAddressBase is needed for tries, it skips the init() call
-func (addr *MACAddress) toAddressBase() *Address {
 	return (*Address)(addr)
 }
 

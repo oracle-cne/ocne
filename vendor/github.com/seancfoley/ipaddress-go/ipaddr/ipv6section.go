@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -165,7 +165,7 @@ func newIPv6SectionFromBytes(bytes []byte, segmentCount int, prefixLength Prefix
 			assignPrefix(prefixLength, segments, res.ToIP(), singleOnly, false, BitCount(segmentCount<<ipv6BitsToSegmentBitshift))
 		}
 		if expectedByteCount == len(bytes) && len(bytes) > 0 {
-			bytes = cloneBytes(bytes)
+			bytes = clone(bytes)
 			res.cache.bytesCache = &bytesCache{lowerBytes: bytes}
 			if !res.isMult { // not a prefix block
 				res.cache.bytesCache.upperBytes = bytes
@@ -340,6 +340,11 @@ type IPv6AddressSection struct {
 	ipAddressSectionInternal
 }
 
+// containsSame returns whether this address section contains all address sections in the given address section collection of the same type.
+func (addr *IPv6AddressSection) containsSame(other *IPv6AddressSection) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is same type and version as the given address section and whether it contains all values in the given section.
 //
 // Sections must also have the same number of segments to be comparable, otherwise false is returned.
@@ -348,6 +353,16 @@ func (section *IPv6AddressSection) Contains(other AddressSectionType) bool {
 		return other == nil || other.ToSectionBase() == nil
 	}
 	return section.contains(other)
+}
+
+// Overlaps returns whether this is same type and version as the given address section and whether it overlaps the given section, both sections containing at least one individual section in common.
+//
+// Sections must also have the same number of segments to be comparable, otherwise false is returned.
+func (section *IPv6AddressSection) Overlaps(other AddressSectionType) bool {
+	if section == nil {
+		return other == nil || other.ToSectionBase() == nil
+	}
+	return section.overlaps(other)
 }
 
 // Equal returns whether the given address section is equal to this address section.
@@ -720,6 +735,9 @@ func (section *IPv6AddressSection) uint64Values() (high, low uint64) {
 
 // UpperUint64Values returns the highest address in the address section range as pair of uint64 values.
 func (section *IPv6AddressSection) UpperUint64Values() (high, low uint64) {
+	if !section.IsMultiple() {
+		return section.Uint64Values()
+	}
 	segCount := section.GetSegmentCount()
 	if segCount == 0 {
 		return
@@ -1107,14 +1125,14 @@ func (section *IPv6AddressSection) IncrementBoundary(increment int64) *IPv6Addre
 }
 
 func getIPv6MaxValue(segmentCount int) *big.Int {
-	return new(big.Int).Set(ipv6MaxValues[segmentCount])
+	return bigZero().Set(ipv6MaxValues[segmentCount])
 }
 
 var ipv6MaxValues = []*big.Int{
 	bigZero(),
-	new(big.Int).SetUint64(IPv6MaxValuePerSegment),
-	new(big.Int).SetUint64(0xffffffff),
-	new(big.Int).SetUint64(0xffffffffffff),
+	bigZero().SetUint64(IPv6MaxValuePerSegment),
+	bigZero().SetUint64(0xffffffff),
+	bigZero().SetUint64(0xffffffffffff),
 	maxInt(4),
 	maxInt(5),
 	maxInt(6),
@@ -1123,7 +1141,7 @@ var ipv6MaxValues = []*big.Int{
 }
 
 func maxInt(segCount int) *big.Int {
-	res := new(big.Int).SetUint64(1)
+	res := bigZero().SetUint64(1)
 	return res.Lsh(res, 16*uint(segCount)).Sub(res, bigOneConst())
 }
 
@@ -1149,13 +1167,9 @@ func (section *IPv6AddressSection) Increment(increment int64) *IPv6AddressSectio
 	if increment == 0 && !section.isMultiple() {
 		return section
 	}
-	lowerValue := section.GetValue()
-	upperValue := section.GetUpperValue()
-	count := section.GetCount()
 	var bigIncrement big.Int
 	bigIncrement.SetInt64(increment)
-	isOverflow := checkOverflowBig(increment, &bigIncrement, lowerValue, upperValue, count, func() *big.Int { return getIPv6MaxValue(section.GetSegmentCount()) })
-	if isOverflow {
+	if isOverflow := checkOverflowBig(increment, &bigIncrement, section.GetValue, section.GetUpperValue, section.GetCount, func() *big.Int { return getIPv6MaxValue(section.GetSegmentCount()) }, section.IsSequential); isOverflow {
 		return nil
 	}
 	prefixLength := section.getPrefixLen()
@@ -1169,7 +1183,6 @@ func (section *IPv6AddressSection) Increment(increment int64) *IPv6AddressSectio
 	if result != nil {
 		return result.ToIPv6()
 	}
-	bigIncrement.SetInt64(increment)
 	return incrementBig(
 		section.ToSectionBase(),
 		increment,
@@ -1180,6 +1193,75 @@ func (section *IPv6AddressSection) Increment(increment int64) *IPv6AddressSectio
 		prefixLength).ToIPv6()
 }
 
+// IncrementBig increments the address or subnet.  It is the same as Increment but allows for a larger increment value.
+// See Increment for more details.
+func (section *IPv6AddressSection) IncrementBig(bigIncrement *big.Int) *IPv6AddressSection {
+	if bigIsZero(bigIncrement) && !section.IsMultiple() {
+		return section
+	}
+	if isOverflow := checkOverflowBigger(bigIncrement, section.GetValue, section.GetUpperValue, section.GetCount, func() *big.Int { return getIPv6MaxValue(section.GetSegmentCount()) }, section.IsSequential); isOverflow {
+		return nil
+	}
+	return incrementBigger(
+		section.ToSectionBase(),
+		bigIncrement,
+		ipv6Network.getIPAddressCreator(),
+		section.getLower,
+		section.getUpper,
+		section.getPrefixLen()).ToIPv6()
+}
+
+func low64IPv6(section *AddressSection) uint64 {
+	_, low := section.ToIPv6().Uint64Values()
+	return low
+}
+
+func low64UpperIPv6(section *AddressSection) uint64 {
+	_, low := section.ToIPv6().UpperUint64Values()
+	return low
+}
+
+func (section *IPv6AddressSection) enumerateAddr(other AddressSectionType) *big.Int {
+	if otherSection := other.ToSectionBase(); otherSection.IsIPv6() {
+		return enumerateBig(section.ToSectionBase(), otherSection, low64IPv6, low64UpperIPv6)
+	}
+	return nil
+}
+
+// Enumerate indicates where an individual address section sits relative to the address section range ordering.
+//
+// Determines how many address section elements of a range precede the given address section element, if the address section is in the range.
+// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+//
+// In other words, if the given address section is not in the range but above it, returns the number of address sections preceding the address from the upper range boundary,
+// added to one less than the total number of range address sections.  If the given address section is not in the subnet but below it, returns the number of address sections following the address section to the lower subnet boundary.
+//
+// If the argument is not in the range, but neither above nor below the range, then nil is returned.
+//
+// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address section.
+//
+// When this is also an individual address section, the returned value is the distance (difference) between the two address section values.
+//
+// If the given address section does not have the same version or type, then nil is returned.
+//
+// Sections must also have the same number of segments to be comparable, otherwise nil is returned.
+func (section *IPv6AddressSection) Enumerate(other AddressSectionType) *big.Int {
+	if other != nil {
+		if otherSection := other.ToSectionBase(); otherSection != nil {
+			if matches, count := section.matchesTypeAndCount(otherSection); matches {
+				if count < 4 {
+					if val, ok := enumerateSmall(section.ToSectionBase(), otherSection, low64IPv6, low64UpperIPv6); ok {
+						return big.NewInt(val)
+					}
+					return nil
+				}
+				return enumerateBig(section.ToSectionBase(), otherSection, low64IPv6, low64UpperIPv6)
+			}
+		}
+	}
+	return nil
+}
+
 // SpanWithPrefixBlocks returns an array of prefix blocks that spans the same set of individual address sections as this section.
 //
 // Unlike SpanWithPrefixBlocksTo, the result only includes blocks that are a part of this section.
@@ -1188,12 +1270,9 @@ func (section *IPv6AddressSection) SpanWithPrefixBlocks() []*IPv6AddressSection 
 		if section.IsSinglePrefixBlock() {
 			return []*IPv6AddressSection{section}
 		}
-		wrapped := wrapIPSection(section.ToIP())
-		spanning := getSpanningPrefixBlocks(wrapped, wrapped)
-		return cloneToIPv6Sections(spanning)
+		return getSpanningPrefixBlocks(section, section)
 	}
-	wrapped := wrapIPSection(section.ToIP())
-	return cloneToIPv6Sections(spanWithPrefixBlocks(wrapped))
+	return spanWithPrefixBlocks(section)
 }
 
 // SpanWithPrefixBlocksTo returns the smallest slice of prefix block subnet sections that span from this section to the given section.
@@ -1202,15 +1281,10 @@ func (section *IPv6AddressSection) SpanWithPrefixBlocks() []*IPv6AddressSection 
 //
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 func (section *IPv6AddressSection) SpanWithPrefixBlocksTo(other *IPv6AddressSection) ([]*IPv6AddressSection, addrerr.SizeMismatchError) {
-	if err := section.checkSectionCount(other.ToIP()); err != nil {
+	if err := section.checkSegmentCount(other.ToIP()); err != nil {
 		return nil, err
 	}
-	return cloneToIPv6Sections(
-		getSpanningPrefixBlocks(
-			wrapIPSection(section.ToIP()),
-			wrapIPSection(other.ToIP()),
-		),
-	), nil
+	return getSpanningPrefixBlocks(section, other), nil
 }
 
 // SpanWithSequentialBlocks produces the smallest slice of sequential blocks that cover the same set of sections as this.
@@ -1222,21 +1296,15 @@ func (section *IPv6AddressSection) SpanWithSequentialBlocks() []*IPv6AddressSect
 	if section.IsSequential() {
 		return []*IPv6AddressSection{section}
 	}
-	wrapped := wrapIPSection(section.ToIP())
-	return cloneToIPv6Sections(spanWithSequentialBlocks(wrapped))
+	return spanWithSequentialBlocks(section)
 }
 
 // SpanWithSequentialBlocksTo produces the smallest slice of sequential block address sections that span from this section to the given section.
 func (section *IPv6AddressSection) SpanWithSequentialBlocksTo(other *IPv6AddressSection) ([]*IPv6AddressSection, addrerr.SizeMismatchError) {
-	if err := section.checkSectionCount(other.ToIP()); err != nil {
+	if err := section.checkSegmentCount(other.ToIP()); err != nil {
 		return nil, err
 	}
-	return cloneToIPv6Sections(
-		getSpanningSequentialBlocks(
-			wrapIPSection(section.ToIP()),
-			wrapIPSection(other.ToIP()),
-		),
-	), nil
+	return getSpanningSequentialBlocks(section, other), nil
 }
 
 // CoverWithPrefixBlockTo returns the minimal-size prefix block section that covers all the address sections spanning from this to the given section.
@@ -1275,9 +1343,7 @@ func (section *IPv6AddressSection) MergeToSequentialBlocks(sections ...*IPv6Addr
 	if err := section.checkSectionCounts(sections); err != nil {
 		return nil, err
 	}
-	series := cloneIPv6Sections(section, sections)
-	blocks := getMergedSequentialBlocks(series)
-	return cloneToIPv6Sections(blocks), nil
+	return getMergedSequentialBlocks(cloneSeries(section, sections)), nil
 }
 
 // MergeToPrefixBlocks merges this section with the list of sections to produce the smallest array of prefix blocks.
@@ -1287,9 +1353,7 @@ func (section *IPv6AddressSection) MergeToPrefixBlocks(sections ...*IPv6AddressS
 	if err := section.checkSectionCounts(sections); err != nil {
 		return nil, err
 	}
-	series := cloneIPv6Sections(section, sections)
-	blocks := getMergedPrefixBlocks(series)
-	return cloneToIPv6Sections(blocks), nil
+	return getMergedPrefixBlocks(cloneSeries(section, sections)), nil
 }
 
 // ReverseBits returns a new section with the bits reversed.  Any prefix length is dropped.

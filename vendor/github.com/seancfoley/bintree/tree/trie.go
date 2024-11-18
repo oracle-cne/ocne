@@ -1,5 +1,5 @@
 //
-// Copyright 2022 Sean C Foley
+// Copyright 2022-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,7 +76,19 @@ func (trie *BinTrie[E, V]) NodeSize() int {
 	return trie.toBinTree().NodeSize()
 }
 
-func (trie *BinTrie[E, V]) ensureRoot(key E) *BinTrieNode[E, V] {
+// EnsureRoot ensures this trie has a root, whose type will match the type and version of the given key.
+// The given key is not added to the trie when calling this method,
+// instead it is used to construct an address of the given address type and version with a prefix length of 0 and with a host that spans all addresses, which will become the root key.
+// Once the root is added, the version and type of the trie is fixed.
+// So, for instance, if a trie has key type of IPAddress, then the root could be version IPv6 or IPv4, one of either ::/0 or 0.0.0.0/0,
+// Once the root exists, all keys to follow must match that same version (ie the same bit-size).
+// Another consequence of fixing the root is that any copy of the BinTrie instance will reference the same underlying trie.
+// If the trie has no root, then any copy of the trie will result in an entirely new and undependent trie.
+// Calling this method will have no effect if the trie root already exists.
+// Calling this method is not necessary, adding any key to the trie will also cause the tree root to be created, matching the type and version of the added key.
+// It only makes sense to call this method on empty tries and only if you wish to fix the root to a given type or version,
+// or if you wish copies of the empty trie instance to reference the same underlying trie structure.
+func (trie *BinTrie[E, V]) EnsureRoot(key E) *BinTrieNode[E, V] {
 	root := trie.root
 	if root == nil {
 		root = trie.setRoot(key.ToPrefixBlockLen(0))
@@ -97,19 +109,20 @@ func (trie *BinTrie[E, V]) setRoot(key E) *binTreeNode[E, V] {
 	return root
 }
 
-// Iterator returns an iterator that iterates through the elements of the sub-tree with this node as the root.
+// Iterator returns an iterator that iterates through the elements of the trie.
 // The iteration is in sorted element order.
 func (trie *BinTrie[E, V]) Iterator() TrieKeyIterator[E] {
 	return trie.GetRoot().Iterator()
 }
 
-// DescendingIterator returns an iterator that iterates through the elements of the subtrie with this node as the root.
+// DescendingIterator returns an iterator that iterates through the elements of the trie.
 // The iteration is in reverse sorted element order.
 func (trie *BinTrie[E, V]) DescendingIterator() TrieKeyIterator[E] {
 	return trie.GetRoot().DescendingIterator()
 }
 
 // String returns a visual representation of the tree with one node per line.
+// It is equivalent to calling TreeString(true)
 func (trie *BinTrie[E, V]) String() string {
 	if trie == nil {
 		return nilString()
@@ -127,7 +140,7 @@ func (trie *BinTrie[E, V]) TreeString(withNonAddedKeys bool) string {
 
 // Add adds the given key to the trie, returning true if not there already.
 func (trie *BinTrie[E, V]) Add(key E) bool {
-	root := trie.ensureRoot(key)
+	root := trie.EnsureRoot(key)
 	result := &opResult[E, V]{
 		key: key,
 		op:  insert,
@@ -138,7 +151,7 @@ func (trie *BinTrie[E, V]) Add(key E) bool {
 
 // AddNode is similar to Add but returns the new or existing node.
 func (trie *BinTrie[E, V]) AddNode(key E) *BinTrieNode[E, V] {
-	root := trie.ensureRoot(key)
+	root := trie.EnsureRoot(key)
 	result := &opResult[E, V]{
 		key: key,
 		op:  insert,
@@ -161,55 +174,67 @@ func (trie *BinTrie[E, V]) addNode(result *opResult[E, V], fromNode *BinTrieNode
 }
 
 func (trie *BinTrie[E, V]) addTrie(addedTreeNode *BinTrieNode[E, V], withValues bool) *BinTrieNode[E, V] {
-	if addedTreeNode == nil { // addedTreeNode can be nil when the root of a zero-valued trie
+	var valueMap func(V) V
+	if withValues {
+		valueMap = func(v V) V { return v }
+	}
+	return addTrie(trie, addedTreeNode, func(e E) E { return e }, valueMap)
+}
+
+func addTrie[ED TrieKey[ED], ES TrieKey[ES], VD, VS any](
+	targetTrie *BinTrie[ED, VD],
+	sourceNode *BinTrieNode[ES, VS],
+	keyMap func(ES) ED,
+	valueMap func(VS) VD) *BinTrieNode[ED, VD] {
+	if sourceNode == nil { // addedTreeNode can be nil when the root of a zero-valued trie
 		return nil
 	}
-	iterator := addedTreeNode.ContainingFirstAllNodeIterator(true)
-	toAdd := iterator.Next()
-	firstKey := toAdd.GetKey()
-	result := &opResult[E, V]{
+	sourceIterator := sourceNode.ContainingFirstAllNodeIterator(true)
+	toAdd := sourceIterator.Next()
+	firstKey := keyMap(toAdd.GetKey())
+	result := &opResult[ED, VD]{
 		key: firstKey,
 		op:  insert,
 	}
-	var firstNode *BinTrieNode[E, V]
-	root := trie.ensureRoot(firstKey)
+	var firstNode *BinTrieNode[ED, VD]
+	root := targetTrie.EnsureRoot(firstKey)
 	firstAdded := toAdd.IsAdded()
 	if firstAdded {
-		if withValues {
-			result.newValue = toAdd.GetValue()
+		if valueMap != nil {
+			result.newValue = valueMap(toAdd.GetValue())
 			// new value assignment
 		}
-		firstNode = trie.addNode(result, root)
+		firstNode = targetTrie.addNode(result, root)
 	} else {
 		firstNode = root
 	}
 	lastAddedNode := firstNode
-	for iterator.HasNext() {
-		iterator.CacheWithLowerSubNode(lastAddedNode)
-		iterator.CacheWithUpperSubNode(lastAddedNode)
-		toAdd = iterator.Next()
-		cachedNode := iterator.GetCached().(*BinTrieNode[E, V])
+	for sourceIterator.HasNext() {
+		sourceIterator.CacheWithLowerSubNode(lastAddedNode)
+		sourceIterator.CacheWithUpperSubNode(lastAddedNode)
+		toAdd = sourceIterator.Next()
+		cachedNode := sourceIterator.GetCached().(*BinTrieNode[ED, VD])
 		if toAdd.IsAdded() {
 			addrNext := toAdd.GetKey()
-			result.key = addrNext
+			result.key = keyMap(addrNext)
 			result.existingNode = nil
 			result.inserted = nil
-			if withValues {
-				result.newValue = toAdd.GetValue()
+			if valueMap != nil {
+				result.newValue = valueMap(toAdd.GetValue())
 				// new value assignment
 			}
-			lastAddedNode = trie.addNode(result, cachedNode)
+			lastAddedNode = targetTrie.addNode(result, cachedNode)
 		} else {
 			lastAddedNode = cachedNode
 		}
 	}
 	if !firstAdded {
-		firstNode = trie.GetNode(addedTreeNode.GetKey())
+		firstNode = targetTrie.GetNode(keyMap(sourceNode.GetKey()))
 	}
 	return firstNode
 }
 
-// AddTrieKeys copies the trie node structure of addedTrie into trie, but does not copy node mapped values
+// AddTrieKeys copies the trie node structure of addedTreeNode into trie, but does not copy node mapped values
 func AddTrieKeys[E TrieKey[E], V1 any, V2 any](trie *BinTrie[E, V1], addedTreeNode *BinTrieNode[E, V2]) *BinTrieNode[E, V1] {
 	if addedTreeNode == nil { // addedTreeNode can be nil when the root of a zero-valued trie
 		return nil
@@ -222,7 +247,7 @@ func AddTrieKeys[E TrieKey[E], V1 any, V2 any](trie *BinTrie[E, V1], addedTreeNo
 		op:  insert,
 	}
 	var firstNode *BinTrieNode[E, V1]
-	root := trie.ensureRoot(firstKey)
+	root := trie.EnsureRoot(firstKey)
 	firstAdded := toAdd.IsAdded()
 	if firstAdded {
 		firstNode = trie.addNode(result, root)
@@ -254,8 +279,24 @@ func (trie *BinTrie[E, V]) AddTrie(trieNode *BinTrieNode[E, V]) *BinTrieNode[E, 
 	if trieNode == nil {
 		return nil
 	}
-	trie.ensureRoot(trieNode.GetKey())
+	trie.EnsureRoot(trieNode.GetKey())
 	return trie.addTrie(trieNode, false)
+}
+
+// AddConvertibleTrie maps from one trie type to another.
+// The keys must follow the same containment structure, meaning any sub-node to parent-node relationship must be maintained across mappings.
+// If the containment structure is not maintained, then do not use this function, instead simply iterate through the source trie and add each to the target trie.
+// If the valueMap is non-nil, then the values will be mapped by that function, otherwise the new values will all be zero values.
+func AddConvertibleTrie[ED TrieKey[ED], ES TrieKey[ES], VD, VS any](
+	target *BinTrie[ED, VD],
+	sourceNode *BinTrieNode[ES, VS],
+	keyMap func(ES) ED,
+	valueMap func(VS) VD) *BinTrieNode[ED, VD] {
+	if sourceNode == nil {
+		return nil
+	}
+	target.EnsureRoot(keyMap(sourceNode.GetKey()))
+	return addTrie(target, sourceNode, keyMap, valueMap)
 }
 
 func (trie *BinTrie[E, V]) Contains(key E) bool {
@@ -328,7 +369,7 @@ func (trie *BinTrie[E, V]) GetAddedNode(key E) *BinTrieNode[E, V] {
 // the old value is replaced by the specified value, and false is returned along with the old value, which may be the zero value.
 // If this map did not previously contain a mapping for the key, true is returned along with the zero value.
 func (trie *BinTrie[E, V]) Put(key E, value V) (V, bool) {
-	root := trie.ensureRoot(key)
+	root := trie.EnsureRoot(key)
 	result := &opResult[E, V]{
 		key:      key,
 		op:       insert,
@@ -343,12 +384,12 @@ func (trie *BinTrie[E, V]) PutTrie(trieNode *BinTrieNode[E, V]) *BinTrieNode[E, 
 	if trieNode == nil {
 		return nil
 	}
-	trie.ensureRoot(trieNode.GetKey())
+	trie.EnsureRoot(trieNode.GetKey())
 	return trie.addTrie(trieNode, true)
 }
 
 func (trie *BinTrie[E, V]) PutNode(key E, value V) *BinTrieNode[E, V] {
-	root := trie.ensureRoot(key)
+	root := trie.EnsureRoot(key)
 	result := &opResult[E, V]{
 		key:      key,
 		op:       insert,
@@ -387,7 +428,7 @@ func (trie *BinTrie[E, V]) RemapIfAbsent(key E, supplier func() V) *BinTrieNode[
 }
 
 func (trie *BinTrie[E, V]) remapImpl(key E, remapper func(val V, exists bool) (V, remapAction)) *BinTrieNode[E, V] {
-	root := trie.ensureRoot(key)
+	root := trie.EnsureRoot(key)
 	result := &opResult[E, V]{
 		key:      key,
 		op:       remap,
@@ -526,7 +567,7 @@ func TreesString[E TrieKey[E], V any](withNonAddedKeys bool, tries ...*BinTrie[E
 	for _, trie := range tries {
 		binTrees = append(binTrees, tobinTree(trie))
 	}
-	return treesString(withNonAddedKeys, binTrees...)
+	return treesString(withNonAddedKeys, true, (*binTree[E, V]).printTree, binTrees...)
 }
 
 func tobinTree[E TrieKey[E], V any](trie *BinTrie[E, V]) *binTree[E, V] {
@@ -540,22 +581,13 @@ func tobinTree[E TrieKey[E], V any](trie *BinTrie[E, V]) *binTree[E, V] {
 // then the alternative tree structure provided by this method is the same as the original trie.
 // The trie values of this trie are of type []*BinTrieNode
 func (trie *BinTrie[E, V]) ConstructAddedNodesTree() BinTrie[E, AddedSubnodeMapping] {
-	var newRoot *binTreeNode[E, AddedSubnodeMapping]
+	newTrie := BinTrie[E, AddedSubnodeMapping]{binTree[E, AddedSubnodeMapping]{}}
 	existingRoot := trie.GetRoot()
-	if existingRoot != nil {
-		newRoot := &binTreeNode[E, AddedSubnodeMapping]{
-			item:     trie.root.item,
-			cTracker: &changeTracker{},
-			pool: &sync.Pool{
-				New: func() any { return &opResult[E, V]{} },
-			},
-		}
-		newRoot.setAddr()
-		if trie.root.IsAdded() {
-			newRoot.SetAdded()
-		}
+	if existingRoot == nil {
+		return newTrie
 	}
-	newTrie := BinTrie[E, AddedSubnodeMapping]{binTree[E, AddedSubnodeMapping]{newRoot}}
+
+	newTrie.setRoot(existingRoot.GetKey())
 
 	// populate the keys from the original trie into the new trie
 	AddTrieKeys(&newTrie, existingRoot)
@@ -579,29 +611,32 @@ func (trie *BinTrie[E, V]) ConstructAddedNodesTree() BinTrie[E, AddedSubnodeMapp
 		// the cached object is our parent
 		if newNext.IsAdded() {
 			var parent *BinTrieNode[E, AddedSubnodeMapping]
-			parent = cachingIterator.GetCached().(*BinTrieNode[E, AddedSubnodeMapping])
+			cached := cachingIterator.GetCached()
+			if cached != nil {
+				parent = cached.(*BinTrieNode[E, AddedSubnodeMapping])
 
-			if parent != nil {
-				// find added parent, or the root if no added parent
-				for !parent.IsAdded() {
-					parentParent := parent.GetParent()
-					if parentParent == nil {
-						break
+				if parent != nil {
+					// find added parent, or the root if no added parent
+					for !parent.IsAdded() {
+						parentParent := parent.GetParent()
+						if parentParent == nil {
+							break
+						}
+						parent = parentParent
 					}
-					parent = parentParent
-				}
-				// store ourselves with that added parent or root
-				var val SubNodesMapping[E, V]
-				val = parent.GetValue().(SubNodesMapping[E, V])
-				var list []*BinTrieNode[E, AddedSubnodeMapping]
-				if val.SubNodes == nil {
-					list = make([]*BinTrieNode[E, AddedSubnodeMapping], 0, 3)
-				} else {
-					list = val.SubNodes
-				}
-				val.SubNodes = append(list, newNext)
-				parent.SetValue(val)
-			} // else root
+					// store ourselves with that added parent or root
+					var val SubNodesMapping[E, V]
+					val = parent.GetValue().(SubNodesMapping[E, V])
+					var list []*BinTrieNode[E, AddedSubnodeMapping]
+					if val.SubNodes == nil {
+						list = make([]*BinTrieNode[E, AddedSubnodeMapping], 0, 3)
+					} else {
+						list = val.SubNodes
+					}
+					val.SubNodes = append(list, newNext)
+					parent.SetValue(val)
+				} // else root
+			}
 		}
 	}
 	return newTrie
@@ -617,16 +652,58 @@ func (trie *BinTrie[E, V]) AddedNodesTreeString() string {
 	return AddedNodesTreeString[E, V](addedTree.GetRoot())
 }
 
-// AddedNodesTreeString provides a flattened version of the trie showing only the contained added nodes and their containment structure, which is non-binary.
-// The root node is included, which may or may not be added.
-func AddedNodesTreeString[E TrieKey[E], V any](addedTree *BinTrieNode[E, AddedSubnodeMapping]) string {
-	var stack []indentsNode[E]
+func AddedNodesTreesString[E TrieKey[E], V any](addedTrees ...*BinTrie[E, AddedSubnodeMapping]) string {
+	// one complication here is that you may wish to omit the usually non-added ::/0 and 0.0.0.0/0 nodes.
+	// In such cases, you actually want to drop the root, and supply to treesString each of the nodes in AddedSubnodeMapping
+	// See below how nextNodes is populated.
+	var binTrees []*binTree[E, AddedSubnodeMapping]
+	for _, trie := range addedTrees {
+		if trie == nil {
+			binTrees = append(binTrees, nil)
+		} else {
+			trieNode := trie.GetRoot()
+			if trieNode.IsAdded() {
+				binTrees = append(binTrees, &trie.binTree)
+			} else {
+				nextVal := trieNode.GetValue()
+				if nextVal != nil {
+					mapping := nextVal.(SubNodesMapping[E, V])
+					if mapping.SubNodes != nil {
+						for _, trieNode = range mapping.SubNodes {
+							binTrees = append(binTrees, &binTree[E, AddedSubnodeMapping]{
+								root: trieNode.toBinTreeNode(),
+							})
+						}
+					}
+				}
+			}
+		}
+	}
+	return treesString(
+		true,
+		false,
+		func(tree *binTree[E, AddedSubnodeMapping], builder *strings.Builder, inds indents, withNonAddedKeys bool) {
+			if tree == nil {
+				addedNodesTreeString[E, V](builder, inds, nil)
+			} else {
+				addedNodesTreeString[E, V](builder, inds, toTrieNode(tree.GetRoot()))
+			}
+		},
+		binTrees...)
+}
+
+func AddedNodesTreeString[E TrieKey[E], V any](addedTreeRoot *BinTrieNode[E, AddedSubnodeMapping]) string {
 	builder := strings.Builder{}
 	builder.WriteByte('\n')
-	nodeIndent, subNodeIndent := "", ""
-	nextNode := addedTree
+	addedNodesTreeString[E, V](&builder, indents{}, addedTreeRoot)
+	return builder.String()
+}
+
+func addedNodesTreeString[E TrieKey[E], V any](builder *strings.Builder, inds indents, addedTreeRoot *BinTrieNode[E, AddedSubnodeMapping]) {
+	var stack []indentsNode[E]
+	nextNode := addedTreeRoot
 	for {
-		builder.WriteString(nodeIndent)
+		builder.WriteString(inds.nodeIndent)
 		builder.WriteString(NodeString[E, V](printWrapper[E, V]{nextNode}))
 		builder.WriteByte('\n')
 
@@ -641,6 +718,7 @@ func AddedNodesTreeString[E TrieKey[E], V any](addedTree *BinTrieNode[E, AddedSu
 		}
 		if len(nextNodes) > 0 {
 			i := len(nextNodes) - 1
+			subNodeIndent := inds.subNodeInd
 			lastIndents := indents{
 				nodeIndent: subNodeIndent + rightElbow,
 				subNodeInd: subNodeIndent + belowElbows,
@@ -649,7 +727,7 @@ func AddedNodesTreeString[E TrieKey[E], V any](addedTree *BinTrieNode[E, AddedSu
 			var nNode *BinTrieNode[E, AddedSubnodeMapping] // SubNodesMapping[E, V]
 			nNode = nextNodes[i]
 			if stack == nil {
-				stack = make([]indentsNode[E], 0, addedTree.Size())
+				stack = make([]indentsNode[E], 0, addedTreeRoot.Size())
 			}
 			stack = append(stack, indentsNode[E]{lastIndents, nNode})
 			if len(nextNodes) > 1 {
@@ -671,11 +749,8 @@ func AddedNodesTreeString[E TrieKey[E], V any](addedTree *BinTrieNode[E, AddedSu
 		nextItem := stack[newLen]
 		stack = stack[:newLen]
 		nextNode = nextItem.node
-		nextIndents := nextItem.inds
-		nodeIndent = nextIndents.nodeIndent
-		subNodeIndent = nextIndents.subNodeInd
+		inds = nextItem.inds
 	}
-	return builder.String()
 }
 
 type SubNodesMapping[E TrieKey[E], V any] struct {

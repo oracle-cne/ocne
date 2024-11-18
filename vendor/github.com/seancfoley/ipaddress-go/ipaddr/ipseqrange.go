@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -149,7 +149,7 @@ func (rng *SequentialRange[T]) getCachedCount(copy bool) (res *big.Int) {
 			if ipv4Lower, ok := any(lower).(*IPv4Address); ok {
 				ipv4Upper := any(upper).(*IPv4Address)
 				val := int64(ipv4Upper.Uint32Value()) - int64(ipv4Lower.Uint32Value()) + 1
-				count = new(big.Int).SetInt64(val)
+				count = bigZero().SetInt64(val)
 			} else {
 				count = upper.GetValue()
 				res = lower.GetValue()
@@ -162,7 +162,7 @@ func (rng *SequentialRange[T]) getCachedCount(copy bool) (res *big.Int) {
 	}
 	if res == nil {
 		if copy {
-			res = new(big.Int).Set(count)
+			res = bigZero().Set(count)
 		} else {
 			res = count
 		}
@@ -188,7 +188,7 @@ func (rng *SequentialRange[T]) GetPrefixCountLen(prefixLen BitCount) *big.Int {
 		upperAdjusted := ipv4Upper.Uint32Value() >> uint(shiftAdjustment)
 		lowerAdjusted := ipv4Lower.Uint32Value() >> uint(shiftAdjustment)
 		result := int64(upperAdjusted) - int64(lowerAdjusted) + 1
-		return new(big.Int).SetInt64(result)
+		return bigZero().SetInt64(result)
 	}
 	upperVal := rng.upper.GetValue()
 	ushiftAdjustment := uint(shiftAdjustment)
@@ -549,7 +549,9 @@ func (rng *SequentialRange[T]) Contains(other IPAddressType) bool {
 		return true
 	}
 	rng = rng.init()
-	if !rng.GetIPVersion().Equal(other.GetIPVersion()) {
+
+	lower := rng.lower
+	if lower.getAddrType() != otherAddr.getAddrType() {
 		return false
 	}
 	return compareLowIPAddressValues(otherAddr.GetLower(), rng.lower) >= 0 &&
@@ -573,6 +575,33 @@ func (rng *SequentialRange[T]) ContainsRange(other IPAddressSeqRangeType) bool {
 	}
 	return compareLowIPAddressValues(otherRange.GetLower(), rng.lower) >= 0 &&
 		compareLowIPAddressValues(otherRange.GetUpper(), rng.upper) <= 0
+}
+
+// Enumerate indicates where an address sits relative to the range ordering.
+//
+// Determines how many address elements of a range precede the given address element, if the address is in the range.
+// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+//
+// In other words, if the given address is not in the range but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of range addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+//
+// Returns nil when the argument is multi-valued. The argument must be an individual address.
+//
+// Enumerate is the inverse of the increment method:
+//   - rng.Enumerate(rng.Increment(inc)) = inc
+//   - rng.Increment(rng.Enumerate(newAddr)) = newAddr
+//
+// If the given address is not the same version as this range, then nil is returned.
+func (rng *SequentialRange[T]) Enumerate(other IPAddressType) *big.Int {
+	lower := rng.GetLower()
+	otherIpAddr := other.ToIP()
+	if otherIpAddr == lower.ToIP() {
+		return bigZero()
+	} else if other == rng.GetUpper().ToIP() {
+		count := rng.GetCount()
+		return count.Sub(count, bigOneConst())
+	}
+	return lower.Enumerate(other)
 }
 
 // Equal returns whether the given sequential address range is equal to this sequential address range.
@@ -737,6 +766,110 @@ func (rng *SequentialRange[T]) PrefixIterator(prefLength BitCount) Iterator[*Seq
 	}
 }
 
+// isContainedBy indicates if the range is contained by the address
+func isContainedBy(rng IPAddressSeqRangeType, other *IPAddress) bool {
+	if rng == nil {
+		return true
+	} else if other == nil {
+		return false
+	}
+	lower := rng.GetLowerIPAddress()
+	upper := rng.GetUpperIPAddress()
+	if lower.getAddrType() != other.getAddrType() {
+		return false
+	}
+	segCount := lower.GetSegmentCount()
+	for i := 0; i < segCount; i++ {
+		lowerSeg := lower.GetSegment(i)
+		upperSeg := upper.GetSegment(i)
+		lowerSegValue := lowerSeg.GetSegmentValue()
+		upperSegValue := upperSeg.GetSegmentValue()
+		otherSeg := other.GetSegment(i)
+		otherSegLowerValue := otherSeg.GetSegmentValue()
+		otherSegUpperValue := otherSeg.GetUpperSegmentValue()
+		if lowerSegValue < otherSegLowerValue || upperSegValue > otherSegUpperValue {
+			return false
+		}
+		if lowerSegValue != upperSegValue {
+			for j := i + 1; j < segCount; j++ {
+				otherSeg = other.GetSegment(j)
+				if !otherSeg.IsFullRange() {
+					return false
+				}
+			}
+			break
+		}
+	}
+	return true
+}
+
+// OverlapsAddress indicates whether this range is the same type and version as the given address and whether it overlaps with the given address, containing at least one individual address common to both.
+func (rng *SequentialRange[T]) OverlapsAddress(other IPAddressType) bool {
+	if rng == nil {
+		return true
+	} else if other == nil {
+		return true
+	}
+	otherAddr := other.ToIP()
+	if otherAddr == nil {
+		return true
+	}
+	rng = rng.init()
+	lower := rng.lower.ToIP()
+	if lower.getAddrType() != otherAddr.getAddrType() {
+		return false
+	}
+	upper := rng.upper.ToIP()
+	segCount := lower.GetSegmentCount()
+	for i := 0; i < segCount; i++ {
+		lowerSeg := lower.GetSegment(i)
+		upperSeg := upper.GetSegment(i)
+		lowerSegValue := lowerSeg.GetSegmentValue()
+		upperSegValue := upperSeg.GetSegmentValue()
+		otherSeg := otherAddr.GetSegment(i)
+		otherSegLowerValue := otherSeg.GetSegmentValue()
+		otherSegUpperValue := otherSeg.GetUpperSegmentValue()
+		if lowerSegValue == upperSegValue {
+			if lowerSegValue < otherSegLowerValue || lowerSegValue > otherSegUpperValue {
+				return false
+			}
+		} else {
+			if otherSegLowerValue < upperSegValue && otherSegUpperValue > lowerSegValue {
+				return true
+			} else if otherSegLowerValue == upperSegValue {
+				for j := i + 1; j < segCount; j++ {
+					otherSeg = otherAddr.GetSegment(j)
+					upperSeg = upper.GetSegment(j)
+					upperSegValue = upperSeg.GetSegmentValue()
+					otherSegLowerValue = otherSeg.GetSegmentValue()
+					if otherSegLowerValue < upperSegValue {
+						return true
+					} else if otherSegLowerValue > upperSegValue {
+						return false
+					}
+				}
+				break
+			} else if otherSegUpperValue == lowerSegValue {
+				for j := i + 1; j < segCount; j++ {
+					otherSeg = otherAddr.GetSegment(j)
+					lowerSeg = lower.GetSegment(j)
+					lowerSegValue = lowerSeg.getSegmentValue()
+					otherSegUpperValue = otherSeg.getUpperSegmentValue()
+					if otherSegUpperValue > lowerSegValue {
+						return true
+					} else if otherSegUpperValue < lowerSegValue {
+						return false
+					}
+				}
+				break
+			} else {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Overlaps returns true if this sequential range overlaps with the given sequential range.
 func (rng *SequentialRange[T]) Overlaps(other *SequentialRange[T]) bool {
 	rng = rng.init()
@@ -780,19 +913,21 @@ func (rng *SequentialRange[T]) Intersect(other *SequentialRange[T]) *SequentialR
 // CoverWithPrefixBlock returns the minimal-size prefix block that covers all the addresses in this range.
 // The resulting block will have a larger count than this, unless this range already directly corresponds to a prefix block.
 func (rng *SequentialRange[T]) CoverWithPrefixBlock() T {
-	return rng.GetLower().CoverWithPrefixBlockTo(rng.GetUpper())
+	rng = rng.init()
+	return rng.lower.CoverWithPrefixBlockTo(rng.upper)
 }
 
 // SpanWithPrefixBlocks returns an array of prefix blocks that spans the same set of addresses as this range.
 func (rng *SequentialRange[T]) SpanWithPrefixBlocks() []T {
-	return rng.GetLower().SpanWithPrefixBlocksTo(rng.GetUpper())
+	rng = rng.init()
+	return rng.lower.SpanWithPrefixBlocksTo(rng.upper)
 }
 
 // SpanWithSequentialBlocks produces the smallest slice of sequential blocks that cover the same set of addresses as this range.
 // This slice can be shorter than that produced by SpanWithPrefixBlocks and is never longer.
 func (rng *SequentialRange[T]) SpanWithSequentialBlocks() []T {
-	res := rng.GetLower().SpanWithSequentialBlocksTo(rng.GetUpper())
-	return res
+	rng = rng.init()
+	return rng.lower.SpanWithSequentialBlocksTo(rng.upper)
 }
 
 // Join joins the receiver with the given ranges into the fewest number of ranges.
@@ -991,7 +1126,8 @@ func (rng *SequentialRange[T]) ToIP() *SequentialRange[*IPAddress] {
 		if ip, ok := any(rng).(*SequentialRange[*IPAddress]); ok {
 			return ip
 		}
-		return newSequRangeUnchecked(rng.GetLower().ToIP(), rng.GetUpper().ToIP(), rng.isMultiple)
+		rng = rng.init()
+		return newSequRangeUnchecked(rng.lower.ToIP(), rng.upper.ToIP(), rng.isMultiple)
 	}
 	return nil
 }

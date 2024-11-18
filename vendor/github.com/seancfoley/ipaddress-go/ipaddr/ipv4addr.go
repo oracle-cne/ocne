@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -752,11 +752,11 @@ func (addr *IPv4Address) ToSinglePrefixBlockOrAddress() *IPv4Address {
 
 func (addr *IPv4Address) toSinglePrefixBlockOrAddress() (*IPv4Address, addrerr.IncompatibleAddressError) {
 	if addr == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	res := addr.ToSinglePrefixBlockOrAddress()
 	if res == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	return res, nil
 }
@@ -951,6 +951,11 @@ func (addr *IPv4Address) PrefixContains(other AddressType) bool {
 	return addr.init().prefixContains(other)
 }
 
+// containsSame returns whether this address contains all addresses in the given address or subnet of the same type.
+func (addr *IPv4Address) containsSame(other *IPv4Address) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is the same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
 func (addr *IPv4Address) Contains(other AddressType) bool {
 	if other == nil || other.ToAddressBase() == nil {
@@ -964,6 +969,27 @@ func (addr *IPv4Address) Contains(other AddressType) bool {
 		return true
 	}
 	return otherAddr.getAddrType() == ipv4Type && addr.section.sameCountTypeContains(otherAddr.GetSection())
+}
+
+// ContainsRange returns true if this address contains the given sequential range
+func (addr *IPv4Address) ContainsRange(other IPAddressSeqRangeType) bool {
+	return isContainedBy(other, addr.ToIP())
+}
+
+// Overlaps returns true if this address overlaps the given address or subnet
+func (addr *IPv4Address) Overlaps(other AddressType) bool {
+	if addr == nil {
+		return true
+	}
+	return addr.init().overlaps(other)
+}
+
+// OverlapsRange returns true if this address overlaps the given sequential range
+func (addr *IPv4Address) OverlapsRange(other IPAddressSeqRangeType) bool {
+	if other == nil {
+		return true
+	}
+	return other.OverlapsAddress(addr)
 }
 
 // Compare returns a negative integer, zero, or a positive integer if this address or subnet is less than, equal, or greater than the given item.
@@ -1296,6 +1322,57 @@ func (addr *IPv4Address) Increment(increment int64) *IPv4Address {
 	return addr.init().increment(increment).ToIPv4()
 }
 
+// Enumerate indicates where an address sits relative to the subnet ordering.
+//
+// Determines how many address elements of the subnet precede the given address element, if the address is in the subnet.
+// If above the subnet range, it is the distance to the upper boundary added to the subnet count less one, and if below the subnet range, the distance to the lower boundary.
+// If not in the subnet, but neither above nor below the range, then 0 is returned and ok is false.
+//
+// In other words, if the given address is not in the subnet but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of subnet addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+//
+// The ok value is false when the argument is multi-valued. The argument must be an individual address.
+//
+// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+//
+// If the given address does not have the same version or type, then ok is false.
+func (addr *IPv4Address) EnumerateIPv4(other AddressType) (val int64, ok bool) {
+	if other != nil {
+		if otherAddr := other.ToAddressBase(); otherAddr != nil {
+			return addr.GetSection().enumerateAddrIPv4(otherAddr.GetSection())
+		}
+	}
+	return
+}
+
+// Enumerate indicates where an address sits relative to the subnet ordering.
+//
+// Determines how many address elements of the subnet precede the given address element, if the address is in the subnet.
+// If above the subnet range, it is the distance to the upper boundary added to the subnet count less one, and if below the subnet range, the distance to the lower boundary.
+//
+// In other words, if the given address is not in the subnet but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of subnet addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+//
+// If the argument is not in the subnet, but neither above nor below the range, then nil is returned.
+//
+// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address.
+//
+// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+//
+// Enumerate is the inverse of the increment method:
+//   - subnet.Enumerate(subnet.Increment(inc)) = inc
+//   - subnet.Increment(subnet.Enumerate(newAddr)) = newAddr
+//
+// If the given address does not have the same version or type, then nil is returned.
+func (addr *IPv4Address) Enumerate(other AddressType) *big.Int {
+	if other != nil {
+		if otherAddr := other.ToAddressBase(); otherAddr != nil {
+			return addr.GetSection().enumerateAddr(otherAddr.GetSection())
+		}
+	}
+	return nil
+}
+
 // SpanWithPrefixBlocks returns an array of prefix blocks that cover the same set of addresses as this subnet.
 //
 // Unlike SpanWithPrefixBlocksTo, the result only includes addresses that are a part of this subnet.
@@ -1304,12 +1381,9 @@ func (addr *IPv4Address) SpanWithPrefixBlocks() []*IPv4Address {
 		if addr.IsSinglePrefixBlock() {
 			return []*IPv4Address{addr}
 		}
-		wrapped := wrapIPAddress(addr.ToIP())
-		spanning := getSpanningPrefixBlocks(wrapped, wrapped)
-		return cloneToIPv4Addrs(spanning)
+		return getSpanningPrefixBlocks(addr, addr)
 	}
-	wrapped := wrapIPAddress(addr.ToIP())
-	return cloneToIPv4Addrs(spanWithPrefixBlocks(wrapped))
+	return spanWithPrefixBlocks(addr)
 }
 
 // SpanWithPrefixBlocksTo returns the smallest slice of prefix block subnets that span from this subnet to the given subnet.
@@ -1319,12 +1393,7 @@ func (addr *IPv4Address) SpanWithPrefixBlocks() []*IPv4Address {
 // From the list of returned subnets you can recover the original range (this to other) by converting each to IPAddressRange with ToSequentialRange
 // and them joining them into a single range with the Join method of IPAddressSeqRange.
 func (addr *IPv4Address) SpanWithPrefixBlocksTo(other *IPv4Address) []*IPv4Address {
-	return cloneToIPv4Addrs(
-		getSpanningPrefixBlocks(
-			wrapIPAddress(addr.ToIP()),
-			wrapIPAddress(other.ToIP()),
-		),
-	)
+	return getSpanningPrefixBlocks(addr, other)
 }
 
 // SpanWithSequentialBlocks produces the smallest slice of sequential blocks that cover the same set of addresses as this subnet.
@@ -1336,8 +1405,7 @@ func (addr *IPv4Address) SpanWithSequentialBlocks() []*IPv4Address {
 	if addr.IsSequential() {
 		return []*IPv4Address{addr}
 	}
-	wrapped := wrapIPAddress(addr.ToIP())
-	return cloneToIPv4Addrs(spanWithSequentialBlocks(wrapped))
+	return spanWithSequentialBlocks(addr)
 }
 
 // SpanWithSequentialBlocksTo produces the smallest slice of sequential block subnets that span all values from this subnet to the given subnet.
@@ -1349,12 +1417,7 @@ func (addr *IPv4Address) SpanWithSequentialBlocks() []*IPv4Address {
 //
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 func (addr *IPv4Address) SpanWithSequentialBlocksTo(other *IPv4Address) []*IPv4Address {
-	return cloneToIPv4Addrs(
-		getSpanningSequentialBlocks(
-			wrapIPAddress(addr.ToIP()),
-			wrapIPAddress(other.ToIP()),
-		),
-	)
+	return getSpanningSequentialBlocks(addr, other)
 }
 
 // CoverWithPrefixBlockTo returns the minimal-size prefix block that covers all the addresses spanning from this subnet to the given subnet.
@@ -1372,18 +1435,14 @@ func (addr *IPv4Address) CoverWithPrefixBlock() *IPv4Address {
 //
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 func (addr *IPv4Address) MergeToSequentialBlocks(addrs ...*IPv4Address) []*IPv4Address {
-	series := cloneIPv4Addrs(addr, addrs)
-	blocks := getMergedSequentialBlocks(series)
-	return cloneToIPv4Addrs(blocks)
+	return getMergedSequentialBlocks(cloneSeries(addr, addrs))
 }
 
 // MergeToPrefixBlocks merges this subnet with the list of subnets to produce the smallest array of CIDR prefix blocks.
 //
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 func (addr *IPv4Address) MergeToPrefixBlocks(addrs ...*IPv4Address) []*IPv4Address {
-	series := cloneIPv4Addrs(addr, addrs)
-	blocks := getMergedPrefixBlocks(series)
-	return cloneToIPv4Addrs(blocks)
+	return getMergedPrefixBlocks(cloneSeries(addr, addrs))
 }
 
 // ReverseBytes returns a new address with the bytes reversed.  Any prefix length is dropped.
@@ -1780,11 +1839,6 @@ func (addr *IPv4Address) ToAddressBase() *Address {
 	if addr != nil {
 		addr = addr.init()
 	}
-	return (*Address)(unsafe.Pointer(addr))
-}
-
-// toAddressBase is needed for tries, it skips the init() call
-func (addr *IPv4Address) toAddressBase() *Address {
 	return (*Address)(unsafe.Pointer(addr))
 }
 
