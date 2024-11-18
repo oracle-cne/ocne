@@ -279,7 +279,6 @@ replace (
 	github.com/spf13/pflag => github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.1
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
-	sigs.k8s.io/yaml => sigs.k8s.io/yaml v1.3.0
 )
 
 exclude (
