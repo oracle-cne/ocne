@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -193,7 +193,7 @@ func (alloc *PrefixBlockAllocator[T]) AllocateSizes(blockSizes ...uint64) []Allo
 		allocated := alloc.AllocateSize(blockSize)
 		if allocated.IsMultiple() || bigIsOne(allocated.GetCount()) { // count is non-zero
 			result = append(result, AllocatedBlock[T]{
-				blockSize:     new(big.Int).SetUint64(blockSize),
+				blockSize:     bigZero().SetUint64(blockSize),
 				reservedCount: alloc.reservedCount,
 				block:         allocated,
 			})

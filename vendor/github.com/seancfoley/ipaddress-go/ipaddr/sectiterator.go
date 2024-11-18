@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ func (it *multiSegmentsIterator) increment() (res []*AddressDivision) {
 	for j := it.networkSegmentIndex; j >= 0; j-- { //for regular iterators (not prefix block), networkSegmentIndex is last segment (count - 1)
 		for variations[j].HasNext() {
 			if previousSegs == nil {
-				previousSegs = cloneDivs(nextSet)
+				previousSegs = clone(nextSet)
 			}
 			nextSet[j] = variations[j].Next().ToDiv()
 			it.updateVariations(j + 1)

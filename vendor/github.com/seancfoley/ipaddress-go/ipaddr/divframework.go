@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,6 +68,9 @@ type AddressSegmentType interface {
 
 	// Contains returns whether this segment is same type and version as the given segment and whether it contains all values in the given segment.
 	Contains(AddressSegmentType) bool
+
+	// Overlaps returns whether this segment is same type and version as the given segment and whether it overlaps with the values in the given segment.
+	Overlaps(AddressSegmentType) bool
 
 	// GetSegmentValue returns the lower value of the segment value range as a SegInt.
 	GetSegmentValue() SegInt

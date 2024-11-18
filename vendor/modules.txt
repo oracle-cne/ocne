@@ -1005,10 +1005,10 @@ github.com/sagikazarmark/locafero
 # github.com/sagikazarmark/slog-shim v0.1.0
 ## explicit; go 1.20
 github.com/sagikazarmark/slog-shim
-# github.com/seancfoley/bintree v1.2.3
+# github.com/seancfoley/bintree v1.3.1
 ## explicit; go 1.18
 github.com/seancfoley/bintree/tree
-# github.com/seancfoley/ipaddress-go v1.5.5
+# github.com/seancfoley/ipaddress-go v1.7.0
 ## explicit; go 1.18
 github.com/seancfoley/ipaddress-go/ipaddr
 github.com/seancfoley/ipaddress-go/ipaddr/addrerr

@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -617,6 +617,32 @@ type AddressSectionType interface {
 	// Sections must also have the same number of segments to be comparable, otherwise false is returned.
 	Contains(AddressSectionType) bool
 
+	// Overlaps returns whether this section overlaps with another.
+	//
+	// Sections must have the same number of segments to be comparable.
+	//
+	//For sections which are aware of their position in an address (IPv6 and MAC), their respective positions must match to be comparable.
+	Overlaps(AddressSectionType) bool
+
+	// Enumerate indicates where an individual address section sits relative to the address section range ordering.
+	//
+	// Determines how many address section elements of a range precede the given address section element, if the address section is in the range.
+	// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+	//
+	// In other words, if the given address section is not in the range but above it, returns the number of address sections preceding the address from the upper range boundary,
+	// added to one less than the total number of range address sections.  If the given address section is not in the subnet but below it, returns the number of address sections following the address section to the lower subnet boundary.
+	//
+	// If the argument is not in the range, but neither above nor below the range, then nil is returned.
+	//
+	// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address section.
+	//
+	// When this is also an individual address section, the returned value is the distance (difference) between the two address section values.
+	//
+	// If the given address section does not have the same version or type, then nil is returned.
+	//
+	// Sections must also have the same number of segments to be comparable, otherwise nil is returned.
+	Enumerate(AddressSectionType) *big.Int
+
 	// PrefixEqual determines if the given section matches this section up to the prefix length of this section.
 	// It returns whether the argument section has the same address section prefix values as this.
 	//
@@ -657,8 +683,28 @@ type AddressType interface {
 	// Two address instances are equal if they represent the same set of addresses.
 	Equal(AddressType) bool
 
-	// Contains returns whether this is same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
+	// Contains returns whether this is the same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
 	Contains(AddressType) bool
+
+	// Overlaps returns whether this is the same type and version as the given address and whether it overlaps with the other, containing at least one individual address common to both.
+	Overlaps(AddressType) bool
+
+	// Enumerate indicates where an address sits relative to the subnet ordering.
+	//
+	// Determines how many address elements of the subnet precede the given address element, if the address is in the subnet.
+	// If above the subnet range, it is the distance to the upper boundary added to the subnet count less one, and if below the subnet range, the distance to the lower boundary.
+	//
+	// In other words, if the given address is not in the subnet but above it, returns the number of addresses preceding the address from the upper range boundary,
+	// added to one less than the total number of subnet addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+	//
+	// If the argument is not in the subnet, but neither above nor below the range, then nil is returned.
+	//
+	// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address.
+	//
+	// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+	//
+	// If the given address does not have the same version or type, then nil is returned.
+	Enumerate(AddressType) *big.Int
 
 	// PrefixEqual determines if the given address matches this address up to the prefix length of this address.
 	// If this address has no prefix length, the entire address is compared.
@@ -746,6 +792,12 @@ type IPAddressType interface {
 
 	IPAddressRange
 
+	// ContainsRange returns whether all the addresses in the given sequential range are also contained in this sequential range.
+	ContainsRange(IPAddressSeqRangeType) bool
+
+	// Overlaps returns whether this IP address is the same version as the given range and whether it overlaps with the given range, containing at least one individual address common to both.
+	OverlapsRange(IPAddressSeqRangeType) bool
+
 	// Wrap wraps this IP address, returning a WrappedIPAddress, an implementation of ExtendedIPSegmentSeries,
 	// which can be used to write code that works with both IP addresses and IP address sections.
 	Wrap() WrappedIPAddress
@@ -780,7 +832,23 @@ type IPAddressSeqRangeType interface {
 	ContainsRange(IPAddressSeqRangeType) bool
 
 	// Contains returns whether this range contains all IP addresses in the given address or subnet.
-	Contains(IPAddressType) bool
+	Contains(IPAddressType) bool // this is not in IPAddressRange because addresses use Contains(AddressType)
+
+	// OverlapsAddress indicates whether this range is the same type and version as the given address and whether it overlaps with the given address, containing at least one individual address common to both.
+	OverlapsAddress(IPAddressType) bool
+
+	// Enumerate indicates where an address sits relative to the range ordering.
+	//
+	// Determines how many address elements of a range precede the given address element, if the address is in the range.
+	// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+	//
+	// In other words, if the given address is not in the range but above it, returns the number of addresses preceding the address from the upper range boundary,
+	// added to one less than the total number of range addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+	//
+	// Returns nil when the argument is multi-valued. The argument must be an individual address.
+	//
+	// If the given address is not the same version, then nil is returned.
+	Enumerate(IPAddressType) *big.Int // this is not in IPAddressRange because addresses use Enumerate(AddressType)
 
 	// Equal returns whether the given sequential address range is equal to this sequential address range.
 	// Two sequential address ranges are equal if their lower and upper range boundaries are equal.
