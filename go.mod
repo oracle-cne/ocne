@@ -8,7 +8,7 @@ go 1.22.0
 toolchain go1.22.5
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/containers/common v0.60.4
 	github.com/containers/image/v5 v5.32.2
 	github.com/coreos/butane v0.0.0-00010101000000-000000000000
