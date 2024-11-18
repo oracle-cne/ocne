@@ -35,6 +35,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
+	"slices"
 )
 
 const (
@@ -242,7 +243,6 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
 
 	// The values that are required are buried inside .spec.networkSpec.vcn
 	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
@@ -470,7 +470,6 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	return ociClusterObj, err
 }
 
-
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
@@ -528,7 +527,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
-	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA1Flex {
+	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
 		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
 
@@ -1058,7 +1057,5 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 }
 
 func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
-	// ens3 is the default OCI vNIC name for x86
-	// enp0s6 is the default for arm
-	return []string{"ens3", "enp0s6"}
+	return []string{}
 }
