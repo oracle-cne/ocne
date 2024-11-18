@@ -275,7 +275,6 @@ require (
 replace (
 	github.com/coreos/butane => github.com/coreos/butane v0.20.0
 	github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-	github.com/spf13/pflag => github.com/spf13/pflag v1.0.5
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
 
