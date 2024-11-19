@@ -8,21 +8,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/cluster/template"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
-	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
@@ -34,6 +28,13 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 )
 
@@ -69,8 +70,8 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
@@ -242,7 +243,6 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
 
 	// The values that are required are buried inside .spec.networkSpec.vcn
 	spec, err := getMapVal(ociCluster.Object, "spec", ociClusterNs, ociClusterName)
@@ -469,7 +469,6 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 
 	return ociClusterObj, err
 }
-
 
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
@@ -777,7 +776,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 		cad.ClusterResources = cdi
 	}
 
-	if err := template.ValidateClusterResources(cad.ClusterResources); err != nil {
+	if err := oci2.ValidateClusterResources(cad.ClusterResources); err != nil {
 		return false, false, err
 	}
 
@@ -939,7 +938,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil{
+		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -968,7 +967,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error{
+			WaitFunction: func(i interface{}) error {
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},

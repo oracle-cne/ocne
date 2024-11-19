@@ -1,11 +1,12 @@
 // Copyright (c) 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package template
+package olvm
 
 import (
 	"errors"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"regexp"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 )
 
-type ociData struct {
+type olvmData struct {
 	ClusterConfig   *types.ClusterConfig
 	ExtraConfig     string
 	KubeVersions    *versions.KubernetesVersions
@@ -255,14 +256,14 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 	return imgs.Amd64
 }
 
-func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	tmplBytes, err := getTemplate("capi-oci.yaml")
+func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+	tmplBytes, err := common.ReadTemplate("capi-oci.yaml")
 
 	if err != nil {
 		return "", err
 	}
 
-	if clusterConfig.ControlPlaneNodes % 2 == 0 {
+	if clusterConfig.ControlPlaneNodes%2 == 0 {
 		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
@@ -301,7 +302,7 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		return "", err
 	}
 
-	return util.TemplateToStringWithFuncs(string(tmplBytes), &ociData{
+	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
 		ClusterConfig:   clusterConfig,
 		ExtraConfig:     ign,
 		KubeVersions:    &kubeVer,
