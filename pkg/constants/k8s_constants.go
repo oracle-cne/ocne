@@ -96,11 +96,13 @@ const (
 	OCICAPIVersion    = ""
 	OCICAPIDeployment = "capoci-controller-manager"
 
-	OLVMCAPIRelease    = "capi-olvm"
-	OLVMCAPINamespace  = "cluster-api-provider-olvm"
-	OLVMCAPIChart      = "olvm-capi"
-	OLVMCAPIVersion    = ""
-	OLVMCAPIDeployment = "capi-olvm-operator"
+	OLVMCAPIRelease            = "olvm-capi"
+	OLVMCAPINamespace          = "cluster-api-provider-olvm"
+	OLVMCAPIChart              = "olvm-capi"
+	OLVMCAPIVersion            = ""
+	OLVMCAPIDeployment         = "olvm-capi-operator"
+	OLVMOVirtCredSecretSuffix  = "ovirt-credentials"
+	OLVMOVirtCAConfigMapSuffix = "ovirt-ca"
 
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"

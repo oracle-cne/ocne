@@ -45,8 +45,24 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	OlvmCluster `yaml:"olvmCluster"`
-	OlvmMachine `yaml:"olvmMachine"`
+	KubeConfigPath string `yaml:"kubeconfig"`
+	SelfManaged    bool   `yaml:"selfmanagedfake"`
+	SelfManagedPtr *bool  `yaml:"selfManaged,omitempty"`
+	Proxy          Proxy  `yaml:"proxy"`
+	OlvmCluster    `yaml:"olvmCluster"`
+	OlvmMachine    `yaml:"olvmMachine"`
+}
+
+type OlvmCluster struct {
+	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
+	OVirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
+	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
+	OVirtApiCA           string                   `yaml:"ovirtApiCA"`
+}
+
+type OlvmControlPlaneEndpoint struct {
+	host string `yaml:"host"`
+	port string `yaml:"port"`
 }
 
 type OlvmMachine struct {
@@ -66,17 +82,6 @@ type OlvmMachineNetwork struct {
 	InterfaceType   string `yaml:"interfaceType"`
 	VnicName        string `yaml:"vnicName"`
 	VnicProfileName string `yaml:"vnicProfileName"`
-}
-
-type OlvmCluster struct {
-	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
-	OvirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
-	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
-}
-
-type OlvmControlPlaneEndpoint struct {
-	host string `yaml:"host"`
-	port string `yaml:"port"`
 }
 
 type ByoProvider struct {
@@ -102,6 +107,7 @@ type Providers struct {
 	Libvirt LibvirtProvider `yaml:"libvirt"`
 	Oci     OciProvider     `yaml:"oci"`
 	Byo     ByoProvider     `yaml:"byo"`
+	Olvm    OlvmProvider    `yaml:"olvm"`
 }
 
 type Proxy struct {
