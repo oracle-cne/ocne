@@ -155,13 +155,17 @@ func FromBytes(in []byte) (*igntypes.Config, error) {
 		// It's not ignition.  Assume the input string is butane.  If
 		// it's not then the parser will catch it and complain.
 		var err error
-		in, _, err = butconfig.TranslateBytes(in, butcommon.TranslateBytesOptions{
+		inIgn, report, err := butconfig.TranslateBytes(in, butcommon.TranslateBytesOptions{
 			Raw: true,
 		})
+
+		fmt.Println(report.String())
 
 		if err != nil {
 			return nil, err
 		}
+
+		in = inIgn
 	}
 
 	ret, _, err := ign34.ParseCompatibleVersion(in)

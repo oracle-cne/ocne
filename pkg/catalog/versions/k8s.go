@@ -19,31 +19,31 @@ var kubernetesVersions = map[string]KubernetesVersions{
 		Kubernetes: "1.26.6",
 		Pause:      "3.9",
 		Etcd:       "3.5.6",
-		CoreDNS:    "v1.9.3-4",
+		CoreDNS:    "current",
 	},
 	"1.27.12": {
 		Kubernetes: "1.27.12",
 		Pause:      "3.9",
 		Etcd:       "3.5.10",
-		CoreDNS:    "v1.10.1",
+		CoreDNS:    "current",
 	},
 	"1.28.8": {
 		Kubernetes: "1.28.8",
 		Pause:      "3.9",
 		Etcd:       "3.5.10",
-		CoreDNS:    "v1.10.1-1",
+		CoreDNS:    "current",
 	},
 	"1.29.3": {
 		Kubernetes: "1.29.3",
 		Pause:      "3.9",
 		Etcd:       "3.5.10",
-		CoreDNS:    "v1.11.1",
+		CoreDNS:    "current",
 	},
 	"1.30.3": {
 		Kubernetes: "1.30.3",
 		Pause:      "3.9",
 		Etcd:       "3.5.12",
-		CoreDNS:    "v1.11.1",
+		CoreDNS:    "current",
 	},
 }
 
