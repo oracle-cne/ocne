@@ -134,6 +134,12 @@ SUBCOMMANDS
     Dump manifests from a curated subset of cluster resources.  By default, 
     all cluster resources are dumped, except Secrets and ConfigMaps.
 
+  `--json`
+    Dump Kubernetes resources in JSON format. The default is false and dumps them in YAML format.
+
+  `--managed`
+    Include the managedFields data in the Kubernetes resources. The default is false.
+
 `-m, --include-configmaps`
     Include ConfigMaps in the cluster dump. The --all-resources flag must also be true. 
     The default is false.
@@ -230,6 +236,10 @@ SUBCOMMANDS
 
   `-d, --output-directory` *string*
   The output directory containing cluster dump data which will be analyzed.
+
+  `--json`
+  Analyze a cluster dump that has Kubernetes artifacts in JSON format. 
+  The default is false and it assumes that the resources are in YAML format.
 
 `  -s, --skip-nodes`
   Skip collecting node resources for the analysis, default is false. This is only valid for a live cluster analysis.

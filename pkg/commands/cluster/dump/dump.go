@@ -62,6 +62,12 @@ type Options struct {
 
 	// ArchiveFile is the file path of the archive file that will be generated
 	ArchiveFile string
+
+	// Managed determines whether the managedField metadata is dumped with a resource
+	Managed bool
+
+	// JSON determines whether the Kubernetes resources should be outputted in JSON format
+	JSON bool
 }
 
 // Dump the cluster

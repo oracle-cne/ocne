@@ -28,4 +28,7 @@ type analyzeParams struct {
 
 	// writer that writes the analyzer output
 	writer io.Writer
+
+	// isJSON if the Kubernetes resources being analyzed are in JSON format
+	isJSON bool
 }
