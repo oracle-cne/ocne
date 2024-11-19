@@ -58,6 +58,7 @@ type OlvmCluster struct {
 	OVirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
 	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
 	OVirtApiCA           string                   `yaml:"ovirtApiCA"`
+	OVirtApiCAPath       string                   `yaml:"ovirtApiCAPath"`
 }
 
 type OlvmControlPlaneEndpoint struct {

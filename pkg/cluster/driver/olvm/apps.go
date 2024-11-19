@@ -23,17 +23,15 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
-	username := os.Getenv(EnvUsername)
-	if username == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+	// Get the creds
+	credmap, err := getCreds()
+	if err != nil {
+		return nil, err
 	}
-	password := os.Getenv(EnvPassword)
-	if password == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password")
-	}
-	scope := os.Getenv(EnvScope)
-	if scope == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+	// get the CA
+	ca, err := getCA(&cad.ClusterConfig.Providers.Olvm)
+	if err != nil {
+		return nil, err
 	}
 
 	return []install.ApplicationDescription{
@@ -64,11 +62,7 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 					ObjectMeta: metav1.ObjectMeta{
 						Name: fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix),
 					},
-					Data: map[string][]byte{
-						"username": []byte(username),
-						"password": []byte(password),
-						"scope":    []byte(scope),
-					},
+					Data: credmap,
 					Type: "Opaque",
 				})
 				if err != nil {
@@ -80,7 +74,7 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 						Name: fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix),
 					},
 					Data: map[string]string{
-						"ca.crt": cad.ClusterConfig.Providers.Olvm.OVirtApiCA,
+						"ca.crt": ca,
 					},
 				})
 				return err
@@ -191,4 +185,44 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 	}
 
 	return ret, nil
+}
+
+func getCA(prov *types.OlvmProvider) (string, error) {
+	if prov.OVirtApiCA != "" && prov.OVirtApiCAPath != "" {
+		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
+	}
+	if prov.OVirtApiCA != "" {
+		return prov.OVirtApiCA, nil
+	}
+
+	if prov.OVirtApiCAPath != "" {
+		by, err := os.ReadFile(prov.OVirtApiCAPath)
+		if err != nil {
+			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OVirtApiCAPath, err)
+		}
+		return string(by), nil
+	}
+	return "", fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
+}
+
+func getCreds() (map[string][]byte, error) {
+	username := os.Getenv(EnvUsername)
+	if username == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+	}
+	password := os.Getenv(EnvPassword)
+	if password == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password")
+	}
+	scope := os.Getenv(EnvScope)
+	if scope == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+	}
+
+	return map[string][]byte{
+		"username": []byte(username),
+		"password": []byte(password),
+		"scope":    []byte(scope),
+	}, nil
+
 }
