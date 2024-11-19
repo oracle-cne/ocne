@@ -6,6 +6,7 @@ package template
 import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/oci"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/olvm"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 )
@@ -16,6 +17,9 @@ func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (stri
 	switch clusterConfig.Provider {
 	case constants.ProviderTypeOCI:
 		tmpl, err = oci.GetOciTemplate(config, clusterConfig)
+	case constants.ProviderTypeOlvm:
+		tmpl, err = olvm.GetOlvmTemplate(config, clusterConfig)
+
 	default:
 		return "", fmt.Errorf("templates not implemented for provider %s", clusterConfig.Provider)
 	}

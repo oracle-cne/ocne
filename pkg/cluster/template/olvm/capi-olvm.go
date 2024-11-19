@@ -256,7 +256,7 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 	return imgs.Amd64
 }
 
-func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 	tmplBytes, err := common.ReadTemplate("capi-oci.yaml")
 
 	if err != nil {

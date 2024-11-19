@@ -44,6 +44,41 @@ type OciProvider struct {
 	Proxy             Proxy            `yaml:"proxy"`
 }
 
+type OlvmProvider struct {
+	OlvmCluster `yaml:"olvmCluster"`
+	OlvmMachine `yaml:"olvmMachine"`
+}
+
+type OlvmMachine struct {
+	OlvmClusterName  string `yaml:"olvmClusterName"`
+	OlvmMachineOvirt `yaml:"ovirt"`
+}
+
+type OlvmMachineOvirt struct {
+	ClusterName    string             `yaml:"ovirtClusterName"`
+	Memory         string             `yaml:"memory"`
+	Network        OlvmMachineNetwork `yaml:"network"`
+	VMTemplateName string             `yaml:"vmTemplateName"`
+}
+
+type OlvmMachineNetwork struct {
+	NetworkName     string `yaml:"networkName"`
+	InterfaceType   string `yaml:"interfaceType"`
+	VnicName        string `yaml:"vnicName"`
+	VnicProfileName string `yaml:"vnicProfileName"`
+}
+
+type OlvmCluster struct {
+	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
+	OvirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
+	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
+}
+
+type OlvmControlPlaneEndpoint struct {
+	host string `yaml:"host"`
+	port string `yaml:"port"`
+}
+
 type ByoProvider struct {
 	AutomaticTokenCreation    bool   `yaml:"automaticTokenCreationfake"`
 	AutomaticTokenCreationPtr *bool  `yaml:"automaticTokenCreation"`

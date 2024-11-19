@@ -96,6 +96,12 @@ const (
 	OCICAPIVersion    = ""
 	OCICAPIDeployment = "capoci-controller-manager"
 
+	OLVMCAPIRelease    = "capi-olvm"
+	OLVMCAPINamespace  = "cluster-api-provider-olvm"
+	OLVMCAPIChart      = "olvm-capi"
+	OLVMCAPIVersion    = ""
+	OLVMCAPIDeployment = "capi-olvm-operator"
+
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
