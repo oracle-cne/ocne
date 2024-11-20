@@ -78,10 +78,10 @@ func imageToDirectory(imageName string) string {
 	return path.Join(prefix, strings.ReplaceAll(imageName, "/", "_"))
 }
 
-// getSystemContext returns a SystemContext that makes sense
+// GetSystemContext returns a SystemContext that makes sense
 // for the system that the function is called on.  The specific
 // behavior is undefined.  It should "do the right thing".
-func getSystemContext(arch string) *types.SystemContext {
+func GetSystemContext(arch string) *types.SystemContext {
 	rootPath := ""
 	if runtime.GOOS == "darwin" {
 		// If this fails, there are big problems
@@ -99,11 +99,11 @@ func getSystemContext(arch string) *types.SystemContext {
 // GetImageLayers fetches the BlobInfos for all the layers of the
 // given ImageReference.
 func GetImageLayers(imgRef types.ImageReference, arch string) ([]types.BlobInfo, error) {
-	imgSrc, err := imgRef.NewImageSource(context.Background(), getSystemContext(arch))
+	imgSrc, err := imgRef.NewImageSource(context.Background(), GetSystemContext(arch))
 	if err != nil {
 		return nil, err
 	}
-	img, err := image.FromSource(context.Background(), getSystemContext(arch), imgSrc)
+	img, err := image.FromSource(context.Background(), GetSystemContext(arch), imgSrc)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func GetOrPull(imageName string, arch string) (types.ImageReference, error) {
 		return nil, err
 	}
 
-	systemCtx := getSystemContext(arch)
+	systemCtx := GetSystemContext(arch)
 	policy, err := signature.DefaultPolicy(systemCtx)
 	if err != nil {
 		log.Debugf("Could not get default signature policy: %v", err)
@@ -189,7 +189,7 @@ func GetOrPull(imageName string, arch string) (types.ImageReference, error) {
 	// location, so it can be accessed later.
 	copyOpts := &copy.Options{
 		ReportWriter:       os.Stdout,
-		SourceCtx:          getSystemContext(arch),
+		SourceCtx:          GetSystemContext(arch),
 		ImageListSelection: copy.CopySystemImage,
 	}
 	_, err = copy.Image(
@@ -272,7 +272,7 @@ func Login(registry string) error {
 		Stdout:             os.Stdout,
 		AcceptRepositories: true,
 	}
-	return auth.Login(context.Background(), getSystemContext(""), &opts, []string{registry})
+	return auth.Login(context.Background(), GetSystemContext(""), &opts, []string{registry})
 }
 
 // Copy moves an image from one place to another
@@ -287,7 +287,7 @@ func Copy(src string, dest string, arch string, imageSelection copy.ImageListSel
 		return err
 	}
 
-	systemCtx := getSystemContext(arch)
+	systemCtx := GetSystemContext(arch)
 	policy, err := signature.DefaultPolicy(systemCtx)
 	if err != nil {
 		log.Debugf("Could not get default signature policy: %v", err)

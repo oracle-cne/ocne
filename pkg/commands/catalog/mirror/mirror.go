@@ -6,16 +6,12 @@ package mirror
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	v1Apps "k8s.io/api/apps/v1"
-	v1Batch "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/containers/common/libimage"
+	"github.com/containers/storage"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
@@ -25,6 +21,14 @@ import (
 	imageUtil "github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	log "github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	v1Apps "k8s.io/api/apps/v1"
+	v1Batch "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"os"
 	"regexp"
 	"sigs.k8s.io/yaml"
 	"strings"
@@ -103,7 +107,13 @@ func Mirror(options Options) error {
 			fmt.Printf("%s\n", image)
 		}
 	}
-
+	runtime, _ := libimage.RuntimeFromStoreOptions(&libimage.RuntimeOptions{SystemContext: imageUtil.GetSystemContext("")}, &storage.StoreOptions{})
+	//if err != nil {
+	//		return err
+	//	}
+	saveOptions := libimage.SaveOptions{}
+	saveOptions.Writer = os.Stdout
+	runtime.Save(context.Background(), images, "docker-archive", "test.tar", &saveOptions)
 	if options.Push && options.DestinationURI == "" {
 		return errors.New("Please provide a destination URI")
 	}
