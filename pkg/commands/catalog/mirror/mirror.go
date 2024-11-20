@@ -108,9 +108,9 @@ func Mirror(options Options) error {
 		}
 	}
 	runtime, _ := libimage.RuntimeFromStoreOptions(&libimage.RuntimeOptions{SystemContext: imageUtil.GetSystemContext("")}, &storage.StoreOptions{})
-	//if err != nil {
-	//		return err
-	//	}
+	if err != nil {
+		return err
+	}
 	saveOptions := libimage.SaveOptions{}
 	saveOptions.Writer = os.Stdout
 	runtime.Save(context.Background(), images, "docker-archive", "test.tar", &saveOptions)
