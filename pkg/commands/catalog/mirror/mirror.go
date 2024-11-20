@@ -107,7 +107,7 @@ func Mirror(options Options) error {
 			fmt.Printf("%s\n", image)
 		}
 	}
-	runtime, _ := libimage.RuntimeFromStoreOptions(&libimage.RuntimeOptions{SystemContext: imageUtil.GetSystemContext("")}, &storage.StoreOptions{})
+	runtime, err := libimage.RuntimeFromStoreOptions(&libimage.RuntimeOptions{SystemContext: imageUtil.GetSystemContext("")}, &storage.StoreOptions{})
 	if err != nil {
 		return err
 	}
