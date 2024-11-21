@@ -1,11 +1,11 @@
-package common
+package template
 
 import (
 	"embed"
 	"fmt"
 )
 
-//go:embed all:../templates
+//go:embed all:templates
 var templates embed.FS
 
 func ReadTemplate(name string) ([]byte, error) {

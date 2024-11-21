@@ -45,25 +45,27 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	KubeConfigPath string `yaml:"kubeconfig"`
-	SelfManaged    bool   `yaml:"selfmanagedfake"`
-	SelfManagedPtr *bool  `yaml:"selfManaged,omitempty"`
-	Proxy          Proxy  `yaml:"proxy"`
-	OlvmCluster    `yaml:"olvmCluster"`
-	OlvmMachine    `yaml:"olvmMachine"`
+	KubeConfigPath      string      `yaml:"kubeconfig"`
+	Namespace           string      `yaml:"namespace"`
+	SelfManaged         bool        `yaml:"selfmanagedfake"`
+	SelfManagedPtr      *bool       `yaml:"selfManaged,omitempty"`
+	Proxy               Proxy       `yaml:"proxy"`
+	OlvmCluster         OlvmCluster `yaml:"olvmCluster"`
+	ControlPlaneMachine OlvmMachine `yaml:"controlPlaneMachine"`
+	WorkerMachine       OlvmMachine `yaml:"workerMachine"`
 }
 
 type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
+	DatacenterName       string                   `yaml:"datacenterName"`
 	OVirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
-	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
 	OVirtApiCA           string                   `yaml:"ovirtApiCA"`
 	OVirtApiCAPath       string                   `yaml:"ovirtApiCAPath"`
 }
 
 type OlvmControlPlaneEndpoint struct {
-	host string `yaml:"host"`
-	port string `yaml:"port"`
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
 }
 
 type OlvmMachine struct {
@@ -72,10 +74,10 @@ type OlvmMachine struct {
 }
 
 type OlvmMachineOvirt struct {
-	ClusterName    string             `yaml:"ovirtClusterName"`
-	Memory         string             `yaml:"memory"`
-	Network        OlvmMachineNetwork `yaml:"network"`
-	VMTemplateName string             `yaml:"vmTemplateName"`
+	OVirtClusterName string             `yaml:"ovirtClusterName"`
+	Memory           string             `yaml:"memory"`
+	Network          OlvmMachineNetwork `yaml:"network"`
+	VMTemplateName   string             `yaml:"vmTemplateName"`
 }
 
 type OlvmMachineNetwork struct {

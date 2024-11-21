@@ -16,7 +16,7 @@ spec:
         - {{.ClusterConfig.ServiceSubnet}}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-    kind: OCICluster
+    kind: OLVMCluster
     name: "{{.ClusterConfig.Name}}"
     namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
   controlPlaneRef:
@@ -33,12 +33,12 @@ metadata:
   name: "{{.ClusterConfig.Name}}"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 spec:
-  ovirtDatacenterName: Default
+  ovirtDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
   controlPlaneEndpoint:
-    host: "{{.ClusterConfig.Providers.Olvm.ControlPlane.Endpoint}}"
-    port: {{.ClusterConfig.Providers.Olvm.ControlPlane.Port}}
+    host: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Host}}"
+    port: {{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Port}}
   ovirtAPI:
-    endpointURL: "{{.ClusterConfig.Providers.Olvm.Ovirt.Endpoint}}"
+    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtApiServerURL}}"
     caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"
     credentialsSecretName: "{{.ClusterConfig.Name}}-ovirt-credentials"
 ---
@@ -93,7 +93,7 @@ spec:
         kubeletExtraArgs:
           cloud-provider: external
           provider-id: olvm://{{ ds["id"] }}
-          volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
+          volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites:
     joinConfiguration:
       discovery: {}
@@ -102,7 +102,7 @@ spec:
         kubeletExtraArgs:
           cloud-provider: external
           provider-id: olvm://{{ ds["id"] }}
-          volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
+          volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites:
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -113,34 +113,22 @@ metadata:
 spec:
   template:
     spec:
-      memory: "{{.ClusterConfig.Providers.Olvm.ControlPlane.Memory}}"
-      olvmClusterName: "{{.ClusterConfig.Providers.Olvm.ControlPlane.Cluster}}"
-      ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlane.Ovirt.Cluster}}"
-      ovirtVMTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlane.Ovirt.Cluster}}"
-      ovirtNetwork:
-        networkName: "{{.ClusterConfig.Providers.Olvm.Ovirt.ControlPlane.Network}}"
-        vnicProfileName:   "{{.ClusterConfig.Providers.Olvm.Ovirt.ControlPlane.Vnic.Profile}}"
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: OLVMMachineTemplate
-metadata:
-  name: "{{.ClusterConfig.Name}}-worker"
-  namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
-spec:
-  template:
-    spec:
-      memory: "{{.ClusterConfig.Providers.Olvm.Worker.Memory}}"
-      olvmClusterName: "{{.ClusterConfig.Providers.Olvm.Worker.Cluster}}"
-      ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.Worker.OvirtCluster}}"
-      ovirtVMTemplateName:  "{{.ClusterConfig.Providers.Olvm.Worker.OvirtCluster}}"
-      ovirtNetwork:
-        networkName: "{{.ClusterConfig.Providers.Olvm.Worker.OvirtNetwork}}"
-        vnicProfileName:   "{{.ClusterConfig.Providers.Olvm.Worker.OvirtVnicProfile}}"
+      olvmClusterName: "{{.ClusterConfig.Name}}"
+      ovirt:
+        memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
+        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.OVirtClusterName}}"
+        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.VMTemplateName}}"
+        network:
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.InterfaceType}}"
+          networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.NetworkName}}"
+          vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.VnicName}}"
+          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.VnicProfileName}}"
+
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: "{{.ClusterConfig.Name}}-worker"
+  name: "{{.ClusterConfig.Name}}-md-0"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 spec:
   template:
@@ -151,12 +139,54 @@ spec:
         version: 1.5.0
         containerLinuxConfig:
           additionalConfig: |
-{{.ExtraConfig}}
-      joinConfiguration:
-        nodeRegistration:
-          kubeletExtraArgs:
-            cloud-provider: external
-            provider-id: oci://{{ ds["id"] }}
-            volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
-            tls-cipher-suites:
-
+  {{.ExtraConfig}}
+joinConfiguration:
+  nodeRegistration:
+    kubeletExtraArgs:
+      cloud-provider: external
+      provider-id: olvm://{{ ds["id"] }}
+      volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
+      tls-cipher-suites:
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OLVMMachineTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
+spec:
+  template:
+    spec:
+      olvmClusterName: "{{.ClusterConfig.Name}}"
+      ovirt:
+        memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
+        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.OVirtClusterName}}"
+        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.VMTemplateName}}"
+        network:
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.InterfaceType}}"
+          networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.NetworkName}}"
+          vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.VnicName}}"
+          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.VnicProfileName}}"
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+spec:
+  clusterName: "{{.ClusterConfig.Name}}"
+  replicas: {{.ClusterConfig.WorkerNodes}}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "{{.ClusterConfig.Name}}"
+      version: "{{.KubeVersions.Kubernetes}}"
+      bootstrap:
+        configRef:
+          name: "{{.ClusterConfig.Name}}-md-0"
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+      infrastructureRef:
+        name: "{{.ClusterConfig.Name}}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachineTemplate

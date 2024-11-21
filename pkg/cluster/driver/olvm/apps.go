@@ -56,9 +56,10 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 		},
 		install.ApplicationDescription{
 			PreInstall: func() error {
-				err := k8s.CreateSecret(kubeClient, constants.OLVMCAPINamespace, &v1.Secret{
+				err := k8s.CreateSecret(kubeClient, constants.OLVMCAPIOperatorNamespace, &v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix),
+						Name:      fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix),
+						Namespace: constants.OLVMCAPIOperatorNamespace,
 					},
 					Data: credmap,
 					Type: "Opaque",
@@ -69,7 +70,8 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 
 				err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix),
+						Name:      fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix),
+						Namespace: constants.OLVMCAPIOperatorNamespace,
 					},
 					Data: map[string]string{
 						"ca.crt": ca,
@@ -79,7 +81,7 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 			},
 			Application: &types.Application{
 				Name:      constants.OLVMCAPIChart,
-				Namespace: constants.OLVMCAPINamespace,
+				Namespace: constants.OLVMCAPIOperatorNamespace,
 				Release:   constants.OLVMCAPIRelease,
 				Version:   constants.OLVMCAPIVersion,
 				Catalog:   catalog.InternalCatalog,
@@ -120,17 +122,17 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 }
 
 func getCA(prov *types.OlvmProvider) (string, error) {
-	if prov.OVirtApiCA != "" && prov.OVirtApiCAPath != "" {
+	if prov.OlvmCluster.OVirtApiCA != "" && prov.OlvmCluster.OVirtApiCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
-	if prov.OVirtApiCA != "" {
-		return prov.OVirtApiCA, nil
+	if prov.OlvmCluster.OVirtApiCA != "" {
+		return prov.OlvmCluster.OVirtApiCA, nil
 	}
 
-	if prov.OVirtApiCAPath != "" {
-		by, err := os.ReadFile(prov.OVirtApiCAPath)
+	if prov.OlvmCluster.OVirtApiCAPath != "" {
+		by, err := os.ReadFile(prov.OlvmCluster.OVirtApiCAPath)
 		if err != nil {
-			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OVirtApiCAPath, err)
+			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OlvmCluster.OVirtApiCAPath, err)
 		}
 		return string(by), nil
 	}

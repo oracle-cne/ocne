@@ -6,7 +6,7 @@ package olvm
 import (
 	"errors"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"regexp"
 	"strings"
 
@@ -257,7 +257,7 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 }
 
 func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	tmplBytes, err := common.ReadTemplate("capi-olvm.yaml")
+	tmplBytes, err := template.ReadTemplate("capi-olvm.yaml")
 
 	if err != nil {
 		return "", err

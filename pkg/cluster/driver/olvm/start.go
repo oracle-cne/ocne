@@ -3,7 +3,7 @@ package olvm
 import (
 	"context"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -30,7 +30,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 			return false, false, err
 		}
 
-		cdi, err := template.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
 			return false, false, err
 		}

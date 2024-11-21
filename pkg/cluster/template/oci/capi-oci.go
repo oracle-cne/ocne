@@ -6,7 +6,7 @@ package oci
 import (
 	"errors"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"regexp"
 	"strings"
 
@@ -257,7 +257,7 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 }
 
 func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	tmplBytes, err := common.ReadTemplate("capi-oci.yaml")
+	tmplBytes, err := template.ReadTemplate("capi-oci.yaml")
 
 	if err != nil {
 		return "", err
