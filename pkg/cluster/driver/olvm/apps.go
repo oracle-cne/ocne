@@ -7,8 +7,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
-	"github.com/oracle-cne/ocne/pkg/util/oci"
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -118,73 +116,7 @@ func (cad *ClusterApiDriver) getApplications(kubeClient kubernetes.Interface) ([
 }
 
 func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
-	ociConfig, err := oci.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
-	if err != nil {
-		return nil, err
-	}
-
-	authCreds := map[string]interface{}{
-		"auth": map[string]interface{}{
-			"region":                ociConfig.Region,
-			"tenancy":               ociConfig.Tenancy,
-			"user":                  ociConfig.User,
-			"key":                   ociConfig.Key,
-			"passphrase":            ociConfig.Passphrase,
-			"fingerprint":           ociConfig.Fingerprint,
-			"useInstancePrincipals": ociConfig.UseInstancePrincipal,
-		},
-		"compartment": compartmentId,
-		"vcn":         cad.ClusterConfig.Providers.Oci.Vcn,
-		"loadBalancer": map[string]interface{}{
-			"subnet1":                    cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1,
-			"subnet2":                    cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2,
-			"securityListManagementMode": "None",
-		},
-	}
-	authCredBytes, err := yaml.Marshal(authCreds)
-	if err != nil {
-		return nil, err
-	}
-
-	ociCcmCreds := map[string][]byte{
-		"cloud-provider.yaml": authCredBytes,
-	}
-	ociCsiCreds := map[string][]byte{
-		"config.yaml": authCredBytes,
-	}
-
-	ret := []install.ApplicationDescription{
-		install.ApplicationDescription{
-			PreInstall: func() error {
-				err := k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: OciCcmSecretName,
-					},
-					Data: ociCcmCreds,
-					Type: "Opaque",
-				})
-				if err != nil {
-					return err
-				}
-
-				err = k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: OciCcmCsiSecretName,
-					},
-					Data: ociCsiCreds,
-					Type: "Opaque",
-				})
-				return err
-			},
-		},
-	}
-
-	return ret, nil
+	return nil, nil
 }
 
 func getCA(prov *types.OlvmProvider) (string, error) {

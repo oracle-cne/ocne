@@ -257,7 +257,7 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 }
 
 func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	tmplBytes, err := common.ReadTemplate("capi-oci.yaml")
+	tmplBytes, err := common.ReadTemplate("capi-olvm.yaml")
 
 	if err != nil {
 		return "", err
@@ -271,29 +271,6 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	kubeVer, err := versions.GetKubernetesVersions(clusterConfig.KubeVersion)
 	if err != nil {
 		return "", err
-	}
-
-	// If the compartment name is non-empty
-	// resolve it to an ID.
-	cid := clusterConfig.Providers.Oci.Compartment
-	if cid != "" {
-		newCid, err := oci.GetCompartmentId(cid)
-		if err != nil {
-			return "", err
-		}
-		clusterConfig.Providers.Oci.Compartment = newCid
-		cid = newCid
-
-		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Amd64 = imageId
-		}
-
-		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Arm64 = imageId
-		}
 	}
 
 	// Build up the extra ignition structures
