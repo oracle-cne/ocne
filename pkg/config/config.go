@@ -80,12 +80,12 @@ func GetDefaultConfig() (*types.Config, error) {
 			Olvm: types.OlvmProvider{
 				Namespace: constants.OLVMCAPIResourcesNamespace,
 				ControlPlaneMachine: types.OlvmMachine{
-					OlvmMachineOvirt: types.OlvmMachineOvirt{
+					OVirt: types.OlvmMachineOvirt{
 						Memory: constants.OLVMCAPIControlPlaneMemory,
 					},
 				},
 				WorkerMachine: types.OlvmMachine{
-					OlvmMachineOvirt: types.OlvmMachineOvirt{
+					OVirt: types.OlvmMachineOvirt{
 						Memory: constants.OLVMCAPIControlPlaneMemory,
 					},
 				},

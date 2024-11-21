@@ -122,17 +122,17 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 }
 
 func getCA(prov *types.OlvmProvider) (string, error) {
-	if prov.OlvmCluster.OVirtApiCA != "" && prov.OlvmCluster.OVirtApiCAPath != "" {
+	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
-	if prov.OlvmCluster.OVirtApiCA != "" {
-		return prov.OlvmCluster.OVirtApiCA, nil
+	if prov.OlvmCluster.OVirtAPI.ServerCA != "" {
+		return prov.OlvmCluster.OVirtAPI.ServerCA, nil
 	}
 
-	if prov.OlvmCluster.OVirtApiCAPath != "" {
-		by, err := os.ReadFile(prov.OlvmCluster.OVirtApiCAPath)
+	if prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
+		by, err := os.ReadFile(prov.OlvmCluster.OVirtAPI.ServerCAPath)
 		if err != nil {
-			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OlvmCluster.OVirtApiCAPath, err)
+			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OlvmCluster.OVirtAPI.ServerCAPath, err)
 		}
 		return string(by), nil
 	}

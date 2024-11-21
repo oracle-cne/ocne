@@ -58,9 +58,13 @@ type OlvmProvider struct {
 type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
 	DatacenterName       string                   `yaml:"datacenterName"`
-	OVirtApiServerURL    string                   `yaml:"ovirtApiServerURL"`
-	OVirtApiCA           string                   `yaml:"ovirtApiCA"`
-	OVirtApiCAPath       string                   `yaml:"ovirtApiCAPath"`
+	OVirtAPI             OlvmClusterOvirtAPI      `yaml:"ovirtApi"`
+}
+
+type OlvmClusterOvirtAPI struct {
+	ServerURL    string `yaml:"serverURL"`
+	ServerCA     string `yaml:"serverCA"`
+	ServerCAPath string `yaml:"serverCAPath"`
 }
 
 type OlvmControlPlaneEndpoint struct {
@@ -69,8 +73,8 @@ type OlvmControlPlaneEndpoint struct {
 }
 
 type OlvmMachine struct {
-	OlvmClusterName  string `yaml:"olvmClusterName"`
-	OlvmMachineOvirt `yaml:"ovirt"`
+	OlvmClusterName string           `yaml:"olvmClusterName"`
+	OVirt           OlvmMachineOvirt `yaml:"ovirt"`
 }
 
 type OlvmMachineOvirt struct {
