@@ -38,7 +38,7 @@ spec:
     host: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Host}}"
     port: {{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Port}}
   ovirtAPI:
-    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtApiServerURL}}"
+    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtAPI.ServerURL}}"
     caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"
     credentialsSecretName: "{{.ClusterConfig.Name}}-ovirt-credentials"
 ---
@@ -92,7 +92,7 @@ spec:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: olvm://{{ ds["id"] }}
+          provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites:
     joinConfiguration:
@@ -101,7 +101,7 @@ spec:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: olvm://{{ ds["id"] }}
+          provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites:
 ---
@@ -116,13 +116,13 @@ spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
       ovirt:
         memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
-        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.OVirtClusterName}}"
-        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.VMTemplateName}}"
+        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OVirtClusterName}}"
+        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
         network:
-          interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.InterfaceType}}"
-          networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.NetworkName}}"
-          vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.VnicName}}"
-          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Ovirt.Network.VnicProfileName}}"
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.InterfaceType}}"
+          networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
+          vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicName}}"
+          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicProfileName}}"
 
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
@@ -144,7 +144,7 @@ joinConfiguration:
   nodeRegistration:
     kubeletExtraArgs:
       cloud-provider: external
-      provider-id: olvm://{{ ds["id"] }}
+      provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
       volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
       tls-cipher-suites:
 ---
@@ -159,13 +159,13 @@ spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
       ovirt:
         memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
-        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.OVirtClusterName}}"
-        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.VMTemplateName}}"
+        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OVirtClusterName}}"
+        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
         network:
-          interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.InterfaceType}}"
-          networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.NetworkName}}"
-          vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.VnicName}}"
-          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Ovirt.Network.VnicProfileName}}"
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.InterfaceType}}"
+          networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.NetworkName}}"
+          vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicName}}"
+          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicProfileName}}"
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment

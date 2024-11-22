@@ -6,11 +6,9 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/config/types"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -80,27 +78,13 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		clusterConfig.ControlPlaneNodes = 1
 	}
 
-	// Validate the provider configuration.  For OCI-CCM several pieces of
-	// configuration are required.  Specifically, a compartment, a vcn and
-	// two subnets (which can be the same).  These values are fed into the
-	// OCI-CCM configuration.
-	if clusterConfig.Providers.Oci.Compartment == "" {
-		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
-	}
-
-	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
-	// be an amd-compatible shape since 1.26 does not support arm
-	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && clusterConfig.Providers.Oci.ControlPlaneShape.Shape == constants.OciVmStandardA1Flex {
-		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
-	}
-
 	cad := &ClusterApiDriver{
 		Config:           config,
 		ClusterConfig:    clusterConfig,
 		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.Providers.Oci.KubeConfigPath, config, clusterConfig)
+	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.Providers.Olvm.KubeConfigPath, config, clusterConfig)
 	if err != nil {
 		return nil, err
 	}

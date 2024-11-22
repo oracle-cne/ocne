@@ -130,6 +130,7 @@ fi
 `
 )
 
+// TODO USE LIBVIRT IGNITION !!!
 func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
@@ -285,9 +286,7 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 		KubeVersions:    &kubeVer,
 		VolumePluginDir: ignition.VolumePluginDir,
 		CipherSuite:     clusterConfig.CipherSuites,
-	}, map[string]any{
-		"shapeImage": imageFromShape,
-	})
+	}, nil)
 }
 
 // ValidateClusterResources performs basic validation on cluster resources.

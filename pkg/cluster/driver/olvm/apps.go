@@ -6,6 +6,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,9 +131,13 @@ func getCA(prov *types.OlvmProvider) (string, error) {
 	}
 
 	if prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
-		by, err := os.ReadFile(prov.OlvmCluster.OVirtAPI.ServerCAPath)
+		f, err := file.AbsDir(prov.OlvmCluster.OVirtAPI.ServerCAPath)
 		if err != nil {
-			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA from %s: %v", prov.OlvmCluster.OVirtAPI.ServerCAPath, err)
+			return "", err
+		}
+		by, err := os.ReadFile(f)
+		if err != nil {
+			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
 		}
 		return string(by), nil
 	}
@@ -142,15 +147,15 @@ func getCA(prov *types.OlvmProvider) (string, error) {
 func getCreds() (map[string][]byte, error) {
 	username := os.Getenv(EnvUsername)
 	if username == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", EnvUsername)
 	}
 	password := os.Getenv(EnvPassword)
 	if password == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password")
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password", EnvPassword)
 	}
 	scope := os.Getenv(EnvScope)
 	if scope == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username")
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", EnvScope)
 	}
 
 	return map[string][]byte{

@@ -25,10 +25,10 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	if cad.FromTemplate {
 		// If there is a need to generate a template, ensure that an
 		// image is present.
-		err := cad.ensureImages()
-		if err != nil {
-			return false, false, err
-		}
+		//err := cad.ensureImages()
+		//if err != nil {
+		//	return false, false, err
+		//}
 
 		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
@@ -193,9 +193,9 @@ func (cad *ClusterApiDriver) waitForControllers(kubeClient kubernetes.Interface)
 			},
 		},
 		{
-			Message: "Waiting for OCI Cluster API Controllers",
+			Message: "Waiting for Olvm Cluster API Controllers",
 			WaitFunction: func(i interface{}) error {
-				return k8s.WaitForDeployment(kubeClient, constants.OCICAPINamespace, constants.OCICAPIDeployment, 1)
+				return k8s.WaitForDeployment(kubeClient, constants.OLVMCAPIOperatorNamespace, constants.OLVMCAPIDeployment, 1)
 			},
 		},
 	})
