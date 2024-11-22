@@ -10,16 +10,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/template"
@@ -34,8 +28,14 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"slices"
 )
 
 const (
@@ -70,12 +70,42 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy": cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+	}
+
+	initContainerValues := []map[string]interface{}{
+		{
+			"name":  "update-ca-trust-store",
+			"image": "os/oraclelinux:8-slim",
+			"command": []string{
+				"/bin/sh", "-c",
+			},
+			"args": []string{
+				"update-ca-certificates && cp -r /etc/ssl/certs/* /artifact/",
+			},
+			"volumeMounts": []map[string]interface{}{
+				{
+					"name":      "trusted-certs",
+					"mountPath": "/test/etc/pki/ca-trust",
+					"subPath":   "custom-certs.pem",
+					"readOnly":  false,
+				},
+			},
+		},
+	}
+
+	volumes := []map[string]interface{}{
+		{
+			"name": "trusted-certs",
+			"configMap": map[string]interface{}{
+				"name": "capoci-trusted-certs",
+			},
+		},
 	}
 
 	return []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CertManagerChart,
 				Namespace: constants.CertManagerNamespace,
@@ -84,7 +114,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				Catalog:   catalog.InternalCatalog,
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CoreCAPIChart,
 				Namespace: constants.CoreCAPINamespace,
@@ -96,7 +126,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.OCICAPIChart,
 				Namespace: constants.OCICAPINamespace,
@@ -113,11 +143,13 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 						"useInstancePrincipal": fmt.Sprintf("%t", ociConfig.UseInstancePrincipal),
 						"user":                 ociConfig.User,
 					},
-					"proxy": proxyValues,
+					"proxy":          proxyValues,
+					"initContainers": initContainerValues,
+					"volumes":        volumes,
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmBootstrapCAPIChart,
 				Namespace: constants.KubeadmBootstrapCAPINamespace,
@@ -129,7 +161,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmControlPlaneCAPIChart,
 				Namespace: constants.KubeadmControlPlaneCAPINamespace,
@@ -186,7 +218,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 	}
 
 	ret := []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			PreInstall: func() error {
 				err := k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -938,7 +970,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 		} else {
 			log.Debugf("Resource for cluster %s/%s was nil", clusterNs, clusterName)
 		}
-		if err != nil{
+		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil, false, nil
 			}
@@ -967,7 +999,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for deletion",
-			WaitFunction: func(i interface{}) error{
+			WaitFunction: func(i interface{}) error {
 				return cad.waitForClusterDeletion(clusterName, clusterNs)
 			},
 		},

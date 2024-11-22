@@ -7,12 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	v1Apps "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	runtime2 "k8s.io/apimachinery/pkg/runtime"
 	"strings"
 
+	v1Apps "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	runtime2 "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	crtpkg "sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +46,12 @@ func CreateResourceIfNotExist(restConf *rest.Config, u *unstructured.Unstructure
 		return err
 	}
 
-	return CreateResource(restConf, u)
+	// A non-nil error at this point means the resource was not found.
+	if err != nil {
+		return CreateResource(restConf, u)
+	}
+
+	return nil
 }
 
 func GetResourceByIdentifier(restConf *rest.Config, group string, version string, kind string, name string, namespace string) (*unstructured.Unstructured, error) {
