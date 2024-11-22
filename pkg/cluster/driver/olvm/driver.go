@@ -98,7 +98,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	}
 
 	// Install any necessary components into the admin cluster
-	capiApplications, err := cad.getApplications(kubeClient)
+	capiApplications, err := cad.getApplications()
 	if err != nil {
 		return nil, err
 	}

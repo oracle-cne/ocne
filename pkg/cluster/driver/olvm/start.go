@@ -6,13 +6,16 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
@@ -63,6 +66,13 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 		return false, false, err
 	}
 
+	// create the ovirt secret, configmap, etc.
+	err = cad.createRequiredResources(clientIface)
+	if err != nil {
+		return false, false, err
+	}
+
+	// create all the CAPI resources
 	log.Info("Applying Cluster API resources")
 	err = cad.applyResources(restConfig)
 	if err != nil {
@@ -133,7 +143,7 @@ func (cad *ClusterApiDriver) PostStart() error {
 	}
 
 	// Install the Cluster API controllers into the new cluster
-	capiApplications, err := cad.getApplications(kubeClient)
+	capiApplications, err := cad.getApplications()
 	if err != nil {
 		return err
 	}
@@ -245,4 +255,93 @@ func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clus
 	kubeconfig = string(kcfgBytes)
 
 	return kubeconfig, nil
+}
+
+func (cad *ClusterApiDriver) createRequiredResources(kubeClient kubernetes.Interface) error {
+	// Get the creds
+	credmap, err := getCreds()
+	if err != nil {
+		return err
+	}
+
+	secretName := fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix)
+	k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+		},
+		Data: credmap,
+		Type: "Opaque",
+	})
+	if err != nil {
+		return err
+	}
+
+	// get the CA
+	ca, err := getCA(&cad.ClusterConfig.Providers.Olvm)
+	if err != nil {
+		return err
+	}
+
+	cmName := fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix)
+	k8s.DeleteConfigmap(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
+	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cmName,
+			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+		},
+		Data: map[string]string{
+			"ca.crt": ca,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getCA(prov *types.OlvmProvider) (string, error) {
+	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
+		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
+	}
+	if prov.OlvmCluster.OVirtAPI.ServerCA != "" {
+		return prov.OlvmCluster.OVirtAPI.ServerCA, nil
+	}
+
+	if prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
+		f, err := file.AbsDir(prov.OlvmCluster.OVirtAPI.ServerCAPath)
+		if err != nil {
+			return "", err
+		}
+		by, err := os.ReadFile(f)
+		if err != nil {
+			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
+		}
+		return string(by), nil
+	}
+	return "", fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
+}
+
+func getCreds() (map[string][]byte, error) {
+	username := os.Getenv(EnvUsername)
+	if username == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", EnvUsername)
+	}
+	password := os.Getenv(EnvPassword)
+	if password == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password", EnvPassword)
+	}
+	scope := os.Getenv(EnvScope)
+	if scope == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", EnvScope)
+	}
+
+	return map[string][]byte{
+		"username": []byte(username),
+		"password": []byte(password),
+		"scope":    []byte(scope),
+	}, nil
+
 }

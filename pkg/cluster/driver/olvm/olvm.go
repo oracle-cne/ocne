@@ -9,19 +9,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
-	"github.com/oracle-cne/ocne/pkg/commands/image/create"
-	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
@@ -47,168 +42,6 @@ func (cad *ClusterApiDriver) getClusterObject() (unstructured.Unstructured, erro
 		}
 	}
 	return clusterObj, err
-}
-
-func getMapVal(source map[string]interface{}, val string, ns string, name string) (map[string]interface{}, error) {
-	valRef, ok := source[val]
-	if !ok {
-		return nil, fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
-	}
-
-	value, ok := valRef.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
-	}
-
-	return value, nil
-}
-
-func getListVal(source map[string]interface{}, val string, ns string, name string) ([]interface{}, error) {
-	valRef, ok := source[val]
-	if !ok {
-		return nil, fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
-	}
-
-	value, ok := valRef.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
-	}
-
-	return value, nil
-}
-
-func getStringVal(source map[string]interface{}, val string, ns string, name string) (string, error) {
-	valRef, ok := source[val]
-	if !ok {
-		return "", fmt.Errorf("Cluster %s/%s does not have a %s field", ns, name, val)
-	}
-
-	value, ok := valRef.(string)
-	if !ok {
-		return "", fmt.Errorf("Cluster %s/%s field %s has an unexpected format", ns, name, val)
-	}
-
-	return value, nil
-}
-
-func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Check for a local image.  First see if there is already an image
-	// available in OCI
-	_, err = oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
-	if err == nil {
-		// An image was found.  Perfect.
-		return "", "", nil
-	}
-
-	// Check to see if a converted image already exists.  If so, don't bother
-	// making a new one.
-	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, cad.ClusterConfig.KubeVersion, arch)
-	if err != nil {
-		return "", "", err
-	}
-
-	_, err = os.Stat(imageName)
-	if err != nil && !os.IsNotExist(err) {
-		return "", "", err
-	}
-
-	// No image exists.  Make one.  Save the existing KC value and substitute
-	// the ephemeral one.  Set it back when done.
-	oldKcfg := cad.Config.KubeConfig
-	cad.Config.KubeConfig = cad.BootstrapKubeConfig
-	err = create.Create(cad.Config, cad.ClusterConfig, create.CreateOptions{
-		ProviderType: create.ProviderTypeOCI,
-		Architecture: arch,
-	})
-	cad.Config.KubeConfig = oldKcfg
-	if err != nil {
-		return "", "", err
-	}
-
-	// Image creation is done.  Upload it.
-	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
-		ProviderType:      upload.ProviderTypeOCI,
-		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
-		CompartmentName:   compartmentId,
-		ImagePath:         imageName,
-		ImageName:         constants.OciImageName,
-		KubernetesVersion: cad.ClusterConfig.KubeVersion,
-		ImageArchitecture: arch,
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	return imageId, workRequestId, nil
-}
-
-func (cad *ClusterApiDriver) ensureImages() error {
-	controlPlaneArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
-	workerArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
-
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
-	if err != nil {
-		return err
-	}
-
-	// If the control plane arch and worker arch are the same, only import the
-	// one image.
-	imageImports := map[string]string{}
-	controlPlaneImageId := ""
-	workerImageId := ""
-	if controlPlaneArch == workerArch {
-		workRequest := ""
-		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(controlPlaneArch)
-		if err != nil {
-			return err
-		}
-		if workRequest != "" {
-			imageImports[workRequest] = "Importing image"
-		}
-	} else {
-		controlPlaneWorkRequest := ""
-		workerWorkRequest := ""
-		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(controlPlaneArch)
-		if err != nil {
-			return err
-		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(workerArch)
-		if err != nil {
-			return err
-		}
-
-		if controlPlaneWorkRequest != "" {
-			imageImports[controlPlaneWorkRequest] = "Importing control plane image"
-		}
-		if workerWorkRequest != "" {
-			imageImports[workerWorkRequest] = "Importing worker image"
-		}
-	}
-	err = oci.WaitForWorkRequests(imageImports)
-	if err != nil {
-		return err
-	}
-	if controlPlaneImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, controlPlaneImageId, controlPlaneArch)
-		if err != nil {
-			return err
-		}
-	}
-	if workerImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, workerImageId, workerArch)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // applyResources creates resources in a cluster if the resource does not
