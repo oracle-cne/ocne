@@ -6,12 +6,10 @@ package mirror
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	"github.com/containers/common/libimage"
-	"github.com/containers/storage"
+	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
@@ -28,7 +26,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
 	"regexp"
 	"sigs.k8s.io/yaml"
 	"strings"
@@ -101,19 +98,18 @@ func Mirror(options Options) error {
 	}
 	images = imageUtil.AddDefaultRegistries(images, options.DefaultRegistry)
 	images = removeDuplicates(images)
-
-	if !options.Push {
-		for _, image := range images {
-			fmt.Printf("%s\n", image)
+	//// Add support for adding name of repo and then pushing
+	for _, image := range images {
+		fmt.Println(images[0])
+		imageInfo, _ := imageUtil.SplitImage(image)
+		fmt.Println(imageInfo.Tag)
+		fmt.Println(imageInfo.BaseImage)
+		fmt.Println(imageInfo.Digest)
+		err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:/~/test.oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+		if err != nil {
+			return err
 		}
 	}
-	runtime, err := libimage.RuntimeFromStoreOptions(&libimage.RuntimeOptions{SystemContext: imageUtil.GetSystemContext("")}, &storage.StoreOptions{})
-	if err != nil {
-		return err
-	}
-	saveOptions := libimage.SaveOptions{}
-	saveOptions.Writer = os.Stdout
-	runtime.Save(context.Background(), images, "docker-archive", "test.tar", &saveOptions)
 	if options.Push && options.DestinationURI == "" {
 		return errors.New("Please provide a destination URI")
 	}
