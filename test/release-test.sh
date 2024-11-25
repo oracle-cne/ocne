@@ -14,4 +14,4 @@ fi
 CAPI_MANAGEMENT_CLUSTER_DEFINITION=$(realpath "$CAPI_MANAGEMENT_CLUSTER_DEFINITION")
 
 # Run the complete test suite
-./run_tests.sh '' 1 1
+./run-tests.sh '' 1 1

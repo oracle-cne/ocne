@@ -9,7 +9,7 @@ setup_suite() {
 			echo "The OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION file, $OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION, does not exist"
 			exit 1
 		fi
-		ocne cluster start -C oci-capi-management-nm-sm -c "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" --auto-start-ui=false
+		ocne cluster start -C oci-capi-management-multinode-nm-sm -c "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" --auto-start-ui=false
 
 		# Temporarily set the KUBECONFIG so that it can be used to start the next cluster
 		export KUBECONFIG=$(ocne cluster show -C oci-capi-management-multinode-nm-sm)
@@ -44,7 +44,7 @@ teardown_suite() {
 	ocne cluster delete -C "$CAPI_NAME"
 
 	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
-		ocne cluster delete -C oci-capi-management-multinode-nm-sm-c "$CAPI_MANAGEMENT_CLUSTER_DEFINITION"
+		ocne cluster delete -C oci-capi-management-multinode-nm-sm -c "$CAPI_MANAGEMENT_CLUSTER_DEFINITION"
 	fi
 }
 

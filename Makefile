@@ -43,7 +43,7 @@ endif
 
 DIST_DIR:=dist
 ENV_NAME=ocne
-GO=GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
+GO=GOTOOLCHAIN=local GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
 
 CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
 
@@ -128,7 +128,7 @@ capi-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instru
 
 .PHONY: release-test
 release-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
-	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./run-tests.sh '$(TEST_PATTERN)' 1 1
+	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./release-test.sh
 	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
 	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
 	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
