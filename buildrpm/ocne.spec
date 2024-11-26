@@ -49,8 +49,7 @@ if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
   git diff
   echo "******************************************************************************"
   echo "* ERROR: The result of a 'go mod tidy' or 'go mod vendor' resulted           *"
-  echo "* in files being modified. These changes need to be included in your PR.     *"
-  echo "* Verify you have PLS approval for changes to go.mod.                        *"
+  echo "* in files being modified. These changes need to be included in-tree         *"
   echo "******************************************************************************"
   exit 1
 fi
@@ -71,6 +70,25 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Tue Nov 19 2024 George Aeillo <george.f.aeillo@oracle.com> - 2.0.5-5
+- Allow YAML output from cluster dumps
+- Fix various issues in cluster dump and info commands
+- Add info subcommand to print basic command information
+
+* Mon Nov 18 2024 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.0.5-4
+- Update Go dependencies
+- Allow automatic installation of the community catalog from ArtifactHub.io
+
+* Mon Nov 18 2024 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.0.5-3
+- Fix an issue where trying to update an application with no customizations would fail
+
+* Mon Nov 18 2024 Zaid Abdulrehman <zaid.a.abdulrehman@oracle.com> - 2.0.5-2
+- Support wider range of OCI compute shapes when using the OCI provider
+- Improve output when parsing errors are encountered when parsing cluster configuration
+
+* Wed Oct 10 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.5-1
+- Allow customization of ignition provider and kernel command line during image create
+
 * Mon Oct 28 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.4-3
 - Added TLS cipher suites support
 

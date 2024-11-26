@@ -13,8 +13,8 @@ setup_suite() {
 
 		# Temporarily set the KUBECONFIG so that it can be used to start the next cluster
 		export KUBECONFIG=$(ocne cluster show -C oci-capi-management-selfmanaged)
-	elif [ -n "$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
-		export KUBECONFIG="$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
+	elif [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
+		export KUBECONFIG="$OCI_CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
 	else
 		echo "There is no management cluster for the oci provider"
 		skip
@@ -36,14 +36,14 @@ teardown_suite() {
 	# Ensure that the KUBECONFIG points back to the management cluster
 	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
 		export KUBECONFIG=$(ocne cluster show -C oci-capi-management-selfmanaged)
-	elif [ -n "$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
-		export KUBECONFIG="$CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
+	elif [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_KUBECONFIG" ]; then
+		export KUBECONFIG="$OCI_CAPI_MANAGEMENT_CLUSTER_KUBECONFIG"
 	fi
 
 	ocne cluster delete -C "$CAPI_NAME"
 
 	if [ -n "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION" ]; then
-		ocne cluster delete -C oci-capi-management-selfmanaged -c "$CAPI_MANAGEMENT_CLUSTER_DEFINITION"
+		ocne cluster delete -C oci-capi-management-selfmanaged -c "$OCI_CAPI_MANAGEMENT_CLUSTER_DEFINITION"
 	fi
 }
 
