@@ -14,7 +14,9 @@ import (
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	imageUtil "github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -29,6 +31,7 @@ import (
 	"os"
 	"regexp"
 	"sigs.k8s.io/yaml"
+	"strconv"
 	"strings"
 )
 
@@ -102,12 +105,16 @@ func Mirror(options Options) error {
 	}
 	images = imageUtil.AddDefaultRegistries(images, options.DefaultRegistry)
 	images = removeDuplicates(images)
-	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
-	counter := 0
 	if options.Download {
+		// Create a temporary directory to place the oci-archive files
+		ociArchiveDir, err := os.MkdirTemp("", "oci-archive")
+		if err != nil {
+			return err
+		}
+		counter := 0
 		for _, image := range images {
 			imageInfo, err := imageUtil.SplitImage(image)
 			if err != nil {
@@ -115,12 +122,13 @@ func Mirror(options Options) error {
 			}
 			fmt.Println(imageInfo.BaseImage)
 			log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
-			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+string(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 			if err != nil {
 				return err
 			}
 			counter = counter + 1
 		}
+		dump.CreateReportArchive(ociArchiveDir, constants.UserConfigDir+"/downloaded-images.tgz")
 	}
 	if options.Push && options.DestinationURI == "" {
 		return errors.New("Please provide a destination URI")
