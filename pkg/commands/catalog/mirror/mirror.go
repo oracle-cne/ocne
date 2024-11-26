@@ -106,16 +106,20 @@ func Mirror(options Options) error {
 	if err != nil {
 		return err
 	}
+	counter := 0
 	if options.Download {
 		for _, image := range images {
 			imageInfo, err := imageUtil.SplitImage(image)
 			if err != nil {
 				return err
 			}
-			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+imageInfo.BaseImage+imageInfo.Tag+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+			fmt.Println(imageInfo.BaseImage)
+			log.Infof("Copyng %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
+			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+string(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 			if err != nil {
 				return err
 			}
+			counter = counter + 1
 		}
 	}
 	if options.Push && options.DestinationURI == "" {
