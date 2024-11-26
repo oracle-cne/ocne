@@ -115,6 +115,7 @@ func Mirror(options Options) error {
 		if err != nil {
 			return err
 		}
+		defer os.RemoveAll(ociArchiveDir)
 		counter := 0
 		for _, image := range images {
 			imageInfo, err := imageUtil.SplitImage(image)
