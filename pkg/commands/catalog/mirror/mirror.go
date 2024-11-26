@@ -114,7 +114,7 @@ func Mirror(options Options) error {
 				return err
 			}
 			fmt.Println(imageInfo.BaseImage)
-			log.Infof("Copyng %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
+			log.Infof("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
 			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+string(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 			if err != nil {
 				return err
