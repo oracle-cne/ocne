@@ -5,13 +5,13 @@ package mirror
 
 import (
 	"errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/mirror"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -32,6 +32,7 @@ var clusterConfigPath string
 var defaultRegistry string
 var quiet bool
 var push bool
+var download bool
 
 const (
 	flagCatalogName      = "name"
@@ -57,6 +58,10 @@ const (
 	flagSource      = "source"
 	flagSourceShort = "s"
 	flagSourceHelp  = "The source registry to use for images without a registry. By default, this value is container-registry.oracle.com. For example, olcne/headlamp becomes container-registry.oracle.com/olcne/headlamp"
+
+	flagDownload      = "download"
+	flagDownloadShort = "d"
+	flagDownloadHelp  = "Download images locally to a tar file on the system "
 )
 
 func NewCmd() *cobra.Command {
@@ -80,6 +85,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&destination, flagDestination, flagDestinationShort, "", flagDestinationHelp)
 	cmd.Flags().BoolVarP(&push, flagPush, flagPushShort, false, flagPushHelp)
 	cmd.Flags().BoolVarP(&quiet, flagQuiet, flagQuietShort, false, flagQuietHelp)
+	cmd.Flags().BoolVarP(&download, flagDownload, flagDownloadShort, false, flagDownloadHelp)
 	return cmd
 }
 

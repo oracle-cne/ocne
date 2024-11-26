@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"os"
 	"regexp"
 	"sigs.k8s.io/yaml"
 	"strings"
@@ -67,6 +68,9 @@ type Options struct {
 
 	// DefaultRegistry is the registry to add to images without a domain. Stores the --source argument.
 	DefaultRegistry string
+
+	// Download is true if you want the images given by catalog mirror to be downloaded locally in a tar format .
+	Download bool
 }
 
 const extraImagesLabel string = "extra-image"
@@ -98,16 +102,20 @@ func Mirror(options Options) error {
 	}
 	images = imageUtil.AddDefaultRegistries(images, options.DefaultRegistry)
 	images = removeDuplicates(images)
-	//// Add support for adding name of repo and then pushing
-	for _, image := range images {
-		fmt.Println(images[0])
-		imageInfo, _ := imageUtil.SplitImage(image)
-		fmt.Println(imageInfo.Tag)
-		fmt.Println(imageInfo.BaseImage)
-		fmt.Println(imageInfo.Digest)
-		err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:/~/test.oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
-		if err != nil {
-			return err
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	if options.Download {
+		for _, image := range images {
+			imageInfo, err := imageUtil.SplitImage(image)
+			if err != nil {
+				return nil
+			}
+			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+imageInfo.BaseImage+imageInfo.Tag+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if options.Push && options.DestinationURI == "" {
