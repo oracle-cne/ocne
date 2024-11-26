@@ -110,7 +110,7 @@ func Mirror(options Options) error {
 		for _, image := range images {
 			imageInfo, err := imageUtil.SplitImage(image)
 			if err != nil {
-				return nil
+				return err
 			}
 			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+homedir+"/"+imageInfo.BaseImage+imageInfo.Tag+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 			if err != nil {

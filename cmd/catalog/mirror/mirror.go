@@ -110,6 +110,7 @@ func RunCmd(cmd *cobra.Command) error {
 		Config:          c,
 		ClusterConfig:   cc,
 		DefaultRegistry: defaultRegistry,
+		Download:        download,
 	}
 	return mirror.Mirror(mo)
 }
