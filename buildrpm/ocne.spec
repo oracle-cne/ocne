@@ -86,7 +86,7 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 - Support wider range of OCI compute shapes when using the OCI provider
 - Improve output when parsing errors are encountered when parsing cluster configuration
 
-* Wed Oct 10 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.5-1
+* Thu Oct 10 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.5-1
 - Allow customization of ignition provider and kernel command line during image create
 
 * Mon Oct 28 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.4-3
