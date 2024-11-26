@@ -79,28 +79,30 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 			"name":  "update-ca-trust-store",
 			"image": "os/oraclelinux:8-slim",
 			"command": []string{
-				"/bin/sh", "-c",
-			},
-			"args": []string{
-				"update-ca-certificates && cp -r /etc/ssl/certs/* /artifact/",
+				"/bin/sh", "-c", "cp /etc/oci/pcaCerts /certs",
 			},
 			"volumeMounts": []map[string]interface{}{
 				{
-					"name":      "trusted-certs",
-					"mountPath": "/test/etc/pki/ca-trust",
-					"subPath":   "custom-certs.pem",
+					"name":      "auth-config-dir",
+					"mountPath": "/etc/oci",
+					"readOnly":  true,
+				},
+				{
+					"name":      "tmp",
+					"mountPath": "/certs",
 					"readOnly":  false,
 				},
+			},
+			"securityContext": map[string]interface{}{
+				"runAsNonRoot": false,
 			},
 		},
 	}
 
 	volumes := []map[string]interface{}{
 		{
-			"name": "trusted-certs",
-			"configMap": map[string]interface{}{
-				"name": "capoci-trusted-certs",
-			},
+			"name":     "tmp",
+			"emptyDir": map[string]interface{}{},
 		},
 	}
 
@@ -142,6 +144,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 						"tenancy":              ociConfig.Tenancy,
 						"useInstancePrincipal": fmt.Sprintf("%t", ociConfig.UseInstancePrincipal),
 						"user":                 ociConfig.User,
+						"pcaCerts":             ociConfig.PCACerts,
 					},
 					"proxy":          proxyValues,
 					"initContainers": initContainerValues,

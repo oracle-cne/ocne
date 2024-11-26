@@ -19,6 +19,7 @@ type OciConfig struct {
 	Tenancy              string
 	UseInstancePrincipal bool
 	User                 string
+	PCACerts             string
 }
 
 func parseOciConfig(filename string) ([]*OciConfig, error) {
@@ -87,6 +88,12 @@ func parseOciConfig(filename string) ([]*OciConfig, error) {
 				return nil, err
 			}
 			cur.Key = string(valBytes)
+		case "pca_certs_file":
+			valBytes, err := os.ReadFile(val)
+			if err != nil {
+				return nil, err
+			}
+			cur.PCACerts = string(valBytes)
 		case "passphrase":
 			cur.Passphrase = val
 		}
