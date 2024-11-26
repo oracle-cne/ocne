@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/yaml"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var appsWithRequiredValues = map[string]map[string]string{
@@ -121,6 +122,7 @@ func Mirror(options Options) error {
 				return err
 			}
 			log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
+			time.Sleep(1 * time.Second)
 			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 			if err != nil {
 				return err
