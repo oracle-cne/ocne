@@ -60,7 +60,7 @@ const (
 	flagSourceHelp  = "The source registry to use for images without a registry. By default, this value is container-registry.oracle.com. For example, olcne/headlamp becomes container-registry.oracle.com/olcne/headlamp"
 
 	flagDownload      = "download"
-	flagDownloadShort = "d"
+	flagDownloadShort = "t"
 	flagDownloadHelp  = "Download images locally to a tar file on the system "
 )
 
