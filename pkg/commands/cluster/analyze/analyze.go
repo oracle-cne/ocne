@@ -27,9 +27,6 @@ type Options struct {
 
 	// Verbose controls displaying of analyze details like events
 	Verbose bool
-
-	// JSON indicates whether the Kubernetes resources in the cluster dump have Kubernetes Resources in JSON format
-	JSON bool
 }
 
 // Analyze analyzes a cluster dump
@@ -55,7 +52,6 @@ func Analyze(o Options) error {
 		nodesDir:       filepath.Join(dumpDir, "nodes"),
 		verbose:        o.Verbose,
 		writer:         os.Stdout,
-		isJSON:         o.JSON,
 	}
 	if _, err := os.Stat(dumpDir); err != nil {
 		return err
@@ -93,28 +89,20 @@ func unpackArchive(archivePath string, dumpDir string) error {
 // readClusterWideJSONFile reads cluster-wide json or yaml data files and unmarshals them into resources.
 // For example, read nodes.json
 func readClusterWideJSONOrYAMLFile[T any](p *analyzeParams, fileName string) (*T, error) {
-	if p.isJSON {
-		return dumpfiles.ReadClusterWideJSONOrYAMLFile[T](p.clusterWideDir, fileName+".json")
-	} else {
-		return dumpfiles.ReadClusterWideJSONOrYAMLFile[T](p.clusterWideDir, fileName+".yaml")
-	}
+	return dumpfiles.ReadClusterWideJSONOrYAMLFile[T](p.clusterWideDir, []string{fileName+".json", fileName+".yaml"})
 }
 
 // readNamespacedJSONOrYAMLFiles reads namespaced json or yaml data files and unmarshals them into resources, then
 // puts the lists in a map where the namespace is the key.
 // For example, read pods.json in all namespaces.
 func readNamespacedJSONOrYAMLFiles[T any](p *analyzeParams, fileName string) (map[string]T, error) {
-	if p.isJSON {
-		return dumpfiles.ReadJSONOrYAMLFiles[T](p.clusterDir, fileName+".json")
-	} else {
-		return dumpfiles.ReadJSONOrYAMLFiles[T](p.clusterDir, fileName+".yaml")
-	}
+	return dumpfiles.ReadJSONOrYAMLFiles[T](p.clusterDir, []string{fileName+".json", fileName+".yaml"})
 }
 
 // readNodeSpecificJSONFiles reads json data files for each node and unmarshals them into resources
 // For example, podman-inspect-all.json
 func readNodeSpecificJSONFiles[T any](p *analyzeParams, fileName string) (map[string]T, error) {
-	return dumpfiles.ReadJSONOrYAMLFiles[T](p.nodesDir, fileName)
+	return dumpfiles.ReadJSONOrYAMLFiles[T](p.nodesDir, []string{fileName})
 }
 
 // readClusterWideTextFile reads cluster-wide json data files and unmarshals them into resources.
