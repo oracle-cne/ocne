@@ -237,10 +237,6 @@ SUBCOMMANDS
   `-d, --output-directory` *string*
   The output directory containing cluster dump data which will be analyzed.
 
-  `--json`
-  Analyze a cluster dump that has Kubernetes artifacts in JSON format. 
-  The default is false and it assumes that the resources are in YAML format.
-
 `  -s, --skip-nodes`
   Skip collecting node resources for the analysis, default is false. This is only valid for a live cluster analysis.
 
