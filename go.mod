@@ -3,7 +3,7 @@
 
 module github.com/oracle-cne/ocne
 
-go 1.22.6
+go 1.22.8
 
 toolchain go1.22.9
 
