@@ -900,6 +900,11 @@ func (cad *ClusterApiDriver) moveCluster(fromBootstrap bool) error {
 						// Tolerate errors where the cluster resources
 						// are in flux.  They will either stabilize
 						// or not.
+						log.Debugf("Could not move cluster: %v", err)
+
+						// Spinning up infrastructure can
+						// take a while...
+						time.Sleep(time.Second * 3)
 						continue
 					} else if err != nil {
 						return err
