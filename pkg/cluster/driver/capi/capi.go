@@ -79,7 +79,10 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 			"name":  "update-ca-trust-store",
 			"image": "os/oraclelinux:8-slim",
 			"command": []string{
-				"/bin/sh", "-c", "cp /etc/oci/pcaCerts /certs",
+				"/scripts/update-ca-trust-store.sh",
+			},
+			"args": []string{
+				"/etc/oci/pcaCerts",
 			},
 			"volumeMounts": []map[string]interface{}{
 				{
@@ -88,9 +91,13 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 					"readOnly":  true,
 				},
 				{
-					"name":      "tmp",
+					"name":      "pca",
 					"mountPath": "/certs",
 					"readOnly":  false,
+				},
+				{
+					"name":      "scripts",
+					"mountPath": "/scripts",
 				},
 			},
 			"securityContext": map[string]interface{}{
@@ -99,10 +106,25 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 	}
 
+	volumeMounts := []map[string]interface{}{
+		{
+			"name":      "pca",
+			"mountPath": "/pca",
+			"readOnly":  false,
+		},
+	}
+
 	volumes := []map[string]interface{}{
 		{
-			"name":     "tmp",
+			"name":     "pca",
 			"emptyDir": map[string]interface{}{},
+		},
+		{
+			"name": "scripts",
+			"configMap": map[string]interface{}{
+				"name":        "capoci-scripts",
+				"defaultMode": 0500,
+			},
 		},
 	}
 
@@ -149,6 +171,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 					"proxy":          proxyValues,
 					"initContainers": initContainerValues,
 					"volumes":        volumes,
+					"volumeMounts":   volumeMounts,
 				},
 			},
 		},
