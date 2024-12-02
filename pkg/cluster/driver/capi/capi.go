@@ -865,6 +865,63 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	return false, false, nil
 }
 
+func (cad *ClusterApiDriver) tryMove(fromBootstrap bool) error {
+	// Move the resources to the new cluster
+	capiClient, err := capiclient.New(context.TODO(), "")
+	if err != nil {
+		return nil
+	}
+
+	fromKcfg := cad.KubeConfig
+	toKcfg := cad.BootstrapKubeConfig
+	if fromBootstrap {
+		fromKcfg = cad.BootstrapKubeConfig
+		toKcfg = cad.KubeConfig
+	}
+
+	err = capiClient.Move(context.TODO(), capiclient.MoveOptions{
+		FromKubeconfig: capiclient.Kubeconfig{Path: fromKcfg, Context: ""},
+		ToKubeconfig:   capiclient.Kubeconfig{Path: toKcfg, Context: ""},
+		Namespace:      cad.ResourceNamespace,
+		DryRun:         false,
+	})
+	return err
+}
+
+func (cad *ClusterApiDriver) moveCluster(fromBootstrap bool) error {
+	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		{
+			Message: "Migrating Cluster API resources",
+			WaitFunction: func(i interface{}) error {
+				c, _ := i.(*ClusterApiDriver)
+				for {
+					err := c.tryMove(fromBootstrap)
+					if err != nil && strings.Contains(err.Error(), "cannot start the move operation") {
+						// Tolerate errors where the cluster resources
+						// are in flux.  They will either stabilize
+						// or not.
+						log.Debugf("Could not move cluster: %v", err)
+
+						// Spinning up infrastructure can
+						// take a while...
+						time.Sleep(time.Second * 3)
+						continue
+					} else if err != nil {
+						return err
+					}
+					break
+				}
+				return nil
+			},
+			Args: cad,
+		},
+	})
+	if haveError {
+		return fmt.Errorf("Could not move Cluster API resources")
+	}
+	return nil
+}
+
 func (cad *ClusterApiDriver) PostStart() error {
 	// If the cluster is not self managed, then the configuration is
 	// complete.
@@ -897,21 +954,8 @@ func (cad *ClusterApiDriver) PostStart() error {
 	}
 
 	// Move the resources to the new cluster
-	capiClient, err := capiclient.New(context.TODO(), "")
-	if err != nil {
-		return nil
-	}
-
 	log.Info("Migrating Cluster API resources into self-managed cluster")
-	err = capiClient.Move(context.TODO(), capiclient.MoveOptions{
-		FromKubeconfig: capiclient.Kubeconfig{Path: cad.BootstrapKubeConfig, Context: ""},
-		ToKubeconfig:   capiclient.Kubeconfig{Path: cad.KubeConfig, Context: ""},
-		Namespace:      cad.ResourceNamespace,
-		DryRun:         false,
-	})
-	if err != nil {
-		return err
-	}
+	err = cad.moveCluster(true)
 
 	// Scale the bootstrap cluster controllers back up.
 	return nil
@@ -1003,22 +1047,44 @@ func (cad *ClusterApiDriver) Delete() error {
 	clusterName := clusterObj.GetName()
 
 	// If this is a self-managed cluster, pivot back into the bootstrap cluster.
-	if cad.ClusterConfig.Providers.Oci.SelfManaged {
-		log.Infof("Migrating Cluster API resources to bootstrap cluster")
-		capiClient, err := capiclient.New(context.TODO(), "")
-		if err != nil {
-			return nil
+	// This is in a for loop so there are break semantics available
+	for {
+		if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+			break
 		}
 
-		err = capiClient.Move(context.TODO(), capiclient.MoveOptions{
-			FromKubeconfig: capiclient.Kubeconfig{Path: cad.KubeConfig, Context: ""},
-			ToKubeconfig:   capiclient.Kubeconfig{Path: cad.BootstrapKubeConfig, Context: ""},
-			Namespace:      cad.ResourceNamespace,
-			DryRun:         false,
-		})
+		// If the kubeconfig for the this cluster does not exist,
+		// assume that the resources are in the target cluster.
+		_, err = os.Stat(cad.KubeConfig)
+		if err != nil {
+			if os.IsNotExist(err) {
+				break
+			}
+			return err
+		}
+
+		// If the objects are not in this cluster, don't try
+		// to move them.  Treat any error as not being able to
+		// find the objects.  If they actually are in the cluster
+		// but cannot be found, the deletion code from the bootstrap
+		// cluster will fail.
+		restConfig, _, err := client.GetKubeClient(cad.KubeConfig)
+		if err != nil {
+			break
+		}
+		_, err = k8s.GetResourceByIdentifier(restConfig, "cluster.x-k8s.io", "v1beta1", "Cluster", clusterObj.GetName(), clusterObj.GetNamespace())
+		if err != nil {
+			break
+		}
+
+		err = cad.moveCluster(false)
 		if err != nil {
 			return err
 		}
+
+		// Only ever do this loop once.  The goal is to have
+		// access to break, not to do this more than once.
+		break
 	}
 
 	return cad.deleteCluster(clusterName, clusterObj.GetNamespace())

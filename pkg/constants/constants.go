@@ -29,7 +29,7 @@ const (
 	NodeCPUs                     = 2
 	NodeMemory                   = "4194304Ki"
 	NodeStorage                  = "20Gi"
-	EphemeralNodeStorage         = "20Gi"
+	EphemeralNodeStorage         = "30Gi"
 	EphemeralClusterName         = "ocne-ephemeral"
 	EphemeralClusterPreserve     = true
 
