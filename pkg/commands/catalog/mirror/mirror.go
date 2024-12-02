@@ -109,6 +109,13 @@ func Mirror(options Options) error {
 	if err != nil {
 		return err
 	}
+
+	if !options.Push {
+		for _, image := range images {
+			fmt.Printf("%s\n", image)
+		}
+	}
+
 	if options.Download {
 		// Create a temporary directory to place the oci-archive files
 		ociArchiveDir, err := os.MkdirTemp("", "oci-archive")
@@ -116,7 +123,7 @@ func Mirror(options Options) error {
 			return err
 		}
 		defer os.RemoveAll(ociArchiveDir)
-		counter := 0
+		counter := 1
 		for _, image := range images {
 			imageInfo, err := imageUtil.SplitImage(image)
 			if err != nil {
@@ -141,8 +148,10 @@ func Mirror(options Options) error {
 			if timeoutHappened == true {
 				return fmt.Errorf("download failed due to Internal Server Error")
 			}
+			log.Debugf("Successfully pulled image %s out of %s images", strconv.Itoa(counter), strconv.Itoa(len(images)))
 			counter = counter + 1
 		}
+		log.Debugf("Successfully pulled all images, now tarring all of the oci-archive files")
 		err = dump.CreateReportArchive(ociArchiveDir, constants.UserConfigDir+"/downloaded-images.tgz")
 		if err != nil {
 			return err
