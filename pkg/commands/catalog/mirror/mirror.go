@@ -123,12 +123,12 @@ func Mirror(options Options) error {
 				return err
 			}
 			log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
-			timeoutOccured := true
+			timeoutHappened := true
 			for i := 0; i < 5; i++ {
 				err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
 				if err == nil {
+					timeoutHappened = false
 					break
-					timeoutOccured = false
 				} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
 					return err
 				} else {
@@ -138,7 +138,7 @@ func Mirror(options Options) error {
 					time.Sleep(30 * time.Second)
 				}
 			}
-			if timeoutOccured == true {
+			if timeoutHappened == true {
 				return fmt.Errorf("download failed due to Internal Server Error")
 			}
 			counter = counter + 1
