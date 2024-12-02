@@ -45,6 +45,7 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 	// Force some settings to what is required for
 	// the ephemeral cluster.
 	clusterConfig.Provider = libvirt.DriverName
+	clusterConfig.ControlPlaneNodes = 1
 	clusterConfig.WorkerNodes = 0
 	clusterConfig.Headless = true
 	clusterConfig.Catalog = false

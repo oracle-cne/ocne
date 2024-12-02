@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,10 +98,6 @@ func deriveIPAddressSectionPrefLen(from *IPAddressSection, segments []*AddressDi
 	return
 }
 
-//
-//
-//
-//
 type ipAddressSectionInternal struct {
 	addressSectionInternal
 }
@@ -615,7 +611,14 @@ func (section *ipAddressSectionInternal) withoutPrefixLen() *IPAddressSection {
 	return res
 }
 
-func (section *ipAddressSectionInternal) checkSectionCount(other *IPAddressSection) addrerr.SizeMismatchError {
+func (section *ipAddressSectionInternal) checkSegmentCount(other *IPAddressSection) addrerr.SizeMismatchError {
+	if other.GetSegmentCount() != section.GetSegmentCount() {
+		return &sizeMismatchError{incompatibleAddressError{addressError{key: "ipaddress.error.sizeMismatch"}}}
+	}
+	return nil
+}
+
+func (section *ipAddressSectionInternal) checkMaskSegmentCount(other *IPAddressSection) addrerr.SizeMismatchError {
 	if other.GetSegmentCount() < section.GetSegmentCount() {
 		return &sizeMismatchError{incompatibleAddressError{addressError{key: "ipaddress.error.sizeMismatch"}}}
 	}
@@ -624,7 +627,7 @@ func (section *ipAddressSectionInternal) checkSectionCount(other *IPAddressSecti
 
 // error can be addrerr.IncompatibleAddressError or addrerr.SizeMismatchError
 func (section *ipAddressSectionInternal) mask(msk *IPAddressSection, retainPrefix bool) (*IPAddressSection, addrerr.IncompatibleAddressError) {
-	if err := section.checkSectionCount(msk); err != nil {
+	if err := section.checkMaskSegmentCount(msk); err != nil {
 		return nil, err
 	}
 	var prefLen PrefixLen
@@ -641,7 +644,7 @@ func (section *ipAddressSectionInternal) mask(msk *IPAddressSection, retainPrefi
 
 // error can be addrerr.IncompatibleAddressError or addrerr.SizeMismatchError
 func (section *ipAddressSectionInternal) bitwiseOr(msk *IPAddressSection, retainPrefix bool) (*IPAddressSection, addrerr.IncompatibleAddressError) {
-	if err := section.checkSectionCount(msk); err != nil {
+	if err := section.checkMaskSegmentCount(msk); err != nil {
 		return nil, err
 	}
 	var prefLen PrefixLen
@@ -656,9 +659,9 @@ func (section *ipAddressSectionInternal) bitwiseOr(msk *IPAddressSection, retain
 }
 
 func (section *ipAddressSectionInternal) matchesWithMask(other *IPAddressSection, mask *IPAddressSection) bool {
-	if err := section.checkSectionCount(other); err != nil {
+	if err := section.checkMaskSegmentCount(other); err != nil {
 		return false
-	} else if err := section.checkSectionCount(mask); err != nil {
+	} else if err := section.checkMaskSegmentCount(mask); err != nil {
 		return false
 	}
 	divCount := section.GetSegmentCount()
@@ -678,7 +681,7 @@ func (section *ipAddressSectionInternal) matchesWithMask(other *IPAddressSection
 
 func (section *ipAddressSectionInternal) intersect(other *IPAddressSection) (res *IPAddressSection, err addrerr.SizeMismatchError) {
 	//check if they are comparable section.  We only check segment count, we do not care about start index.
-	err = section.checkSectionCount(other)
+	err = section.checkSegmentCount(other)
 	if err != nil {
 		return
 	}
@@ -760,7 +763,7 @@ func (section *ipAddressSectionInternal) intersect(other *IPAddressSection) (res
 
 func (section *ipAddressSectionInternal) subtract(other *IPAddressSection) (res []*IPAddressSection, err addrerr.SizeMismatchError) {
 	//check if they are comparable section
-	err = section.checkSectionCount(other)
+	err = section.checkSegmentCount(other)
 	if err != nil {
 		return
 	}
@@ -898,22 +901,22 @@ func (section *ipAddressSectionInternal) createDiffSection(
 }
 
 func (section *ipAddressSectionInternal) spanWithPrefixBlocks() []ExtendedIPSegmentSeries {
-	wrapped := wrapIPSection(section.toIPAddressSection())
 	if section.IsSequential() {
 		if section.IsSinglePrefixBlock() {
+			wrapped := wrapIPSection(section.toIPAddressSection())
 			return []ExtendedIPSegmentSeries{wrapped}
 		}
-		return getSpanningPrefixBlocks(wrapped, wrapped)
+		return cloneIPSections(nil, getSpanningPrefixBlocks(section.toIPAddressSection(), section.toIPAddressSection()))
 	}
-	return spanWithPrefixBlocks(wrapped)
+	return cloneIPSections(nil, spanWithPrefixBlocks(section.toIPAddressSection()))
 }
 
 func (section *ipAddressSectionInternal) spanWithSequentialBlocks() []ExtendedIPSegmentSeries {
-	wrapped := wrapIPSection(section.toIPAddressSection())
 	if section.IsSequential() {
+		wrapped := wrapIPSection(section.toIPAddressSection())
 		return []ExtendedIPSegmentSeries{wrapped}
 	}
-	return spanWithSequentialBlocks(wrapped)
+	return cloneIPSections(nil, spanWithSequentialBlocks(section.toIPAddressSection()))
 }
 
 func (section *ipAddressSectionInternal) coverSeriesWithPrefixBlock() ExtendedIPSegmentSeries {
@@ -921,28 +924,24 @@ func (section *ipAddressSectionInternal) coverSeriesWithPrefixBlock() ExtendedIP
 		return wrapIPSection(section.toIPAddressSection())
 	}
 	return coverWithPrefixBlock(
-		wrapIPSection(section.getLower().ToIP()),
-		wrapIPSection(section.getUpper().ToIP()))
+		section.getLower().ToIP(),
+		section.getUpper().ToIP()).Wrap()
 }
 
 func (section *ipAddressSectionInternal) coverWithPrefixBlock() *IPAddressSection {
 	if section.IsSinglePrefixBlock() {
 		return section.toIPAddressSection()
 	}
-	res := coverWithPrefixBlock(
-		wrapIPSection(section.getLower().ToIP()),
-		wrapIPSection(section.getUpper().ToIP()))
-	return res.(WrappedIPAddressSection).IPAddressSection
+	return coverWithPrefixBlock(section.getLower().ToIP(), section.getUpper().ToIP())
 }
 
 func (section *ipAddressSectionInternal) coverWithPrefixBlockTo(other *IPAddressSection) (*IPAddressSection, addrerr.SizeMismatchError) {
-	if err := section.checkSectionCount(other); err != nil {
+	if err := section.checkSegmentCount(other); err != nil {
 		return nil, err
 	}
-	res := getCoveringPrefixBlock(
-		wrapIPSection(section.toIPAddressSection()),
-		wrapIPSection(other))
-	return res.(WrappedIPAddressSection).IPAddressSection, nil
+	return getCoveringPrefixBlock(
+		section.toIPAddressSection(),
+		other), nil
 }
 
 func (section *ipAddressSectionInternal) getNetworkSection() *IPAddressSection {
@@ -1569,6 +1568,11 @@ type IPAddressSection struct {
 	ipAddressSectionInternal
 }
 
+// containsSame returns whether this address section contains all address sections in the given address section collection of the same type.
+func (addr *IPAddressSection) containsSame(other *IPAddressSection) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is same type and version as the given address section and whether it contains all values in the given section.
 //
 // Sections must also have the same number of segments to be comparable, otherwise false is returned.
@@ -1579,12 +1583,23 @@ func (section *IPAddressSection) Contains(other AddressSectionType) bool {
 	return section.contains(other)
 }
 
+// Overlaps returns whether this is same type and version as the given address section and whether it overlaps the given section, both sections containing at least one individual section in common.
+//
+// Sections must also have the same number of segments to be comparable, otherwise false is returned.
+func (section *IPAddressSection) Overlaps(other AddressSectionType) bool {
+	if section == nil {
+		return other == nil || other.ToSectionBase() == nil
+	}
+	return section.overlaps(other)
+}
+
 // Equal returns whether the given address section is equal to this address section.
 // Two address sections are equal if they represent the same set of sections.
 // They must match:
-//  - type/version: IPv4, IPv6
-//  - segment counts
-//  - segment value ranges
+//   - type/version: IPv4, IPv6
+//   - segment counts
+//   - segment value ranges
+//
 // Prefix lengths are ignored.
 func (section *IPAddressSection) Equal(other AddressSectionType) bool {
 	if section == nil {
@@ -2060,6 +2075,27 @@ func (section *IPAddressSection) Increment(increment int64) *IPAddressSection {
 	return section.increment(increment).ToIP()
 }
 
+// Enumerate indicates where an individual address section sits relative to the address section range ordering.
+//
+// Determines how many address section elements of a range precede the given address section element, if the address section is in the range.
+// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+//
+// In other words, if the given address section is not in the range but above it, returns the number of address sections preceding the address from the upper range boundary,
+// added to one less than the total number of range address sections.  If the given address section is not in the subnet but below it, returns the number of address sections following the address section to the lower subnet boundary.
+//
+// If the argument is not in the range, but neither above nor below the range, then nil is returned.
+//
+// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address section.
+//
+// When this is also an individual address section, the returned value is the distance (difference) between the two address section values.
+//
+// If the given address section does not have the same version or type, then nil is returned.
+//
+// Sections must also have the same number of segments to be comparable, otherwise nil is returned.
+func (section *IPAddressSection) Enumerate(other AddressSectionType) *big.Int {
+	return section.enumerate(other)
+}
+
 // SpanWithPrefixBlocks returns an array of prefix blocks that spans the same set of individual address sections as this section.
 //
 // Unlike SpanWithPrefixBlocksTo, the result only includes blocks that are a part of this section.
@@ -2068,12 +2104,9 @@ func (section *IPAddressSection) SpanWithPrefixBlocks() []*IPAddressSection {
 		if section.IsSinglePrefixBlock() {
 			return []*IPAddressSection{section}
 		}
-		wrapped := wrapIPSection(section)
-		spanning := getSpanningPrefixBlocks(wrapped, wrapped)
-		return cloneToIPSections(spanning)
+		return getSpanningPrefixBlocks(section, section)
 	}
-	wrapped := wrapIPSection(section)
-	return cloneToIPSections(spanWithPrefixBlocks(wrapped))
+	return spanWithPrefixBlocks(section)
 }
 
 // SpanWithSequentialBlocks produces the smallest slice of sequential blocks that cover the same set of sections as this.
@@ -2083,8 +2116,7 @@ func (section *IPAddressSection) SpanWithSequentialBlocks() []*IPAddressSection 
 	if section.IsSequential() {
 		return []*IPAddressSection{section}
 	}
-	wrapped := wrapIPSection(section)
-	return cloneToIPSections(spanWithSequentialBlocks(wrapped))
+	return spanWithSequentialBlocks(section)
 }
 
 // CoverWithPrefixBlock returns the minimal-size prefix block that covers all the individual address sections in this section.

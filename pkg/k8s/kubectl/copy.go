@@ -6,13 +6,11 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/kubectl/pkg/cmd/cp"
 	kutil "k8s.io/kubectl/pkg/cmd/util"
-
-	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/logutils"
 )
 
 type FilePath struct {
@@ -105,7 +103,7 @@ func CopyFilesFromPod(c *CopyConfig, waitMsg string) error {
 						return err
 					}
 					if fatalErr {
-						return errors.New(fatalStr)
+						return fmt.Errorf("%s", fatalStr)
 					}
 				}
 				return nil

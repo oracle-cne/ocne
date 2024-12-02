@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -142,7 +142,7 @@ func (hostBitCount *HostBitCount) BlockSize() *big.Int {
 	if hostBitCount == nil {
 		return bigZero()
 	}
-	return new(big.Int).Lsh(bigOneConst(), uint(*hostBitCount))
+	return bigZero().Lsh(bigOneConst(), uint(*hostBitCount))
 }
 
 // Len returns the length of the host.  If the receiver is nil, representing the absence of a host length, returns 0.
@@ -333,17 +333,25 @@ func bigSixteen() *big.Int {
 	return big.NewInt(16)
 }
 
-func bigIsZero(val *BigDivInt) bool {
+func bigIsZero(val *big.Int) bool {
 	return len(val.Bits()) == 0 // slightly faster than div.value.BitLen() == 0
 }
 
-func bigIsOne(val *BigDivInt) bool {
+func bigIsOne(val *big.Int) bool {
 	return bigAbsIsOne(val) && val.Sign() > 0
 }
 
-func bigAbsIsOne(val *BigDivInt) bool {
+func bigAbsIsOne(val *big.Int) bool {
 	bits := val.Bits()
 	return len(bits) == 1 && bits[0] == 1
+}
+
+func bigIsNegative(val *big.Int) bool {
+	return val.Sign() < 0
+}
+
+func bigIsNonPositive(val *big.Int) bool {
+	return val.Sign() <= 0
 }
 
 func checkSubnet(item BitItem, prefixLength BitCount) BitCount {

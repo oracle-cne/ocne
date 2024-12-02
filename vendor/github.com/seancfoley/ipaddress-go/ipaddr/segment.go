@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -88,6 +88,24 @@ func (seg *addressSegmentInternal) contains(other AddressSegmentType) bool {
 		return true
 	} else if matchesStructure, _ := seg.matchesStructure(other); matchesStructure {
 		return seg.sameTypeContains(otherSeg)
+	}
+	return false
+}
+
+func (seg *addressSegmentInternal) sameTypeOverlaps(otherSeg *AddressSegment) bool {
+	return otherSeg.GetSegmentValue() <= seg.GetUpperSegmentValue() &&
+		otherSeg.GetUpperSegmentValue() >= seg.GetSegmentValue()
+}
+
+func (seg *addressSegmentInternal) overlaps(other AddressSegmentType) bool {
+	if other == nil {
+		return true
+	}
+	otherSeg := other.ToSegmentBase()
+	if seg.toAddressSegment() == otherSeg || otherSeg == nil {
+		return true
+	} else if matchesStructure, _ := seg.matchesStructure(other); matchesStructure {
+		return seg.sameTypeOverlaps(otherSeg)
 	}
 	return false
 }
@@ -773,6 +791,14 @@ func (seg *AddressSegment) Contains(other AddressSegmentType) bool {
 		return other == nil || other.ToSegmentBase() == nil
 	}
 	return seg.contains(other)
+}
+
+// Overlaps returns whether this is same type and version as the given segment and whether it overlaps with the values in the given segment.
+func (seg *AddressSegment) Overlaps(other AddressSegmentType) bool {
+	if seg == nil {
+		return other == nil || other.ToSegmentBase() == nil
+	}
+	return seg.overlaps(other)
 }
 
 // Equal returns whether the given segment is equal to this segment.

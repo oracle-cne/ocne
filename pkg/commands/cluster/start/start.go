@@ -81,6 +81,10 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	localKubeConfig := drv.GetKubeconfigPath()
 
 	if !wasRunning {
+		clusterCache, err = cache.GetCache()
+		if err != nil {
+			return "", err
+		}
 		err = clusterCache.Add(clusterConfig, localKubeConfig)
 		if err != nil {
 			return localKubeConfig, err

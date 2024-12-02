@@ -184,8 +184,8 @@ func EnsureCompatibleImageShapes(imageId string, arch string) error {
 
 		page = resp.OpcNextPage
 		for _, entry := range resp.Items {
-			// A1 are compatible, and Generic are special shape names that can't be removed
-			if !strings.Contains(*entry.Shape, ".A1.") && !strings.Contains(*entry.Shape, "Generic") {
+			// A1, A2 are compatible, and Generic are special shape names that can't be removed
+			if !strings.Contains(*entry.Shape, ".A2.") && !strings.Contains(*entry.Shape, ".A1.") && !strings.Contains(*entry.Shape, "Generic") {
 				shapesToRemove = append(shapesToRemove, *entry.Shape)
 			}
 		}

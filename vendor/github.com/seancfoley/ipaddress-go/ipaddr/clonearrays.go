@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,103 +16,108 @@
 
 package ipaddr
 
-func cloneIPv4Sections(sect *IPv4AddressSection, orig []*IPv4AddressSection) []ExtendedIPSegmentSeries {
-	converter := func(a *IPv4AddressSection) ExtendedIPSegmentSeries { return wrapIPSection(a.ToIP()) }
-	if sect == nil {
-		return cloneTo(orig, converter)
-	}
-	return cloneToExtra(sect, orig, converter) // return types matter with interfaces - https://play.golang.org/p/HZR8FSp42a9 )
-}
-
-func cloneIPv6Sections(sect *IPv6AddressSection, orig []*IPv6AddressSection) []ExtendedIPSegmentSeries {
-	converter := func(a *IPv6AddressSection) ExtendedIPSegmentSeries { return wrapIPSection(a.ToIP()) }
-	if sect == nil {
-		return cloneTo(orig, converter)
-	}
-	return cloneToExtra(sect, orig, converter)
+type addrPtrType[S any, T any] interface {
+	*S
+	getAddrType() addrType
+	init() T
 }
 
 // returns a slice of addresses that match the same IP version as the given
-func filterCloneIPAddrs(addr *IPAddress, orig []*IPAddress) []ExtendedIPSegmentSeries {
+func filterSeries[S any, T addrPtrType[S, T]](addr T, orig []T) []T {
+	addr = addr.init()
 	addrType := addr.getAddrType()
-	result := make([]ExtendedIPSegmentSeries, 0, len(orig)+1)
-	result = append(result, wrapIPAddress(addr))
+	result := append(make([]T, 0, len(orig)+1), addr)
 	for _, a := range orig {
 		if addrType == a.getAddrType() {
-			result = append(result, a.Wrap())
+			result = append(result, a.init())
 		}
 	}
 	return result
 }
 
-func cloneIPv4Addrs(sect *IPv4Address, orig []*IPv4Address) []ExtendedIPSegmentSeries {
-	converter := func(a *IPv4Address) ExtendedIPSegmentSeries { return wrapIPAddress(a.ToIP()) }
+func cloneIPAddrs(sect *IPAddress, orig []*IPAddress) []ExtendedIPSegmentSeries {
+	converter := func(a *IPAddress) ExtendedIPSegmentSeries { return wrapIPAddress(a) }
 	if sect == nil {
 		return cloneTo(orig, converter)
 	}
 	return cloneToExtra(sect, orig, converter)
 }
 
-func cloneIPv6Addrs(sect *IPv6Address, orig []*IPv6Address) []ExtendedIPSegmentSeries {
-	converter := func(a *IPv6Address) ExtendedIPSegmentSeries { return wrapIPAddress(a.ToIP()) }
+func cloneIPSections(sect *IPAddressSection, orig []*IPAddressSection) []ExtendedIPSegmentSeries {
+	converter := func(a *IPAddressSection) ExtendedIPSegmentSeries { return wrapIPSection(a) }
 	if sect == nil {
 		return cloneTo(orig, converter)
 	}
 	return cloneToExtra(sect, orig, converter)
 }
 
-func cloneToIPSections(orig []ExtendedIPSegmentSeries) []*IPAddressSection {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPAddressSection { return a.(WrappedIPAddressSection).IPAddressSection })
-}
-
-func cloneToIPv4Sections(orig []ExtendedIPSegmentSeries) []*IPv4AddressSection {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPv4AddressSection {
-		return a.(WrappedIPAddressSection).IPAddressSection.ToIPv4()
-	})
-}
-
-func cloneToIPv6Sections(orig []ExtendedIPSegmentSeries) []*IPv6AddressSection {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPv6AddressSection {
-		return a.(WrappedIPAddressSection).IPAddressSection.ToIPv6()
-	})
-}
-
-func cloneToIPAddrs(orig []ExtendedIPSegmentSeries) []*IPAddress {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPAddress { return a.(WrappedIPAddress).IPAddress })
-}
-
-func cloneToIPv4Addrs(orig []ExtendedIPSegmentSeries) []*IPv4Address {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPv4Address { return a.(WrappedIPAddress).IPAddress.ToIPv4() })
-}
-
-func cloneToIPv6Addrs(orig []ExtendedIPSegmentSeries) []*IPv6Address {
-	return cloneTo(orig, func(a ExtendedIPSegmentSeries) *IPv6Address { return a.(WrappedIPAddress).IPAddress.ToIPv6() })
-}
-
-func cloneTo[T any, U any](orig []T, conv func(T) U) []U {
-	result := make([]U, len(orig))
-	for i := range orig {
-		result[i] = conv(orig[i])
-	}
-	return result
-}
-
-func cloneToExtra[T any, U any](sect T, orig []T, conv func(T) U) []U {
-	origCount := len(orig)
-	result := make([]U, origCount+1)
-	result[origCount] = conv(sect)
-	for i := range orig {
-		result[i] = conv(orig[i])
-	}
-	return result
-}
-
-func copyTo[T any, U any](dest []U, orig []T, conv func(T) U) {
-	for i := range orig {
-		if i == len(dest) {
-			break
-		}
-		dest[i] = conv(orig[i])
+func cloneTo[T any, U any](orig []T, conv func(T) U) (result []U) {
+	result = make([]U, len(orig))
+	for i, v := range orig {
+		result[i] = conv(v)
 	}
 	return
+}
+
+func cloneToExtra[T any, U any](sect T, orig []T, conv func(T) U) (result []U) {
+	origCount := len(orig)
+	result = make([]U, origCount+1)
+	result[origCount] = conv(sect)
+	for i, v := range orig {
+		result[i] = conv(v)
+	}
+	return
+}
+
+// ToIPv4Slice converts a slice of subnets, addresses, or components thereof into IPv4-specific components.
+// The original slice element type can be one of *Address, *IPAddress, *AddressDivisionGrouping,
+// *AddressSection, *IPAddressSection, *AddressDivision, *AddressSegment, *IPAddressSegment, *SequentialRange,
+// ExtendedIPSegmentSeries, WrappedIPAddress, WrappedIPAddressSection, ExtendedSegmentSeries, WrappedAddress, or WrappedAddressSection.
+// Each slice element will be converted if the element originated as an IPv4 component, otherwise the element will be converted to nil in the returned slice.
+func ToIPv4Slice[T interface {
+	ToIPv4() IPv4Type
+}, IPv4Type any](orig []T) []IPv4Type {
+	return cloneTo(orig, func(a T) IPv4Type { return a.ToIPv4() })
+}
+
+// ToIPv6Slice converts a slice of subnets, addresses, or components thereof into IPv6-specific components.
+// The original slice element type can be one of *Address, *IPAddress, *AddressDivisionGrouping,
+// *AddressSection, *IPAddressSection, *AddressDivision, *AddressSegment, *IPAddressSegment, *SequentialRange,
+// ExtendedIPSegmentSeries, WrappedIPAddress, WrappedIPAddressSection, ExtendedSegmentSeries, WrappedAddress, or WrappedAddressSection.
+// Each slice element will be converted if the element originated as an IPv6 component, otherwise the element will be converted to nil in the returned slice.
+func ToIPv6Slice[T interface {
+	ToIPv6() IPv6Type
+}, IPv6Type any](orig []T) []IPv6Type {
+	return cloneTo(orig, func(a T) IPv6Type { return a.ToIPv6() })
+}
+
+// ToIPSlice converts a slice of subnets, addresses, or components thereof into IP-specific components.
+// The original slice element type can be one of *Address, *IPv4Address, *IPv6Address, *AddressDivisionGrouping,
+// *AddressSection, *IPv4AddressSection, *IPv6AddressSection, *AddressDivision, *AddressSegment, *IPv4AddressSegment, *IPv6AddressSegment, *IPAddressSegment,
+// *SequentialRange, ExtendedSegmentSeries, WrappedAddress, WrappedAddressSection, WrappedIPAddress, IPAddressType, *SequentialRange, or IPAddressSeqRangeType.
+// Each slice element will be converted if the element originated as an IPv6 component, otherwise the element will be converted to nil in the returned slice.
+func ToIPSlice[T interface {
+	ToIP() IPType
+}, IPType any](orig []T) []IPType {
+	return cloneTo(orig, func(a T) IPType { return a.ToIP() })
+}
+
+// ToAddressBaseSlice converts a slice of subnets or addresses into general addresses or subnets not specific to a version or address type.
+// The original slice element type can be one of *Address, *IPv4Address, *IPv6Address, *MACAddress, *IPAddress, or AddressType.
+// Each slice element will be converted if the element originated as an IPv6 component, otherwise the element will be converted to nil in the returned slice.
+func ToAddressBaseSlice[T interface {
+	ToAddressBase() AddrType
+}, AddrType any](orig []T) []AddrType {
+	return cloneTo(orig, func(a T) AddrType { return a.ToAddressBase() })
+}
+
+// ToMACSlice converts a slice of subnets, addresses, or components thereof into MAC-specific components.
+// The original slice element type can be one of *Address, *AddressDivisionGrouping,
+// *AddressSection, *AddressDivision, *AddressSegment,
+// ExtendedSegmentSeries, WrappedAddress, or WrappedAddressSection.
+// Each slice element will be converted if the element originated as a MAC component, otherwise the element will be converted to nil in the returned slice.
+func ToMACSlice[T interface {
+	ToMAC() MACType
+}, MACType any](orig []T) []MACType {
+	return cloneTo(orig, func(a T) MACType { return a.ToMAC() })
 }

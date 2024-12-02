@@ -4,17 +4,18 @@
 package dumpfiles
 
 import (
-	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/yaml"
+	"slices"
 )
 
-// ReadClusterWideJSONFile reads cluster-wide json data files and un-marshals them into resources.
+// ReadClusterWideJSONOrYAMLFile reads cluster-wide json/yaml data files and un-marshals them into resources.
 // For example, read nodes.json
-func ReadClusterWideJSONFile[T any](clusterWideDir string, fileName string) (*T, error) {
+func ReadClusterWideJSONOrYAMLFile[T any](clusterWideDir string, fileNames []string) (*T, error) {
 	var rObj *T
-	if err := readJSONFromDirTree[T](clusterWideDir, fileName, func(_ string, obj *T) {
+	if err := readJSONOrYAMLFromDirTree[T](clusterWideDir, fileNames, func(_ string, obj *T) {
 		rObj = obj
 	}); err != nil {
 		return nil, err
@@ -22,14 +23,14 @@ func ReadClusterWideJSONFile[T any](clusterWideDir string, fileName string) (*T,
 	return rObj, nil
 }
 
-// ReadJSONFiles reads namespaced or node-specific json data files and unmarshals them into resources.
+// ReadJSONOrYAMLFiles reads namespaced or node-specific json/yaml data files and unmarshals them into resources.
 // The unmarshalled objects are then put into a map where the namespace is the key.
 // For example, read pods.json in all namespaces.
-func ReadJSONFiles[T any](rootDir string, fileName string) (map[string]T, error) {
+func ReadJSONOrYAMLFiles[T any](rootDir string, fileNames []string) (map[string]T, error) {
 	// Read the json from each namespace directory into a map resource list then put the list into
 	// the map, indexed by namespace
 	rMap := make(map[string]T)
-	if err := readJSONFromDirTree[T](rootDir, fileName, func(nameSpace string, obj *T) {
+	if err := readJSONOrYAMLFromDirTree[T](rootDir, fileNames, func(nameSpace string, obj *T) {
 		rMap[nameSpace] = *obj
 	}); err != nil {
 		return nil, err
@@ -37,8 +38,8 @@ func ReadJSONFiles[T any](rootDir string, fileName string) (map[string]T, error)
 	return rMap, nil
 }
 
-// readJSONFromDirTree read matching JSON files in a directory tree, including files in all nested subdirectories
-func readJSONFromDirTree[T any](rootDir string, targetFileName string, f func(parentDir string, obj *T)) error {
+// readJSONorYAMLFromDirTree read matching JSON or YAML files in a directory tree, including files in all nested subdirectories
+func readJSONOrYAMLFromDirTree[T any](rootDir string, targetFileNames []string, f func(parentDir string, obj *T)) error {
 	if _, err := os.Stat(rootDir); os.IsNotExist(err) {
 		return nil
 	}
@@ -51,15 +52,15 @@ func readJSONFromDirTree[T any](rootDir string, targetFileName string, f func(pa
 			if dirEntry.IsDir() {
 				return nil // walk into this dir
 			}
-			if dirEntry.Name() != targetFileName {
+			if !slices.Contains(targetFileNames, dirEntry.Name()) {
 				return nil
 			}
-			jsonStr, err := os.ReadFile(path)
+			dataStr, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
 			var obj T
-			if err = json.Unmarshal([]byte(jsonStr), &obj); err != nil {
+			if err = yaml.Unmarshal([]byte(dataStr), &obj); err != nil {
 				return err
 			}
 

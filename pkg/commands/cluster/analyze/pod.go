@@ -8,14 +8,14 @@ import (
 	"os"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze/triage"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	v1 "k8s.io/api/core/v1"
 )
 
 func analyzePods(p *analyzeParams) error {
-	// Read the pods.json from each namespace directory into a map
-	podMap, err := readNamespacedJSONFiles[v1.PodList](p, "pods.json")
+	// Read the pods.json/yaml from each namespace directory into a map
+	podMap, err := readNamespacedJSONOrYAMLFiles[v1.PodList](p, "pods")
 	if err != nil {
 		return err
 	}

@@ -1,3 +1,19 @@
+//
+// Copyright 2022-2024 Sean C Foley
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package ipaddr
 
 import (
@@ -112,7 +128,7 @@ func (grouping *largeDivisionGroupingInternal) calcBytes() (bytes, upperBytes []
 		for totalDivBits := div.GetBitCount(); totalDivBits > 0; totalDivBits -= 64 {
 
 			// grab those 64 bits (from bigBytes and bigUpperBytes) and put them in val and upperVal
-			divBits := min(totalDivBits, 64)
+			divBits := imin(totalDivBits, 64)
 			var divBytes []byte
 			var val, upperVal uint64
 			if len(bigBytes) > 8 {
@@ -206,7 +222,7 @@ func (grouping *largeDivisionGroupingInternal) Bytes() []byte {
 	if grouping.hasNoDivisions() {
 		return emptyBytes
 	}
-	return cloneBytes(grouping.getBytes())
+	return clone(grouping.getBytes())
 }
 
 // UpperBytes returns the highest individual division grouping in this grouping as a byte slice.
@@ -214,7 +230,7 @@ func (grouping *largeDivisionGroupingInternal) UpperBytes() []byte {
 	if grouping.hasNoDivisions() {
 		return emptyBytes
 	}
-	return cloneBytes(grouping.getUpperBytes())
+	return clone(grouping.getUpperBytes())
 }
 
 // GetValue returns the lowest individual address division grouping in this address division grouping as an integer value.

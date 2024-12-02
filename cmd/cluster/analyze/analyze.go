@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/file"
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 const (

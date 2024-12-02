@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.16-draft
+### Version: v0.0.17-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -17,6 +17,10 @@ Follow these [instructions](https://docs.oracle.com/en/operating-systems/olcne/2
 ocne cluster start --provider none --kubeconfig $KUBECONFIG --auto-start-ui false
 kubectl -n ocne-system rollout status deployment ocne-catalog
 ```
+
+## Perform an ETCD Backup
+Follow these [instructions](../../cluster-management/etcd-backup.md) to backup the ETCD database.
+
 ## Perform a Cluster Dump
 
 Perform a cluster dump to take snapshot of the cluster state before the migration begins.

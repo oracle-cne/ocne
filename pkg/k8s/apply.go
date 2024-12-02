@@ -8,9 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	client2 "github.com/oracle-cne/ocne/pkg/k8s/client"
-	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"os"
 	"path"
 	"reflect"
@@ -18,7 +15,10 @@ import (
 	"text/template"
 
 	"github.com/go-logr/logr"
+	client2 "github.com/oracle-cne/ocne/pkg/k8s/client"
+	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -41,6 +41,7 @@ type (
 	action func(obj *unstructured.Unstructured) error
 )
 
+// init - required for the initialization of CAPI clusters
 func init() {
 	controllerruntimelog.SetLogger(logr.New(nil))
 }

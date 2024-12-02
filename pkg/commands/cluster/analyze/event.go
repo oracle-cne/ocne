@@ -5,8 +5,8 @@ package analyze
 
 import (
 	"fmt"
-	v1 "k8s.io/api/core/v1"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze/triage"
+	v1 "k8s.io/api/core/v1"
 	"os"
 	"regexp"
 )
@@ -14,8 +14,8 @@ import (
 var excludeRegexpr = []string{"Search Line limits were exceeded"}
 
 func analyzeEvents(p *analyzeParams) error {
-	// Read the events.json from each namespace directory into a map
-	evMap, err := readNamespacedJSONFiles[v1.EventList](p, "events.json")
+	// Read the events.json/yaml from each namespace directory into a map
+	evMap, err := readNamespacedJSONOrYAMLFiles[v1.EventList](p, "events")
 	if err != nil {
 		return err
 	}

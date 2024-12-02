@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,25 +18,19 @@ package ipaddr
 
 import "math/bits"
 
-func getCoveringPrefixBlock(
-	first,
-	other ExtendedIPSegmentSeries) ExtendedIPSegmentSeries {
+func getCoveringPrefixBlock[S any, T spannableType[S, T]](first, other T) T {
 	result := checkPrefixBlockContainment(first, other)
 	if result != nil {
 		return result
 	}
-	return applyOperatorToLowerUpper(first, other, false, coverWithPrefixBlockWrapped)[0]
+	return applyOperatorToLowerUpper(first, other, false, coverWithPrefixBlockWrapped[S, T])[0]
 }
 
-func coverWithPrefixBlockWrapped(
-	lower,
-	upper ExtendedIPSegmentSeries) []ExtendedIPSegmentSeries {
-	return []ExtendedIPSegmentSeries{coverWithPrefixBlock(lower, upper)}
+func coverWithPrefixBlockWrapped[S any, T spannableType[S, T]](lower, upper T) []T {
+	return []T{coverWithPrefixBlock(lower, upper)}
 }
 
-func coverWithPrefixBlock(
-	lower,
-	upper ExtendedIPSegmentSeries) ExtendedIPSegmentSeries {
+func coverWithPrefixBlock[S any, T spannableType[S, T]](lower, upper T) T {
 	segCount := lower.GetSegmentCount()
 	bitsPerSegment := lower.GetBitsPerSegment()
 	var currentSegment int

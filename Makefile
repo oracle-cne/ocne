@@ -6,7 +6,7 @@ GOPATH ?= $(shell go env GOPATH)
 
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-OCNE_DIR:=github.com/oracle-cne$(shell echo ${MAKEFILE_DIR} | sed 's/.*github.com//')
+INFO_DIR:=github.com/oracle-cne/ocne/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
@@ -17,6 +17,8 @@ CHART_BUILD_OUT_DIR:=$(CHART_BUILD_DIR)/repo
 CHART_GIT_DIR:=build/charts
 
 CHART_EMBED:=pkg/catalog/embedded/charts
+
+CATALOG_BRANCH?=release/2.0
 
 TEST_PATTERN:=.*
 TEST_FILTERS:=
@@ -30,9 +32,10 @@ NAME:=ocne
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
-
-ifdef RELEASE_VERSION
-	CLI_VERSION=${RELEASE_VERSION}
+CLI_VERSION:=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)-$(shell grep Release: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2 | cut -d '%' -f 1)
+OS:=$(shell uname)
+ifeq ($(OS), Linux)
+	CLI_VERSION=$(shell rpmspec -q --queryformat='%{VERSION}-%{RELEASE}' ${MAKEFILE_DIR}/buildrpm/ocne.spec)
 endif
 ifndef RELEASE_BRANCH
 	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
@@ -40,7 +43,10 @@ endif
 
 DIST_DIR:=dist
 ENV_NAME=ocne
-GO=GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
+GO=GOTOOLCHAIN=local GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
+
+CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
+
 
 export GOCOVERDIR
 export BATS_RESULT_DIR
@@ -56,7 +62,7 @@ help: ## Display this help.
 
 .PHONY: run
 run:
-	$(GO) run ${GOPATH}/src/${OCNE_DIR}/main.go
+	$(GO) run -trimpath -ldflags "${CLI_GO_LDFLAGS}" ./...
 #
 # Go build related tasks
 #
@@ -70,18 +76,18 @@ $(CHART_EMBED): $(CHART_BUILD_OUT_DIR)
 	cp $(CHART_BUILD_OUT_DIR)/* $@
 
 $(CHART_BUILD_DIR): $(BUILD_DIR)
-	git clone -b release/2.0  $(CATALOG_REPO) $@
+	git clone -b ${CATALOG_BRANCH}  $(CATALOG_REPO) $@
 
 $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
 	cd $< && make
 
 .PHONY: build-cli
 build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current system and architecture
-	$(GO) build -trimpath -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
+	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
 
 # Build an instrumented CLI for the current system and architecture
-build-cli-instrumented: $(CHARTS_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
-	$(GO) build -cover -trimpath -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
+build-cli-instrumented: $(CHART_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
+	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
 
 .PHONY: cli
 cli: build-cli ## Build and install the CLI
@@ -122,7 +128,7 @@ capi-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instru
 
 .PHONY: release-test
 release-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
-	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./run-tests.sh '$(TEST_PATTERN)' 1 1
+	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./release-test.sh
 	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
 	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
 	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
