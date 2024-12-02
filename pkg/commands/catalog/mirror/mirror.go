@@ -134,6 +134,7 @@ func Mirror(options Options) error {
 				} else {
 					// Delete oci-archive file and backoff
 					os.Remove(ociArchiveDir + "/" + strconv.Itoa(counter) + ".oci")
+					log.Debugf("Backing off and retrying pulling %s:%s from the registry", imageInfo.BaseImage, imageInfo.Tag)
 					time.Sleep(30 * time.Second)
 				}
 			}
