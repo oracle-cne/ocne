@@ -123,14 +123,29 @@ func Mirror(options Options) error {
 				return err
 			}
 			log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
-			time.Sleep(30 * time.Second)
-			err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
-			if err != nil {
-				return err
+			timeoutOccured := true
+			for i := 0; i < 5; i++ {
+				err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+				if err == nil {
+					break
+					timeoutOccured = false
+				} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
+					return err
+				} else {
+					// Delete oci-archive file and backoff
+					os.Remove(ociArchiveDir + "/" + strconv.Itoa(counter) + ".oci")
+					time.Sleep(30 * time.Second)
+				}
+			}
+			if timeoutOccured == true {
+				return fmt.Errorf("download failed due to Internal Server Error")
 			}
 			counter = counter + 1
 		}
-		dump.CreateReportArchive(ociArchiveDir, constants.UserConfigDir+"/downloaded-images.tgz")
+		err = dump.CreateReportArchive(ociArchiveDir, constants.UserConfigDir+"/downloaded-images.tgz")
+		if err != nil {
+			return err
+		}
 	}
 	if options.Push && options.DestinationURI == "" {
 		return errors.New("Please provide a destination URI")
