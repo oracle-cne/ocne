@@ -83,6 +83,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 			},
 			"args": []string{
 				"/etc/oci/pcaCerts",
+				"/certs",
 			},
 			"volumeMounts": []map[string]interface{}{
 				{
@@ -91,7 +92,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 					"readOnly":  true,
 				},
 				{
-					"name":      "pca",
+					"name":      "certificates",
 					"mountPath": "/certs",
 					"readOnly":  false,
 				},
@@ -108,15 +109,22 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 
 	volumeMounts := []map[string]interface{}{
 		{
-			"name":      "pca",
-			"mountPath": "/pca",
+			"name":      "certificates",
+			"mountPath": "/etc/pki/ca-trust/extracted/openssl",
+			"subPath":   "etc/pki/ca-trust/extracted/openssl",
+			"readOnly":  false,
+		},
+		{
+			"name":      "certificates",
+			"mountPath": "/etc/pki/ca-trust/extracted/pem",
+			"subPath":   "etc/pki/ca-trust/extracted/pem",
 			"readOnly":  false,
 		},
 	}
 
 	volumes := []map[string]interface{}{
 		{
-			"name":     "pca",
+			"name":     "certificates",
 			"emptyDir": map[string]interface{}{},
 		},
 		{
