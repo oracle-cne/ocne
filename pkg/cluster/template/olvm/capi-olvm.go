@@ -18,6 +18,7 @@ import (
 )
 
 type olvmData struct {
+	Config          *types.Config
 	ClusterConfig   *types.ClusterConfig
 	ExtraConfig     string
 	KubeVersions    *versions.KubernetesVersions
@@ -57,6 +58,7 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	}
 
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
+		Config:          config,
 		ClusterConfig:   clusterConfig,
 		ExtraConfig:     ign,
 		KubeVersions:    &kubeVer,

@@ -1,8 +1,12 @@
+// Copyright (c) 2024, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package olvm
 
 import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -19,16 +23,18 @@ const (
 	EnvScope         = "OCNE_OLVM_SCOPE"
 )
 
-type ClusterApiDriver struct {
-	Ephemeral           bool
-	BootstrapKubeConfig string
-	KubeConfig          string
-	Config              *types.Config
-	ClusterConfig       *types.ClusterConfig
-	ClusterResources    string
-	ResourceNamespace   string
-	FromTemplate        bool
-	Deleted             bool
+type OlvmDriver struct {
+	Ephemeral            bool
+	BootstrapKubeConfig  string
+	KubeConfig           string
+	Config               *types.Config
+	ClusterConfig        *types.ClusterConfig
+	ClusterResources     string
+	PKIInfo              *kubepki.PKIInfo
+	UploadCertificateKey string
+	ResourceNamespace    string
+	FromTemplate         bool
+	Deleted              bool
 }
 
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
@@ -78,7 +84,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		clusterConfig.ControlPlaneNodes = 1
 	}
 
-	cad := &ClusterApiDriver{
+	cad := &OlvmDriver{
 		Config:           config,
 		ClusterConfig:    clusterConfig,
 		ClusterResources: cdi,

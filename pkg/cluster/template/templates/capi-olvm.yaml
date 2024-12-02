@@ -35,8 +35,8 @@ metadata:
 spec:
   ovirtDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
   controlPlaneEndpoint:
-    host: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Host}}"
-    port: {{.ClusterConfig.Providers.Olvm.OlvmCluster.ControlPlaneEndpoint.Port}}
+    host: "{{.ClusterConfig.VirtualIp}}"
+    port: {{.Config.KubeAPIServerBindPort}}
   ovirtAPI:
     apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtAPI.ServerURL}}"
     caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"

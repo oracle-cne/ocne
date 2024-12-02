@@ -1,3 +1,6 @@
+// Copyright (c) 2024, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package olvm
 
 import (
@@ -9,7 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription, error) {
+func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, error) {
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
 		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
@@ -77,6 +80,6 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	}, nil
 }
 
-func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
+func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
 	return nil, nil
 }

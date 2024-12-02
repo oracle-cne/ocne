@@ -23,7 +23,7 @@ import (
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 )
 
-func (cad *ClusterApiDriver) getClusterObject() (unstructured.Unstructured, error) {
+func (cad *OlvmDriver) getClusterObject() (unstructured.Unstructured, error) {
 	clusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
 		if u.GetKind() != "Cluster" {
 			return false
@@ -46,7 +46,7 @@ func (cad *ClusterApiDriver) getClusterObject() (unstructured.Unstructured, erro
 
 // applyResources creates resources in a cluster if the resource does not
 // already exist.  If the resource already exists, it is not modified.
-func (cad *ClusterApiDriver) applyResources(restConfig *rest.Config) error {
+func (cad *OlvmDriver) applyResources(restConfig *rest.Config) error {
 	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
 	if err != nil {
 		return err
@@ -62,15 +62,15 @@ func (cad *ClusterApiDriver) applyResources(restConfig *rest.Config) error {
 	return nil
 }
 
-func (cad *ClusterApiDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNodes int) error {
+func (cad *OlvmDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNodes int) error {
 	return fmt.Errorf("Joining new nodes to this cluster is done by editing the KubeadmControlPlane and MachineDeployment resources in the management cluster")
 }
 
-func (cad *ClusterApiDriver) Stop() error {
-	return fmt.Errorf("ClusterApiDriver.Stop() is not implemented")
+func (cad *OlvmDriver) Stop() error {
+	return fmt.Errorf("OlvmDriver.Stop() is not implemented")
 }
 
-func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterNs string) error {
+func (cad *OlvmDriver) waitForClusterDeletion(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (cad *ClusterApiDriver) waitForClusterDeletion(clusterName string, clusterN
 	return err
 }
 
-func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string) error {
+func (cad *OlvmDriver) deleteCluster(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 	return nil
 }
 
-func (cad *ClusterApiDriver) Delete() error {
+func (cad *OlvmDriver) Delete() error {
 	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
@@ -169,7 +169,7 @@ func (cad *ClusterApiDriver) Delete() error {
 	return cad.deleteCluster(clusterName, clusterObj.GetNamespace())
 }
 
-func (cad *ClusterApiDriver) Close() error {
+func (cad *OlvmDriver) Close() error {
 	// There needs to be some logic to figure out when a cluster
 	// is done being deleted.  It is not reasoble to develop
 	// this against the OCI CAPI provider because it is unreliable
@@ -189,19 +189,19 @@ func (cad *ClusterApiDriver) Close() error {
 	return nil
 }
 
-func (cad *ClusterApiDriver) GetKubeconfigPath() string {
+func (cad *OlvmDriver) GetKubeconfigPath() string {
 	return cad.KubeConfig
 }
 
-func (cad *ClusterApiDriver) GetKubeAPIServerAddress() string {
+func (cad *OlvmDriver) GetKubeAPIServerAddress() string {
 	return ""
 }
 
-func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
+func (cad *OlvmDriver) PostInstallHelpStanza() string {
 	return fmt.Sprintf("To access the cluster:\n    use %s", cad.KubeConfig)
 }
 
-func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
+func (Cad *OlvmDriver) DefaultCNIInterfaces() []string {
 	// ens3 is the default OCI vNIC name for x86
 	// enp0s6 is the default for arm
 	return []string{"ens3", "enp0s6"}

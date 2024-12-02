@@ -19,105 +19,11 @@ const (
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
 `
-
-	// OCI requires custom scripting to set the hostname, as well
-	// set other networking parameters.  These are gathered from
-	// the instance metadata.
-	//
-	// Note: this is lifted verbatim from a regular OL instance.
-	dhclientPath = "/etc/NetworkManager/dispatcher.d/11-dhclient"
-	dhclient     = `#!/bin/bash
-# run dhclient.d scripts in an emulated environment
-
-PATH=/bin:/usr/bin:/sbin
-ETCDIR=/etc/dhcp
-SAVEDIR=/var/lib/dhclient
-interface=$1
-
-for optname in "${!DHCP4_@}"; do
-    newoptname=${optname,,};
-    newoptname=new_${newoptname#dhcp4_};
-    export "${newoptname}"="${!optname}";
-done
-
-[ -f /etc/sysconfig/network ] && . /etc/sysconfig/network
-
-[ -f /etc/sysconfig/network-scripts/ifcfg-"${interface}" ] && \
-    . /etc/sysconfig/network-scripts/ifcfg-"${interface}"
-
-if [ -d $ETCDIR/dhclient.d ]; then
-    for f in $ETCDIR/dhclient.d/*.sh; do
-	if [ -x "${f}" ]; then
-	    subsystem="${f%.sh}"
-	    subsystem="${subsystem##*/}"
-	    . "${f}"
-	    if [ "$2" = "up" ]; then
-	        "${subsystem}_config"
-	    elif [ "$2" = "dhcp4-change" ]; then
-	        if [ "$subsystem" = "chrony" -o "$subsystem" = "ntp" ]; then
-	            "${subsystem}_config"
-	        fi
-	    elif [ "$2" = "down" ]; then
-	        "${subsystem}_restore"
-	    fi
-	fi
-    done
-fi
-`
-
-	proxyConfigServiceName = "ocne-proxy-config.service"
-	proxyConfigContents    = `[Unit]
-Description=Add API server IP address to no_proxy configuration
-After=kubeadm.service
-
-[Service]
-User=root
-Type=oneshot
-ExecStart=/etc/ocne/proxy-config.sh
-
-[Install]
-WantedBy=multi-user.target
-`
-	proxyConfigScriptPattern = `#!/bin/bash
-
-# Update the no_proxy configuration to include the IP address of the API server.
-
-export KUBECONFIG=/etc/kubernetes/kubelet.conf
-CLUSTER_NAME=%s
-PROXY_CONF=%s
-PROXY_CONF2=%s
-
-# Parse the API Server IP address
-#  - Get the full URL
-#  - Strip off the protocol (https://)
-#  - Split the resulting string at double colon
-url=$(kubectl config view --cluster $CLUSTER_NAME -o=jsonpath="{.clusters[0].cluster.server}")
-protocol="$(echo $url | grep :// | sed -e's,^\(.*://\).*,\1,g')"
-url2="$(echo ${url/$protocol/})"
-IFS=":"
-read -ra ipaddr <<< "$url2"
-unset IFS
-
-# Add the IP address to the no_proxy list if not already there
-echo Checking if $ipaddr exists in $PROXY_CONF
-grep -q "${ipaddr}" $PROXY_CONF
-if [[ $? -ne 0 ]]; then
-	echo Adding $ipaddr to no_proxy setting in $PROXY_CONF
-	sed -i "s/no_proxy=/no_proxy=$ipaddr,/g" $PROXY_CONF
-	systemctl daemon-reload
-fi
-echo Checking if $ipaddr exists in $PROXY_CONF2
-grep -q "${ipaddr}" $PROXY_CONF2
-if [[ $? -ne 0 ]]; then
-	echo Adding $ipaddr to no_proxy setting in $PROXY_CONF2
-	sed -i "s/no_proxy=/no_proxy=$ipaddr,/g" $PROXY_CONF2
-	systemctl daemon-reload
-fi
-`
 )
 
 // TODO USE LIBVIRT IGNITION !!!
 func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
@@ -166,21 +72,6 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 		},
 	})
 
-	// Add a service to update the no_proxy configuration once the API Server is up (after kubeadm.service runs)
-	ign = ignition.AddUnit(ign, &igntypes.Unit{
-		Name:     proxyConfigServiceName,
-		Enabled:  util.BoolPtr(true),
-		Contents: util.StrPtr(proxyConfigContents),
-	})
-	proxyConfigFile := &ignition.File{
-		Path: "/etc/ocne/proxy-config.sh",
-		Mode: 0555,
-		Contents: ignition.FileContents{
-			Source: fmt.Sprintf(proxyConfigScriptPattern, clusterConfig.Name, "/etc/systemd/system/ocne-update.service.d/proxy.conf", "/etc/systemd/system/crio.service.d/proxy.conf"),
-		},
-	}
-	ignition.AddFile(ign, proxyConfigFile)
-
 	// Update service configuration file
 	updateFile := &ignition.File{
 		Path: ignition.OcneUpdateConfigPath,
@@ -201,6 +92,16 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 	ign = ignition.Merge(ign, container)
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
+
+	// TEMP - For Now assume internal LB
+	//internalLB := true
+	//if internalLB {
+	//
+	//	//ret, err = ignition.GenerateAssetsForVirtualIp(ign\, ci.KubeAPIBindPort, ci.KubeAPIBindPortAlt, ci.KubeAPIServerIP, &ci.Proxy, ci.NetInterface)
+	//	//if err != nil {
+	//	//	return nil, err
+	//	//}
+	//}
 
 	// Add any additional configuration
 	if clusterConfig.ExtraIgnition != "" {

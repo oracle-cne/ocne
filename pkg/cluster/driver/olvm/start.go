@@ -1,3 +1,6 @@
+// Copyright (c) 2024, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package olvm
 
 import (
@@ -23,7 +26,7 @@ import (
 	"time"
 )
 
-func (cad *ClusterApiDriver) Start() (bool, bool, error) {
+func (cad *OlvmDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
 		// If there is a need to generate a template, ensure that an
@@ -130,7 +133,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	return false, false, nil
 }
 
-func (cad *ClusterApiDriver) PostStart() error {
+func (cad *OlvmDriver) PostStart() error {
 	// If the cluster is not self managed, then the configuration is
 	// complete.
 	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
@@ -182,7 +185,7 @@ func (cad *ClusterApiDriver) PostStart() error {
 	return nil
 }
 
-func (cad *ClusterApiDriver) waitForControllers(kubeClient kubernetes.Interface) error {
+func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error {
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: "Waiting for Core Cluster API Controllers",
@@ -215,7 +218,7 @@ func (cad *ClusterApiDriver) waitForControllers(kubeClient kubernetes.Interface)
 	return nil
 }
 
-func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clusterName string) (string, error) {
+func (cad *OlvmDriver) waitForKubeconfig(client kubernetes.Interface, clusterName string) (string, error) {
 	var kubeconfig string
 	kcfgSecretIface, _, err := util.LinearRetryTimeout(func(i interface{}) (interface{}, bool, error) {
 		log.Debugf("Looking for secrets in %s with label %s = %s", cad.ResourceNamespace, ClusterNameLabel, clusterName)
@@ -257,7 +260,7 @@ func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clus
 	return kubeconfig, nil
 }
 
-func (cad *ClusterApiDriver) createRequiredResources(kubeClient kubernetes.Interface) error {
+func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) error {
 	// Get the creds
 	credmap, err := getCreds()
 	if err != nil {
