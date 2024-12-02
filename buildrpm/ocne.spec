@@ -33,6 +33,7 @@ clusters and the application in them.
 
 %build
 export GOPATH=`pwd`/go
+export GOTOOLCHAIN=local
 mkdir -p $GOPATH/src/%{MOD_PATH}
 ln -s `pwd` $GOPATH/src/%{MOD_PATH}/ocne
 pushd $GOPATH/src/%{MOD_PATH}/ocne
@@ -79,14 +80,14 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 - Update Go dependencies
 - Allow automatic installation of the community catalog from ArtifactHub.io
 
-* Mon Nov 18 2024 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.0.5-3
+* Fri Nov 15 2024 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.0.5-3
 - Fix an issue where trying to update an application with no customizations would fail
 
-* Mon Nov 18 2024 Zaid Abdulrehman <zaid.a.abdulrehman@oracle.com> - 2.0.5-2
+* Thu Nov 14 2024 Zaid Abdulrehman <zaid.a.abdulrehman@oracle.com> - 2.0.5-2
 - Support wider range of OCI compute shapes when using the OCI provider
 - Improve output when parsing errors are encountered when parsing cluster configuration
 
-* Thu Oct 10 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.5-1
+* Wed Oct 30 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.0.5-1
 - Allow customization of ignition provider and kernel command line during image create
 
 * Mon Oct 28 2024 Guoyong Zhang <guoyong.zhang@oracle.com> - 2.0.4-3
