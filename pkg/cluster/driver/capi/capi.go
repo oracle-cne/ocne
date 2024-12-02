@@ -1122,6 +1122,6 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 	return fmt.Sprintf("To access the cluster:\n    use %s", cad.KubeConfig)
 }
 
-func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
+func (cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
 }
