@@ -23,6 +23,7 @@ import (
 
 type ApplicationDescription struct {
 	PreInstall     func() error
+	Force          bool
 	Application    *types.Application
 	kubeConfigPath string
 }
@@ -67,6 +68,7 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 		ReleaseName:    app.Application.Release,
 		Version:        app.Application.Version,
 		Values:         app.Application.ConfigFrom,
+		Force:          app.Force,
 		Overrides: []helm.HelmOverrides{
 			{
 				LiteralOverride: config,

@@ -12,6 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -75,6 +78,33 @@ func findTaggableImage(registry string, tag string, imgs []v1.ContainerImage) st
 	return ret
 }
 
+func getKubeProxyTag(client kubernetes.Interface) (string, error) {
+	ret := ""
+
+	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
+	if err != nil {
+		return "", err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for _, c := range proxyDep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return "", err
+		}
+
+		if imgInfo.BaseImage != constants.KubeProxyImage {
+			continue
+		}
+
+		log.Debugf("Found kube-proxy tag %s", imgInfo.Tag)
+		ret = imgInfo.Tag
+		break
+	}
+
+	return ret, err
+}
+
 func tagCommand(imgName string, registry string) string {
 	return fmt.Sprintf("chroot /hostroot podman tag %s %s:%s", imgName, registry, constants.CurrentTag)
 }
@@ -120,64 +150,29 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
 }
 
-func updateKubeProxy(client kubernetes.Interface) error {
-	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
-	if err != nil {
-		return err
-	}
-
-	// If the kube-proxy image already makes sense, then do nothing.
-	for i, c := range proxyDep.Spec.Template.Spec.Containers {
-		imgInfo, err := image.SplitImage(c.Image)
-		if err != nil {
-			return err
-		}
-
-		if imgInfo.BaseImage != constants.KubeProxyImage {
-			continue
-		}
-
-		// kube-proxy is already using current tag.  Nothing to do.
-		if imgInfo.Tag == constants.CurrentTag {
-			break
-		}
-
-		log.Debugf("Updating kube-proxy tag from %s to %s", imgInfo.Tag, constants.CurrentTag)
-		proxyDep.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s:%s", constants.KubeProxyImage, constants.CurrentTag)
-
-		// Once the daemonset is updated, the work is done.  Return
-		_, err = k8s.UpdateDaemonSet(client, proxyDep, constants.KubeProxyNamespace)
-		break
-	}
-
-	return err
-}
-
-func getKubeProxyTag(client kubernetes.Interface) (string, error) {
-	ret := ""
-
-	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
-	if err != nil {
-		return "", err
-	}
-
-	// If the kube-proxy image already makes sense, then do nothing.
-	for _, c := range proxyDep.Spec.Template.Spec.Containers {
-		imgInfo, err := image.SplitImage(c.Image)
-		if err != nil {
-			return "", err
-		}
-
-		if imgInfo.BaseImage != constants.KubeProxyImage {
-			continue
-		}
-
-		log.Debugf("Found kube-proxy tag %s", imgInfo.Tag)
-		ret = imgInfo.Tag
-		break
-	}
-
-	return ret, err
+func updateKubeProxy(kubeConfigPath string) error {
+	return install.InstallApplications([]install.ApplicationDescription{
+		install.ApplicationDescription{
+			Force: true,
+			Application: &types.Application{
+				Name:      constants.KubeProxyChart,
+				Namespace: constants.KubeProxyNamespace,
+				Release:   constants.KubeProxyRelease,
+				Version:   constants.KubeProxyVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"apiServer": map[string]interface{}{
+						"host": "127.0.0.1",
+						"port": "6443",
+					},
+					"config": map[string]interface{}{
+						"mode": "iptables",
+						"clusterCIDR": "10.244.0.0/16",
+					},
+				},
+			},
+		},
+	}, kubeConfigPath, false)
 }
 
 func updateCoreDNS(client kubernetes.Interface) error {
@@ -232,7 +227,6 @@ func getCoreDNSTag(client kubernetes.Interface) (string, error) {
 			continue
 		}
 
-
 		log.Debugf("Found CoreDNS tag %s", imgInfo.Tag)
 		ret = imgInfo.Tag
 		break
@@ -240,7 +234,6 @@ func getCoreDNSTag(client kubernetes.Interface) (string, error) {
 
 	return ret, err
 }
-
 
 func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
 	// Check for presence of "current" tags for kube-proxy
@@ -263,7 +256,7 @@ func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 
 	// Once at least some nodes have the current tags, update the
 	// kube-proxy daemonset and coredns deployment to use them.
-	err := updateKubeProxy(client)
+	err := updateKubeProxy(kubeConfigPath)
 	if err != nil {
 		return err
 	}

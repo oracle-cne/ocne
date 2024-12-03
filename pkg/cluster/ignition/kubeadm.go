@@ -28,6 +28,11 @@ type InitConfig struct {
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
 	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
+	Patches          Patches          `yaml:"patches,omitempty"`
+}
+
+type Patches struct {
+	Directory string `yaml:"directory,omitempty"`
 }
 
 type LocalAPIEndpoint struct {
@@ -182,6 +187,10 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 		CertificateKey: ci.UploadCertificateKey,
 		SkipPhases: []string{
 			"addon/kube-proxy",
+			"preflight",
+		},
+		Patches: Patches{
+			Directory: "/etc/ocne/patches",
 		},
 	}
 	if !ci.ExpectingWorkerNodes {

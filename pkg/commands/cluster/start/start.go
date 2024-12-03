@@ -102,8 +102,12 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
+	//
+	// kube-proxy is forcibly installed to account for old cluster
+	// descriptions that use kubeadm to deploy kube-proxy. 
 	applications := []install.ApplicationDescription{
 		install.ApplicationDescription{
+			Force: true,
 			Application: &types.Application{
 				Name:      constants.KubeProxyChart,
 				Namespace: constants.KubeProxyNamespace,
