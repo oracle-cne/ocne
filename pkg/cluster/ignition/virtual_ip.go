@@ -383,8 +383,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	return data, nil
 }
 
-// add keepalived and nginx services and its files to ignition
-func ignitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) (*igntypes.Config, error) {
+// IgnitionForVirtualIp add keepalived and nginx services and its files to ignition
+func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) (*igntypes.Config, error) {
 	data, err := GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, proxy, netInterface)
 	if err != nil {
 		return nil, err

@@ -70,7 +70,7 @@ spec:
       apiServer:
         certSANs: [localhost, 127.0.0.1]
         extraArgs:
-          tls-cipher-suites:
+          tls-cipher-suites: {{.CipherSuite}}
       dns:
         imageRepository: container-registry.oracle.com/olcne
         imageTag: v1.11.1
@@ -79,31 +79,27 @@ spec:
           imageRepository: container-registry.oracle.com/olcne
           imageTag: 3.5.12
           extraArgs:
-            cipher-suites:
+            cipher-suites: {{.CipherSuite}}
       networking: {}
       controllerManager:
         extraArgs:
-          tls-cipher-suites:
+          tls-cipher-suites: {{.CipherSuite}}
       scheduler:
         extraArgs:
-          tls-cipher-suites:
+          tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
-          tls-cipher-suites:
+          tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
       discovery: {}
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
           volume-plugin-dir: "{{.VolumePluginDir}}"
-          tls-cipher-suites:
+          tls-cipher-suites: {{.CipherSuite}}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OLVMMachineTemplate
@@ -143,10 +139,8 @@ spec:
 joinConfiguration:
   nodeRegistration:
     kubeletExtraArgs:
-      cloud-provider: external
-      provider-id: olvm://{{"{{ ds[\"id\"] }}"}}
       volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
-      tls-cipher-suites:
+      tls-cipher-suites: {{.CipherSuite}}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OLVMMachineTemplate

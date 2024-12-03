@@ -50,6 +50,7 @@ type OlvmProvider struct {
 	SelfManaged         bool        `yaml:"selfmanagedfake"`
 	SelfManagedPtr      *bool       `yaml:"selfManaged,omitempty"`
 	Proxy               Proxy       `yaml:"proxy"`
+	NetworkInterface    string      `yaml:"networkInterface"`
 	OlvmCluster         OlvmCluster `yaml:"olvmCluster"`
 	ControlPlaneMachine OlvmMachine `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine `yaml:"workerMachine"`
@@ -429,6 +430,7 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
 		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
 		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
+		NetworkInterface:    ies(def.NetworkInterface, ovr.NetworkInterface),
 		OlvmCluster:         MergeOlvmCluster(&def.OlvmCluster, &ovr.OlvmCluster),
 		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),

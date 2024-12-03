@@ -383,7 +383,7 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	AddFile(ret, caKeyFile)
 
 	if ci.InternalLB {
-		ret, err = ignitionForVirtualIp(ret, ci.KubeAPIBindPort, ci.KubeAPIBindPortAlt, ci.KubeAPIServerIP, &ci.Proxy, ci.NetInterface)
+		ret, err = IgnitionForVirtualIp(ret, ci.KubeAPIBindPort, ci.KubeAPIBindPortAlt, ci.KubeAPIServerIP, &ci.Proxy, ci.NetInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +423,7 @@ func JoinCluster(cj *ClusterJoin) (*igntypes.Config, error) {
 	AddFile(ret, kubeadmFile)
 
 	if cj.Role == clustertypes.ControlPlaneRole && cj.InternalLB {
-		ret, err = ignitionForVirtualIp(ret, cj.KubeAPIBindPort, cj.KubeAPIBindPortAlt, cj.KubeAPIServerIP, &cj.Proxy, cj.NetInterface)
+		ret, err = IgnitionForVirtualIp(ret, cj.KubeAPIBindPort, cj.KubeAPIBindPortAlt, cj.KubeAPIServerIP, &cj.Proxy, cj.NetInterface)
 		if err != nil {
 			return nil, err
 		}

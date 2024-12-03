@@ -22,7 +22,7 @@ Before=kubeadm.service
 )
 
 // TODO USE LIBVIRT IGNITION !!!
-func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
@@ -62,13 +62,13 @@ func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (
 				Name:     "pre-kubeadm.conf",
 				Contents: util.StrPtr(preKubeadmDropin),
 			},
-			{
-				Name: "ocid-populate.conf",
-				Contents: util.StrPtr(`[Service]
-ExecStartPre=sh -c 'export OCID=$(curl -H "Authorization: Bearer Oracle" -L http://169.254.169.254/opc/v2/instance/id); sed -i "s/{{ ds\\[\\"id\\"\\] }}/$OCID/g" /etc/kubeadm.yml'
-ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /tmp/'
-`),
-			},
+			//			{
+			//				Name: "ocid-populate.conf",
+			//				Contents: util.StrPtr(`[Service]
+			//ExecStartPre=sh -c 'export OCID=$(curl -H "Authorization: Bearer Oracle" -L http://169.254.169.254/opc/v2/instance/id); sed -i "s/{{ ds\\[\\"id\\"\\] }}/$OCID/g" /etc/kubeadm.yml'
+			//ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /tmp/'
+			//`),
+			//			},
 		},
 	})
 
@@ -94,14 +94,14 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 	ign = ignition.Merge(ign, usr)
 
 	// TEMP - For Now assume internal LB
-	//internalLB := true
-	//if internalLB {
-	//
-	//	//ret, err = ignition.GenerateAssetsForVirtualIp(ign\, ci.KubeAPIBindPort, ci.KubeAPIBindPortAlt, ci.KubeAPIServerIP, &ci.Proxy, ci.NetInterface)
-	//	//if err != nil {
-	//	//	return nil, err
-	//	//}
-	//}
+	internalLB := true
+	if internalLB {
+		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPortAlt, config.KubeAPIServerBindPortAlt,
+			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
+		if err != nil {
+			return "", err
+		}
+	}
 
 	// Add any additional configuration
 	if clusterConfig.ExtraIgnition != "" {
