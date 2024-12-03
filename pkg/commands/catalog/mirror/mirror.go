@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sigs.k8s.io/yaml"
 	"strconv"
@@ -152,7 +153,12 @@ func Mirror(options Options) error {
 			counter = counter + 1
 		}
 		log.Debugf("Successfully pulled all images, now tarring all of the oci-archive files")
-		err = dump.CreateReportArchive(ociArchiveDir, constants.UserConfigDir+"/downloaded-images.tgz")
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		archivePath := filepath.Join(homedir, constants.UserConfigDir, "downloaded-images.tgz")
+		err = dump.CreateReportArchive(ociArchiveDir, archivePath)
 		if err != nil {
 			return err
 		}
