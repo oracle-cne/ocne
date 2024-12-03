@@ -99,15 +99,12 @@ elif [[ "$ACTION" == "init" ]]; then
 	echo Initalizing new Kubernetes cluster
 	mkdir -p $PKI
 
-	kubeadm init --skip-phases addon --config ${K8S}/kubeadm.conf --upload-certs
+	kubeadm init --config ${K8S}/kubeadm.conf --upload-certs
 
 	ENDPOINT=$(yq 'select(.kind == "ClusterConfiguration") | .controlPlaneEndpoint' < /etc/kubernetes/kubeadm.conf)
 	ENDPOINT_IP=$(echo $ENDPOINT | cut -d: -f1)
 	ENDPOINT_PORT=$(echo $ENDPOINT | cut -d: -f2)
 
-	export KUBECONFIG=/etc/kubernetes/admin.conf
-	kubeadm init phase addon kube-proxy --control-plane-endpoint "$ENDPOINT_IP" --apiserver-bind-port "$ENDPOINT_PORT" --print-manifest 2>/dev/null | yq 'select(.kind == "DaemonSet").spec.template.spec.containers[0].image = "container-registry.oracle.com/olcne/kube-proxy:current"' | kubectl apply -f -
-	kubeadm init phase addon coredns --print-manifest 2>/dev/null | yq 'select(.kind == "Deployment").spec.template.spec.containers[0].image = "container-registry.oracle.com/olcne/coredns:current"' | kubectl apply -f -
 elif [[ "$ACTION" == "join" ]]; then
 	echo Joining existing Kubernetes cluster
 	kubeadm join --config ${K8S}/kubeadm.conf
@@ -357,8 +354,7 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	kpc, err := GenerateKubeProxyConfigurationYaml(ci.ProxyMode)
-	kubeadmConfigRaw := fmt.Sprintf("%s\n---\n%s---\n%s", ki, cc, kpc)
+	kubeadmConfigRaw := fmt.Sprintf("%s\n---\n%s", ki, cc)
 
 	kubeadmFile := &File{
 		Path: KubeadmFilePath,

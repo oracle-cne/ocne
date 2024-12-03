@@ -27,6 +27,7 @@ type InitConfig struct {
 	LocalAPIEndpoint LocalAPIEndpoint `yaml:"localAPIEndpoint,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
+	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
 }
 
 type LocalAPIEndpoint struct {
@@ -179,10 +180,12 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			},
 		},
 		CertificateKey: ci.UploadCertificateKey,
+		SkipPhases: []string{
+			"addon/kube-proxy",
+		},
 	}
 	if !ci.ExpectingWorkerNodes {
 		ret.NodeRegistration.Taints = &[]string{}
-
 	}
 	return ret
 }
