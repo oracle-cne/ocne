@@ -17,9 +17,9 @@ import (
 const (
 	CommandName = "mirror"
 	helpShort   = "Mirror container images in a catalog"
-	helpLong    = `Clone the container images used by applications in an application catalog and push them to a private registry`
+	helpLong    = `Clone the container images used by applications in an application catalog and push them to a private registry or download them to a .tgz file`
 	helpExample = `
-ocne catalog mirror --name mycatalog --destination other-container-registry.io --push --config example-path/OCNE-Configuration-File
+ocne catalog mirror --name mycatalog --destination other-container-registry.io --push --config example-path/OCNE-Configuration-File --download
 `
 )
 

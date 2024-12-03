@@ -87,7 +87,7 @@ SUBCOMMANDS
 
 `mirror` [OPTIONS]...
   List the known container images used by applications in an application catalog and
-  optionally push them to a private registry. Images not present in the following Kubernetes 
+  optionally push them to a private registry or optionally download them to a .tgz file. Images not present in the following Kubernetes 
   objects in an application's chart should be denoted; Job, Cronjob, Pod, Podtemplate, Deployment,
   Statefulset, Replicaset, and Replicationcontroller. To denote such images, add comments in 
   the following format to any object in the application's chart: ``# extra-image: <image>``.
@@ -112,6 +112,9 @@ SUBCOMMANDS
 
 `-q`, `--quiet`
     If specified, output only image names and omit all other output. Useful for scripting.
+
+`-t`, `--download`
+    If specified, download the images into a .tgz file saved locally. Useful for working in air-gapped environments.
 
 SEE ALSO
 --------
