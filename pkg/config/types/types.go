@@ -76,8 +76,20 @@ type OlvmControlPlaneEndpoint struct {
 type OlvmMachine struct {
 	Memory           string             `yaml:"memory"`
 	Network          OlvmMachineNetwork `yaml:"network"`
+	Cpu              OlvmMachineCpu     `yaml:"cpu"`
 	OVirtClusterName string             `yaml:"ovirtClusterName"`
 	VMTemplateName   string             `yaml:"vmTemplateName"`
+}
+
+type OlvmMachineCpu struct {
+	Architecture string                `yaml:"architecture"`
+	Topology     OlvmMachineCpuToplogy `yaml:"topology"`
+}
+
+type OlvmMachineCpuToplogy struct {
+	Cores   int `yaml:"cores"`
+	Sockets int `yaml:"sockets"`
+	Threads int `yaml:"threads"`
 }
 
 type OlvmMachineNetwork struct {
@@ -481,6 +493,7 @@ func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 		OVirtClusterName: ies(def.OVirtClusterName, ovr.OVirtClusterName),
 		Memory:           ies(def.Memory, ovr.Memory),
 		Network:          MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
+		Cpu:              MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
 		VMTemplateName:   ies(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
@@ -495,6 +508,29 @@ func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) O
 		InterfaceType:   ies(def.InterfaceType, ovr.InterfaceType),
 		VnicName:        ies(def.VnicName, ovr.VnicName),
 		VnicProfileName: ies(def.VnicProfileName, ovr.VnicProfileName),
+	}
+}
+
+// MergeOlvmMachineCpu takes two OlvmMachineCpus and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCpu {
+	return OlvmMachineCpu{
+		Architecture: ies(def.Architecture, ovr.Architecture),
+		Topology:     MergeOlvmMachineCpuToplogy(&def.Topology, &ovr.Topology),
+	}
+}
+
+// MergeOlvmMachineCpuToplogy takes two OlvmMachineCpuToplogies and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuToplogy) OlvmMachineCpuToplogy {
+	return OlvmMachineCpuToplogy{
+		Cores:   iei(def.Cores, ovr.Cores),
+		Sockets: iei(def.Sockets, ovr.Sockets),
+		Threads: iei(def.Threads, ovr.Threads),
 	}
 }
 
