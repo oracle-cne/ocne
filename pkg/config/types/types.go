@@ -45,15 +45,16 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	KubeConfigPath      string      `yaml:"kubeconfig"`
-	Namespace           string      `yaml:"namespace"`
-	SelfManaged         bool        `yaml:"selfmanagedfake"`
-	SelfManagedPtr      *bool       `yaml:"selfManaged,omitempty"`
-	Proxy               Proxy       `yaml:"proxy"`
-	NetworkInterface    string      `yaml:"networkInterface"`
-	OlvmCluster         OlvmCluster `yaml:"olvmCluster"`
-	ControlPlaneMachine OlvmMachine `yaml:"controlPlaneMachine"`
-	WorkerMachine       OlvmMachine `yaml:"workerMachine"`
+	KubeConfigPath      string               `yaml:"kubeconfig"`
+	Namespace           string               `yaml:"namespace"`
+	SelfManaged         bool                 `yaml:"selfmanagedfake"`
+	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
+	Proxy               Proxy                `yaml:"proxy"`
+	NetworkInterface    string               `yaml:"networkInterface"`
+	OlvmCluster         OlvmCluster          `yaml:"olvmCluster"`
+	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
+	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
+	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
 }
 
 type OlvmCluster struct {
@@ -97,6 +98,11 @@ type OlvmMachineNetwork struct {
 	InterfaceType   string `yaml:"interfaceType"`
 	VnicName        string `yaml:"vnicName"`
 	VnicProfileName string `yaml:"vnicProfileName"`
+}
+
+type OlvmLocalAPIEndpoint struct {
+	BindPort         int    `yaml:"bindPort"`
+	AdvertiseAddress string `yaml:"advertiseAddress"`
 }
 
 type ByoProvider struct {
@@ -446,6 +452,7 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 		OlvmCluster:         MergeOlvmCluster(&def.OlvmCluster, &ovr.OlvmCluster),
 		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
+		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
 	}
 }
 
@@ -531,6 +538,17 @@ func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuT
 		Cores:   iei(def.Cores, ovr.Cores),
 		Sockets: iei(def.Sockets, ovr.Sockets),
 		Threads: iei(def.Threads, ovr.Threads),
+	}
+}
+
+// MergeOlvmLocalAPIEndpoint takes two OlvmLocalAPIEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpoint) OlvmLocalAPIEndpoint {
+	return OlvmLocalAPIEndpoint{
+		BindPort:         iei(def.BindPort, ovr.BindPort),
+		AdvertiseAddress: ies(def.AdvertiseAddress, ovr.AdvertiseAddress),
 	}
 }
 

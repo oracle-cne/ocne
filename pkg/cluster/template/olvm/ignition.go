@@ -96,7 +96,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 	// TEMP - For Now assume internal LB
 	internalLB := true
 	if internalLB {
-		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPortAlt, config.KubeAPIServerBindPortAlt,
+		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
 			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
 		if err != nil {
 			return "", err

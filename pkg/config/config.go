@@ -85,6 +85,9 @@ func GetDefaultConfig() (*types.Config, error) {
 				WorkerMachine: types.OlvmMachine{
 					Memory: constants.OLVMCAPIControlPlaneMemory,
 				},
+				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
+					BindPort: 6444,
+				},
 			},
 		},
 		PodSubnet:                constants.PodSubnet,
