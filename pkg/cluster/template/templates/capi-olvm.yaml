@@ -119,7 +119,12 @@ spec:
           networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
           vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicName}}"
           vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicProfileName}}"
-
+        cpu:
+          architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Architecture}}"
+          topology:
+            cores: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Cores}}"
+            sockets: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Sockets}}"
+            threads: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Threads}}"
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
@@ -160,6 +165,12 @@ spec:
           networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.NetworkName}}"
           vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicName}}"
           vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicProfileName}}"
+        cpu:
+          architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Architecture}}"
+          topology:
+            cores: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Cores}}"
+            sockets: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Sockets}}"
+            threads: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Threads}}"
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
