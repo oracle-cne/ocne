@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/yaml"
 	"strings"
 )
 
@@ -29,34 +30,34 @@ const (
 )
 
 // captureByNamespace collects the Kubernetes resources from the specified namespace, as JSON files
-func captureByNamespace(cs *captureSync, dynamicClient dynamic.Interface, outDir, namespace string, redact bool) {
-	goCaptureDynamicRes(cs, gvr.K8sNamespacedResources, dynamicClient, outDir, namespace, redact)
-	goCaptureDynamicRes(cs, gvr.CapiNamespacedResources, dynamicClient, outDir, namespace, redact)
-	goCaptureDynamicRes(cs, gvr.CertmanagerNamespacedResources, dynamicClient, outDir, namespace, redact)
-	goCaptureDynamicRes(cs, gvr.IstioNamespacedResources, dynamicClient, outDir, namespace, redact)
-	goCaptureDynamicRes(cs, gvr.PromNamespacedResources, dynamicClient, outDir, namespace, redact)
+func captureByNamespace(cs *captureSync, dynamicClient dynamic.Interface, outDir, namespace string, redact bool, managed bool, toJSON bool) {
+	goCaptureDynamicRes(cs, gvr.K8sNamespacedResources, dynamicClient, outDir, namespace, redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.CapiNamespacedResources, dynamicClient, outDir, namespace, redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.CertmanagerNamespacedResources, dynamicClient, outDir, namespace, redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.IstioNamespacedResources, dynamicClient, outDir, namespace, redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.PromNamespacedResources, dynamicClient, outDir, namespace, redact, managed, toJSON)
 
 }
 
 // captureClusterWide collects the Kubernetes resources that are cluster wide
-func captureClusterWide(cs *captureSync, dynamicClient dynamic.Interface, outDir string, redact bool) {
-	goCaptureDynamicRes(cs, gvr.K8sClusterResources, dynamicClient, outDir, "", redact)
-	goCaptureDynamicRes(cs, gvr.CapiClusterResources, dynamicClient, outDir, "", redact)
-	goCaptureDynamicRes(cs, gvr.CertmanagerClusterResources, dynamicClient, outDir, "", redact)
-	goCaptureDynamicRes(cs, gvr.IstioClusterResources, dynamicClient, outDir, "", redact)
-	goCaptureDynamicRes(cs, gvr.PromClusterResources, dynamicClient, outDir, "", redact)
+func captureClusterWide(cs *captureSync, dynamicClient dynamic.Interface, outDir string, redact bool, managed bool, toJSON bool) {
+	goCaptureDynamicRes(cs, gvr.K8sClusterResources, dynamicClient, outDir, "", redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.CapiClusterResources, dynamicClient, outDir, "", redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.CertmanagerClusterResources, dynamicClient, outDir, "", redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.IstioClusterResources, dynamicClient, outDir, "", redact, managed, toJSON)
+	goCaptureDynamicRes(cs, gvr.PromClusterResources, dynamicClient, outDir, "", redact, managed, toJSON)
 
 }
 
 // goCaptureDynamicRes will create a goroutine for every gvr to dump the gvr resource list manifests to a file
-func goCaptureDynamicRes(cs *captureSync, gvrs []schema.GroupVersionResource, dynamicClient dynamic.Interface, outDir string, namespace string, redact bool) {
+func goCaptureDynamicRes(cs *captureSync, gvrs []schema.GroupVersionResource, dynamicClient dynamic.Interface, outDir string, namespace string, redact bool, managed bool, toJSON bool) {
 	for i, _ := range gvrs {
 		cs.wg.Add(1)
 
 		// block until a slot is free in the channel buffer.
 		cs.channel <- 0
 		go func() {
-			err := captureDynamicRes(dynamicClient, gvrs[i], outDir, namespace, redact)
+			err := captureDynamicRes(dynamicClient, gvrs[i], outDir, namespace, redact, managed, toJSON)
 			if err != nil {
 				log.Errorf(err.Error())
 			}
@@ -67,9 +68,15 @@ func goCaptureDynamicRes(cs *captureSync, gvrs []schema.GroupVersionResource, dy
 }
 
 // captureDynamicRes will get the list of all resources that match the gvr and write the JSON file
-func captureDynamicRes(dynamicClient dynamic.Interface, gvr schema.GroupVersionResource, outDir string, namespace string, redact bool) error {
+func captureDynamicRes(dynamicClient dynamic.Interface, gvr schema.GroupVersionResource, outDir string, namespace string, redact bool, managed bool, toJSON bool) error {
 	var list *unstructured.UnstructuredList
 	var err error
+	var extension string
+	if toJSON {
+		extension = "json"
+	} else {
+		extension = "yaml"
+	}
 	if len(namespace) == 0 {
 		list, err = dynamicClient.Resource(gvr).List(context.TODO(), metav1.ListOptions{})
 	} else {
@@ -85,20 +92,25 @@ func captureDynamicRes(dynamicClient dynamic.Interface, gvr schema.GroupVersionR
 	if len(list.Items) > 0 {
 		var fname string
 		if gvr.Group == "" {
-			fname = fmt.Sprintf("%s.json", strings.ToLower(gvr.Resource))
+			fname = fmt.Sprintf("%s.%s", strings.ToLower(gvr.Resource), extension)
 		} else {
-			fname = fmt.Sprintf("%s.%s.json", strings.ToLower(gvr.Resource), strings.ToLower(gvr.Group))
+			fname = fmt.Sprintf("%s.%s.%s", strings.ToLower(gvr.Resource), strings.ToLower(gvr.Group), extension)
+		}
+		if !managed {
+			for _, item := range list.Items {
+				unstructured.RemoveNestedField(item.Object, "metadata", "managedFields")
+			}
 		}
 
-		if err = writeJSONToFile(list, namespace, fname, outDir, redact); err != nil {
+		if err = writeJSONOrYAMLToFile(list, fname, outDir, redact, toJSON); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// writeJSONToFile write the JSON data to a file
-func writeJSONToFile(v interface{}, namespace, resourceFile, outDir string, redact bool) error {
+// writeJSONOrYAMLToFile optionally converts the JSON data into a YAML format and then writes the JSON or YAML data to a file
+func writeJSONOrYAMLToFile(v interface{}, resourceFile, outDir string, redact bool, toJSON bool) error {
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
 		err := os.MkdirAll(outDir, os.ModePerm)
 		if err != nil {
@@ -113,11 +125,14 @@ func writeJSONToFile(v interface{}, namespace, resourceFile, outDir string, reda
 	}
 	defer f.Close()
 
-	resJSON, _ := json.MarshalIndent(v, JSONPrefix, JSONIndent)
+	output, _ := json.MarshalIndent(v, JSONPrefix, JSONIndent)
+	if !toJSON {
+		output, _ = yaml.JSONToYAML(output)
+	}
 	if redact {
-		_, err = f.WriteString(sanitize.SanitizeString(string(resJSON), nil))
+		_, err = f.WriteString(sanitize.SanitizeString(string(output), nil))
 	} else {
-		_, err = f.WriteString(string(resJSON))
+		_, err = f.WriteString(string(output))
 	}
 
 	if err != nil {

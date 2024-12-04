@@ -15,15 +15,19 @@ setup_file() {
 	NODE="$output"
 
 	run bash -c "echo true | timeout 1m ocne cluster console --node $NODE"
+	echo $output
 	[ "$status" -eq 0 ]
 
 	run bash -c "echo false | timeout 1m ocne cluster console --node $NODE"
+	echo $output
 	[ "$status" -ne 0 ]
 
 	run timeout 1m ocne cluster console --node $NODE -- true
+	echo $output
 	[ "$status" -eq 0 ]
 
 	run timeout 1m ocne cluster console --node $NODE -- false
+	echo $output
 	[ "$status" -ne 0 ]
 }
 
@@ -33,15 +37,19 @@ setup_file() {
 	NODE="$output"
 
 	run bash -c "echo true | timeout 1m ocne cluster console --node $NODE --direct"
+	echo $output
 	[ "$status" -eq 0 ]
 
 	run bash -c "echo false | timeout 1m ocne cluster console --node $NODE --direct"
+	echo $output
 	[ "$status" -ne 0 ]
 
 	run timeout 1m ocne cluster console --node $NODE --direct -- true
+	echo $output
 	[ "$status" -eq 0 ]
 
 	run timeout 1m ocne cluster console --node $NODE --direct -- false
+	echo $output
 	[ "$status" -ne 0 ]
 }
 

@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ type CachingTrieIterator[T any] interface {
 	// be retrieved with GetCached when the lower sub-node is visited later.
 	//
 	// Returns false if it could not be cached, either because the node has since been removed with a call to Remove,
-	// because Next has not been called yet, or because there is no lower sub node for the node previously returned by  Next.
+	// because Next has not been called yet, or because there is no lower sub node for the node previously returned by Next.
 	//
 	// The caching and retrieval is done in constant time.
 	CacheWithLowerSubNode(Cached) bool
@@ -102,6 +102,18 @@ func (iter addrTrieNodeIterator[T, V]) Next() *TrieNode[T] {
 
 //
 
+type addrTrieIteratorRem[T TrieKeyConstraint[T], V any] struct {
+	tree.TrieNodeIteratorRem[trieKey[T], V]
+}
+
+func (iter addrTrieIteratorRem[T, V]) Next() T {
+	return iter.TrieNodeIteratorRem.Next().GetKey().address
+}
+
+func (iter addrTrieIteratorRem[T, V]) Remove() T {
+	return iter.TrieNodeIteratorRem.Remove().GetKey().address
+}
+
 type cachingAddressTrieNodeIterator[T TrieKeyConstraint[T], V any] struct {
 	tree.CachingTrieNodeIterator[trieKey[T], V]
 }
@@ -141,15 +153,15 @@ func (iter associativeAddressTrieNodeIterator[T, V]) Next() *AssociativeTrieNode
 
 //
 
-type cachingAssociativeAddressTrieNodeIteratorX[T TrieKeyConstraint[T], V any] struct {
+type cachingAssociativeAddressTrieNodeIterator[T TrieKeyConstraint[T], V any] struct {
 	tree.CachingTrieNodeIterator[trieKey[T], V]
 }
 
-func (iter cachingAssociativeAddressTrieNodeIteratorX[T, V]) Next() *AssociativeTrieNode[T, V] {
+func (iter cachingAssociativeAddressTrieNodeIterator[T, V]) Next() *AssociativeTrieNode[T, V] {
 	return toAssociativeTrieNode[T, V](iter.CachingTrieNodeIterator.Next())
 }
 
-func (iter cachingAssociativeAddressTrieNodeIteratorX[T, V]) Remove() *AssociativeTrieNode[T, V] {
+func (iter cachingAssociativeAddressTrieNodeIterator[T, V]) Remove() *AssociativeTrieNode[T, V] {
 	return toAssociativeTrieNode[T, V](iter.CachingTrieNodeIterator.Remove())
 }
 
@@ -165,6 +177,10 @@ func (it emptyIterator[T]) Next() (t T) {
 	return
 }
 
-func nilAddressIterator[T any]() Iterator[T] {
+func (it emptyIterator[T]) Remove() (t T) {
+	return
+}
+
+func nilAddressIterator[T any]() IteratorWithRemove[T] {
 	return emptyIterator[T]{}
 }

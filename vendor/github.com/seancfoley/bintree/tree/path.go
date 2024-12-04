@@ -1,5 +1,5 @@
 //
-// Copyright 2022 Sean C Foley
+// Copyright 2022-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -133,18 +133,18 @@ func (node *PathNode[E, V]) Size() (storedSize int) {
 			for ; next != nil && next.storedSize == sizeUnknown; prev, next = next, next.next {
 			}
 			var nodeSize int
+			if next != nil {
+				nodeSize = next.storedSize
+			}
 			for {
 				if prev.IsAdded() {
 					nodeSize++
-				}
-				if next != nil {
-					nodeSize += next.storedSize
 				}
 				prev.storedSize = nodeSize
 				if prev == node {
 					break
 				}
-				prev = node.previous
+				prev = prev.previous
 			}
 			storedSize = node.storedSize
 		}
@@ -198,10 +198,10 @@ func (node *PathNode[E, V]) printList(builder *strings.Builder,
 			builder.WriteString(nonAddedNodeCircle)
 			builder.WriteByte('\n')
 		}
-		indents.nodeIndent = indents.subNodeInd + rightElbow
-		indents.subNodeInd = indents.subNodeInd + belowElbows
 		if next = next.next; next == nil {
 			break
 		}
+		indents.nodeIndent = indents.subNodeInd + rightElbow
+		indents.subNodeInd += belowElbows
 	}
 }

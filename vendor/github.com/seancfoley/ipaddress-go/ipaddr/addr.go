@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -258,7 +258,7 @@ func (addr *addressInternal) isMultiple() bool {
 
 // isPrefixed returns whether this address has an associated prefix length.
 func (addr *addressInternal) isPrefixed() bool {
-	return addr.section != nil && addr.section.IsPrefixed()
+	return addr.section.IsPrefixed()
 }
 
 // GetPrefixLen returns the prefix length, or nil if there is no prefix length.
@@ -732,11 +732,26 @@ func (addr *addressInternal) contains(other AddressType) bool {
 		return true
 	}
 	otherSection := otherAddr.GetSection()
+	return addr.section.Contains(otherSection) &&
+		// if it is IPv6 and has a zone, then it does not contain addresses from other zones
+		addr.isSameZone(otherAddr)
+}
+
+// Returns whether this is same type and version of the given address and whether it overlaps with the values in the given address or subnet
+func (addr *addressInternal) overlaps(other AddressType) bool {
+	if other == nil {
+		return true
+	}
+	otherAddr := other.ToAddressBase()
+	if addr.toAddress() == otherAddr || otherAddr == nil {
+		return true
+	}
+	otherSection := otherAddr.GetSection()
 	if addr.section == nil {
 		return otherSection.GetSegmentCount() == 0
 	}
-	return addr.section.Contains(otherSection) &&
-		// if it is IPv6 and has a zone, then it does not contain addresses from other zones
+	return addr.section.Overlaps(otherSection) &&
+		// if it is IPv6 and has a zone, then it does not overlap addresses from other zones
 		addr.isSameZone(otherAddr)
 }
 
@@ -1008,6 +1023,18 @@ func (addr *addressInternal) incrementBoundary(increment int64) *Address {
 	return addr.checkIdentity(addr.section.incrementBoundary(increment))
 }
 
+func (addr *addressInternal) enumerate(other AddressType) *big.Int {
+	if other == nil {
+		return nil
+	}
+	otherAddr := other.ToAddressBase()
+	if otherAddr == nil {
+		return nil
+	}
+	otherSection := otherAddr.GetSection()
+	return addr.section.Enumerate(otherSection)
+}
+
 func (addr *addressInternal) getStringCache() *stringCache {
 	cache := addr.cache
 	if cache == nil {
@@ -1165,7 +1192,7 @@ type Address struct {
 
 func (addr *Address) init() *Address {
 	if addr.section == nil {
-		return zeroAddr // this has a zero section rather that a nil section
+		return zeroAddr // this has a zero section rather than a nil section
 	}
 	return addr
 }
@@ -1209,12 +1236,25 @@ func (addr *Address) PrefixContains(other AddressType) bool {
 	return addr.init().prefixContains(other)
 }
 
+// containsSame returns whether this address contains all addresses in the given address or subnet of the same type.
+func (addr *Address) containsSame(other *Address) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is the same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
 func (addr *Address) Contains(other AddressType) bool {
 	if addr == nil {
 		return other == nil || other.ToAddressBase() == nil
 	}
 	return addr.init().contains(other)
+}
+
+// Overlaps returns true if this address overlaps the given address or subnet
+func (addr *Address) Overlaps(other AddressType) bool {
+	if addr == nil {
+		return true
+	}
+	return addr.init().overlaps(other)
 }
 
 // Compare returns a negative integer, zero, or a positive integer if this address or subnet is less than, equal, or greater than the given item.
@@ -1584,11 +1624,11 @@ func (addr *Address) ToSinglePrefixBlockOrAddress() *Address {
 
 func (addr *Address) toSinglePrefixBlockOrAddress() (*Address, addrerr.IncompatibleAddressError) {
 	if addr == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	res := addr.ToSinglePrefixBlockOrAddress()
 	if res == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	return res, nil
 }
@@ -1699,6 +1739,27 @@ func (addr *Address) IncrementBoundary(increment int64) *Address {
 // On address overflow or underflow, Increment returns nil.
 func (addr *Address) Increment(increment int64) *Address {
 	return addr.init().increment(increment)
+}
+
+// Enumerate indicates where an address sits relative to the subnet ordering.
+//
+// Determines how many address elements of the subnet precede the given address element, if the address is in the subnet.
+// If above the subnet range, it is the distance to the upper boundary added to the subnet count less one, and if below the subnet range, the distance to the lower boundary.
+//
+// In other words, if the given address is not in the subnet but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of subnet addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+//
+// Returns nil when the argument is multi-valued. The argument must be an individual address.
+//
+// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+//
+// Enumerate is the inverse of the increment method:
+//   - subnet.Enumerate(subnet.Increment(inc)) = inc
+//   - subnet.Increment(subnet.Enumerate(newAddr)) = newAddr
+//
+// If the given address does not have the same version or type, then nil is returned.
+func (addr *Address) Enumerate(other AddressType) *big.Int {
+	return addr.init().enumerate(other)
 }
 
 // ReverseBytes returns a new address with the bytes reversed.  Any prefix length is dropped.
@@ -1951,11 +2012,6 @@ func (addr *Address) IsMAC() bool {
 //
 // ToAddressBase can be called with a nil receiver, enabling you to chain this method with methods that might return a nil pointer.
 func (addr *Address) ToAddressBase() *Address {
-	return addr
-}
-
-// toAddressBase is needed for tries
-func (addr *Address) toAddressBase() *Address {
 	return addr
 }
 

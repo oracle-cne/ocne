@@ -1,5 +1,5 @@
 //
-// Copyright 2022 Sean C Foley
+// Copyright 2022-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,6 +81,7 @@ func (tree binTree[E, V]) format(state fmt.State, verb rune) {
 }
 
 // String returns a visual representation of the tree with one node per line.
+// It is equivalent to calling TreeString(true)
 func (tree *binTree[E, V]) String() string {
 	return tree.TreeString(true)
 }
@@ -103,7 +104,12 @@ func (tree *binTree[E, V]) printTree(builder *strings.Builder, inds indents, wit
 const treeKeyWildcard = '*'
 
 // Produces a visual representation of the given tries joined by a single root node, with one node per line.
-func treesString[E Key, V any](withNonAddedKeys bool, trees ...*binTree[E, V]) string {
+func treesString[E Key, V any](
+	withNonAddedKeys bool,
+	withSize bool,
+	treePrinter func(tree *binTree[E, V], builder *strings.Builder, inds indents, withNonAddedKeys bool),
+	trees ...*binTree[E, V]) string {
+
 	totalEntrySize := 0
 	for _, tree := range trees {
 		totalEntrySize += tree.Size()
@@ -118,7 +124,7 @@ func treesString[E Key, V any](withNonAddedKeys bool, trees ...*binTree[E, V]) s
 		for _, tree := range trees {
 			totalSize += tree.Size()
 		}
-		if withNonAddedKeys {
+		if withNonAddedKeys && withSize {
 			builder.WriteByte(' ')
 			builder.WriteByte(treeKeyWildcard)
 			builder.WriteString(" (")
@@ -128,15 +134,23 @@ func treesString[E Key, V any](withNonAddedKeys bool, trees ...*binTree[E, V]) s
 		builder.WriteByte('\n')
 		lastTreeIndex := len(trees) - 1
 		for i := 0; i < lastTreeIndex; i++ {
-			trees[i].printTree(&builder, indents{
-				nodeIndent: leftElbow,
-				subNodeInd: inBetweenElbows,
-			}, withNonAddedKeys)
+			treePrinter(
+				trees[i],
+				&builder,
+				indents{
+					nodeIndent: leftElbow,
+					subNodeInd: inBetweenElbows,
+				},
+				withNonAddedKeys)
 		}
-		trees[lastTreeIndex].printTree(&builder, indents{
-			nodeIndent: rightElbow,
-			subNodeInd: belowElbows,
-		}, withNonAddedKeys)
+		treePrinter(
+			trees[lastTreeIndex],
+			&builder,
+			indents{
+				nodeIndent: rightElbow,
+				subNodeInd: belowElbows,
+			},
+			withNonAddedKeys)
 	} else {
 		if withNonAddedKeys {
 			builder.WriteByte(' ')

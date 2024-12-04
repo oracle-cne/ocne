@@ -1,5 +1,5 @@
 //
-// Copyright 2022 Sean C Foley
+// Copyright 2022-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ func newNodeIterator[E Key, V any](forward, addedOnly bool, start, end *binTreeN
 		}
 	}
 	res := binTreeNodeIterator[E, V]{end: end}
-	res.setChangeTracker(ctracker)
+	res.initChangeTracker(ctracker)
 	res.operator = nextOperator
 	res.next = res.getStart(start, end, nil, addedOnly)
 	return &res
@@ -105,7 +105,7 @@ func (iter *binTreeNodeIterator[E, V]) getStart(
 	return iter.toNext(start)
 }
 
-func (iter *binTreeNodeIterator[E, V]) setChangeTracker(ctracker *changeTracker) {
+func (iter *binTreeNodeIterator[E, V]) initChangeTracker(ctracker *changeTracker) {
 	if ctracker != nil {
 		iter.cTracker, iter.currentChange = ctracker, ctracker.getCurrent()
 	}
@@ -121,11 +121,15 @@ func (iter *binTreeNodeIterator[E, V]) Next() *binTreeNode[E, V] {
 	}
 	cTracker := iter.cTracker
 	if cTracker != nil && cTracker.changedSince(iter.currentChange) {
-		panic("the tree has been modified since the iterator was created")
+		changePanic()
 	}
 	iter.current = iter.next
 	iter.next = iter.toNext(iter.next)
 	return iter.current
+}
+
+func changePanic() {
+	panic("the tree has been modified since the iterator was created")
 }
 
 func (iter *binTreeNodeIterator[E, V]) toNext(current *binTreeNode[E, V]) *binTreeNode[E, V] {
@@ -138,7 +142,7 @@ func (iter *binTreeNodeIterator[E, V]) Remove() *binTreeNode[E, V] {
 	}
 	cTracker := iter.cTracker
 	if cTracker != nil && cTracker.changedSince(iter.currentChange) {
-		panic("the tree has been modified since the iterator was created")
+		changePanic()
 	}
 	result := iter.current
 	result.Remove()
@@ -285,7 +289,7 @@ func newPriorityNodeIteratorBounded[E Key, V any](
 	start = res.getStart(start, nil, bnds, addedOnly)
 	if start != nil {
 		res.next = start
-		res.setChangeTracker(start.cTracker)
+		res.initChangeTracker(start.cTracker)
 	}
 	return res
 }
@@ -320,7 +324,7 @@ func newCachingPriorityNodeIteratorSized[E Key, V any](
 	start = res.getStart(start, nil, nil, false)
 	if start != nil {
 		res.next = start
-		res.setChangeTracker(start.cTracker)
+		res.initChangeTracker(start.cTracker)
 	}
 	return res
 }
@@ -517,7 +521,7 @@ func newSubNodeCachingIterator[E Key, V any](
 		addedOnly:           addedOnly,
 		binTreeNodeIterator: binTreeNodeIterator[E, V]{end: end},
 	}
-	res.setChangeTracker(ctracker)
+	res.initChangeTracker(ctracker)
 	res.operator = nextOperator
 	res.next = res.getStart(start, end, bnds, addedOnly)
 	return res
@@ -591,7 +595,6 @@ func (iter *subNodeCachingIterator[E, V]) Remove() *binTreeNode[E, V] {
 		// But parent is our next node.  Now our next node is invalid.  So we are lost.
 		// This is avoided for iterators that are "added" only.
 		panic("no removal allowed, this code path should not be accessible")
-		return nil
 	}
 	return iter.binTreeNodeIterator.Remove()
 }

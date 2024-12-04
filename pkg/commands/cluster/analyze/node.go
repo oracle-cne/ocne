@@ -6,8 +6,8 @@ package analyze
 import (
 	"fmt"
 
-	v1 "k8s.io/api/core/v1"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/analyze/triage"
+	v1 "k8s.io/api/core/v1"
 )
 
 func analyzeNodes(p *analyzeParams) error {
@@ -16,8 +16,7 @@ func analyzeNodes(p *analyzeParams) error {
 }
 
 func analyzeClusterNodes(p *analyzeParams) error {
-	// Read the cluster wide nodes.json
-	nodeList, err := readClusterWideJSONFile[v1.NodeList](p, "nodes.json")
+	nodeList, err := readClusterWideJSONOrYAMLFile[v1.NodeList](p, "nodes")
 	if err != nil {
 		return err
 	}

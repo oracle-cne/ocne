@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,12 +18,13 @@ package ipaddr
 
 import (
 	"fmt"
-	"github.com/seancfoley/ipaddress-go/ipaddr/addrerr"
-	"github.com/seancfoley/ipaddress-go/ipaddr/addrstr"
 	"math/big"
 	"net"
 	"net/netip"
 	"unsafe"
+
+	"github.com/seancfoley/ipaddress-go/ipaddr/addrerr"
+	"github.com/seancfoley/ipaddress-go/ipaddr/addrstr"
 )
 
 const (
@@ -390,22 +391,22 @@ func (addr *ipAddressInternal) GetBlockMaskPrefixLen(network bool) PrefixLen {
 }
 
 func (addr *ipAddressInternal) spanWithPrefixBlocks() []ExtendedIPSegmentSeries {
-	wrapped := addr.toIPAddress().Wrap()
 	if addr.IsSequential() {
 		if addr.IsSinglePrefixBlock() {
+			wrapped := addr.toIPAddress().Wrap()
 			return []ExtendedIPSegmentSeries{wrapped}
 		}
-		return getSpanningPrefixBlocks(wrapped, wrapped)
+		return cloneIPAddrs(nil, getSpanningPrefixBlocks(addr.toIPAddress(), addr.toIPAddress()))
 	}
-	return spanWithPrefixBlocks(wrapped)
+	return cloneIPAddrs(nil, spanWithPrefixBlocks(addr.toIPAddress()))
 }
 
 func (addr *ipAddressInternal) spanWithSequentialBlocks() []ExtendedIPSegmentSeries {
-	wrapped := addr.toIPAddress().Wrap()
 	if addr.IsSequential() {
+		wrapped := addr.toIPAddress().Wrap()
 		return []ExtendedIPSegmentSeries{wrapped}
 	}
-	return spanWithSequentialBlocks(wrapped)
+	return cloneIPAddrs(nil, spanWithSequentialBlocks(addr.toIPAddress()))
 }
 
 func (addr *ipAddressInternal) coverSeriesWithPrefixBlock() ExtendedIPSegmentSeries {
@@ -414,9 +415,9 @@ func (addr *ipAddressInternal) coverSeriesWithPrefixBlock() ExtendedIPSegmentSer
 		return addr.toIPAddress().Wrap()
 	}
 	return coverWithPrefixBlock(
-		addr.getLower().ToIP().Wrap(),
-		addr.getUpper().ToIP().Wrap(),
-	)
+		addr.getLower().ToIP(),
+		addr.getUpper().ToIP(),
+	).Wrap()
 }
 
 func (addr *ipAddressInternal) coverWithPrefixBlock() *IPAddress {
@@ -424,19 +425,11 @@ func (addr *ipAddressInternal) coverWithPrefixBlock() *IPAddress {
 	if addr.IsSinglePrefixBlock() {
 		return addr.toIPAddress()
 	}
-	res := coverWithPrefixBlock(
-		addr.getLower().ToIP().Wrap(),
-		addr.getUpper().ToIP().Wrap(),
-	)
-	return res.(WrappedIPAddress).IPAddress
+	return coverWithPrefixBlock(addr.getLower().ToIP(), addr.getUpper().ToIP())
 }
 
 func (addr *ipAddressInternal) coverWithPrefixBlockTo(other *IPAddress) *IPAddress {
-	res := getCoveringPrefixBlock(
-		addr.toIPAddress().Wrap(),
-		other.Wrap(),
-	)
-	return res.(WrappedIPAddress).IPAddress
+	return getCoveringPrefixBlock(addr.toIPAddress(), other)
 }
 
 func (addr *ipAddressInternal) getNetworkMask(network IPAddressNetwork) *IPAddress {
@@ -1284,11 +1277,11 @@ func (addr *IPAddress) ToSinglePrefixBlockOrAddress() *IPAddress {
 
 func (addr *IPAddress) toSinglePrefixBlockOrAddress() (*IPAddress, addrerr.IncompatibleAddressError) {
 	if addr == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	res := addr.ToSinglePrefixBlockOrAddress()
 	if res == nil {
-		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block"}}
+		return nil, &incompatibleAddressError{addressError{key: "ipaddress.error.address.not.block", str: addr.String()}}
 	}
 	return res, nil
 }
@@ -1429,12 +1422,38 @@ func (addr *IPAddress) PrefixContains(other AddressType) bool {
 	return addr.init().prefixContains(other)
 }
 
+// containsSame returns whether this address contains all addresses in the given address or subnet of the same type.
+func (addr *IPAddress) containsSame(other *IPAddress) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is the same type and version as the given address or subnet and whether it contains all addresses in the given address or subnet.
 func (addr *IPAddress) Contains(other AddressType) bool {
 	if addr == nil {
 		return other == nil || other.ToAddressBase() == nil
 	}
 	return addr.init().contains(other)
+}
+
+// ContainsRange returns true if this address contains the given sequential range
+func (addr *IPAddress) ContainsRange(other IPAddressSeqRangeType) bool {
+	return isContainedBy(other, addr.init())
+}
+
+// Overlaps returns true if this address overlaps the given address or subnet
+func (addr *IPAddress) Overlaps(other AddressType) bool {
+	if addr == nil {
+		return true
+	}
+	return addr.init().overlaps(other)
+}
+
+// Overlaps returns true if this address overlaps the given sequential range
+func (addr *IPAddress) OverlapsRange(other IPAddressSeqRangeType) bool {
+	if other == nil {
+		return true
+	}
+	return other.OverlapsAddress(addr)
 }
 
 // Compare returns a negative integer, zero, or a positive integer if this address or subnet is less than, equal, or greater than the given item.
@@ -1560,11 +1579,6 @@ func (addr *IPAddress) ToAddressBase() *Address {
 	return (*Address)(unsafe.Pointer(addr))
 }
 
-// toAddressBase is needed for tries, it skips the init() call
-func (addr *IPAddress) toAddressBase() *Address {
-	return (*Address)(unsafe.Pointer(addr))
-}
-
 // ToIP is an identity method.
 //
 // ToIP can be called with a nil receiver, enabling you to chain this method with methods that might return a nil pointer.
@@ -1598,7 +1612,7 @@ func (addr *IPAddress) ToIPv4() *IPv4Address {
 // which can be used to write code that works with both IP addresses and IP address sections.
 // Wrap can be called with a nil receiver, wrapping a nil address.
 func (addr *IPAddress) Wrap() WrappedIPAddress {
-	return wrapIPAddress(addr)
+	return wrapIPAddress(addr.init())
 }
 
 // WrapAddress wraps this IP address, returning a WrappedAddress, an implementation of ExtendedSegmentSeries,
@@ -1751,6 +1765,27 @@ func (addr *IPAddress) IncrementBoundary(increment int64) *IPAddress {
 // On address overflow or underflow, Increment returns nil.
 func (addr *IPAddress) Increment(increment int64) *IPAddress {
 	return addr.init().increment(increment).ToIP()
+}
+
+// Enumerate indicates where an address sits relative to the subnet ordering.
+//
+// Determines how many address elements of the subnet precede the given address element, if the address is in the subnet.
+// If above the subnet range, it is the distance to the upper boundary added to the subnet count less one, and if below the subnet range, the distance to the lower boundary.
+//
+// In other words, if the given address is not in the subnet but above it, returns the number of addresses preceding the address from the upper range boundary,
+// added to one less than the total number of subnet addresses.  If the given address is not in the subnet but below it, returns the number of addresses following the address to the lower subnet boundary.
+//
+// Returns nil when the argument is multi-valued. The argument must be an individual address.
+//
+// When this is also an individual address, the returned value is the distance (difference) between the two addresses.
+//
+// Enumerate is the inverse of the increment method:
+//   - subnet.Enumerate(subnet.Increment(inc)) = inc
+//   - subnet.Increment(subnet.Enumerate(newAddr)) = newAddr
+//
+// If the given address does not have the same version or type, then nil is returned.
+func (addr *IPAddress) Enumerate(other AddressType) *big.Int {
+	return addr.init().enumerate(other)
 }
 
 // SpanWithRange returns an IPAddressSeqRange instance that spans this subnet to the given subnet.
@@ -1918,9 +1953,7 @@ func versionsMatch(one, two *IPAddress) bool {
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 // Arguments that are not the same IP version are ignored.
 func (addr *IPAddress) MergeToSequentialBlocks(addrs ...*IPAddress) []*IPAddress {
-	series := filterCloneIPAddrs(addr.init(), addrs)
-	blocks := getMergedSequentialBlocks(series)
-	return cloneToIPAddrs(blocks)
+	return getMergedSequentialBlocks(filterSeries(addr, addrs))
 }
 
 // MergeToPrefixBlocks merges this subnet with the list of subnets to produce the smallest array of prefix blocks.
@@ -1928,9 +1961,64 @@ func (addr *IPAddress) MergeToSequentialBlocks(addrs ...*IPAddress) []*IPAddress
 // The resulting slice is sorted from lowest address value to highest, regardless of the size of each prefix block.
 // Arguments that are not the same IP version are ignored.
 func (addr *IPAddress) MergeToPrefixBlocks(addrs ...*IPAddress) []*IPAddress {
-	series := filterCloneIPAddrs(addr.init(), addrs)
-	blocks := getMergedPrefixBlocks(series)
-	return cloneToIPAddrs(blocks)
+	return getMergedPrefixBlocks(filterSeries(addr, addrs))
+}
+
+// MergeToPrefixBlocks merges the given set of IP addresses and subnets into a minimal number of prefix blocks.
+//
+// This function complements the MergeToPrefixBlock methods of each IP address type, whether IPv4Address, IPv6Address, or IPAddress.
+// Those methods ignore arguments that do not match the IP version of the method receiver, while this function does not.
+// This function will only ignore an argument if it is nil, or it is the zero-bit zero value of the type IPAddress.
+// All other arguments will have IP version IPv4 or IPv6, and will be merged into one of the two returned slices.
+//
+// Use ToIPv4Slice or ToIPv6Slice if you wish to convert the returned slices to the more specific types []*IPv4Address or []*IPv6Address.
+func MergeToPrefixBlocks(addrs ...*IPAddress) (ipv4Blocks, ipv6Blocks []*IPAddress) {
+	return mergeToBlocks((*IPAddress).MergeToPrefixBlocks, addrs)
+}
+
+// MergeToSequentialBlocks merges the given set of IP addresses and subnets into a minimal number of sequential blocks.
+//
+// This function complements the MergeToSequentialBlocks methods of the IP address types, whether IPv4Address, IPv6Address, or IPAddress.
+// Those methods ignore arguments that do not match the IP version of the method receiver, while this function does not.
+// This function will only ignore an argument if it is the zero-bit zero value of the type IPAddress.
+// All other arguments will have IP version IPv4 or IPv6, and will be merged into one of the two returned slices.
+//
+// Use ToIPv4Slice or ToIPv6Slice if you wish to convert the returned slices to the more specific types []*IPv4Address or []*IPv6Address.
+func MergeToSequentialBlocks(addrs ...*IPAddress) (ipv4Blocks, ipv6Blocks []*IPAddress) {
+	return mergeToBlocks((*IPAddress).MergeToSequentialBlocks, addrs)
+}
+
+func mergeToBlocks(
+	merge func(*IPAddress, ...*IPAddress) []*IPAddress,
+	addrs []*IPAddress) (
+	ipv4Blocks, ipv6Blocks []*IPAddress) {
+
+	var ipv4Addr, ipv6Addr *IPAddress
+	for _, addr := range addrs {
+		addrType := addr.getAddrType()
+		if addrType == ipv4Type {
+			if ipv4Addr == nil {
+				ipv4Addr = addr
+			}
+			if ipv6Addr != nil {
+				break
+			}
+		} else if addrType == ipv6Type {
+			if ipv6Addr == nil {
+				ipv6Addr = addr
+			}
+			if ipv4Addr != nil {
+				break
+			}
+		}
+	}
+	if ipv4Addr != nil {
+		ipv4Blocks = merge(ipv4Addr, addrs...)
+	}
+	if ipv6Addr != nil {
+		ipv6Blocks = merge(ipv6Addr, addrs...)
+	}
+	return
 }
 
 // SpanWithPrefixBlocks returns an array of prefix blocks that cover the same set of addresses as this subnet.
@@ -1942,12 +2030,9 @@ func (addr *IPAddress) SpanWithPrefixBlocks() []*IPAddress {
 		if addr.IsSinglePrefixBlock() {
 			return []*IPAddress{addr}
 		}
-		wrapped := addr.Wrap()
-		spanning := getSpanningPrefixBlocks(wrapped, wrapped)
-		return cloneToIPAddrs(spanning)
+		return getSpanningPrefixBlocks(addr, addr)
 	}
-	wrapped := addr.Wrap()
-	return cloneToIPAddrs(spanWithPrefixBlocks(wrapped))
+	return spanWithPrefixBlocks(addr)
 }
 
 // SpanWithPrefixBlocksTo returns the smallest slice of prefix block subnets that span from this subnet to the given subnet.
@@ -1964,12 +2049,7 @@ func (addr *IPAddress) SpanWithPrefixBlocksTo(other *IPAddress) []*IPAddress {
 	if !versionsMatch(addr, other) {
 		return addr.SpanWithPrefixBlocks()
 	}
-	return cloneToIPAddrs(
-		getSpanningPrefixBlocks(
-			addr.Wrap(),
-			other.Wrap(),
-		),
-	)
+	return getSpanningPrefixBlocks(addr, other)
 }
 
 // CoverWithPrefixBlockTo returns the minimal-size prefix block that covers all the addresses spanning from this subnet to the given subnet.
@@ -2000,7 +2080,7 @@ func (addr *IPAddress) SpanWithSequentialBlocks() []*IPAddress {
 	if addr.IsSequential() {
 		return []*IPAddress{addr}
 	}
-	return cloneToIPAddrs(spanWithSequentialBlocks(addr.Wrap()))
+	return spanWithSequentialBlocks(addr)
 }
 
 // SpanWithSequentialBlocksTo produces the smallest slice of sequential block subnets that span all values from this subnet to the given subnet.
@@ -2019,12 +2099,7 @@ func (addr *IPAddress) SpanWithSequentialBlocksTo(other *IPAddress) []*IPAddress
 	if !versionsMatch(addr, other) {
 		return addr.SpanWithSequentialBlocks()
 	}
-	return cloneToIPAddrs(
-		getSpanningSequentialBlocks(
-			addr.Wrap(),
-			other.Wrap(),
-		),
-	)
+	return getSpanningSequentialBlocks(addr, other)
 }
 
 // ReverseBytes returns a new address with the bytes reversed.  Any prefix length is dropped.
@@ -2068,7 +2143,7 @@ func (addr *IPAddress) GetSegmentStrings() []string {
 //and https://standards.ieee.org/wp-content/uploads/import/documents/tutorials/macgrp.pdf and https://en.wikipedia.org/wiki/MAC_address
 //canonicalParams = new MACStringOptions.Builder().setSeparator(MACAddress.DASH_SEGMENT_SEPARATOR).setUppercase(true).setExpandedSegments(true).setWildcards(new Wildcards(MACAddress.DASHED_SEGMENT_RANGE_SEPARATOR_STR, Address.SEGMENT_WILDCARD_STR, null)).toOptions();
 // Search docs for: An example is "01-23-45-67-89-ab"
-// But ACTUALLY, in the ends I decided not to: https://www.mef.net/wp-content/uploads/MEF-89.pdf
+// But ACTUALLY, in the end I decided not to: https://www.mef.net/wp-content/uploads/MEF-89.pdf
 
 // ToCanonicalString produces a canonical string for the address.
 //

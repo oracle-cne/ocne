@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2024 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ func NewMACSectionFromBytes(bytes []byte, segmentCount int) (res *MACAddressSect
 		// note prefix len is nil
 		res = createMACSection(segments)
 		if expectedByteCount == len(bytes) {
-			bytes = cloneBytes(bytes)
+			bytes = clone(bytes)
 			res.cache.bytesCache = &bytesCache{lowerBytes: bytes}
 			if !res.isMult { // not a prefix block
 				res.cache.bytesCache.upperBytes = bytes
@@ -178,6 +178,11 @@ type MACAddressSection struct {
 	addressSectionInternal
 }
 
+// containsSame returns whether this address section contains all address sections in the given address section collection of the same type.
+func (addr *MACAddressSection) containsSame(other *MACAddressSection) bool {
+	return addr.Contains(other)
+}
+
 // Contains returns whether this is same type and version as the given address section and whether it contains all values in the given section.
 //
 // Sections must also have the same number of segments to be comparable, otherwise false is returned.
@@ -188,12 +193,23 @@ func (section *MACAddressSection) Contains(other AddressSectionType) bool {
 	return section.contains(other)
 }
 
+// Overlaps returns whether this is same type and version as the given address section and whether it overlaps the given section, both sections containing at least one individual section in common.
+//
+// Sections must also have the same number of segments to be comparable, otherwise false is returned.
+func (section *MACAddressSection) Overlaps(other AddressSectionType) bool {
+	if section == nil {
+		return other == nil || other.ToSectionBase() == nil
+	}
+	return section.overlaps(other)
+}
+
 // Equal returns whether the given address section is equal to this address section.
 // Two address sections are equal if they represent the same set of sections.
 // They must match:
-//  - type/version: MAC
-//  - segment counts
-//  - segment value ranges
+//   - type/version: MAC
+//   - segment counts
+//   - segment value ranges
+//
 // Prefix lengths are ignored.
 func (section *MACAddressSection) Equal(other AddressSectionType) bool {
 	if section == nil {
@@ -607,6 +623,10 @@ var macMaxValues = []uint64{
 	0xffffffffffffff,
 	0xffffffffffffffff}
 
+func (section *MACAddressSection) getMacCountLong() uint64 {
+	return section.getCachedCount().Uint64()
+}
+
 // Increment returns the item that is the given increment upwards into the range,
 // with the increment of 0 returning the first in the range.
 //
@@ -630,24 +650,66 @@ func (section *MACAddressSection) Increment(incrementVal int64) *MACAddressSecti
 		return section
 	}
 	segCount := section.GetSegmentCount()
-	lowerValue := section.Uint64Value()
-	upperValue := section.UpperUint64Value()
-	count := section.GetCount()
-	countMinus1 := count.Sub(count, bigOneConst()).Uint64()
-	isOverflow := checkOverflow(incrementVal, lowerValue, upperValue, countMinus1, getMacMaxValueLong(segCount))
-	if isOverflow {
+	if isOverflow := checkOverflow(incrementVal, section.Uint64Value, section.UpperUint64Value, section.getMacCountLong, func() uint64 { return getMacMaxValueLong(segCount) }, section.IsSequential); isOverflow {
 		return nil
 	}
 	return increment(
 		section.ToSectionBase(),
 		incrementVal,
 		macNetwork.getAddressCreator(),
-		countMinus1,
-		section.Uint64Value(),
-		section.UpperUint64Value(),
+		section.getMacCountLong,
+		section.Uint64Value,
+		section.UpperUint64Value,
 		section.addressSectionInternal.getLower,
 		section.addressSectionInternal.getUpper,
 		section.getPrefixLen()).ToMAC()
+}
+
+func low64MAC(section *AddressSection) uint64 {
+	return section.ToMAC().Uint64Value()
+}
+
+func low64UpperMAC(section *AddressSection) uint64 {
+	return section.ToMAC().UpperUint64Value()
+}
+
+func (section *MACAddressSection) enumerateAddr(other AddressSectionType) *big.Int {
+	if otherSection := other.ToSectionBase(); otherSection != nil {
+		if matches, count := section.matchesTypeAndCount(otherSection); matches {
+			if count < 8 {
+				if val, ok := enumerateSmall(section.ToSectionBase(), otherSection, low64MAC, low64UpperMAC); ok {
+					return big.NewInt(val)
+				}
+				return nil
+			}
+			return enumerateBig(section.ToSectionBase(), otherSection, low64MAC, low64UpperMAC)
+		}
+	}
+	return nil
+}
+
+// Enumerate indicates where an individual address section sits relative to the address section range ordering.
+//
+// Determines how many address section elements of a range precede the given address section element, if the address section is in the range.
+// If above the range, it is the distance to the upper boundary added to the range count less one, and if below the range, the distance to the lower boundary.
+//
+// In other words, if the given address section is not in the range but above it, returns the number of address sections preceding the address from the upper range boundary,
+// added to one less than the total number of range address sections.  If the given address section is not in the subnet but below it, returns the number of address sections following the address section to the lower subnet boundary.
+//
+// If the argument is not in the range, but neither above nor below the range, then nil is returned.
+//
+// Enumerate returns nil when the argument is multi-valued. The argument must be an individual address section.
+//
+// When this is also an individual address section, the returned value is the distance (difference) between the two address section values.
+//
+// If the given address section does not have the same type, then nil is returned.
+//
+// Sections must also have the same number of segments to be comparable, otherwise nil is returned.
+func (section *MACAddressSection) Enumerate(other AddressSectionType) *big.Int {
+	if other != nil {
+		return section.enumerateAddr(other)
+	}
+	return nil
 }
 
 // ReverseBits returns a new section with the bits reversed.  Any prefix length is dropped.

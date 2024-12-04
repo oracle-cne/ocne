@@ -145,6 +145,7 @@ StartLimitIntervalSec=0
 [Service]
 ExecStartPre=/etc/ocne/nginx/pull_ocne_nginx
 ExecStart=/etc/ocne/nginx/start_ocne_nginx
+ExecStop=podman stop ocne-nginx
 Restart=always
 RestartSec=1
 
@@ -173,7 +174,7 @@ if [ -f "/etc/ocne/nginx/image" ]; then
 	. "/etc/ocne/nginx/image"
 fi
 
-exec podman run --rm --network=host --volume=/etc/ocne/nginx:/etc/nginx ${IMAGE}
+exec podman run --name ocne-nginx --replace --rm --network=host --volume=/etc/ocne/nginx:/etc/nginx ${IMAGE}
 `
 
 	nginxImage = "IMAGE=container-registry.oracle.com/olcne/nginx:1.17.7-1"

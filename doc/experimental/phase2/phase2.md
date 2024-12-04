@@ -1,6 +1,6 @@
 # Phase Two: Oracle Cloud Native Environment 2.0 OCK Migration
 
-### Version: v0.0.5-draft
+### Version: v0.0.6-draft
 
 ## Overview
 Instructions for performing an in-place upgrade of a Kubernetes cluster from Oracle Cloud Native Environment 1.x to 2.x.
@@ -76,9 +76,31 @@ After the entire has been upgraded to OCK, then you can safely remove the verraz
  helm uninstall -n verrazzano-module-operator verrazzano-module-operator --wait
 ```
 
-### Delete the Module CRs
-*TDB* Patch the CRs and remove the finalizer
-*TBD* Delete each CR
+### List The Module CRs
+There are several CRs of type Module. Once all the nodes have moved to OCK, then they are no longer needed.  
+They can be found by the following kubectl command 
+```text
+kubectl get module -A
+```
+At this point, the module operator should be removed from the system, so the finalizers have to be deleted. 
+
+### Remove finalizer for each Module
+Remove the finalizers for each Module object. A potential example is listed below.
+```text
+ kubectl patch module -n example-namespace example-module-name -p '{"metadata":{"finalizers":[]}}' --type=merge
+```
+
+## Delete Module objects
+```text
+ kubectl delete --all --all-namespaces module --cascade=orphan
+ ```
+
+## Confirm that the Module objects are deleted
+The following command should return `no resources found`. If not, repeat the previous steps of removing the finalizers.
+
+```text
+ kubectl get --all-namespaces modules
+```
 
 ## Delete all the Verrazzano related CRDs
 ```text
