@@ -4,6 +4,8 @@
 package olvm
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
@@ -14,9 +16,12 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -165,5 +170,69 @@ func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error
 	if haveError {
 		return fmt.Errorf("Not all Cluster API controllers became available")
 	}
+	return nil
+}
+
+func (cad *OlvmDriver) getClusterObject() (unstructured.Unstructured, error) {
+	clusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
+		if u.GetKind() != "Cluster" {
+			return false
+		}
+		if u.GetAPIVersion() != "cluster.x-k8s.io/v1beta1" {
+			return false
+		}
+		_, ok := u.GetLabels()[ClusterNameLabel]
+		return ok
+	})
+	if err != nil {
+		if k8s.IsNotExist(err) {
+			return unstructured.Unstructured{}, fmt.Errorf("Cluster resources do not include a valid cluster.x-k8s.io/v1beta1/Cluster")
+		} else {
+			return unstructured.Unstructured{}, err
+		}
+	}
+	return clusterObj, err
+}
+
+// applyResources creates resources in a cluster if the resource does not
+// already exist.  If the resource already exists, it is not modified.
+func (cad *OlvmDriver) applyResources(restConfig *rest.Config) error {
+	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
+	if err != nil {
+		return err
+	}
+
+	for _, r := range resources {
+		err = k8s.CreateResourceIfNotExist(restConfig, &r)
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (cad *OlvmDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNodes int) error {
+	return fmt.Errorf("Joining new nodes to this cluster is done by editing the KubeadmControlPlane and MachineDeployment resources in the management cluster")
+}
+
+func (cad *OlvmDriver) Stop() error {
+	return fmt.Errorf("OlvmDriver.Stop() is not implemented")
+}
+
+func (cad *OlvmDriver) GetKubeconfigPath() string {
+	return cad.KubeConfig
+}
+
+func (cad *OlvmDriver) GetKubeAPIServerAddress() string {
+	return ""
+}
+
+func (cad *OlvmDriver) PostInstallHelpStanza() string {
+	return fmt.Sprintf("To access the cluster:\n    use %s", cad.KubeConfig)
+}
+
+func (Cad *OlvmDriver) DefaultCNIInterfaces() []string {
+	// let CNI pick the interface
 	return nil
 }
