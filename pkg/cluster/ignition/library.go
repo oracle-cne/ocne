@@ -36,9 +36,10 @@ const (
 	ActionInit    = "init"
 	ActionJoin    = "join"
 
-	KubeletServiceName = "kubelet.service"
-	CrioServiceName    = "crio.service"
-	IscsidServiceName  = "iscsid.service"
+	KubeletServiceName   = "kubelet.service"
+	CrioServiceName      = "crio.service"
+	IscsidServiceName    = "iscsid.service"
+	OcneNginxServiceName = "ocne-nginx.service"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.

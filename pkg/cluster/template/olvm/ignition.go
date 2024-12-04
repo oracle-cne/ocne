@@ -19,6 +19,18 @@ const (
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
 `
+	// Used whenever a service has to start before the CAPI
+	// service used to start Kubernetes services on a node
+	preKubeadmService = `[Unit]
+Before=kubeadm.service
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c "systemctl enable --now crio.service && systemctl enable kubelet.service"
+
+[Install]
+WantedBy=multi-user.target
+`
 )
 
 // TODO USE LIBVIRT IGNITION !!!
@@ -51,27 +63,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 		Enabled: util.BoolPtr(false),
 	})
 
-	// Add a systemd dropin to force crio to start before
-	// kubeadm.service.  That service is included in the
-	// ignition configuration from the CAPI provider.
-	ign = ignition.AddUnit(ign, &igntypes.Unit{
-		Name:    ignition.CrioServiceName,
-		Enabled: util.BoolPtr(true),
-		Dropins: []igntypes.Dropin{
-			{
-				Name:     "pre-kubeadm.conf",
-				Contents: util.StrPtr(preKubeadmDropin),
-			},
-			//			{
-			//				Name: "ocid-populate.conf",
-			//				Contents: util.StrPtr(`[Service]
-			//ExecStartPre=sh -c 'export OCID=$(curl -H "Authorization: Bearer Oracle" -L http://169.254.169.254/opc/v2/instance/id); sed -i "s/{{ ds\\[\\"id\\"\\] }}/$OCID/g" /etc/kubeadm.yml'
-			//ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /tmp/'
-			//`),
-			//			},
-		},
-	})
-
 	// Update service configuration file
 	updateFile := &ignition.File{
 		Path: ignition.OcneUpdateConfigPath,
@@ -87,6 +78,31 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 		Name:    ignition.IscsidServiceName,
 		Enabled: util.BoolPtr(true),
 	})
+
+	ign = ignition.AddUnit(ign, &igntypes.Unit{
+		Name:    ignition.OcneNginxServiceName,
+		Enabled: util.BoolPtr(true),
+		Dropins: []igntypes.Dropin{
+			{
+				Name:     "pre-kubeadm.conf",
+				Contents: util.StrPtr(preKubeadmDropin),
+			},
+			{
+				Name: "enable-services.conf",
+				Contents: util.StrPtr(`[Service]
+ExecStartPost=sh -c 'systemctl enable --now crio.service && systemctl enable kubelet.service && systemctl enable --now kubeadm.service'
+`),
+			},
+		},
+	})
+
+	// Add a systemd service to start crio and enable kubelet before
+	// kubeadm.service.
+	//ign = ignition.AddUnit(ign, &igntypes.Unit{
+	//	Name:     ignition.PreKubeAdmServiceName,
+	//	Enabled:  util.BoolPtr(true),
+	//	Contents: util.StrPtr(preKubeadmService),
+	//})
 
 	// Merge everything together
 	ign = ignition.Merge(ign, container)
