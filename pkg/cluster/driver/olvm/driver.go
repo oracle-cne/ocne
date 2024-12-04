@@ -10,7 +10,11 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"k8s.io/client-go/kubernetes"
 	"os"
 	"path/filepath"
 )
@@ -129,4 +133,37 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	}
 
 	return cad, nil
+}
+
+func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error {
+	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		{
+			Message: "Waiting for Core Cluster API Controllers",
+			WaitFunction: func(i interface{}) error {
+				return k8s.WaitForDeployment(kubeClient, constants.CoreCAPINamespace, constants.CoreCAPIDeployment, 1)
+			},
+		},
+		{
+			Message: "Waiting for Kubadm Boostrap Cluster API Controllers",
+			WaitFunction: func(i interface{}) error {
+				return k8s.WaitForDeployment(kubeClient, constants.KubeadmBootstrapCAPINamespace, constants.KubeadmBootstrapCAPIDeployment, 1)
+			},
+		},
+		{
+			Message: "Waiting for Kubadm Control Plane Cluster API Controllers",
+			WaitFunction: func(i interface{}) error {
+				return k8s.WaitForDeployment(kubeClient, constants.KubeadmControlPlaneCAPINamespace, constants.KubeadmControlPlaneCAPIDeployment, 1)
+			},
+		},
+		{
+			Message: "Waiting for Olvm Cluster API Controllers",
+			WaitFunction: func(i interface{}) error {
+				return k8s.WaitForDeployment(kubeClient, constants.OLVMCAPIOperatorNamespace, constants.OLVMCAPIDeployment, 1)
+			},
+		},
+	})
+	if haveError {
+		return fmt.Errorf("Not all Cluster API controllers became available")
+	}
+	return nil
 }

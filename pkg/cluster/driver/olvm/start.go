@@ -185,40 +185,6 @@ func (cad *OlvmDriver) PostStart() error {
 	return nil
 }
 
-func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error {
-	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
-		{
-			Message: "Waiting for Core Cluster API Controllers",
-			WaitFunction: func(i interface{}) error {
-				return k8s.WaitForDeployment(kubeClient, constants.CoreCAPINamespace, constants.CoreCAPIDeployment, 1)
-			},
-		},
-		{
-			Message: "Waiting for Kubadm Boostrap Cluster API Controllers",
-			WaitFunction: func(i interface{}) error {
-				return k8s.WaitForDeployment(kubeClient, constants.KubeadmBootstrapCAPINamespace, constants.KubeadmBootstrapCAPIDeployment, 1)
-			},
-		},
-		{
-			Message: "Waiting for Kubadm Control Plane Cluster API Controllers",
-			WaitFunction: func(i interface{}) error {
-				return k8s.WaitForDeployment(kubeClient, constants.KubeadmControlPlaneCAPINamespace, constants.KubeadmControlPlaneCAPIDeployment, 1)
-			},
-		},
-		// TODO - This is temp disabled for testing OLVM controller in debugger
-		//{
-		//	Message: "Waiting for Olvm Cluster API Controllers",
-		//	WaitFunction: func(i interface{}) error {
-		//		return k8s.WaitForDeployment(kubeClient, constants.OLVMCAPIOperatorNamespace, constants.OLVMCAPIDeployment, 1)
-		//	},
-		//},
-	})
-	if haveError {
-		return fmt.Errorf("Not all Cluster API controllers became available")
-	}
-	return nil
-}
-
 func (cad *OlvmDriver) waitForKubeconfig(client kubernetes.Interface, clusterName string) (string, error) {
 	var kubeconfig string
 	kcfgSecretIface, _, err := util.LinearRetryTimeout(func(i interface{}) (interface{}, bool, error) {

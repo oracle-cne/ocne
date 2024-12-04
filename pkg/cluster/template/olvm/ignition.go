@@ -19,17 +19,18 @@ const (
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
 `
-	// Used whenever a service has to start before the CAPI
-	// service used to start Kubernetes services on a node
-	preKubeadmService = `[Unit]
-Before=kubeadm.service
-
-[Service]
-Type=simple
-ExecStart=/bin/sh -c "systemctl enable --now crio.service && systemctl enable kubelet.service"
-
-[Install]
-WantedBy=multi-user.target
+	// Used to start services needed for kubeadm service
+	enableServicesDropinFile = "enable-services.conf"
+	enableServicesDropin     = `[Service]
+	ExecStartPre=/bin/bash -c "/etc/ocne/enableServices.sh &"
+`
+	enableServicesScriptPath = "/etc/ocne/enableServices.sh"
+	enableServicesScript     = `#! /bin/bash
+set -x
+set -e
+systemctl enable --now crio.service 
+systemctl enable kubelet.service
+systemctl enable --now kubeadm.service
 `
 )
 
@@ -79,8 +80,22 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 		Enabled: util.BoolPtr(true),
 	})
 
+	// **NOTE: This is a temporary workaroud to enable/start certain services that are
+	// enabled in ignition but don't start for some reason.
+	// Piggyback on the ocne-update service which is always started
+	// Add script to enable services
+	enableServicesFile := &ignition.File{
+		Path: enableServicesScriptPath,
+		Mode: 0555,
+		Contents: ignition.FileContents{
+			Source: enableServicesScript,
+		},
+	}
+	ignition.AddFile(ign, enableServicesFile)
+
+	// Add drop-in to run enable services script
 	ign = ignition.AddUnit(ign, &igntypes.Unit{
-		Name:    ignition.OcneNginxServiceName,
+		Name:    ignition.OcneUpdateServiceName,
 		Enabled: util.BoolPtr(true),
 		Dropins: []igntypes.Dropin{
 			{
@@ -88,10 +103,8 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 				Contents: util.StrPtr(preKubeadmDropin),
 			},
 			{
-				Name: "enable-services.conf",
-				Contents: util.StrPtr(`[Service]
-ExecStartPost=sh -c 'systemctl enable --now crio.service && systemctl enable kubelet.service && systemctl enable --now kubeadm.service'
-`),
+				Name:     enableServicesDropinFile,
+				Contents: util.StrPtr(enableServicesDropin),
 			},
 		},
 	})
