@@ -80,7 +80,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 		Enabled: util.BoolPtr(true),
 	})
 
-	// **NOTE: This is a temporary workaroud to enable/start certain services that are
+	// **NOTE: This is a temporary workaround to enable/start certain services that are
 	// enabled in ignition but don't start for some reason.
 	// Piggyback on the ocne-update service which is always started
 	// Add script to enable services
