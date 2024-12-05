@@ -15,7 +15,7 @@ spec:
       cidrBlocks:
         - {{.ClusterConfig.ServiceSubnet}}
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: OLVMCluster
     name: "{{.ClusterConfig.Name}}"
     namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
@@ -206,5 +206,5 @@ spec:
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "{{.ClusterConfig.Name}}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-        kind: OCIMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OLVMMachineTemplate
