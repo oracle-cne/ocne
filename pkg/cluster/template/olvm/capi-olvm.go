@@ -18,12 +18,13 @@ import (
 )
 
 type olvmData struct {
-	Config          *types.Config
-	ClusterConfig   *types.ClusterConfig
-	ExtraConfig     string
-	KubeVersions    *versions.KubernetesVersions
-	VolumePluginDir string
-	CipherSuite     string
+	Config                  *types.Config
+	ClusterConfig           *types.ClusterConfig
+	ExtraConfigControlPlane string
+	ExtraConfigWorker       string
+	KubeVersions            *versions.KubernetesVersions
+	VolumePluginDir         string
+	CipherSuite             string
 }
 
 func imageFromShape(shape string, imgs *types.OciImageSet) string {
@@ -51,19 +52,23 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 		return "", err
 	}
 
-	// Build up the extra ignition structures
-	ign, err := getExtraIgnition(config, clusterConfig)
+	// Build up the extra ignition structures.  Internal LB for control plane only
+	cpIgn, err := getExtraIgnition(config, clusterConfig, true)
 	if err != nil {
 		return "", err
 	}
-
+	workerIgn, err := getExtraIgnition(config, clusterConfig, false)
+	if err != nil {
+		return "", err
+	}
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
-		Config:          config,
-		ClusterConfig:   clusterConfig,
-		ExtraConfig:     ign,
-		KubeVersions:    &kubeVer,
-		VolumePluginDir: ignition.VolumePluginDir,
-		CipherSuite:     clusterConfig.CipherSuites,
+		Config:                  config,
+		ClusterConfig:           clusterConfig,
+		ExtraConfigControlPlane: cpIgn,
+		ExtraConfigWorker:       workerIgn,
+		KubeVersions:            &kubeVer,
+		VolumePluginDir:         ignition.VolumePluginDir,
+		CipherSuite:             clusterConfig.CipherSuites,
 	}, nil)
 }
 

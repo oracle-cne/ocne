@@ -68,7 +68,7 @@ spec:
       version: 1.5.0
       containerLinuxConfig:
         additionalConfig: |
-{{.ExtraConfig}}
+{{.ExtraConfigControlPlane}}
     clusterConfiguration:
       kubernetesVersion: {{.KubeVersions.Kubernetes}}
       imageRepository: container-registry.oracle.com/olcne
@@ -152,7 +152,7 @@ spec:
         version: 1.5.0
         containerLinuxConfig:
           additionalConfig: |
-  {{.ExtraConfig}}
+  {{.ExtraConfigWorker}}
 joinConfiguration:
   nodeRegistration:
     kubeletExtraArgs:

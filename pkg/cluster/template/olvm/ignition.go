@@ -34,8 +34,7 @@ systemctl enable --now kubeadm.service
 `
 )
 
-// TODO USE LIBVIRT IGNITION !!!
-func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
 
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
@@ -74,12 +73,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 	}
 	ignition.AddFile(ign, updateFile)
 
-	// Start the iscsi service
-	ign = ignition.AddUnit(ign, &igntypes.Unit{
-		Name:    ignition.IscsidServiceName,
-		Enabled: util.BoolPtr(true),
-	})
-
 	// **NOTE: This is a temporary workaround to enable/start certain services that are
 	// enabled in ignition but don't start for some reason.
 	// Piggyback on the ocne-update service which is always started
@@ -109,21 +102,11 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig) 
 		},
 	})
 
-	// Add a systemd service to start crio and enable kubelet before
-	// kubeadm.service.
-	//ign = ignition.AddUnit(ign, &igntypes.Unit{
-	//	Name:     ignition.PreKubeAdmServiceName,
-	//	Enabled:  util.BoolPtr(true),
-	//	Contents: util.StrPtr(preKubeadmService),
-	//})
-
 	// Merge everything together
 	ign = ignition.Merge(ign, container)
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
 
-	// TEMP - For Now assume internal LB
-	internalLB := true
 	if internalLB {
 		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
 			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
