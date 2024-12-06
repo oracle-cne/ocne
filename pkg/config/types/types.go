@@ -76,11 +76,11 @@ type OlvmControlPlaneEndpoint struct {
 }
 
 type OlvmVmIpProfile struct {
-	Name              string `json:"name"`
-	StartingIpAddress string `json:"startingIpAddress"`
-	Device            string `json:"device"`
-	Gateway           string `json:"gateway"`
-	Netmask           string `json:"netmask"`
+	Name              string `yaml:"name"`
+	StartingIpAddress string `yaml:"startingIpAddress"`
+	Device            string `yaml:"device"`
+	Gateway           string `yaml:"gateway"`
+	Netmask           string `yaml:"netmask"`
 }
 
 type OlvmMachine struct {
