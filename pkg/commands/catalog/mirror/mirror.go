@@ -107,9 +107,6 @@ func Mirror(options Options) error {
 	}
 	images = imageUtil.AddDefaultRegistries(images, options.DefaultRegistry)
 	images = removeDuplicates(images)
-	if err != nil {
-		return err
-	}
 
 	if !options.Push {
 		for _, image := range images {
