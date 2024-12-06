@@ -42,10 +42,11 @@ spec:
     caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"
     credentialsSecretName: "{{.ClusterConfig.Name}}-ovirt-credentials"
   vmIpProfiles:
-    - profileName: default-ip
-      gateway: 100.101.70.1
-      netmask: 255.255.255.0
-      startingIpAddress: 100.101.70.162
+    - name: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Name}}"
+      startingIpAddress: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.StartingIpAddress}}"
+      gateway: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Gateway}}"
+      netmask: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Netmask}}"
+      device: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Device}}"
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
@@ -121,7 +122,7 @@ spec:
   template:
     spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
-      olvmIpProfileName: default-ip
+      olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
       ovirt:
         memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
         ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OVirtClusterName}}"
@@ -168,7 +169,7 @@ spec:
   template:
     spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
-      olvmIpProfileName: default-ip
+      olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
       ovirt:
         memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
         ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OVirtClusterName}}"

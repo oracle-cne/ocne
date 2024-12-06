@@ -61,6 +61,7 @@ type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
 	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
 	OVirtAPI             OlvmClusterOvirtAPI      `yaml:"ovirtAPI"`
+	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
 }
 
 type OlvmClusterOvirtAPI struct {
@@ -74,12 +75,21 @@ type OlvmControlPlaneEndpoint struct {
 	Port string `yaml:"port"`
 }
 
+type OlvmVmIpProfile struct {
+	Name              string `json:"name"`
+	StartingIpAddress string `json:"startingIpAddress"`
+	Device            string `json:"device"`
+	Gateway           string `json:"gateway"`
+	Netmask           string `json:"netmask"`
+}
+
 type OlvmMachine struct {
-	Memory           string             `yaml:"memory"`
-	Network          OlvmMachineNetwork `yaml:"network"`
-	Cpu              OlvmMachineCpu     `yaml:"cpu"`
-	OVirtClusterName string             `yaml:"ovirtClusterName"`
-	VMTemplateName   string             `yaml:"vmTemplateName"`
+	Memory              string             `yaml:"memory"`
+	Network             OlvmMachineNetwork `yaml:"network"`
+	Cpu                 OlvmMachineCpu     `yaml:"cpu"`
+	OVirtClusterName    string             `yaml:"ovirtClusterName"`
+	OlvmVmIpProfileName string             `yaml:"olvmVmIpProfileName"`
+	VMTemplateName      string             `yaml:"vmTemplateName"`
 }
 
 type OlvmMachineCpu struct {
@@ -465,6 +475,21 @@ func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
 		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
 		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
 		OVirtAPI:             MergeOlvmClusterOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
+		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
+	}
+}
+
+// MergeOlvmVmIpProfile takes two OlvmVmIpProfiles and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpProfile {
+	return OlvmVmIpProfile{
+		Name:              ies(def.Name, ovr.Name),
+		StartingIpAddress: ies(def.StartingIpAddress, ovr.StartingIpAddress),
+		Device:            ies(def.Device, ovr.Device),
+		Gateway:           ies(def.Gateway, ovr.Gateway),
+		Netmask:           ies(def.Netmask, ovr.Netmask),
 	}
 }
 
@@ -497,11 +522,12 @@ func MergeOlvmClusterOvirtAPI(def *OlvmClusterOvirtAPI, ovr *OlvmClusterOvirtAPI
 // takes precedence.
 func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	return OlvmMachine{
-		OVirtClusterName: ies(def.OVirtClusterName, ovr.OVirtClusterName),
-		Memory:           ies(def.Memory, ovr.Memory),
-		Network:          MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
-		Cpu:              MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
-		VMTemplateName:   ies(def.VMTemplateName, ovr.VMTemplateName),
+		OVirtClusterName:    ies(def.OVirtClusterName, ovr.OVirtClusterName),
+		OlvmVmIpProfileName: ies(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
+		Memory:              ies(def.Memory, ovr.Memory),
+		Network:             MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
+		Cpu:                 MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
+		VMTemplateName:      ies(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
 
