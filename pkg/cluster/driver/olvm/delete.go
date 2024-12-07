@@ -13,6 +13,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	log "github.com/sirupsen/logrus"
+	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	"strings"
 	"time"
@@ -63,6 +64,13 @@ func (cad *OlvmDriver) Delete() error {
 	err = cad.deleteCluster(clusterName, clusterObj.GetNamespace())
 	if err != nil {
 		return err
+	}
+
+	// delete the capi cluster kubeconfig
+	if err = os.Remove(cad.KubeConfig); err != nil {
+		// log the error but keep going
+		log.Errorf("Error deleting capi kubeconfig file %s/%s: %v",
+			cad.KubeConfig, err)
 	}
 
 	_, clientIface, err := client.GetKubeClient(cad.BootstrapKubeConfig)
