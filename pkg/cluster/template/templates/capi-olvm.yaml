@@ -103,10 +103,10 @@ spec:
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
-      discovery: {}
-      localAPIEndpoint:
-        bindPort: {{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.BindPort}}
-        advertiseAddress: "{{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.AdvertiseAddress}}"
+      controlPlane:
+        localAPIEndpoint:
+          bindPort: {{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.BindPort}}
+          advertiseAddress: "{{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.AdvertiseAddress}}"
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
