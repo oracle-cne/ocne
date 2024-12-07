@@ -108,7 +108,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, usr)
 
 	if internalLB {
-		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPortAlt, config.KubeAPIServerBindPort,
+		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
 			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
 		if err != nil {
 			return "", err

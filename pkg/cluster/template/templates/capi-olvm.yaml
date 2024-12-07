@@ -36,7 +36,7 @@ spec:
   ovirtDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
   controlPlaneEndpoint:
     host: "{{.ClusterConfig.VirtualIp}}"
-    port: {{.Config.KubeAPIServerBindPortAlt}}
+    port: {{.Config.KubeAPIServerBindPort}}
   ovirtAPI:
     apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtAPI.ServerURL}}"
     caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"
@@ -104,6 +104,9 @@ spec:
           tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
       discovery: {}
+      localAPIEndpoint:
+        bindPort: {{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.BindPort}}
+        advertiseAddress: "{{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.AdvertiseAddress}}"
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:
