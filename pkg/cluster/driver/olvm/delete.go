@@ -60,7 +60,29 @@ func (cad *OlvmDriver) Delete() error {
 		}
 	}
 
-	return cad.deleteCluster(clusterName, clusterObj.GetNamespace())
+	err = cad.deleteCluster(clusterName, clusterObj.GetNamespace())
+	if err != nil {
+		return err
+	}
+
+	_, clientIface, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	if err != nil {
+		return err
+	}
+
+	secretName := cad.credSecretName()
+	if err = k8s.DeleteSecret(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
+		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v",
+			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	}
+
+	cmName := cad.caConfigMapName()
+	if err = k8s.DeleteConfigmap(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
+		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v",
+			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	}
+
+	return nil
 }
 
 func (cad *OlvmDriver) Close() error {

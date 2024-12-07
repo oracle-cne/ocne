@@ -234,7 +234,7 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 		return err
 	}
 
-	secretName := fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix)
+	secretName := cad.credSecretName()
 	k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
 	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -254,7 +254,7 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 		return err
 	}
 
-	cmName := fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix)
+	cmName := cad.caConfigMapName()
 	k8s.DeleteConfigmap(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
 	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -314,4 +314,12 @@ func getCreds() (map[string][]byte, error) {
 		"scope":    []byte(scope),
 	}, nil
 
+}
+
+func (cad *OlvmDriver) credSecretName() string {
+	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix)
+}
+
+func (cad *OlvmDriver) caConfigMapName() string {
+	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix)
 }
