@@ -19,10 +19,15 @@ const (
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
 `
+	// Used whenever a service has to start after the CAPI
+	// service used to start Kubernetes services on a node
+	postKubeadmDropin = `[Unit]
+After=kubeadm.service
+`
 	// Used to start services needed for kubeadm service
 	enableServicesDropinFile = "enable-services.conf"
 	enableServicesDropin     = `[Service]
-	ExecStartPre=/bin/bash -c "/etc/ocne/enableServices.sh &"
+ExecStartPre=/bin/bash -c "/etc/ocne/enableServices.sh &"
 `
 	enableServicesScriptPath = "/etc/ocne/enableServices.sh"
 	enableServicesScript     = `#! /bin/bash
@@ -31,6 +36,26 @@ set -e
 systemctl enable --now crio.service 
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
+`
+
+	// Used to start services needed for kubeadm service
+	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
+	copyKubeconfigDropin     = `[Service]
+ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
+`
+	// Copy kubeconfig to the keepalived dir and change ownership
+	copyKubeconfigScriptPath = "/etc/ocne/keepalived-copy-kubeconfig.sh"
+	copyKubeconfigScript     = `#! /bin/bash
+set -x
+set -e
+while [ ! -f "/etc/kubernetes/admin.conf" ]; do
+   echo "Waiting for /etc/kubernetes/admin.conf to exist"
+   sleep 2
+done
+
+cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
+chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
+chmod 400 /etc/keepalived/kubeconfig
 `
 )
 
@@ -108,6 +133,33 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, usr)
 
 	if internalLB {
+		// Copy the kubeconfig file needed by keepalived service to get the
+		// list of cluster nodes
+		copyKubeconfig := &ignition.File{
+			Path: copyKubeconfigScriptPath,
+			Mode: 0555,
+			Contents: ignition.FileContents{
+				Source: copyKubeconfigScript,
+			},
+		}
+		ignition.AddFile(ign, copyKubeconfig)
+
+		// Add drop-in to copy the kubeadm config file for keepalived
+		ign = ignition.AddUnit(ign, &igntypes.Unit{
+			Name:    ignition.KeepalivedServiceName,
+			Enabled: util.BoolPtr(true),
+			Dropins: []igntypes.Dropin{
+				{
+					Name:     "post-kubeadm.conf",
+					Contents: util.StrPtr(postKubeadmDropin),
+				},
+				{
+					Name:     copyKubeconfigDropinFile,
+					Contents: util.StrPtr(copyKubeconfigDropin),
+				},
+			},
+		})
+
 		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
 			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
 		if err != nil {
