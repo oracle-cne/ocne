@@ -29,13 +29,6 @@ import (
 func (cad *OlvmDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
-		// If there is a need to generate a template, ensure that an
-		// image is present.
-		//err := cad.ensureImages()
-		//if err != nil {
-		//	return false, false, err
-		//}
-
 		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
 			return false, false, err
