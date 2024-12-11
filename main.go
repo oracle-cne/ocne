@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/none"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
+	"github.com/oracle-cne/ocne/pkg/features"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -21,7 +22,9 @@ import (
 func registerDrivers() {
 	driver.RegisterDriver(byo.DriverName, byo.CreateDriver)
 	driver.RegisterDriver(capi.DriverName, capi.CreateDriver)
-	driver.RegisterDriver(olvm.DriverName, olvm.CreateDriver)
+	if features.OLVM {
+		driver.RegisterDriver(olvm.DriverName, olvm.CreateDriver)
+	}
 	driver.RegisterDriver(libvirt.DriverName, libvirt.CreateDriver)
 	driver.RegisterDriver(none.DriverName, none.CreateDriver)
 }
