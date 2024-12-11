@@ -22,6 +22,7 @@ CATALOG_BRANCH?=release/2.0
 
 DEVELOPER_CHART_BUILD_DIR:=${BUILD_DIR}/developer-catalog
 DEVELOPER_CATALOG_BRANCH?=developer
+DEVELOPER_BUILD?=true
 
 TEST_PATTERN:=.*
 TEST_FILTERS:=
@@ -49,7 +50,10 @@ ENV_NAME=ocne
 GO=GOTOOLCHAIN=local GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
 
 CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
-CLI_BUILD_TAGS=-tags developer
+CLI_BUILD_TAGS=
+ifeq (${DEVELOPER_BUILD}, true)
+	CLI_BUILD_TAGS=-tags developer
+endif
 
 export GOCOVERDIR
 export BATS_RESULT_DIR
