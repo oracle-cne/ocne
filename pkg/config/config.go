@@ -83,7 +83,7 @@ func GetDefaultConfig() (*types.Config, error) {
 					Memory: constants.OLVMCAPIControlPlaneMemory,
 				},
 				WorkerMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIControlPlaneMemory,
+					Memory: constants.OLVMCAPIWorkerMemory,
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
 					BindPort: 6444,

@@ -12,6 +12,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// getApplications gets the applications that are needed for the OLVM provider.
+// These applications will be installed in the bootstrap cluster
 func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, error) {
 	proxyValues := map[string]interface{}{
 		"httpsProxy": cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
@@ -80,6 +82,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 	}, nil
 }
 
+// getWorkloadClusterApplications gets the applications that need to be installed into the new CAPI cluster
 func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
 	return nil, nil
 }

@@ -46,6 +46,7 @@ type OlvmDriver struct {
 	Deleted              bool
 }
 
+// CreateDriver creates an OLVM CAPI driver.
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
@@ -140,6 +141,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	return cad, nil
 }
 
+// waitForControllers waits for all the CAPI controllers to be ready.
 func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error {
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
@@ -173,6 +175,7 @@ func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error
 	return nil
 }
 
+// getClusterObject gets the CAPI cluster object that is being started or deleted.
 func (cad *OlvmDriver) getClusterObject() (unstructured.Unstructured, error) {
 	clusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
 		if u.GetKind() != "Cluster" {

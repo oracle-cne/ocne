@@ -92,7 +92,7 @@ func FindIn(haystack string, filter func(unstructured.Unstructured) bool) (unstr
 	return unstructured.Unstructured{}, &ErrorNotExist{}
 }
 
-// FindAll finds all objects that mateches the criteria in a
+// FindAll finds all objects that match the criteria in a
 // multi-doc yaml string.
 func FindAll(haystack string, filter func(unstructured.Unstructured) bool) ([]unstructured.Unstructured, error) {
 	candidates, err := Unmarshall(bufio.NewReader(bytes.NewBuffer([]byte(haystack))))

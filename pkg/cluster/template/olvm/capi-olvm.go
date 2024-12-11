@@ -14,7 +14,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/oci"
 )
 
 type olvmData struct {
@@ -27,14 +26,7 @@ type olvmData struct {
 	CipherSuite             string
 }
 
-func imageFromShape(shape string, imgs *types.OciImageSet) string {
-	arch := oci.ArchitectureFromShape(shape)
-	if arch == "arm64" {
-		return imgs.Arm64
-	}
-	return imgs.Amd64
-}
-
+// GetOlvmTemplate renders the OLVM template that specifies the CAPI resources.
 func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
 	tmplBytes, err := template.ReadTemplate("capi-olvm.yaml")
 

@@ -59,8 +59,8 @@ chmod 400 /etc/keepalived/kubeconfig
 `
 )
 
+// getExtraIgnition creates the ignition string that will be passed to the VM.
 func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
-
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
@@ -81,8 +81,8 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 
 	ign := ignition.NewIgnition()
 
-	// Cluster API has its own service to start
-	// kublet.  Use that one.
+	// Cluster API has its own kubeadm service to start
+	// kubelet.  Use that one instead of ocne.service.
 	ign = ignition.AddUnit(ign, &igntypes.Unit{
 		Name:    "ocne.service",
 		Enabled: util.BoolPtr(false),
@@ -100,8 +100,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 
 	// **NOTE: This is a temporary workaround to enable/start certain services that are
 	// enabled in ignition but don't start for some reason.
-	// Piggyback on the ocne-update service which is always started
-	// Add script to enable services
+	// Piggyback on the enable service script to the update service script.
 	enableServicesFile := &ignition.File{
 		Path: enableServicesScriptPath,
 		Mode: 0555,
@@ -132,6 +131,8 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
 
+	// If an internal LB is needed for the control plane then the kubeconfig file
+	// needs to be copied to /etc/keepalived
 	if internalLB {
 		// Copy the kubeconfig file needed by keepalived service to get the
 		// list of cluster nodes

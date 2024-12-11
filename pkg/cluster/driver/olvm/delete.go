@@ -19,6 +19,7 @@ import (
 	"time"
 )
 
+// Delete deletes the CAPI resources in the bootstrap cluster which results in the CAPI cluster being deleted.
 func (cad *OlvmDriver) Delete() error {
 	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
 	cad.Deleted = true
@@ -93,9 +94,10 @@ func (cad *OlvmDriver) Delete() error {
 	return nil
 }
 
+// Close stops the ephemeral cluster as needed.
 func (cad *OlvmDriver) Close() error {
 	// There needs to be some logic to figure out when a cluster
-	// is done being deleted.  It is not reasoble to develop
+	// is done being deleted.  It is not reasonable to develop
 	// this against the OCI CAPI provider because it is unreliable
 	// when deleting clusters.  For now, leave the ephemeral one
 	// behind so that deletion can continue in the background.
@@ -113,6 +115,7 @@ func (cad *OlvmDriver) Close() error {
 	return nil
 }
 
+// deleteCluster deletes the CAPI cluster resource.
 func (cad *OlvmDriver) deleteCluster(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
@@ -140,6 +143,7 @@ func (cad *OlvmDriver) deleteCluster(clusterName string, clusterNs string) error
 	return nil
 }
 
+// waitForClusterDeletion waits for the cluster to be deleted.
 func (cad *OlvmDriver) waitForClusterDeletion(clusterName string, clusterNs string) error {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {

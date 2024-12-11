@@ -107,8 +107,8 @@ const (
 
 	// OLVM CAPI resources constants
 	OLVMCAPIResourcesNamespace = "ocne"
-	OLVMCAPIControlPlaneMemory = "6442450944"  // 6 GiB
-	OLVMCAPIWorkerMemory       = "17179869184" // 16 GiB
+	OLVMCAPIControlPlaneMemory = "7GB"
+	OLVMCAPIWorkerMemory       = "16GB"
 
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"

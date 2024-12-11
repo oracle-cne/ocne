@@ -26,6 +26,7 @@ import (
 	"time"
 )
 
+// Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
 func (cad *OlvmDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
@@ -126,8 +127,9 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 	return false, false, nil
 }
 
+// PostStart installs the CAPI controllers and dependent apps in a self-managed cluster.
 func (cad *OlvmDriver) PostStart() error {
-	// If the cluster is not self managed, then the configuration is
+	// If the cluster is not self-managed, then the configuration is
 	// complete.
 	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
 		return nil
@@ -178,6 +180,7 @@ func (cad *OlvmDriver) PostStart() error {
 	return nil
 }
 
+// waitForKubeconfig waits for the kubeconfig secret to be created.
 func (cad *OlvmDriver) waitForKubeconfig(client kubernetes.Interface, clusterName string) (string, error) {
 	var kubeconfig string
 	kcfgSecretIface, _, err := util.LinearRetryTimeout(func(i interface{}) (interface{}, bool, error) {
@@ -220,6 +223,7 @@ func (cad *OlvmDriver) waitForKubeconfig(client kubernetes.Interface, clusterNam
 	return kubeconfig, nil
 }
 
+// createRequiredResources creates the required resources needed for an OLVM CAPI cluster.
 func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) error {
 	// Get the creds
 	credmap, err := getCreds()
@@ -265,6 +269,7 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	return nil
 }
 
+// getCA gets the oVirt CA string from the config, either inline or from a file.
 func getCA(prov *types.OlvmProvider) (string, error) {
 	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
@@ -287,6 +292,7 @@ func getCA(prov *types.OlvmProvider) (string, error) {
 	return "", fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
 }
 
+// getCreds gets the oVirt creds from a set of ENV vars.
 func getCreds() (map[string][]byte, error) {
 	username := os.Getenv(EnvUsername)
 	if username == "" {
