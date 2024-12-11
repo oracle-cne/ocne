@@ -86,12 +86,16 @@ $(CHART_BUILD_DIR): $(BUILD_DIR)
 	git clone -b ${CATALOG_BRANCH}  $(CATALOG_REPO) $@
 
 $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR) ${DEVELOPER_CHART_BUILD_DIR}
+ifeq (${DEVELOPER_BUILD},true)
 	cp -r ${DEVELOPER_CHART_BUILD_DIR}/charts/* ${CHART_BUILD_DIR}/charts
 	cp ${DEVELOPER_CHART_BUILD_DIR}/olm/icons/* ${CHART_BUILD_DIR}/olm/icons
+endif
 	cd $< && make
 
 $(DEVELOPER_CHART_BUILD_DIR): $(BUILD_DIR)
+ifeq (${DEVELOPER_BUILD},true)
 	git clone -b ${DEVELOPER_CATALOG_BRANCH}  $(CATALOG_REPO) $@
+endif
 
 .PHONY: build-cli
 build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current system and architecture
