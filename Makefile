@@ -22,7 +22,6 @@ CATALOG_BRANCH?=release/2.0
 
 DEVELOPER_CHART_BUILD_DIR:=${BUILD_DIR}/developer-catalog
 DEVELOPER_CATALOG_BRANCH?=developer
-DEVELOPER_BUILD?=true
 
 TEST_PATTERN:=.*
 TEST_FILTERS:=
@@ -43,6 +42,17 @@ ifeq ($(OS), Linux)
 endif
 ifndef RELEASE_BRANCH
 	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+endif
+
+DEVELOPER_BUILD?=
+ifeq ($(DEVELOPER_BUILD),)
+	# Default the value based on the branch name.  If the branch name is prefixed
+	# with "release/" then set to false, otherwise true.
+	ifeq ($(findstring release/,$(RELEASE_BRANCH)), release/)
+		DEVELOPER_BUILD=false
+	else
+		DEVELOPER_BUILD=true
+	endif
 endif
 
 DIST_DIR:=dist
@@ -82,7 +92,8 @@ $(CHART_EMBED): $(CHART_BUILD_OUT_DIR)
 	mkdir -p $@
 	cp $(CHART_BUILD_OUT_DIR)/* $@
 
-$(CHART_BUILD_DIR): $(BUILD_DIR)
+$(CHART_BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 	git clone -b ${CATALOG_BRANCH}  $(CATALOG_REPO) $@
 
 $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR) ${DEVELOPER_CHART_BUILD_DIR}
@@ -92,8 +103,9 @@ ifeq (${DEVELOPER_BUILD},true)
 endif
 	cd $< && make
 
-$(DEVELOPER_CHART_BUILD_DIR): $(BUILD_DIR)
+$(DEVELOPER_CHART_BUILD_DIR):
 ifeq (${DEVELOPER_BUILD},true)
+	mkdir -p $(BUILD_DIR)
 	git clone -b ${DEVELOPER_CATALOG_BRANCH}  $(CATALOG_REPO) $@
 endif
 
