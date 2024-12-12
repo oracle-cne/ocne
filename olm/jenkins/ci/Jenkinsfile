@@ -11,6 +11,6 @@ olcnePipeline(
     yumOL8Repos: ['ol8_codeready_builder', 'ol8_UEKR7'],
     yumOL9Repos: ['ol9_codeready_builder', 'ol9_UEKR7'],
     preBuildCommands: [
-      "make build/catalog",
+      "make build/catalog build/developer-catalog",
     ],
 )
