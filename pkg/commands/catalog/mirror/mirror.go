@@ -543,7 +543,7 @@ func downloadArchive(images []string, archivePath string) error {
 		log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
 		err = copyOneImage(image, ociArchiveDir, counter, imageInfo)
 		if err != nil {
-			return fmt.Errorf("download failed due to Internal Server Error")
+			return err
 		}
 		log.Debugf("Successfully pulled image %s out of %s images", strconv.Itoa(counter), strconv.Itoa(len(images)))
 		counter = counter + 1
@@ -557,16 +557,18 @@ func downloadArchive(images []string, archivePath string) error {
 }
 
 func copyOneImage(image string, ociArchiveDir string, counter int, imageInfo types.ImageInfo) error {
-	err := imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
-	if err == nil {
-		return nil
-	} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
-		return err
-	} else {
-		// Delete oci-archive file and backoff
-		os.Remove(filepath.Join(ociArchiveDir, strconv.Itoa(counter)+".oci"))
-		log.Debugf("Backing off and retrying pulling %s:%s from the registry", imageInfo.BaseImage, imageInfo.Tag)
-		time.Sleep(3 * time.Second)
+	for i := 0; i < 5; i++ {
+		err := imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+		if err == nil {
+			return nil
+		} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
+			return err
+		} else {
+			// Delete oci-archive file and backoff
+			os.Remove(filepath.Join(ociArchiveDir, strconv.Itoa(counter)+".oci"))
+			log.Debugf("Backing off and retrying pulling %s:%s from the registry", imageInfo.BaseImage, imageInfo.Tag)
+			time.Sleep(3 * time.Second)
+		}
 	}
-	return err
+	return fmt.Errorf("download failed due to Internal Server Error")
 }

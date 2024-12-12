@@ -113,7 +113,7 @@ SUBCOMMANDS
 `-q`, `--quiet`
     If specified, output only image names and omit all other output. Useful for scripting.
 
-`-t`, `--download`
+`-o`, `--download`
     If specified, download the images into a .tgz file saved locally. Useful for working in air-gapped environments.
 
 `-a`, `--archive`
