@@ -100,7 +100,8 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.Providers.Olvm.KubeConfigPath, config, clusterConfig)
+
+	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.KubeConfig, config, clusterConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +229,7 @@ func (cad *OlvmDriver) GetKubeconfigPath() string {
 }
 
 func (cad *OlvmDriver) GetKubeAPIServerAddress() string {
-	return ""
+	return fmt.Sprintf("https://%s:%v", cad.ClusterConfig.VirtualIp, cad.ClusterConfig.KubeAPIServerBindPort)
 }
 
 func (cad *OlvmDriver) PostInstallHelpStanza() string {

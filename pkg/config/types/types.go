@@ -45,7 +45,6 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	KubeConfigPath      string               `yaml:"kubeconfig"`
 	Namespace           string               `yaml:"namespace"`
 	SelfManaged         bool                 `yaml:"selfmanagedfake"`
 	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
@@ -453,7 +452,6 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 // values takes precedence.
 func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 	return OlvmProvider{
-		KubeConfigPath:      ies(def.KubeConfigPath, ovr.KubeConfigPath),
 		Namespace:           ies(def.Namespace, ovr.Namespace),
 		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
 		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
