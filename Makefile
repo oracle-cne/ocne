@@ -48,7 +48,7 @@ DEVELOPER_BUILD?=
 ifeq ($(DEVELOPER_BUILD),)
 	# Default the value based on the branch name.  If the branch name is prefixed
 	# with "release/" then set to false, otherwise true.
-	ifeq ($(findstring release/,$(RELEASE_BRANCH)), "release/")
+	ifeq ($(findstring release/,$(RELEASE_BRANCH)), release/)
 		DEVELOPER_BUILD=false
 	else
 		DEVELOPER_BUILD=true
