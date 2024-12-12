@@ -20,6 +20,9 @@ CHART_EMBED:=pkg/catalog/embedded/charts
 
 CATALOG_BRANCH?=release/2.0
 
+DEVELOPER_CHART_BUILD_DIR:=${BUILD_DIR}/developer-catalog
+DEVELOPER_CATALOG_BRANCH?=developer
+
 TEST_PATTERN:=.*
 TEST_FILTERS:=
 TEST_DIR:=$(OUT_DIR)/tests
@@ -41,12 +44,26 @@ ifndef RELEASE_BRANCH
 	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 endif
 
+DEVELOPER_BUILD?=
+ifeq ($(DEVELOPER_BUILD),)
+	# Default the value based on the branch name.  If the branch name is prefixed
+	# with "release/" then set to false, otherwise true.
+	ifeq ($(findstring release/,$(RELEASE_BRANCH)), release/)
+		DEVELOPER_BUILD=false
+	else
+		DEVELOPER_BUILD=true
+	endif
+endif
+
 DIST_DIR:=dist
 ENV_NAME=ocne
 GO=GOTOOLCHAIN=local GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
 
 CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
-
+CLI_BUILD_TAGS=
+ifeq (${DEVELOPER_BUILD}, true)
+	CLI_BUILD_TAGS=-tags developer
+endif
 
 export GOCOVERDIR
 export BATS_RESULT_DIR
@@ -62,7 +79,7 @@ help: ## Display this help.
 
 .PHONY: run
 run:
-	$(GO) run -trimpath -ldflags "${CLI_GO_LDFLAGS}" ./...
+	$(GO) run -trimpath -ldflags "${CLI_GO_LDFLAGS}" ${CLI_BUILD_TAGS} ./...
 #
 # Go build related tasks
 #
@@ -75,19 +92,30 @@ $(CHART_EMBED): $(CHART_BUILD_OUT_DIR)
 	mkdir -p $@
 	cp $(CHART_BUILD_OUT_DIR)/* $@
 
-$(CHART_BUILD_DIR): $(BUILD_DIR)
+$(CHART_BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 	git clone -b ${CATALOG_BRANCH}  $(CATALOG_REPO) $@
 
-$(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR)
+$(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR) ${DEVELOPER_CHART_BUILD_DIR}
+ifeq (${DEVELOPER_BUILD},true)
+	cp -r ${DEVELOPER_CHART_BUILD_DIR}/charts/* ${CHART_BUILD_DIR}/charts
+	cp ${DEVELOPER_CHART_BUILD_DIR}/olm/icons/* ${CHART_BUILD_DIR}/olm/icons
+endif
 	cd $< && make
+
+$(DEVELOPER_CHART_BUILD_DIR):
+ifeq (${DEVELOPER_BUILD},true)
+	mkdir -p $(BUILD_DIR)
+	git clone -b ${DEVELOPER_CATALOG_BRANCH}  $(CATALOG_REPO) $@
+endif
 
 .PHONY: build-cli
 build-cli: $(CHART_EMBED) $(PLATFORM_OUT_DIR) ## Build CLI for the current system and architecture
-	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
+	$(GO) build -trimpath -ldflags "${CLI_GO_LDFLAGS}" ${CLI_BUILD_TAGS} -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH) ./...
 
 # Build an instrumented CLI for the current system and architecture
 build-cli-instrumented: $(CHART_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
-	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
+	$(GO) build -cover -trimpath -ldflags "${CLI_GO_LDFLAGS}" ${CLI_BUILD_TAGS} -o $(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented ./...
 
 .PHONY: cli
 cli: build-cli ## Build and install the CLI
