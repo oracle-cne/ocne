@@ -16,7 +16,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/config/types"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	imageUtil "github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -74,8 +73,11 @@ type Options struct {
 	// DefaultRegistry is the registry to add to images without a domain. Stores the --source argument.
 	DefaultRegistry string
 
-	// Download is true if you want the images given by catalog mirror to be downloaded locally in a tar format .
+	// Download is true if you want the images given by catalog mirror to be downloaded locally in a tar format.
 	Download bool
+
+	// Archive is the path to the .tgz file where images can be downloaded locally.
+	Archive string
 }
 
 const extraImagesLabel string = "extra-image"
@@ -115,47 +117,7 @@ func Mirror(options Options) error {
 	}
 
 	if options.Download {
-		// Create a temporary directory to place the oci-archive files
-		ociArchiveDir, err := os.MkdirTemp("", "oci-archive")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(ociArchiveDir)
-		counter := 1
-		for _, image := range images {
-			imageInfo, err := imageUtil.SplitImage(image)
-			if err != nil {
-				return err
-			}
-			log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
-			timeoutHappened := true
-			for i := 0; i < 5; i++ {
-				err = imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
-				if err == nil {
-					timeoutHappened = false
-					break
-				} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
-					return err
-				} else {
-					// Delete oci-archive file and backoff
-					os.Remove(ociArchiveDir + "/" + strconv.Itoa(counter) + ".oci")
-					log.Debugf("Backing off and retrying pulling %s:%s from the registry", imageInfo.BaseImage, imageInfo.Tag)
-					time.Sleep(30 * time.Second)
-				}
-			}
-			if timeoutHappened == true {
-				return fmt.Errorf("download failed due to Internal Server Error")
-			}
-			log.Debugf("Successfully pulled image %s out of %s images", strconv.Itoa(counter), strconv.Itoa(len(images)))
-			counter = counter + 1
-		}
-		log.Debugf("Successfully pulled all images, now tarring all of the oci-archive files")
-		homedir, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-		archivePath := filepath.Join(homedir, constants.UserConfigDir, "downloaded-images.tgz")
-		err = dump.CreateReportArchive(ociArchiveDir, archivePath)
+		err = downloadArchive(images, options.Archive)
 		if err != nil {
 			return err
 		}
@@ -563,4 +525,48 @@ func unmarshallObjects(listOfYamls []string) []unstructured.Unstructured {
 		toReturn = append(toReturn, temp...)
 	}
 	return toReturn
+}
+
+func downloadArchive(images []string, archivePath string) error {
+	// Create a temporary directory to place the oci-archive files
+	ociArchiveDir, err := os.MkdirTemp("", "oci-archive")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(ociArchiveDir)
+	counter := 1
+	for _, image := range images {
+		imageInfo, err := imageUtil.SplitImage(image)
+		if err != nil {
+			return err
+		}
+		log.Debugf("Copying %s:%s to system", imageInfo.BaseImage, imageInfo.Tag)
+		err = copyOneImage(image, ociArchiveDir, counter, imageInfo)
+		if err != nil {
+			return fmt.Errorf("download failed due to Internal Server Error")
+		}
+		log.Debugf("Successfully pulled image %s out of %s images", strconv.Itoa(counter), strconv.Itoa(len(images)))
+		counter = counter + 1
+	}
+	log.Debugf("Successfully pulled all images. Creating image archives at %s", archivePath)
+	err = dump.CreateReportArchive(ociArchiveDir, archivePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyOneImage(image string, ociArchiveDir string, counter int, imageInfo types.ImageInfo) error {
+	err := imageUtil.Copy(fmt.Sprintf("docker://%s", image), "oci-archive:"+ociArchiveDir+"/"+strconv.Itoa(counter)+".oci:"+imageInfo.BaseImage+":"+imageInfo.Tag, "", copy.CopyAllImages)
+	if err == nil {
+		return nil
+	} else if !strings.Contains(err.Error(), "500 Internal Server Error") {
+		return err
+	} else {
+		// Delete oci-archive file and backoff
+		os.Remove(filepath.Join(ociArchiveDir, strconv.Itoa(counter)+".oci"))
+		log.Debugf("Backing off and retrying pulling %s:%s from the registry", imageInfo.BaseImage, imageInfo.Tag)
+		time.Sleep(3 * time.Second)
+	}
+	return err
 }

@@ -10,8 +10,11 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/mirror"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	constants2 "github.com/oracle-cne/ocne/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
 )
 
 const (
@@ -19,7 +22,7 @@ const (
 	helpShort   = "Mirror container images in a catalog"
 	helpLong    = `Clone the container images used by applications in an application catalog and push them to a private registry or download them to a .tgz file`
 	helpExample = `
-ocne catalog mirror --name mycatalog --destination other-container-registry.io --push --config example-path/OCNE-Configuration-File --download
+ocne catalog mirror --name mycatalog --destination other-container-registry.io --push --config example-path/OCNE-Configuration-File --download -a ~/images.tgz
 `
 )
 
@@ -33,6 +36,7 @@ var defaultRegistry string
 var quiet bool
 var push bool
 var download bool
+var archivePath string
 
 const (
 	flagCatalogName      = "name"
@@ -60,8 +64,12 @@ const (
 	flagSourceHelp  = "The source registry to use for images without a registry. By default, this value is container-registry.oracle.com. For example, olcne/headlamp becomes container-registry.oracle.com/olcne/headlamp"
 
 	flagDownload      = "download"
-	flagDownloadShort = "t"
-	flagDownloadHelp  = "Download images locally to a tar file on the system "
+	flagDownloadShort = "o"
+	flagDownloadHelp  = "Download images locally to a .tgz file on the system"
+
+	flagArchive      = "archive"
+	flagArchiveShort = "a"
+	flagArchiveHelp  = "If images are downloaded, the path of the .tgz file where they are stored. By default, this value is ~/.ocne/downloaded-images.tgz"
 )
 
 func NewCmd() *cobra.Command {
@@ -86,6 +94,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&push, flagPush, flagPushShort, false, flagPushHelp)
 	cmd.Flags().BoolVarP(&quiet, flagQuiet, flagQuietShort, false, flagQuietHelp)
 	cmd.Flags().BoolVarP(&download, flagDownload, flagDownloadShort, false, flagDownloadHelp)
+	cmd.Flags().StringVarP(&archivePath, flagArchive, flagArchiveShort, "", flagArchiveHelp)
 	return cmd
 }
 
@@ -95,6 +104,15 @@ func RunCmd(cmd *cobra.Command) error {
 	if err != nil {
 		err = errors.New("Configuration error: " + err.Error())
 		return err
+	}
+
+	//Set the default archive path to ~/.ocne/downloaded-images.tgz
+	if archivePath == "" {
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		archivePath = filepath.Join(homedir, constants2.UserConfigDir, "downloaded-images.tgz")
 	}
 
 	if quiet {
@@ -111,6 +129,7 @@ func RunCmd(cmd *cobra.Command) error {
 		ClusterConfig:   cc,
 		DefaultRegistry: defaultRegistry,
 		Download:        download,
+		Archive:         archivePath,
 	}
 	return mirror.Mirror(mo)
 }
