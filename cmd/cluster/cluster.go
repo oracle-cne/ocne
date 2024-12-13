@@ -16,6 +16,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/cluster/stage"
 	"github.com/oracle-cne/ocne/cmd/cluster/start"
 	"github.com/oracle-cne/ocne/cmd/cluster/template"
+	"github.com/oracle-cne/ocne/cmd/common"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +39,7 @@ func NewCmd() *cobra.Command {
 		Use:       CommandName,
 		Short:     helpShort,
 		Long:      helpLong,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Args:      common.ArgsCheck,
 		ValidArgs: []string{analyze.CommandName, backup.CommandName, console.CommandName, dump.CommandName, info.CommandName, join.CommandName, delete.CommandName, template.CommandName, stage.CommandName},
 	}
 
