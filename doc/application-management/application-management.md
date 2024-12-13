@@ -181,9 +181,9 @@ grafana    	7.5.5
 
 To search an alternate catalog, specify its name.
 
-Search the catalog named `embedded`, which is built into the CLI binary.
+Search the catalog named `embedded`, which is built in the CLI.
 ```
-ocne catalog search --name embedded
+$ ocne catalog search --name embedded
 ```
 
 Search the catalog named `artifacthub`.
@@ -268,7 +268,7 @@ APPVERSION: v0.22.3
 The configuration options for an application can be extracted from the catalog
 and viewed, saved to a file, or edited directly.
 
-To view the configuration, simply generate a template.  To save the template
+To view the configuration, generate a template.  To save the template
 to a file to use for an installation, redirect the output to a file.
 
 ```
@@ -284,6 +284,12 @@ rbac:
   # - apiGroups: []
   #   resources: []
 ```
+
+You can view the configuration of an application using the catalog built into the CLI.  This can be done without a running cluster.
+```
+
+```
+
 
 Templates can be edited directly if a default editor is configured.
 
@@ -329,10 +335,10 @@ prometheus-server-d899755c4-9p7tz   1/2     Running   0          13s
 
 Install Grafana from the catalog named `embedded`, which is built into the CLI binary.
 ```
-ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
+$ ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
 
 # It is now visible in the list
-ocne application list --namespace grafana
+$ ocne application list --namespace grafana
 
 NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
 grafana	grafana  	grafana	deployed	2       	7.5.17    
@@ -422,12 +428,12 @@ prometheus-node-exporter-4fqqc      1/1     Running   0          8s
 prometheus-server-d899755c4-9p7tz   2/2     Running   0          60s
 ```
 
-Update the application Grafana from the catalog named `embedded`, which is built into the CLI binary.
+Update the application Grafana from the catalog named `embedded`, which is built in the CLI.
 ```
-ocne application update --release grafana --catalog embedded --namespace grafana
+$ ocne application update --release grafana --catalog embedded --namespace grafana
 
 # It is now visible in the list
-ocne application list --namespace grafana
+$ ocne application list --namespace grafana
 
 NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
 grafana	grafana  	grafana	deployed	2       	7.5.17    
