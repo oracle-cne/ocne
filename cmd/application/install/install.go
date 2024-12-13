@@ -31,7 +31,7 @@ ocne application install --name "myApplication" --release "appRelease" --catalog
 # Install the built-in catalog.
 ocne app install -b
 
-# Install Grafana from the catalog embedded in the CLI binary
+# Install Grafana from the catalog named embedded, which is built into in the CLI binary
 ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
 `
 )
