@@ -5,12 +5,13 @@ package template
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
+
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/template"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -20,7 +21,11 @@ const (
   style of application served by the target catalog. In general, it will be a
   set of Helm values.`
 	helpExample = `
+# Generate a template for an application
 ocne application template --catalog myCatalog --name myApplication
+
+# Generate a template using catalog built into the CLI
+ocne application template --catalog embedded --name myApplication
 `
 )
 
