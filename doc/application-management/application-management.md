@@ -325,7 +325,17 @@ prometheus	prometheus	prometheus	deployed	3       	2.31.1
 $ kubectl -n prometheus get pods
 NAME                                READY   STATUS    RESTARTS   AGE
 prometheus-server-d899755c4-9p7tz   1/2     Running   0          13s
+```
 
+Install Grafana from the catalog named `embedded`, which is built into the CLI binary.
+```
+ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
+
+# It is now visible in the list
+ocne application list --namespace grafana
+
+NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
+grafana	grafana  	grafana	deployed	2       	7.5.17    
 ```
 
 Applications can also be customized via a values file during installation
@@ -410,4 +420,15 @@ $ kubectl -n prometheus get pods
 NAME                                READY   STATUS    RESTARTS   AGE
 prometheus-node-exporter-4fqqc      1/1     Running   0          8s
 prometheus-server-d899755c4-9p7tz   2/2     Running   0          60s
+```
+
+Update the application Grafana from the catalog named `embedded`, which is built into the CLI binary.
+```
+ocne application update --release grafana --catalog embedded --namespace grafana
+
+# It is now visible in the list
+ocne application list --namespace grafana
+
+NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
+grafana	grafana  	grafana	deployed	2       	7.5.17    
 ```
