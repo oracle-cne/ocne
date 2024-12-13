@@ -285,11 +285,20 @@ rbac:
   #   resources: []
 ```
 
-You can view the configuration of an application using the catalog built into the CLI.  This can be done without a running cluster.
+You can view the configuration of an application using the catalog built into the CLI. This can be done without a running cluster.
 ```
-
+$ ocne application template --name grafana --catalog embedded | head
+rbac:
+  create: true
+  ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
+  # useExistingRole: name-of-some-(cluster)role
+  pspEnabled: true
+  pspUseAppArmor: true
+  namespaced: false
+  extraRoleRules: []
+  # - apiGroups: []
+  #   resources: []
 ```
-
 
 Templates can be edited directly if a default editor is configured.
 
