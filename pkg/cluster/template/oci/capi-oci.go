@@ -1,11 +1,12 @@
 // Copyright (c) 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package template
+package oci
 
 import (
 	"errors"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"regexp"
 	"strings"
 
@@ -256,13 +257,13 @@ func imageFromShape(shape string, imgs *types.OciImageSet) string {
 }
 
 func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	tmplBytes, err := getTemplate("capi-oci.yaml")
+	tmplBytes, err := template.ReadTemplate("capi-oci.yaml")
 
 	if err != nil {
 		return "", err
 	}
 
-	if clusterConfig.ControlPlaneNodes % 2 == 0 {
+	if clusterConfig.ControlPlaneNodes%2 == 0 {
 		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
