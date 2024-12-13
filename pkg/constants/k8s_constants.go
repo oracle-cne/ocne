@@ -54,7 +54,7 @@ const (
 	CatalogNamespace = "ocne-system"
 	CatalogChart     = "ocne-catalog"
 	CatalogVersion   = "2.0.0"
-	CatalogName      = "Oracle Cloud Native Environment Application Catalog"
+	CatalogName      = DefaultCatalogName
 
 	CommunityCatalogName      = "ArtifactHub Community Catalog"
 	CommunityCatalogURI       = "https://artifacthub.io"

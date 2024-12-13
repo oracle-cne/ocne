@@ -181,6 +181,12 @@ grafana    	7.5.5
 
 To search an alternate catalog, specify its name.
 
+Search the catalog embedded in the CLI binary.
+```
+ocne catalog search --name embedded
+```
+
+Search the catalog named `artifacthub`.
 ```
 $ ocne catalog search --name artifacthub --pattern ingress-nginx
 APPLICATION               	VERSION
