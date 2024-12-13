@@ -25,7 +25,7 @@ const (
 ocne application template --catalog myCatalog --name myApplication
 
 # Generate a template using catalog built into the CLI
-ocne application template --catalog embedded --name myApplication
+ocne application template --name grafana --catalog embedded
 `
 )
 
