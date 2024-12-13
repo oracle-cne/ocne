@@ -5,14 +5,15 @@ package search
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/gosuri/uitable"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
-	"sort"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -20,7 +21,11 @@ const (
 	helpShort   = "Discover applications in a catalog"
 	helpLong    = `Discover applications in an application catalog that follow a specific pattern in a Kubernetes cluster`
 	helpExample = `
+# Search a catalog for a matching pattern
 ocne catalog search --name mycatalog --pattern *
+
+# Search the catalog that is built into the CLI
+ocne catalog search --name embedded
 `
 )
 
@@ -31,7 +36,7 @@ var catalogName string
 const (
 	flagCatalogName      = "name"
 	flagCatalogNameShort = "N"
-	flagCatalogNameHelp  = "The name of the catalog to search"
+	flagCatalogNameHelp  = "The name of the catalog to search. The catalog named \"embedded\" can be searched without creating a cluster"
 
 	flagPattern      = "pattern"
 	flagPatternShort = "p"
@@ -74,7 +79,7 @@ func RunCmd(cmd *cobra.Command) error {
 	// ChartEntries map[string][]ChartMeta `json:"entries"`
 	var charts []catalog.ChartMeta
 	for _, chartMetas := range cat.ChartEntries {
-		for i, _ := range chartMetas {
+		for i := range chartMetas {
 			charts = append(charts, chartMetas[i])
 		}
 	}
