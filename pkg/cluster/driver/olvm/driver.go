@@ -229,7 +229,7 @@ func (cad *OlvmDriver) GetKubeconfigPath() string {
 }
 
 func (cad *OlvmDriver) GetKubeAPIServerAddress() string {
-	return fmt.Sprintf("https://%s:%v", cad.ClusterConfig.VirtualIp, cad.ClusterConfig.KubeAPIServerBindPort)
+	return cad.ClusterConfig.VirtualIp
 }
 
 func (cad *OlvmDriver) PostInstallHelpStanza() string {
