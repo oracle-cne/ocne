@@ -46,7 +46,12 @@ func CreateResourceIfNotExist(restConf *rest.Config, u *unstructured.Unstructure
 		return err
 	}
 
-	return CreateResource(restConf, u)
+	// A non-nil error at this point means the resource was not found.
+	if err != nil {
+		return CreateResource(restConf, u)
+	}
+
+	return nil
 }
 
 func GetResourceByIdentifier(restConf *rest.Config, group string, version string, kind string, name string, namespace string) (*unstructured.Unstructured, error) {

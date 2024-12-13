@@ -96,6 +96,20 @@ const (
 	OCICAPIVersion    = ""
 	OCICAPIDeployment = "capoci-controller-manager"
 
+	// OLVM Operator constants
+	OLVMCAPIRelease            = "olvm-capi"
+	OLVMCAPIOperatorNamespace  = "cluster-api-provider-olvm"
+	OLVMCAPIChart              = "olvm-capi"
+	OLVMCAPIVersion            = ""
+	OLVMCAPIDeployment         = "olvm-capi-operator"
+	OLVMOVirtCredSecretSuffix  = "ovirt-credentials"
+	OLVMOVirtCAConfigMapSuffix = "ovirt-ca"
+
+	// OLVM CAPI resources constants
+	OLVMCAPIResourcesNamespace = "ocne"
+	OLVMCAPIControlPlaneMemory = "7GB"
+	OLVMCAPIWorkerMemory       = "16GB"
+
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"

@@ -71,6 +71,7 @@ const (
 	// Provider Types
 	ProviderTypeLibvirt = "libvirt"
 	ProviderTypeOCI     = "oci"
+	ProviderTypeOlvm    = "olvm"
 	ProviderTypeNone    = "none"
 )
 

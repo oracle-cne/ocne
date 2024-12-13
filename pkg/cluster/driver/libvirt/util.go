@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/util"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -20,7 +21,6 @@ import (
 	configtypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
-	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 // getDomainName generates the name of a libvirt domain based on
