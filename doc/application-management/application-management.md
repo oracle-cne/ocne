@@ -181,6 +181,12 @@ grafana    	7.5.5
 
 To search an alternate catalog, specify its name.
 
+Search the catalog named `embedded`, which is built in the CLI.
+```
+$ ocne catalog search --name embedded
+```
+
+Search the catalog named `artifacthub`.
 ```
 $ ocne catalog search --name artifacthub --pattern ingress-nginx
 APPLICATION               	VERSION
@@ -262,11 +268,11 @@ APPVERSION: v0.22.3
 The configuration options for an application can be extracted from the catalog
 and viewed, saved to a file, or edited directly.
 
-To view the configuration, simply generate a template.  To save the template
+To view the configuration, generate a template.  To save the template
 to a file to use for an installation, redirect the output to a file.
 
 ```
-$ ocne application template --name grafana | head
+$ ocne application template --name grafana | less
 rbac:
   create: true
   ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
@@ -277,6 +283,23 @@ rbac:
   extraRoleRules: []
   # - apiGroups: []
   #   resources: []
+...
+```
+
+You can view the configuration of an application using the catalog built into the CLI. This can be done without a running cluster.
+```
+$ ocne application template --name grafana --catalog embedded | less
+rbac:
+  create: true
+  ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
+  # useExistingRole: name-of-some-(cluster)role
+  pspEnabled: true
+  pspUseAppArmor: true
+  namespaced: false
+  extraRoleRules: []
+  # - apiGroups: []
+  #   resources: []
+...
 ```
 
 Templates can be edited directly if a default editor is configured.
@@ -293,9 +316,10 @@ grafana-values.yaml
 ### Installing Applications
 
 Applications are installed from catalogs.  By default, the Oracle Cloud Native
-Environment Catalog is the source of applications.  Many applications can be
-installed multiple times.  Each unique installation of an application is known
-as a "release".  Releases are installed into particular Kubernetes namespaces.
+Environment Catalog is the source of applications.  Applications may also be installed from the catalog named `embedded`, which is built into the CLI binary.
+
+Many applications can be installed multiple times.  Each unique installation of an application 
+is known as a "release".  Releases are installed into particular Kubernetes namespaces.
 
 ```
 # Install the application
@@ -318,7 +342,17 @@ prometheus	prometheus	prometheus	deployed	3       	2.31.1
 $ kubectl -n prometheus get pods
 NAME                                READY   STATUS    RESTARTS   AGE
 prometheus-server-d899755c4-9p7tz   1/2     Running   0          13s
+```
 
+Install Grafana from the catalog named `embedded`, which is built into the CLI binary.
+```
+$ ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
+
+# It is now visible in the list
+$ ocne application list --namespace grafana
+
+NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
+grafana	grafana  	grafana	deployed	2       	7.5.17    
 ```
 
 Applications can also be customized via a values file during installation
@@ -403,4 +437,15 @@ $ kubectl -n prometheus get pods
 NAME                                READY   STATUS    RESTARTS   AGE
 prometheus-node-exporter-4fqqc      1/1     Running   0          8s
 prometheus-server-d899755c4-9p7tz   2/2     Running   0          60s
+```
+
+Update the application Grafana from the catalog named `embedded`, which is built in the CLI.
+```
+$ ocne application update --release grafana --catalog embedded --namespace grafana
+
+# It is now visible in the list
+$ ocne application list --namespace grafana
+
+NAME   	NAMESPACE	CHART  	STATUS  	REVISION	APPVERSION
+grafana	grafana  	grafana	deployed	2       	7.5.17    
 ```
