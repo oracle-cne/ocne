@@ -4,8 +4,8 @@
 package application
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+	"os"
+
 	"github.com/oracle-cne/ocne/cmd/application/install"
 	"github.com/oracle-cne/ocne/cmd/application/list"
 	"github.com/oracle-cne/ocne/cmd/application/show"
@@ -14,6 +14,8 @@ import (
 	"github.com/oracle-cne/ocne/cmd/application/update"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -29,10 +31,17 @@ var kubeConfig string
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:       CommandName,
-		Short:     helpShort,
-		Long:      helpLong,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Use:   CommandName,
+		Short: helpShort,
+		Long:  helpLong,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				cmd.Help()
+				os.Exit(0)
+			}
+			cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs)
+			return nil
+		},
 		ValidArgs: []string{install.CommandName, list.CommandName, show.CommandName, template.CommandName, uninstall.CommandName, update.CommandName},
 	}
 
