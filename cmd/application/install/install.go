@@ -5,8 +5,7 @@ package install
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
@@ -14,6 +13,8 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -24,11 +25,14 @@ Install an application from an application catalog in a Kubernetes cluster.
 This command can also be used to install the built-in catalog into any cluster
 where the container runtime has the proper registry name configured.`
 	helpExample = `
-# Install application named myApplication from myCatalog with the in-cluster name appRelease
+# Install the application named myApplication from myCatalog with the in-cluster name appRelease
 ocne application install --name "myApplication" --release "appRelease" --catalog "myCatalog" 
 
 # Install the built-in catalog.
 ocne app install -b
+
+# Install Grafana from the catalog embedded in the CLI binary
+ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
 `
 )
 

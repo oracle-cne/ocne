@@ -181,7 +181,7 @@ grafana    	7.5.5
 
 To search an alternate catalog, specify its name.
 
-Search the catalog embedded in the CLI binary.
+Search the catalog named `embedded`, which is built into the CLI binary.
 ```
 ocne catalog search --name embedded
 ```
@@ -299,9 +299,10 @@ grafana-values.yaml
 ### Installing Applications
 
 Applications are installed from catalogs.  By default, the Oracle Cloud Native
-Environment Catalog is the source of applications.  Many applications can be
-installed multiple times.  Each unique installation of an application is known
-as a "release".  Releases are installed into particular Kubernetes namespaces.
+Environment Catalog is the source of applications.  Applications may also be installed from the catalog named `embedded`, which is built into the CLI binary.
+
+Many applications can be installed multiple times.  Each unique installation of an application 
+is known as a "release".  Releases are installed into particular Kubernetes namespaces.
 
 ```
 # Install the application
