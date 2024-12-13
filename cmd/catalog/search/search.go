@@ -21,8 +21,10 @@ const (
 	helpShort   = "Discover applications in a catalog"
 	helpLong    = `Discover applications in an application catalog that follow a specific pattern in a Kubernetes cluster`
 	helpExample = `
+# Search a catalog for a matching pattern
 ocne catalog search --name mycatalog --pattern *
 
+# Search the catalog that is built into the CLI
 ocne catalog search --name embedded
 `
 )
@@ -34,7 +36,7 @@ var catalogName string
 const (
 	flagCatalogName      = "name"
 	flagCatalogNameShort = "N"
-	flagCatalogNameHelp  = "The name of the catalog to search. The builtin catalog named \"embedded\" can be searched without creating a cluster"
+	flagCatalogNameHelp  = "The name of the catalog to search. The catalog named \"embedded\" can be searched without creating a cluster"
 
 	flagPattern      = "pattern"
 	flagPatternShort = "p"
