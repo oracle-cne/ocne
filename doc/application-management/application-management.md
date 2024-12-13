@@ -272,7 +272,7 @@ To view the configuration, generate a template.  To save the template
 to a file to use for an installation, redirect the output to a file.
 
 ```
-$ ocne application template --name grafana | head
+$ ocne application template --name grafana | less
 rbac:
   create: true
   ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
@@ -283,11 +283,12 @@ rbac:
   extraRoleRules: []
   # - apiGroups: []
   #   resources: []
+...
 ```
 
 You can view the configuration of an application using the catalog built into the CLI. This can be done without a running cluster.
 ```
-$ ocne application template --name grafana --catalog embedded | head
+$ ocne application template --name grafana --catalog embedded | less
 rbac:
   create: true
   ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
@@ -298,6 +299,7 @@ rbac:
   extraRoleRules: []
   # - apiGroups: []
   #   resources: []
+...
 ```
 
 Templates can be edited directly if a default editor is configured.
