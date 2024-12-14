@@ -11,11 +11,11 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -25,6 +25,7 @@ import (
 
 const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
+const ProviderTypeOlvm = "olvm"
 
 const (
 	podName         = "ocne-image-builder"
@@ -37,6 +38,7 @@ const (
 	envKargs        = "KARGS_APPEND_STANZA"
 
 	ociDefaultIgnition  = "oci"
+	olvmDefaultIgnition = "openstack"
 	qemuDefaultIgnition = "qemu"
 )
 
@@ -63,8 +65,8 @@ type CreateOptions struct {
 
 type providerFuncs struct {
 	defaultProvider string
-	createConfigMap       func(string, string) *corev1.ConfigMap
-	createImage           func(*copyConfig) error
+	createConfigMap func(string, string) *corev1.ConfigMap
+	createImage     func(*copyConfig) error
 }
 
 // Create creates a qcow2 image for the specified provider type
@@ -235,59 +237,21 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 	return err
 }
 
-func createOciConfigMap(namespace string, name string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Immutable: nil,
-		Data: map[string]string{
-			setProviderScriptName: setProviderScript,
-			modifyImageScriptName: modifyImageScript,
-			OciDhcpScriptPath:     OciDhcpScript,
-			OciDhclientScriptPath: OciDhclientScript,
-			OciDhclientPath:       OciDhclient,
-		},
-	}
-}
-
-func createOciImage(cc *copyConfig) error {
-	// copy the qcow2 image from the local system to the pod
-	kubectl.SetPipes(cc.KubectlConfig)
-	err := uploadImage(cc)
-	if err != nil {
-		return err
-	}
-
-	// run the script in the pod to change the provider in the qcow2 image
-	kubectl.SetPipes(cc.KubectlConfig)
-	if err := kubectl.RunScript(cc.KubectlConfig, cc.podName, imageMountPath, setProviderScriptName); err != nil {
-		return err
-	}
-
-	// copy boot image from pod to local system
-	kubectl.SetPipes(cc.KubectlConfig)
-	localBootImagePath, err := downloadImage(cc)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("New boot image was created successfully at %s", localBootImagePath)
-	return nil
-}
-
 var providers = map[string]providerFuncs{
 	ProviderTypeOCI: providerFuncs{
-		defaultProvider:       ociDefaultIgnition,
-		createConfigMap:       createOciConfigMap,
-		createImage:           createOciImage,
+		defaultProvider: ociDefaultIgnition,
+		createConfigMap: createOciConfigMap,
+		createImage:     createOciImage,
 	},
 	ProviderTypeOstree: providerFuncs{
-		defaultProvider:       qemuDefaultIgnition,
-		createConfigMap:       createOstreeConfigMap,
-		createImage:           createOstreeImage,
+		defaultProvider: qemuDefaultIgnition,
+		createConfigMap: createOstreeConfigMap,
+		createImage:     createOstreeImage,
+	},
+	ProviderTypeOlvm: providerFuncs{
+		defaultProvider: olvmDefaultIgnition,
+		createConfigMap: createOlvmConfigMap,
+		createImage:     createOlvmImage,
 	},
 }
 
