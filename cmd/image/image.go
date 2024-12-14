@@ -4,11 +4,12 @@
 package image
 
 import (
-	"github.com/spf13/cobra"
+	"github.com/oracle-cne/ocne/cmd/common"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/image/create"
 	"github.com/oracle-cne/ocne/cmd/image/upload"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -27,7 +28,7 @@ func NewCmd() *cobra.Command {
 		Use:       CommandName,
 		Short:     helpShort,
 		Long:      helpLong,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Args:      common.ArgsCheck,
 		ValidArgs: []string{create.CommandName},
 	}
 
