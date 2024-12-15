@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Ls gets a logs of catalogs
+// Ls - return the list of catalogs
 func Ls(kubeconfig string) ([]catalog.CatalogInfo, error) {
 	// Get a kubernetes client
 	_, kubeClient, err := client.GetKubeClient(kubeconfig)
@@ -51,11 +51,12 @@ func Ls(kubeconfig string) ([]catalog.CatalogInfo, error) {
 			Type:        service.Spec.Type,
 		})
 
-		// Always add the catalog embedded in the CLI
-		catalogs = append(catalogs, catalog.CatalogInfo{
-			CatalogName: catalog.InternalCatalog,
-			Protocol:    catalog.HelmProtocol,
-		})
 	}
+	// Always add the catalog embedded in the CLI
+	catalogs = append(catalogs, catalog.CatalogInfo{
+		CatalogName: catalog.InternalCatalog,
+		Protocol:    catalog.HelmProtocol,
+	})
+
 	return catalogs, nil
 }
