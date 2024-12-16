@@ -116,7 +116,7 @@ func BasicAdminPod(node string, namespace string, podNamePrefix string, toolbox 
 	if toolbox {
 		image = "olcne/ock:toolbox"
 	} else {
-		image = "container-registry.oracle.com/os/oraclelinux:8"
+		image = GenerateOLImageToUse()
 	}
 	privileged := true
 	hostPathType := v1.HostPathDirectory

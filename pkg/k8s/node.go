@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"strings"
 )
 
 const (
@@ -187,4 +188,16 @@ func IsUpdateAvailable(node *v1.Node) bool {
 		update = true
 	}
 	return update
+}
+
+func IsTwoDotONode() bool {
+	return false
+}
+
+func GenerateOLImageToUse() string {
+	if !IsTwoDotONode() {
+		return strings.ReplaceAll(constants.DefaultPodImage, "container-registry.oracle.com/", "")
+	} else {
+		return constants.DefaultPodImage
+	}
 }

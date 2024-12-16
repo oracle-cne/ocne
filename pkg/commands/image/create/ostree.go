@@ -14,8 +14,10 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"strings"
 )
 
 func createOstreeImage(cc *copyConfig) error {
@@ -108,6 +110,10 @@ func createOstreeImage(cc *copyConfig) error {
 }
 
 func createOstreeConfigMap(namespace string, name string) *corev1.ConfigMap {
+	osTreeBuildImageFile := ostreeImageDockerfile
+	if !k8s.IsTwoDotONode() {
+		osTreeBuildImageFile = strings.ReplaceAll(ostreeImageDockerfile, "container-registry.oracle.com/", "")
+	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,7 +122,7 @@ func createOstreeConfigMap(namespace string, name string) *corev1.ConfigMap {
 		},
 		Immutable: nil,
 		Data: map[string]string{
-			dockerfileName:          ostreeImageDockerfile,
+			dockerfileName:          osTreeBuildImageFile,
 			ostreeScriptName:        ostreeScript,
 			ostreeArchiveScriptName: ostreeArchiveScript,
 		},

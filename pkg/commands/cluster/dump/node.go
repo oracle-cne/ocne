@@ -57,12 +57,13 @@ func dumpNodes(o Options, kubeClient kubernetes.Interface, nodeNames []string) e
 		if o.NodeDumpForClusterInfo {
 			dumpFull = "FALSE"
 		}
+		dumpImage := k8s.GenerateOLImageToUse()
 
 		p := &k8s.PodOptions{
 			NodeName:      nodeName,
 			Namespace:     namespace,
 			PodName:       podName,
-			ImageName:     constants.DefaultPodImage,
+			ImageName:     dumpImage,
 			ConfigMapName: cmName,
 			HostPID:       true,
 			HostNetwork:   true,

@@ -4,11 +4,11 @@
 package script
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 func RunScript(client kubernetes.Interface, kcConfig *kubectl.KubectlConfig, nodeName string, namespace string, action string, script string, envVars []corev1.EnvVar) error {
@@ -26,6 +26,7 @@ func RunScript(client kubernetes.Interface, kcConfig *kubectl.KubectlConfig, nod
 	if err := k8s.CreateConfigMapWithData(client, namespace, cmName, map[string]string{scriptName: script}); err != nil {
 		return err
 	}
+	scriptImage := k8s.GenerateOLImageToUse()
 
 	// create the pod, first delete the pod if it exists
 	if err := k8s.DeletePod(client, namespace, podName); err != nil {
@@ -35,7 +36,7 @@ func RunScript(client kubernetes.Interface, kcConfig *kubectl.KubectlConfig, nod
 		NodeName:      nodeName,
 		Namespace:     namespace,
 		PodName:       podName,
-		ImageName:     constants.DefaultPodImage,
+		ImageName:     scriptImage,
 		ConfigMapName: cmName,
 		HostPID:       true,
 		HostNetwork:   true,

@@ -151,22 +151,6 @@ exit
 
 	dockerfileName = "Dockerfile"
 
-	ostreeImageDockerfile = `
-FROM container-registry.oracle.com/os/oraclelinux:8-slim
-
-ARG PODMAN_IMG
-ARG ARCH
-ARG OSTREE_IMG
-
-ADD ca-trust /tmp/ca-trust
-ADD tls /tmp/tls
-ADD make-archive.sh /make-archive.sh
-RUN sh /make-archive.sh
-
-CMD ["nginx", "-g", "daemon off;"]
-EXPOSE 80
-EXPOSE 443`
-
 	ostreeArchiveScriptName = "make-archive.sh"
 	ostreeArchiveScript     = `
 #! /bin/bash
@@ -249,3 +233,19 @@ export CONTAINERS_STORAGE_CONF=/tmp/ostree-image/storage.conf
 chroot /hostroot podman build --no-cache --isolation chroot -t ock-ostree:latest --build-arg OSTREE_IMG='%s' --build-arg PODMAN_IMG=%s --build-arg ARCH=%s /tmp/ostree-image/build
 `
 )
+
+var ostreeImageDockerfile = `
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
+
+ARG PODMAN_IMG
+ARG ARCH
+ARG OSTREE_IMG
+
+ADD ca-trust /tmp/ca-trust
+ADD tls /tmp/tls
+ADD make-archive.sh /make-archive.sh
+RUN sh /make-archive.sh
+
+CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 80
+EXPOSE 443`
