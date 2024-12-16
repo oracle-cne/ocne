@@ -918,7 +918,7 @@ func (ld *LibvirtDriver) GetKubeconfigPath() string {
 }
 
 func (ld *LibvirtDriver) GetKubeAPIServerAddress() string {
-	return ld.TargetIP
+	return ld.KubeAPIServerIP
 }
 
 func (ld *LibvirtDriver) PostInstallHelpStanza() string {

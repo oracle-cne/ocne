@@ -51,7 +51,7 @@ const (
 	CNIFlannelImageTag  = "v0.22.3-2"
 
 	KubeProxyRelease   = "kube-proxy"
-	KubeProxyNamespace = "kube-system"
+	KubeProxyNamespace = "kube-proxy"
 	KubeProxyChart     = "kube-proxy"
 	KubeProxyVersion   = "2.0.0"
 	KubeProxyDaemonSet = "kube-proxy"

@@ -40,9 +40,9 @@ var kubernetesVersions = map[string]KubernetesVersions{
 		CoreDNS:    "current",
 	},
 	"1.30.3": {
-		Kubernetes: "1.30.2",
+		Kubernetes: "1.30.3",
 		Pause:      "3.9",
-		Etcd:       "3.5.11",
+		Etcd:       "3.5.12",
 		CoreDNS:    "current",
 	},
 }

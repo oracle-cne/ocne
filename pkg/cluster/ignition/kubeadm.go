@@ -28,7 +28,7 @@ type InitConfig struct {
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
 	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
-	Patches          Patches          `yaml:"patches,omitempty"`
+	Patches          *Patches          `yaml:"patches,omitempty"`
 }
 
 type Patches struct {
@@ -134,6 +134,7 @@ type JoinConfig struct {
 	ControlPlane     ControlPlane     `yaml:"controlPlane,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	Discovery        Discovery        `yaml:"discovery,omitempty"`
+	Patches          *Patches          `yaml:"patches,omitempty"`
 }
 
 type ControlPlane struct {
@@ -189,8 +190,8 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			"addon/kube-proxy",
 			"preflight",
 		},
-		Patches: Patches{
-			Directory: "/etc/ocne/patches",
+		Patches: &Patches{
+			Directory: "/etc/ocne/ock",
 		},
 	}
 	if !ci.ExpectingWorkerNodes {
@@ -227,6 +228,9 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 				Token:             cj.JoinToken,
 				CACertHashes:      cj.KubePKICertHashes,
 			},
+		},
+		Patches: &Patches{
+			Directory: "/etc/ocne/ock",
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {
