@@ -5,10 +5,9 @@ package catalog
 
 import (
 	"fmt"
-
+	httphelpers "github.com/oracle-cne/ocne/pkg/http"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	httphelpers "github.com/oracle-cne/ocne/pkg/http"
 )
 
 // HelmConnection implements the "helm" protocol.  This protocol

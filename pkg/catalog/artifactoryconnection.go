@@ -6,11 +6,11 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	httphelpers "github.com/oracle-cne/ocne/pkg/http"
 	"net/url"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
-	httphelpers "github.com/oracle-cne/ocne/pkg/http"
 )
 
 const (
