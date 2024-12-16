@@ -59,11 +59,18 @@ type OlvmProvider struct {
 type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
 	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
-	OVirtAPI             OlvmClusterOvirtAPI      `yaml:"ovirtAPI"`
+	OVirtAPI             OlvmOvirtAPI             `yaml:"ovirtAPI"`
+	OVirtOck             OlvmOvirtOck             `yaml:"ovirtOck"`
 	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
 }
 
-type OlvmClusterOvirtAPI struct {
+type OlvmOvirtOck struct {
+	DiskName          string `yaml:"diskName"`
+	DiskSize          string `yaml:"diskSize"`
+	StorageDomainName string `yaml:"storageDomainName"`
+}
+
+type OlvmOvirtAPI struct {
 	ServerURL    string `yaml:"serverURL"`
 	ServerCA     string `yaml:"serverCA"`
 	ServerCAPath string `yaml:"serverCAPath"`
@@ -472,7 +479,8 @@ func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
 	return OlvmCluster{
 		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
 		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
-		OVirtAPI:             MergeOlvmClusterOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
+		OVirtAPI:             MergeOlvmOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
+		OVirtOck:             MergeOlvmOvirtOck(&def.OVirtOck, &ovr.OVirtOck),
 		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
 	}
 }
@@ -502,15 +510,27 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 	}
 }
 
-// MergeOlvmClusterOvirtAPI takes two OlvmClusterOvirtAPIs and merges them into
+// MergeOlvmOvirtAPI takes two OlvmOvirtAPIs and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmClusterOvirtAPI(def *OlvmClusterOvirtAPI, ovr *OlvmClusterOvirtAPI) OlvmClusterOvirtAPI {
-	return OlvmClusterOvirtAPI{
+func MergeOlvmOvirtAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
+	return OlvmOvirtAPI{
 		ServerURL:    ies(def.ServerURL, ovr.ServerURL),
 		ServerCA:     ies(def.ServerCA, ovr.ServerCA),
 		ServerCAPath: ies(def.ServerCAPath, ovr.ServerCAPath),
+	}
+}
+
+// MergeOlvmOvirtOck takes two OlvmOvirtOcks and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
+	return OlvmOvirtOck{
+		DiskName:          ies(def.DiskName, ovr.DiskName),
+		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
+		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
 	}
 }
 
