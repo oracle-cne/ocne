@@ -43,6 +43,9 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
+	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, oCluster.OVirtOck.DiskName,
+		oCluster.OVirtOck.StorageDomainName)
+
 	// Create an empty disk in the oVirt storage domain
 	disk, err := createDisk(ovcli, oCluster)
 	if err != nil {
@@ -91,7 +94,7 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
-	log.Infof("Successfully uploaded OCK image %s to disk %s", o.ImagePath, disk.Name)
+	log.Infof("Successfully uploaded OCK image")
 	return nil
 }
 
@@ -148,7 +151,7 @@ func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk) (*ovit.Image
 }
 
 func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase string) error {
-	log.Infof("Waiting for image transfer to become ready")
+	log.Infof("Waiting for image transfer phase %s", phase)
 	const maxTries = 60
 	for i := 0; i < maxTries; i++ {
 		iTran, err := ovit.GetImageTransfer(ovcli, transferID)
@@ -160,11 +163,11 @@ func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase 
 		}
 		time.Sleep(1 + time.Second)
 	}
-	return fmt.Errorf("Timed out waiting for image transfer to become ready")
+	return fmt.Errorf("Timed out waiting for image transfer phase %s", phase)
 }
 
 func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
-	log.Infof("Waiting for image transfer to become ready")
+	log.Infof("Waiting for disk status to be OK")
 	const maxTries = 60
 	for i := 0; i < maxTries; i++ {
 		disk, err := ovdisk.GetDisk(ovcli, diskID)
@@ -176,17 +179,7 @@ func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
 		}
 		time.Sleep(1 + time.Second)
 	}
-	return fmt.Errorf("Timed out waiting for disk %s to become ok", diskID)
-}
-
-//func isImageTransferReady(ovcli *ovclient.Client, diskID string) (bool, error) {
-//
-//
-//}
-
-func uploadImage(ovcli *ovclient.Client, proxy_url string) error {
-	log.Infof("Uploading image to %s", proxy_url)
-	return nil
+	return fmt.Errorf("Timed out waiting for disk %s status to be OK", diskID)
 }
 
 // cleanup is a best effort
@@ -203,4 +196,9 @@ func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
 	}
 	ovit.DeleteImageTransfer(ovcli, transferID)
 	ovdisk.DeleteDisk(ovcli, diskID)
+}
+
+func uploadImage(ovcli *ovclient.Client, proxy_url string) error {
+	log.Infof("Uploading image to %s", proxy_url)
+	return nil
 }
