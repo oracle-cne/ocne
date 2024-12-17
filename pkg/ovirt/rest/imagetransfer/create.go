@@ -31,13 +31,11 @@ func CreateImageTransfer(ovcli *ovclient.Client, req *CreateImageTransferRequest
 	body, statusCode, err := ovcli.REST.Post(path, bytes.NewReader(jsonPayload), h)
 	if err != nil {
 		err = fmt.Errorf("Error calling HTTP POST to create an ImageTransfer resource: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 
 	if statusCode != 200 && statusCode != 201 && statusCode != 202 {
 		err = fmt.Errorf("Error calling HTTP POST to create an ImageTransfer resource %v", statusCode)
-		log.Error(err)
 		return nil, err
 	}
 

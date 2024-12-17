@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -23,13 +22,11 @@ func DoImageTransferAction(ovcli *ovclient.Client, transferID string, action str
 	_, statusCode, err := ovcli.REST.Post(path, bytes.NewReader(nil), h)
 	if err != nil {
 		err = fmt.Errorf("Error calling HTTP POST to update an ImageTransfer resource: %v", err)
-		log.Error(err)
 		return err
 	}
 
 	if statusCode != 200 && statusCode != 201 && statusCode != 202 {
 		err = fmt.Errorf("Error calling HTTP POST to update an ImageTransfer resource %v", statusCode)
-		log.Error(err)
 		return err
 	}
 

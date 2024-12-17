@@ -6,7 +6,6 @@ package imagetransfer
 import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
@@ -18,7 +17,6 @@ func GetImageTransfer(ovcli *ovclient.Client, transferID string) (*ImageTransfer
 	body, err := ovcli.REST.Get(ovcli.AccessToken, path)
 	if err != nil {
 		err = fmt.Errorf("Error doing HTTP GET: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 
@@ -26,7 +24,6 @@ func GetImageTransfer(ovcli *ovclient.Client, transferID string) (*ImageTransfer
 	err = json.Unmarshal(body, iTran)
 	if err != nil {
 		err = fmt.Errorf("Error unmarshaling ImageTransfer: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 

@@ -62,33 +62,34 @@ func UploadOlvm(o UploadOptions) error {
 		ovdisk.DeleteDisk(ovcli, disk.Id)
 		return err
 	}
-	defer cleanup(ovcli, iTran.Id, disk.Id)
 
 	// Wait for imagetransfer to be ready to transfer
 	err = waitForImageTransferPhase(ovcli, iTran.Id, ovit.PhaseTransferring)
 	if err != nil {
+		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
 	}
 
 	// Upload the image to the disk
 	err = uploadImage(ovcli, iTran.Id)
 	if err != nil {
+		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
 	}
 
 	// Finish imagetransfer
 	err = ovit.DoImageTransferAction(ovcli, iTran.Id, ovit.ActionFinalize)
 	if err != nil {
+		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
 	}
 
 	// Wait until the transfer session was successfully closed, and the targeted image was verified and ready to be used
 	err = waitForImageTransferPhase(ovcli, iTran.Id, ovit.PhaseFinished)
 	if err != nil {
+		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
 	}
-
-	ovit.DeleteImageTransfer(ovcli, iTran.Id)
 
 	log.Infof("Successfully uploaded OCK image %s to disk %s", o.ImagePath, disk.Name)
 	return nil

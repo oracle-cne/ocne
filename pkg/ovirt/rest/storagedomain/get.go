@@ -18,7 +18,6 @@ func GetStorageDomains(ovcli *ovclient.Client) (*StorageDomainList, error) {
 	body, err := ovcli.REST.Get(ovcli.AccessToken, path)
 	if err != nil {
 		err = fmt.Errorf("Error doing HTTP GET: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 

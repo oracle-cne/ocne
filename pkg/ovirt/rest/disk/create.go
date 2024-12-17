@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"net/http"
@@ -19,7 +18,7 @@ func CreateDisk(ovcli *ovclient.Client, req *CreateDiskRequest) (*Disk, error) {
 
 	jsonPayload, err := json.Marshal(req)
 	if err != nil {
-		log.Errorf("Error marshalling CreateDiskRequest %s: %v", req.Name, err)
+		err := fmt.Errorf("Error marshalling CreateDiskRequest %s: %v", req.Name, err)
 		return nil, err
 	}
 
@@ -31,13 +30,11 @@ func CreateDisk(ovcli *ovclient.Client, req *CreateDiskRequest) (*Disk, error) {
 	body, statusCode, err := ovcli.REST.Post(path, bytes.NewReader(jsonPayload), h)
 	if err != nil {
 		err = fmt.Errorf("Error calling HTTP POST to create an oVirt disk: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 
 	if statusCode != 200 && statusCode != 201 && statusCode != 202 {
 		err = fmt.Errorf("Error calling HTTP POST to create an oVirt disk returned status code %v", statusCode)
-		log.Error(err)
 		return nil, err
 	}
 
@@ -45,7 +42,6 @@ func CreateDisk(ovcli *ovclient.Client, req *CreateDiskRequest) (*Disk, error) {
 	err = json.Unmarshal(body, disk)
 	if err != nil {
 		err = fmt.Errorf("Error unmarshalling create oVirt disk response: %v", err)
-		log.Error(err)
 		return nil, err
 	}
 

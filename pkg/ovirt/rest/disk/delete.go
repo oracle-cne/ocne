@@ -6,7 +6,6 @@ package disk
 import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -22,7 +21,6 @@ func DeleteDisk(ovcli *ovclient.Client, diskID string) error {
 	_, err := ovcli.REST.Delete(path, h)
 	if err != nil {
 		err = fmt.Errorf("Error doing HTTP DELETE of the disk %s: %v", diskID, err)
-		log.Error(err)
 		return err
 	}
 
