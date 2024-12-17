@@ -4,11 +4,16 @@
 package upload
 
 import (
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"io"
 )
 
 // UploadOptions are the options for the upload image command
 type UploadOptions struct {
+	// ClusterConfig is the cluster config.
+	// This is optional and only needed by OLVM for now
+	ClusterConfig *types.ClusterConfig
+
 	// ProviderConfigPath is the path for the provider config (e.g ~/.oci/config)
 	ProviderConfigPath string
 

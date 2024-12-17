@@ -3,6 +3,11 @@
 
 package upload
 
+// UploadOlvm uploads a boot image to an OLVM disk.
+func UploadOlvm(options UploadOptions) error {
+	return nil
+}
+
 // Get OvClient
 
 // Create disk

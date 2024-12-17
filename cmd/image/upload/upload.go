@@ -6,13 +6,13 @@ package upload
 import (
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -26,6 +26,9 @@ ocne image upload --compartment ocid1.compartment.example --bucket images --type
 )
 
 var config types.Config
+var clusterConfig types.ClusterConfig
+var clusterConfigPath string
+
 var uploadOptions = upload.UploadOptions{
 	BucketName:        pkgconst.OciBucket,
 	ImageName:         pkgconst.OciImageName,
@@ -75,6 +78,7 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
+	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp)
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&uploadOptions.ProviderType, flagProviderType, flagProviderTypeShort, upload.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&uploadOptions.BucketName, flagBucket, flagBucketShort, pkgconst.OciBucket, flagBucketHelp)
@@ -91,6 +95,12 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne image upload" command
 func RunCmd(cmd *cobra.Command) error {
+	_, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	if err != nil {
+		return err
+	}
+
+	uploadOptions.ClusterConfig = cc
 	if err := flags.ValidateArchitecture(uploadOptions.ImageArchitecture); err != nil {
 		return err
 	}
