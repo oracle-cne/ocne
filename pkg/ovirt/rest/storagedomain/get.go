@@ -12,7 +12,7 @@ import (
 
 // GetStorageDomains gets all datacenters.
 func GetStorageDomains(ovcli *ovclient.Client) (*StorageDomainList, error) {
-	const path = "/api/datacenters"
+	const path = "/api/storagedomains"
 
 	// call the server to get the datacenters
 	body, err := ovcli.REST.Get(ovcli.AccessToken, path)
@@ -42,9 +42,9 @@ func GetStorageDomain(ovcli *ovclient.Client, storageDomainName string) (*Storag
 
 	for i, sd := range sdList.StorageDomains {
 		if sd.Name == storageDomainName {
-			return &sdList.StorageDomains[i].StorageDomain, nil
+			return &sdList.StorageDomains[i], nil
 		}
 	}
 
-	return nil, err
+	return nil, fmt.Errorf("Storage Domain %s not found", storageDomainName)
 }

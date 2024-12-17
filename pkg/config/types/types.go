@@ -60,7 +60,7 @@ type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
 	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
 	OVirtAPI             OlvmOvirtAPI             `yaml:"ovirtAPI"`
-	OVirtOck             OlvmOvirtOck             `yaml:"ovirtOck"`
+	OVirtOck             OlvmOvirtOck             `yaml:"ovirtOCK"`
 	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
 }
 

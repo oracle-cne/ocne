@@ -80,7 +80,6 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&uploadOptions.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp)
-	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&uploadOptions.ProviderType, flagProviderType, flagProviderTypeShort, upload.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&uploadOptions.BucketName, flagBucket, flagBucketShort, pkgconst.OciBucket, flagBucketHelp)
 	cmd.Flags().StringVarP(&uploadOptions.CompartmentName, flagCompartment, flagCompartmentShort, "", flagCompartmentHelp)
