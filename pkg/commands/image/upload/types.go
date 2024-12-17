@@ -10,6 +10,9 @@ import (
 
 // UploadOptions are the options for the upload image command
 type UploadOptions struct {
+	// KubeConfigPath is the optional path to the kubeconfig file
+	KubeConfigPath string
+
 	// ClusterConfig is the cluster config.
 	// This is optional and only needed by OLVM for now
 	ClusterConfig *types.ClusterConfig

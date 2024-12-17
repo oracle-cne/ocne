@@ -4,13 +4,12 @@
 package ovclient
 
 import (
-	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -20,14 +19,13 @@ const (
 // GetOvirtCA validates the CA configmap and returns the CA
 // The configmap is optional since the CA is only needed for self-signed certs or certs that are not
 // in the local trust store.
-func GetOvirtCA(cli ctrlclient.Client, nsn types.NamespacedName) (string, error) {
+func GetOvirtCA(cli kubernetes.Interface, nsn types.NamespacedName) (string, error) {
 	// CA configmap is optional
 	if nsn.Name == "" {
 		return "", nil
 	}
-
-	cm := &corev1.ConfigMap{}
-	if err := cli.Get(context.TODO(), nsn, cm); err != nil {
+	cm, err := k8s.GetConfigmap(cli, nsn.Namespace, nsn.Name)
+	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			err = fmt.Errorf("The oVirt CA configmap %v is missing", nsn)
 			log.Error(err.Error())

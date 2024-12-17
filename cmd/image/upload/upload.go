@@ -78,6 +78,7 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
+	cmd.Flags().StringVarP(&uploadOptions.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp)
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&uploadOptions.ProviderType, flagProviderType, flagProviderTypeShort, upload.ProviderTypeOCI, flagProviderTypeHelp)

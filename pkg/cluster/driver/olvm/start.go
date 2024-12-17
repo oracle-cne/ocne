@@ -316,9 +316,17 @@ func getCreds() (map[string][]byte, error) {
 }
 
 func (cad *OlvmDriver) credSecretName() string {
-	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix)
+	return CredSecretName(cad.ClusterConfig)
 }
 
 func (cad *OlvmDriver) caConfigMapName() string {
-	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix)
+	return CaConfigMapName(cad.ClusterConfig)
+}
+
+func CredSecretName(cc *types.ClusterConfig) string {
+	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
+}
+
+func CaConfigMapName(cc *types.ClusterConfig) string {
+	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
 }

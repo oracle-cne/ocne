@@ -4,13 +4,13 @@
 package ovclient
 
 import (
-	"context"
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 	scopeKey    = "scope"
 )
 
-func GetCredentials(cli ctrlclient.Client, nsn types.NamespacedName) (*corev1.Secret, *Credentials, error) {
+func GetCredentials(cli kubernetes.Interface, nsn types.NamespacedName) (*corev1.Secret, *Credentials, error) {
 	secret, err := GetCredSecret(cli, nsn)
 	if err != nil {
 		return nil, nil, err
@@ -39,9 +39,9 @@ func GetCredentials(cli ctrlclient.Client, nsn types.NamespacedName) (*corev1.Se
 }
 
 // GetCredSecret gets the credential secret
-func GetCredSecret(cli ctrlclient.Client, nsn types.NamespacedName) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	if err := cli.Get(context.TODO(), nsn, secret); err != nil {
+func GetCredSecret(cli kubernetes.Interface, nsn types.NamespacedName) (*corev1.Secret, error) {
+	secret, err := k8s.GetSecret(cli, nsn.Namespace, nsn.Name)
+	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			err = fmt.Errorf("The credential Secret %v is missing", nsn)
 			log.Error(err.Error())

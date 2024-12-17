@@ -9,9 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"net/url"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
@@ -47,7 +47,7 @@ type Client struct {
 }
 
 // GetOVClient gets an ovClient
-func GetOVClient(cli ctrlclient.Client, secretNsn types.NamespacedName, caNsn types.NamespacedName, apiServerURL string) (*Client, error) {
+func GetOVClient(cli kubernetes.Interface, secretNsn types.NamespacedName, caNsn types.NamespacedName, apiServerURL string) (*Client, error) {
 	// validate the secret that has the oVirt REST creds
 	_, creds, err := GetCredentials(cli, secretNsn)
 	if err != nil {

@@ -9,9 +9,7 @@ type CreateDiskRequest struct {
 }
 
 type StorageDomainList struct {
-	StorageDomains []struct {
-		StorageDomain
-	} `json:"storage_domain"`
+	StorageDomains []StorageDomain `json:"storage_domain"`
 }
 
 type StorageDomain struct {
