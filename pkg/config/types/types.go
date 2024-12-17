@@ -44,6 +44,76 @@ type OciProvider struct {
 	Proxy             Proxy            `yaml:"proxy"`
 }
 
+type OlvmProvider struct {
+	Namespace           string               `yaml:"namespace"`
+	SelfManaged         bool                 `yaml:"selfmanagedfake"`
+	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
+	Proxy               Proxy                `yaml:"proxy"`
+	NetworkInterface    string               `yaml:"networkInterface"`
+	OlvmCluster         OlvmCluster          `yaml:"olvmCluster"`
+	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
+	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
+	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
+}
+
+type OlvmCluster struct {
+	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
+	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
+	OVirtAPI             OlvmClusterOvirtAPI      `yaml:"ovirtAPI"`
+	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
+}
+
+type OlvmClusterOvirtAPI struct {
+	ServerURL    string `yaml:"serverURL"`
+	ServerCA     string `yaml:"serverCA"`
+	ServerCAPath string `yaml:"serverCAPath"`
+}
+
+type OlvmControlPlaneEndpoint struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
+
+type OlvmVmIpProfile struct {
+	Name              string `yaml:"name"`
+	StartingIpAddress string `yaml:"startingIpAddress"`
+	Device            string `yaml:"device"`
+	Gateway           string `yaml:"gateway"`
+	Netmask           string `yaml:"netmask"`
+}
+
+type OlvmMachine struct {
+	Memory              string             `yaml:"memory"`
+	Network             OlvmMachineNetwork `yaml:"network"`
+	Cpu                 OlvmMachineCpu     `yaml:"cpu"`
+	OVirtClusterName    string             `yaml:"ovirtClusterName"`
+	OlvmVmIpProfileName string             `yaml:"olvmVmIpProfileName"`
+	VMTemplateName      string             `yaml:"vmTemplateName"`
+}
+
+type OlvmMachineCpu struct {
+	Architecture string                `yaml:"architecture"`
+	Topology     OlvmMachineCpuToplogy `yaml:"topology"`
+}
+
+type OlvmMachineCpuToplogy struct {
+	Cores   int `yaml:"cores"`
+	Sockets int `yaml:"sockets"`
+	Threads int `yaml:"threads"`
+}
+
+type OlvmMachineNetwork struct {
+	NetworkName     string `yaml:"networkName"`
+	InterfaceType   string `yaml:"interfaceType"`
+	VnicName        string `yaml:"vnicName"`
+	VnicProfileName string `yaml:"vnicProfileName"`
+}
+
+type OlvmLocalAPIEndpoint struct {
+	BindPort         int    `yaml:"bindPort"`
+	AdvertiseAddress string `yaml:"advertiseAddress"`
+}
+
 type ByoProvider struct {
 	AutomaticTokenCreation    bool   `yaml:"automaticTokenCreationfake"`
 	AutomaticTokenCreationPtr *bool  `yaml:"automaticTokenCreation"`
@@ -67,6 +137,7 @@ type Providers struct {
 	Libvirt LibvirtProvider `yaml:"libvirt"`
 	Oci     OciProvider     `yaml:"oci"`
 	Byo     ByoProvider     `yaml:"byo"`
+	Olvm    OlvmProvider    `yaml:"olvm"`
 }
 
 type Proxy struct {
@@ -375,6 +446,136 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 	}
 }
 
+// MergeOlvmProvider takes two OlvmProviders and merges
+// them into a third.  The default values for the result come from
+// the first argument.  If a value is set in the second argument, that
+// values takes precedence.
+func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
+	return OlvmProvider{
+		Namespace:           ies(def.Namespace, ovr.Namespace),
+		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
+		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
+		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
+		NetworkInterface:    ies(def.NetworkInterface, ovr.NetworkInterface),
+		OlvmCluster:         MergeOlvmCluster(&def.OlvmCluster, &ovr.OlvmCluster),
+		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
+		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
+		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
+	}
+}
+
+// MergeOlvmCluster takes two OlvmClusters and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
+	return OlvmCluster{
+		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
+		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
+		OVirtAPI:             MergeOlvmClusterOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
+		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
+	}
+}
+
+// MergeOlvmVmIpProfile takes two OlvmVmIpProfiles and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpProfile {
+	return OlvmVmIpProfile{
+		Name:              ies(def.Name, ovr.Name),
+		StartingIpAddress: ies(def.StartingIpAddress, ovr.StartingIpAddress),
+		Device:            ies(def.Device, ovr.Device),
+		Gateway:           ies(def.Gateway, ovr.Gateway),
+		Netmask:           ies(def.Netmask, ovr.Netmask),
+	}
+}
+
+// MergeOlvmControlPlaneEndpoint takes two OlvmControlPlaneEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
+	return OlvmControlPlaneEndpoint{
+		Host: ies(def.Host, ovr.Host),
+		Port: ies(def.Port, ovr.Port),
+	}
+}
+
+// MergeOlvmClusterOvirtAPI takes two OlvmClusterOvirtAPIs and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmClusterOvirtAPI(def *OlvmClusterOvirtAPI, ovr *OlvmClusterOvirtAPI) OlvmClusterOvirtAPI {
+	return OlvmClusterOvirtAPI{
+		ServerURL:    ies(def.ServerURL, ovr.ServerURL),
+		ServerCA:     ies(def.ServerCA, ovr.ServerCA),
+		ServerCAPath: ies(def.ServerCAPath, ovr.ServerCAPath),
+	}
+}
+
+// MergeOlvmMachine takes two OlvmMachines and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
+	return OlvmMachine{
+		OVirtClusterName:    ies(def.OVirtClusterName, ovr.OVirtClusterName),
+		OlvmVmIpProfileName: ies(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
+		Memory:              ies(def.Memory, ovr.Memory),
+		Network:             MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
+		Cpu:                 MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
+		VMTemplateName:      ies(def.VMTemplateName, ovr.VMTemplateName),
+	}
+}
+
+// MergeOlvmMachineNetwork takes two OlvmMachineNetworks and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) OlvmMachineNetwork {
+	return OlvmMachineNetwork{
+		NetworkName:     ies(def.NetworkName, ovr.NetworkName),
+		InterfaceType:   ies(def.InterfaceType, ovr.InterfaceType),
+		VnicName:        ies(def.VnicName, ovr.VnicName),
+		VnicProfileName: ies(def.VnicProfileName, ovr.VnicProfileName),
+	}
+}
+
+// MergeOlvmMachineCpu takes two OlvmMachineCpus and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCpu {
+	return OlvmMachineCpu{
+		Architecture: ies(def.Architecture, ovr.Architecture),
+		Topology:     MergeOlvmMachineCpuToplogy(&def.Topology, &ovr.Topology),
+	}
+}
+
+// MergeOlvmMachineCpuToplogy takes two OlvmMachineCpuToplogies and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuToplogy) OlvmMachineCpuToplogy {
+	return OlvmMachineCpuToplogy{
+		Cores:   iei(def.Cores, ovr.Cores),
+		Sockets: iei(def.Sockets, ovr.Sockets),
+		Threads: iei(def.Threads, ovr.Threads),
+	}
+}
+
+// MergeOlvmLocalAPIEndpoint takes two OlvmLocalAPIEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpoint) OlvmLocalAPIEndpoint {
+	return OlvmLocalAPIEndpoint{
+		BindPort:         iei(def.BindPort, ovr.BindPort),
+		AdvertiseAddress: ies(def.AdvertiseAddress, ovr.AdvertiseAddress),
+	}
+}
+
 // MergeByoProvider takes two ByoProviders and merged them into a
 // third.  The default values for the result come from the first
 // argument.  If a value is set in the second argument, that value
@@ -395,6 +596,7 @@ func MergeProviders(def *Providers, ovr *Providers) Providers {
 		Libvirt: MergeLibvirtProvider(&def.Libvirt, &ovr.Libvirt),
 		Oci:     MergeOciProvider(&def.Oci, &ovr.Oci),
 		Byo:     MergeByoProvider(&def.Byo, &ovr.Byo),
+		Olvm:    MergeOlvmProvider(&def.Olvm, &ovr.Olvm),
 	}
 }
 

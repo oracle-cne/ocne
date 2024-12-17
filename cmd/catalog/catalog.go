@@ -4,8 +4,6 @@
 package catalog
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/catalog/add"
 	"github.com/oracle-cne/ocne/cmd/catalog/copy"
 	"github.com/oracle-cne/ocne/cmd/catalog/get"
@@ -13,8 +11,11 @@ import (
 	"github.com/oracle-cne/ocne/cmd/catalog/mirror"
 	"github.com/oracle-cne/ocne/cmd/catalog/remove"
 	"github.com/oracle-cne/ocne/cmd/catalog/search"
+	"github.com/oracle-cne/ocne/cmd/common"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -33,7 +34,7 @@ func NewCmd() *cobra.Command {
 		Use:       CommandName,
 		Short:     helpShort,
 		Long:      helpLong,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Args:      common.ArgsCheck,
 		ValidArgs: []string{add.CommandName, get.CommandName, list.CommandName, mirror.CommandName, remove.CommandName, search.CommandName, copy.CommandName},
 	}
 

@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	"fmt"
 	cmdconstants "github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
-	"fmt"
+	"gopkg.in/yaml.v3"
 )
 
 // ParseConfig takes a yaml-encoded string and parses it
@@ -75,6 +75,18 @@ func GetDefaultConfig() (*types.Config, error) {
 				WorkerShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardE4Flex,
 					Ocpus: constants.OciWorkerOcpus,
+				},
+			},
+			Olvm: types.OlvmProvider{
+				Namespace: constants.OLVMCAPIResourcesNamespace,
+				ControlPlaneMachine: types.OlvmMachine{
+					Memory: constants.OLVMCAPIControlPlaneMemory,
+				},
+				WorkerMachine: types.OlvmMachine{
+					Memory: constants.OLVMCAPIWorkerMemory,
+				},
+				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
+					BindPort: 6444,
 				},
 			},
 		},

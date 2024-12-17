@@ -5,6 +5,7 @@ package k8s
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,17 @@ import (
 func CreateSecret(client kubernetes.Interface, namespace string, secret *v1.Secret) error {
 	_, err := client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	return err
+}
+
+// DeleteSecret deletes a Secret
+func DeleteSecret(client kubernetes.Interface, namespace string, name string) error {
+	if err := client.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // FindSecretsByLabelKey returns a SecretList for services that match the specified label key
