@@ -3,12 +3,26 @@
 
 package imagetransfer
 
+// See https://www.ovirt.org/documentation/doc-REST_API_Guide/#types-image_transfer_phase
 const PhaseTransferring string = "transferring"
+const PhaseCancelled string = "cancelled"
+const PhaseFinished string = "finished_success"
+
+const ActionFinalize string = "finalize"
+const ActionCancel string = "cancel"
+
+const DirectionUpload string = "upload"
+
+// see https://www.ovirt.org/documentation/doc-REST_API_Guide/#types-image_transfer_timeout_policy
+// cancel the transfer and unlock the disk
+const TimeoutPolicy string = "cancel"
 
 // CreateImageTransferRequest specifies the request to the image transfer service
 type CreateImageTransferRequest struct {
-	Disk      `json:"disk"`
-	Direction string `json:"direction"`
+	Name          string `json:"name"`
+	Disk          `json:"disk"`
+	Direction     string `json:"direction"`
+	TimeoutPolicy string `json:"timeout_policy"`
 }
 
 type Disk struct {

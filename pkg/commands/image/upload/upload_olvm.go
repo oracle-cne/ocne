@@ -52,29 +52,46 @@ func UploadOlvm(o UploadOptions) error {
 	// Wait for disk ready for data transfer
 	err = waitForDiskReady(ovcli, disk.Id)
 	if err != nil {
+		ovdisk.DeleteDisk(ovcli, disk.Id)
 		return err
 	}
 
 	// Create imagetransfer
-	iTran, err := createImageTransfer(ovcli, disk.Id)
+	iTran, err := createImageTransfer(ovcli, disk)
 	if err != nil {
+		ovdisk.DeleteDisk(ovcli, disk.Id)
 		return err
 	}
-	defer ovit.DeleteImageTransfer(ovcli, iTran.Id)
+	defer cleanup(ovcli, iTran.Id, disk.Id)
 
 	// Wait for imagetransfer to be ready to transfer
-	err = waitForImageTransferReady(ovcli, iTran.Id)
+	err = waitForImageTransferPhase(ovcli, iTran.Id, ovit.PhaseTransferring)
 	if err != nil {
 		return err
 	}
 
-	// Upload image
+	// Upload the image to the disk
+	err = uploadImage(ovcli, iTran.Id)
+	if err != nil {
+		return err
+	}
 
 	// Finish imagetransfer
+	err = ovit.DoImageTransferAction(ovcli, iTran.Id, ovit.ActionFinalize)
+	if err != nil {
+		return err
+	}
 
-	// TODO add doc telling user to create a VM Template
+	// Wait until the transfer session was successfully closed, and the targeted image was verified and ready to be used
+	err = waitForImageTransferPhase(ovcli, iTran.Id, ovit.PhaseFinished)
+	if err != nil {
+		return err
+	}
+
+	ovit.DeleteImageTransfer(ovcli, iTran.Id)
+
+	log.Infof("Successfully uploaded OCK image %s to disk %s", o.ImagePath, disk.Name)
 	return nil
-
 }
 
 func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Disk, error) {
@@ -101,8 +118,8 @@ func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Di
 		},
 		Name:            oCluster.OVirtOck.DiskName,
 		ProvisionedSize: diskSizeBytesStr,
-		Format:          "cow",
-		Backup:          "none",
+		Format:          ovdisk.FormatCow,
+		Backup:          ovdisk.BackupNone,
 	}
 	disk, err := ovdisk.CreateDisk(ovcli, &req)
 	if err != nil {
@@ -111,13 +128,15 @@ func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Di
 	return disk, nil
 }
 
-func createImageTransfer(ovcli *ovclient.Client, diskID string) (*ovit.ImageTransfer, error) {
+func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk) (*ovit.ImageTransfer, error) {
 	// Create image transfer
 	req := ovit.CreateImageTransferRequest{
+		Name: fmt.Sprintf("Upload OCK image to disk %s, ID %s", disk.Name, disk.Id),
 		Disk: ovit.Disk{
-			Id: diskID,
+			Id: disk.Id,
 		},
-		Direction: "upload",
+		Direction:     ovit.DirectionUpload,
+		TimeoutPolicy: ovit.TimeoutPolicy,
 	}
 
 	iTran, err := ovit.CreateImageTransfer(ovcli, &req)
@@ -127,7 +146,7 @@ func createImageTransfer(ovcli *ovclient.Client, diskID string) (*ovit.ImageTran
 	return iTran, nil
 }
 
-func waitForImageTransferReady(ovcli *ovclient.Client, transferID string) error {
+func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase string) error {
 	log.Infof("Waiting for image transfer to become ready")
 	const maxTries = 60
 	for i := 0; i < maxTries; i++ {
@@ -135,7 +154,7 @@ func waitForImageTransferReady(ovcli *ovclient.Client, transferID string) error 
 		if err != nil {
 			return err
 		}
-		if iTran.Phase == ovit.PhaseTransferring {
+		if iTran.Phase == phase {
 			return nil
 		}
 		time.Sleep(1 + time.Second)
@@ -164,7 +183,23 @@ func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
 //
 //}
 
-func uploadingImage(ovcli *ovclient.Client, proxy_url string) error {
+func uploadImage(ovcli *ovclient.Client, proxy_url string) error {
 	log.Infof("Uploading image to %s", proxy_url)
 	return nil
+}
+
+// cleanup is a best effort
+func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
+	iTran, err := ovit.GetImageTransfer(ovcli, transferID)
+	if err != nil || iTran == nil {
+		ovdisk.DeleteDisk(ovcli, diskID)
+		return
+	}
+	ovit.DoImageTransferAction(ovcli, transferID, ovit.ActionCancel)
+	err = waitForImageTransferPhase(ovcli, transferID, ovit.PhaseCancelled)
+	if err != nil {
+		return
+	}
+	ovit.DeleteImageTransfer(ovcli, transferID)
+	ovdisk.DeleteDisk(ovcli, diskID)
 }
