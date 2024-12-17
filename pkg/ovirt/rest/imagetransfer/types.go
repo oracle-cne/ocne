@@ -3,12 +3,16 @@
 
 package imagetransfer
 
-// ImageTransferRequest specifies the request to the image transfer service
-type ImageTransferRequest struct {
-	Disk struct {
-		Id string `json:"id"`
-	} `json:"disk"`
+const PhaseTransferring string = "transferring"
+
+// CreateImageTransferRequest specifies the request to the image transfer service
+type CreateImageTransferRequest struct {
+	Disk      `json:"disk"`
 	Direction string `json:"direction"`
+}
+
+type Disk struct {
+	Id string `json:"id"`
 }
 
 type ImageTransfer struct {
