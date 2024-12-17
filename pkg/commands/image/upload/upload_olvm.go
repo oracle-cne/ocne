@@ -4,11 +4,14 @@
 package upload
 
 import (
+	"fmt"
+	"github.com/docker/go-units"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
 	ovdisk "github.com/oracle-cne/ocne/pkg/ovirt/rest/disk"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -42,6 +45,15 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
+	// convert disk size to bytes
+	diskSizeBytes, err := units.RAMInBytes(oCluster.OVirtOck.DiskSize)
+	if err != nil {
+		err = fmt.Errorf("Error, DiskSize value %s is an invalid format", oCluster.OVirtOck.DiskSize)
+		log.Error(err)
+		return err
+	}
+	diskSizeBytesStr := fmt.Sprintf("%v", diskSizeBytes)
+
 	// Create disk
 	cd := ovdisk.CreateDiskRequest{
 		StorageDomainList: ovdisk.StorageDomainList{
@@ -49,7 +61,7 @@ func UploadOlvm(o UploadOptions) error {
 				{Id: sd.Id}},
 		},
 		Name:            oCluster.OVirtOck.DiskName,
-		ProvisionedSize: oCluster.OVirtOck.DiskSize,
+		ProvisionedSize: diskSizeBytesStr,
 		Format:          "cow",
 		Backup:          "none",
 	}

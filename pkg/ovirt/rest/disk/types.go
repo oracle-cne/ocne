@@ -1,11 +1,11 @@
 package disk
 
 type CreateDiskRequest struct {
-	StorageDomainList
-	Name            string `json:"name"`
-	ProvisionedSize string `json:"provisioned_size"`
-	Format          string `json:"format"`
-	Backup          string `json:"backup"`
+	StorageDomainList StorageDomainList `json:"storage_domains"`
+	Name              string            `json:"name"`
+	ProvisionedSize   string            `json:"provisioned_size"`
+	Format            string            `json:"format"`
+	Backup            string            `json:"backup"`
 }
 
 type StorageDomainList struct {
