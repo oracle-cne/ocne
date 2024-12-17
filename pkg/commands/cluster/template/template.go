@@ -4,7 +4,7 @@
 package template
 
 import (
-	"github.com/oracle-cne/ocne/pkg/cluster/template"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 )
 
@@ -18,5 +18,5 @@ type TemplateOptions struct {
 }
 
 func Template(opt TemplateOptions) (string, error) {
-	return template.GetTemplate(&opt.Config, &opt.ClusterConfig)
+	return common.GetTemplate(&opt.Config, &opt.ClusterConfig)
 }

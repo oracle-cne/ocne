@@ -14,9 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
+
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
-	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
@@ -834,7 +836,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 			return false, false, err
 		}
 
-		cdi, err := template.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
 			return false, false, err
 		}
@@ -842,7 +844,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 		cad.ClusterResources = cdi
 	}
 
-	if err := template.ValidateClusterResources(cad.ClusterResources); err != nil {
+	if err := oci2.ValidateClusterResources(cad.ClusterResources); err != nil {
 		return false, false, err
 	}
 
@@ -1093,7 +1095,7 @@ func (cad *ClusterApiDriver) Delete() error {
 	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
-		cdi, err := template.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
 			return err
 		}

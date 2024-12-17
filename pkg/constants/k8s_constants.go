@@ -54,7 +54,7 @@ const (
 	CatalogNamespace = "ocne-system"
 	CatalogChart     = "ocne-catalog"
 	CatalogVersion   = "2.0.0"
-	CatalogName      = "Oracle Cloud Native Environment Application Catalog"
+	CatalogName      = DefaultCatalogName
 
 	CommunityCatalogName      = "ArtifactHub Community Catalog"
 	CommunityCatalogURI       = "https://artifacthub.io"
@@ -95,6 +95,20 @@ const (
 	OCICAPIChart      = "oci-capi"
 	OCICAPIVersion    = ""
 	OCICAPIDeployment = "capoci-controller-manager"
+
+	// OLVM Operator constants
+	OLVMCAPIRelease            = "olvm-capi"
+	OLVMCAPIOperatorNamespace  = "cluster-api-provider-olvm"
+	OLVMCAPIChart              = "olvm-capi"
+	OLVMCAPIVersion            = ""
+	OLVMCAPIDeployment         = "olvm-capi-operator"
+	OLVMOVirtCredSecretSuffix  = "ovirt-credentials"
+	OLVMOVirtCAConfigMapSuffix = "ovirt-ca"
+
+	// OLVM CAPI resources constants
+	OLVMCAPIResourcesNamespace = "ocne"
+	OLVMCAPIControlPlaneMemory = "7GB"
+	OLVMCAPIWorkerMemory       = "16GB"
 
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"

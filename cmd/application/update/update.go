@@ -27,6 +27,9 @@ ocne application update --release appRelease
 
 # Update the built-in catalog.
 ocne app update -b
+
+# Update the application Grafana using the catalog built into the CLI
+ocne application update --release grafana --namespace grafana --catalog embedded
 `
 )
 
