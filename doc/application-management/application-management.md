@@ -59,6 +59,7 @@ The set of available catalogs can be listed.
 $ ocne catalog list
 CATALOG                                            	NAMESPACE  	PROTOCOL	URI
 Oracle Cloud Native Environment Application Catalog	ocne-system	helm    	   
+embedded                                           	           	helm
 ```
 
 ### Adding Catalogs
@@ -82,6 +83,7 @@ $ ocne catalog list
 CATALOG                                            	NAMESPACE  	PROTOCOL   	URI                   
 Oracle Cloud Native Environment Application Catalog	ocne-system	helm       	                      
 artifacthub                                        	ocne-system	artifacthub	https://artifacthub.io
+embedded                                           	           	helm
 ```
 
 #### Adding a Catalog Manually
@@ -117,6 +119,7 @@ $ ocne catalog list
 CATALOG                                            	NAMESPACE          	PROTOCOL	URI
 My Custom Catalog                                  	mycatalog-namespace	helm    	   
 Oracle Cloud Native Environment Application Catalog	ocne-system        	helm    	   
+embedded                                           	           	        helm
 ```
 
 ### Removing Catalogs
@@ -133,6 +136,7 @@ $ ocne catalog remove -n artifacthub
 $ ocne catalog list
 CATALOG                                            	NAMESPACE  	PROTOCOL	URI
 Oracle Cloud Native Environment Application Catalog	ocne-system	helm
+embedded                                           	           	helm
 ```
 
 #### Removing a Catalog Manually
