@@ -13,9 +13,6 @@ import (
 	ovdisk "github.com/oracle-cne/ocne/pkg/ovirt/rest/disk"
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
-	"github.com/oracle-cne/ocne/pkg/util/logutils"
-	"github.com/oracle-cne/ocne/pkg/util/oci"
-	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -52,6 +49,12 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
+	// Wait for disk ready for data transfer
+	err = waitForDiskReady(ovcli, disk.Id)
+	if err != nil {
+		return err
+	}
+
 	// Create imagetransfer
 	iTran, err := createImageTransfer(ovcli, disk.Id)
 	if err != nil {
@@ -59,7 +62,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 	defer ovit.DeleteImageTransfer(ovcli, iTran.Id)
 
-	// Wait for imagetransfer stage transferring
+	// Wait for imagetransfer to be ready to transfer
 	err = waitForImageTransferReady(ovcli, iTran.Id)
 	if err != nil {
 		return err
@@ -101,11 +104,11 @@ func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Di
 		Format:          "cow",
 		Backup:          "none",
 	}
-	_, err = ovdisk.CreateDisk(ovcli, &req)
+	disk, err := ovdisk.CreateDisk(ovcli, &req)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return disk, nil
 }
 
 func createImageTransfer(ovcli *ovclient.Client, diskID string) (*ovit.ImageTransfer, error) {
@@ -117,17 +120,17 @@ func createImageTransfer(ovcli *ovclient.Client, diskID string) (*ovit.ImageTran
 		Direction: "upload",
 	}
 
-	_, err := ovit.CreateImageTransfer(ovcli, &req)
+	iTran, err := ovit.CreateImageTransfer(ovcli, &req)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return iTran, nil
 }
 
 func waitForImageTransferReady(ovcli *ovclient.Client, transferID string) error {
 	log.Infof("Waiting for image transfer to become ready")
 	const maxTries = 60
-	for i := range maxTries {
+	for i := 0; i < maxTries; i++ {
 		iTran, err := ovit.GetImageTransfer(ovcli, transferID)
 		if err != nil {
 			return err
@@ -137,21 +140,23 @@ func waitForImageTransferReady(ovcli *ovclient.Client, transferID string) error 
 		}
 		time.Sleep(1 + time.Second)
 	}
+	return fmt.Errorf("Timed out waiting for image transfer to become ready")
+}
 
-	//failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
-	//	&logutils.Waiter{
-	//		Args:    &options,
-	//		Message: "Uploading image to object storage",
-	//		WaitFunction: func(uIface interface{}) error {
-	//			uo, _ := uIface.(*UploadOptions)
-	//			return oci.UploadObject(uo.BucketName, options.filename, uo.size, uo.file, nil)
-	//		},
-	//	},
-	//})
-	//if failed {
-	//	return "", "", fmt.Errorf("Failed to upload image to object storage")
-	//}
-	return nil
+func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
+	log.Infof("Waiting for image transfer to become ready")
+	const maxTries = 60
+	for i := 0; i < maxTries; i++ {
+		disk, err := ovdisk.GetDisk(ovcli, diskID)
+		if err != nil {
+			return err
+		}
+		if disk.Status == ovdisk.StatusOK {
+			return nil
+		}
+		time.Sleep(1 + time.Second)
+	}
+	return fmt.Errorf("Timed out waiting for disk %s to become ok", diskID)
 }
 
 //func isImageTransferReady(ovcli *ovclient.Client, diskID string) (bool, error) {

@@ -35,7 +35,7 @@ func CreateDisk(ovcli *ovclient.Client, req *CreateDiskRequest) (*Disk, error) {
 		return nil, err
 	}
 
-	if statusCode != 200 && statusCode != 202 {
+	if statusCode != 200 && statusCode != 201 && statusCode != 202 {
 		err = fmt.Errorf("Error calling HTTP POST to create an oVirt disk returned status code %v", statusCode)
 		log.Error(err)
 		return nil, err

@@ -1,5 +1,7 @@
 package disk
 
+const StatusOK = "ok"
+
 type CreateDiskRequest struct {
 	StorageDomainList StorageDomainList `json:"storage_domains"`
 	Name              string            `json:"name"`

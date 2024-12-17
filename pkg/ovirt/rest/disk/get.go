@@ -1,0 +1,31 @@
+package disk
+
+import (
+	"fmt"
+	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/json"
+)
+
+// GetDisk gets an disk resource.
+func GetDisk(ovcli *ovclient.Client, transferID string) (*Disk, error) {
+	path := fmt.Sprintf("/api/disks/%s", transferID)
+
+	// call the server to get the disk
+	body, err := ovcli.REST.Get(ovcli.AccessToken, path)
+	if err != nil {
+		err = fmt.Errorf("Error doing HTTP GET: %v", err)
+		log.Error(err)
+		return nil, err
+	}
+
+	disk := &Disk{}
+	err = json.Unmarshal(body, disk)
+	if err != nil {
+		err = fmt.Errorf("Error unmarshaling Disk: %v", err)
+		log.Error(err)
+		return nil, err
+	}
+
+	return disk, nil
+}
