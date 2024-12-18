@@ -52,17 +52,40 @@ func NewRestClient(resetter TokenResetter, endpointURL string, ca string) *REST 
 func (r REST) HeaderAcceptJSON(header *http.Header) {
 	header.Set("Accept", "application/json")
 }
+
+func (r REST) HeaderContentOctet(header *http.Header) {
+	header.Set("Content-Type", "application/octet-stream")
+}
+
 func (r REST) HeaderContentJSON(header *http.Header) {
 	header.Set("Content-Type", "application/json")
 }
+
 func (r REST) HeaderContentXML(header *http.Header) {
 	header.Set("Content-Type", "application/xml")
 }
+
 func (r REST) HeaderUrlEncoded(header *http.Header) {
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 }
+
 func (r REST) HeaderBearerToken(header *http.Header, token string) {
 	header.Set("Authorization", "Bearer "+token)
+}
+
+func (r REST) HeaderContentLen(header *http.Header, len int64) {
+	lenstr := fmt.Sprintf("%v", len)
+	header.Set("Content-Length", lenstr)
+}
+
+func (r REST) HeaderContentRange(header *http.Header, start int64, end int64, totalLen int64) {
+	s := fmt.Sprintf("bytes %v-%v/%v", start, end, totalLen)
+	header.Set("Content-Range", s)
+}
+
+func (r REST) HeaderNoCache(header *http.Header) {
+	header.Set("Cache-Control'", "no-cache")
+	header.Set("Pragma", "no-cache")
 }
 
 func rootCertPool(caData []byte) *x509.CertPool {

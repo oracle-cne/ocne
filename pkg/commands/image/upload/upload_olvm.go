@@ -8,11 +8,14 @@ import (
 	"github.com/docker/go-units"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
 	ovdisk "github.com/oracle-cne/ocne/pkg/ovirt/rest/disk"
+	ovfile "github.com/oracle-cne/ocne/pkg/ovirt/rest/file"
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -74,7 +77,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Upload the image to the disk
-	err = uploadImage(ovcli, iTran.Id)
+	err = uploadImage(ovcli, iTran.ProxyUrl, o.ImagePath)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
@@ -198,7 +201,26 @@ func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
 	ovdisk.DeleteDisk(ovcli, diskID)
 }
 
-func uploadImage(ovcli *ovclient.Client, proxy_url string) error {
+func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string) error {
 	log.Infof("Uploading image to %s", proxy_url)
+	path, err := file.AbsDir(imagePath)
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	reader, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	err = ovfile.UploadFile(ovcli, proxy_url, reader, info.Size())
+	if err != nil {
+		return err
+	}
 	return nil
 }
