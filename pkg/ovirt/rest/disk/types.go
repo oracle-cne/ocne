@@ -17,6 +17,7 @@ type CreateDiskRequest struct {
 	ProvisionedSize   string            `json:"provisioned_size"`
 	Format            string            `json:"format"`
 	Backup            string            `json:"backup"`
+	InitialSize       string            `json:"initial_size"`
 }
 
 type StorageDomainList struct {

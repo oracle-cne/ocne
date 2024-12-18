@@ -14,6 +14,7 @@ import (
 	ovdisk "github.com/oracle-cne/ocne/pkg/ovirt/rest/disk"
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"os"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 )
 
 // UploadOlvm uploads a boot image to an OLVM disk.
+// see https://ovirt.github.io/ovirt-imageio/images.html
 func UploadOlvm(o UploadOptions) error {
 	// get a kubernetes client
 	_, kubeClient, err := client.GetKubeClient(o.KubeConfigPath)
@@ -48,8 +50,13 @@ func UploadOlvm(o UploadOptions) error {
 	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, oCluster.OVirtOck.DiskName,
 		oCluster.OVirtOck.StorageDomainName)
 
+	fileInfo, err := getImageInfo(o.ImagePath)
+	if err != nil {
+		return err
+	}
+
 	// Create an empty disk in the oVirt storage domain
-	disk, err := createDisk(ovcli, oCluster)
+	disk, err := createDisk(ovcli, oCluster, fileInfo)
 	if err != nil {
 		return err
 	}
@@ -62,7 +69,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Create imagetransfer
-	iTran, err := createImageTransfer(ovcli, disk)
+	iTran, err := createImageTransfer(ovcli, disk, fileInfo)
 	if err != nil {
 		ovdisk.DeleteDisk(ovcli, disk.Id)
 		return err
@@ -76,7 +83,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Upload the image to the disk
-	fileInfo, err := uploadImage(ovcli, iTran.ProxyUrl, o.ImagePath)
+	err = uploadImageAndWait(ovcli, iTran.ProxyUrl, o.ImagePath, fileInfo)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
@@ -84,6 +91,7 @@ func UploadOlvm(o UploadOptions) error {
 
 	// Wait until the imagetransfer resource reports the total bytes transferred
 	fileLenStr := fmt.Sprintf("%v", fileInfo.Size())
+
 	err = waitForImageTransferLenMatch(ovcli, iTran.Id, fileLenStr)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
@@ -108,12 +116,14 @@ func UploadOlvm(o UploadOptions) error {
 	return nil
 }
 
-func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Disk, error) {
+func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
 	// Get storage name
 	sd, err := ovsd.GetStorageDomain(ovcli, oCluster.OVirtOck.StorageDomainName)
 	if err != nil {
 		return nil, err
 	}
+
+	initialSize := fmt.Sprintf("%v", fileInfo.Size())
 
 	// convert disk size to bytes
 	diskSizeBytes, err := units.RAMInBytes(oCluster.OVirtOck.DiskSize)
@@ -134,6 +144,7 @@ func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Di
 		ProvisionedSize: diskSizeBytesStr,
 		Format:          ovdisk.FormatCow,
 		Backup:          ovdisk.BackupNone,
+		InitialSize:     initialSize,
 	}
 	disk, err := ovdisk.CreateDisk(ovcli, &req)
 	if err != nil {
@@ -142,16 +153,19 @@ func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster) (*ovdisk.Di
 	return disk, nil
 }
 
-func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk) (*ovit.ImageTransfer, error) {
+func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk, info os.FileInfo) (*ovit.ImageTransfer, error) {
+	inactiveTimeoutSecs := fmt.Sprintf("%d", 180)
+
 	// Create image transfer
 	req := ovit.CreateImageTransferRequest{
 		Name: fmt.Sprintf("Upload OCK image to disk %s, ID %s", disk.Name, disk.Id),
 		Disk: ovit.Disk{
 			Id: disk.Id,
 		},
-		Direction:     ovit.DirectionUpload,
-		TimeoutPolicy: ovit.TimeoutPolicy,
-		Format:        ovdisk.FormatCow,
+		Direction:         ovit.DirectionUpload,
+		TimeoutPolicy:     ovit.TimeoutPolicy,
+		InactivityTimeout: inactiveTimeoutSecs,
+		Format:            ovdisk.FormatCow,
 	}
 
 	iTran, err := ovit.CreateImageTransfer(ovcli, &req)
@@ -176,7 +190,7 @@ func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase 
 		lastPhase = iTran.Phase
 		time.Sleep(1 + time.Second)
 	}
-	err := fmt.Errorf("Timed out waiting for image transfer phase %s, current phase is ", phase, lastPhase)
+	err := fmt.Errorf("Timed out waiting for image transfer phase %s, current phase is %s", phase, lastPhase)
 	log.Error(err)
 	return err
 }
@@ -236,7 +250,7 @@ func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
 	ovdisk.DeleteDisk(ovcli, diskID)
 }
 
-func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string) (os.FileInfo, error) {
+func getImageInfo(imagePath string) (os.FileInfo, error) {
 	path, err := file.AbsDir(imagePath)
 	if err != nil {
 		return nil, err
@@ -246,17 +260,40 @@ func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string) (os
 	if err != nil {
 		return nil, err
 	}
+	return info, nil
+}
 
-	log.Infof("Uploading image %s with %v bytes to %s", path, info.Size(), proxy_url)
+func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo) error {
+	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		{
+			Message: fmt.Sprintf("Uploading image %s with %v bytes", imagePath, info.Size()),
+			WaitFunction: func(i interface{}) error {
+				err := uploadImage(ovcli, proxy_url, imagePath, info)
+				return err
+			},
+		},
+	})
+	if haveError {
+		return fmt.Errorf("Oracle image upload failed")
+	}
+	return nil
+}
+
+func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo) error {
+	path, err := file.AbsDir(imagePath)
+	if err != nil {
+		return err
+	}
 
 	reader, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer reader.Close()
 
 	err = ovit.UploadFile(ovcli, proxy_url, reader, info.Size())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return info, nil
+	return nil
 }

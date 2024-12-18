@@ -13,7 +13,7 @@ import (
 
 // UploadFile uploads an image to an endpoint
 func UploadFile(ovcli *ovclient.Client, inUrl string, reader io.Reader, totalLen int64) error {
-	const defChunkLen = 10 * 1024 * 1024
+	const defChunkLen = 104857600 // = 10 * 1024 * 1024
 	var chunkLen int64 = defChunkLen
 	var start int64
 	var end int64 = -1
@@ -33,7 +33,7 @@ func UploadFile(ovcli *ovclient.Client, inUrl string, reader io.Reader, totalLen
 		if chunkLen == remainingLen {
 			url = inUrl + "?close=y"
 		} else {
-			url = inUrl + "?flush=n"
+			url = inUrl + "?flush=y"
 		}
 
 		// start and end are 0-based and inclusive
@@ -44,12 +44,21 @@ func UploadFile(ovcli *ovclient.Client, inUrl string, reader io.Reader, totalLen
 		if err := uploadChunk(ovcli, url, reader, chunkLen, start, end, totalLen); err != nil {
 			return err
 		}
+
+		if chunkLen == remainingLen {
+			url = inUrl + "?close=y"
+		} else {
+			url = inUrl + "?flush=y"
+		}
+
 	}
 
 	return nil
 }
 
 func uploadChunk(ovcli *ovclient.Client, url string, reader io.Reader, chunkLen int64, start int64, end int64, totalLen int64) error {
+	//log.Infof("Upload: start %v, end %v, chunk %v, total %v", start, end, chunkLen, totalLen)
+
 	// TEMP - until i figure out how to prevent http from closing the file stream
 	b := make([]byte, chunkLen)
 	n, err := io.ReadFull(reader, b)

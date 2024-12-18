@@ -21,11 +21,12 @@ const TimeoutPolicy string = "cancel"
 
 // CreateImageTransferRequest specifies the request to the image transfer service
 type CreateImageTransferRequest struct {
-	Name          string `json:"name"`
-	Disk          `json:"disk"`
-	Direction     string `json:"direction"`
-	TimeoutPolicy string `json:"timeout_policy"`
-	Format        string `json:"format"`
+	Name              string `json:"name"`
+	Disk              `json:"disk"`
+	Direction         string `json:"direction"`
+	TimeoutPolicy     string `json:"timeout_policy"`
+	Format            string `json:"format"`
+	InactivityTimeout string `json:"inactivity_timeout"`
 }
 
 type Disk struct {
