@@ -13,6 +13,8 @@ const ActionCancel string = "cancel"
 
 const DirectionUpload string = "upload"
 
+const FormatCow = "cow"
+
 // see https://www.ovirt.org/documentation/doc-REST_API_Guide/#types-image_transfer_timeout_policy
 // cancel the transfer and unlock the disk
 const TimeoutPolicy string = "cancel"
@@ -23,6 +25,7 @@ type CreateImageTransferRequest struct {
 	Disk          `json:"disk"`
 	Direction     string `json:"direction"`
 	TimeoutPolicy string `json:"timeout_policy"`
+	Format        string `json:"format"`
 }
 
 type Disk struct {

@@ -12,7 +12,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
 	ovdisk "github.com/oracle-cne/ocne/pkg/ovirt/rest/disk"
-	ovfile "github.com/oracle-cne/ocne/pkg/ovirt/rest/file"
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
 	"os"
@@ -77,7 +76,15 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Upload the image to the disk
-	err = uploadImage(ovcli, iTran.ProxyUrl, o.ImagePath)
+	fileInfo, err := uploadImage(ovcli, iTran.ProxyUrl, o.ImagePath)
+	if err != nil {
+		cleanup(ovcli, iTran.Id, disk.Id)
+		return err
+	}
+
+	// Wait until the imagetransfer resource reports the total bytes transferred
+	fileLenStr := fmt.Sprintf("%v", fileInfo.Size())
+	err = waitForImageTransferLenMatch(ovcli, iTran.Id, fileLenStr)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
@@ -144,6 +151,7 @@ func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk) (*ovit.Image
 		},
 		Direction:     ovit.DirectionUpload,
 		TimeoutPolicy: ovit.TimeoutPolicy,
+		Format:        ovdisk.FormatCow,
 	}
 
 	iTran, err := ovit.CreateImageTransfer(ovcli, &req)
@@ -156,6 +164,7 @@ func createImageTransfer(ovcli *ovclient.Client, disk *ovdisk.Disk) (*ovit.Image
 func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase string) error {
 	log.Infof("Waiting for image transfer phase %s", phase)
 	const maxTries = 60
+	var lastPhase string
 	for i := 0; i < maxTries; i++ {
 		iTran, err := ovit.GetImageTransfer(ovcli, transferID)
 		if err != nil {
@@ -164,9 +173,31 @@ func waitForImageTransferPhase(ovcli *ovclient.Client, transferID string, phase 
 		if iTran.Phase == phase {
 			return nil
 		}
+		lastPhase = iTran.Phase
 		time.Sleep(1 + time.Second)
 	}
-	return fmt.Errorf("Timed out waiting for image transfer phase %s", phase)
+	err := fmt.Errorf("Timed out waiting for image transfer phase %s, current phase is ", phase, lastPhase)
+	log.Error(err)
+	return err
+}
+
+func waitForImageTransferLenMatch(ovcli *ovclient.Client, transferID string, numBytesTransferred string) error {
+	const maxTries = 60
+	for i := 0; i < maxTries; i++ {
+		iTran, err := ovit.GetImageTransfer(ovcli, transferID)
+		if err != nil {
+			return err
+		}
+		if iTran.Transferred == numBytesTransferred {
+			log.Infof("imagetransfer.Transferred value %s matches the actual number of bytes transferred", iTran.Transferred)
+			return nil
+		}
+		time.Sleep(1 + time.Second)
+		log.Infof("Waiting for imagetransfer.Transferred value %s to match the actual number of bytes transferred %s", iTran.Transferred, numBytesTransferred)
+	}
+	err := fmt.Errorf("Timed out waiting for image transfer length to match")
+	log.Error(err)
+	return err
 }
 
 func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
@@ -182,11 +213,15 @@ func waitForDiskReady(ovcli *ovclient.Client, diskID string) error {
 		}
 		time.Sleep(1 + time.Second)
 	}
-	return fmt.Errorf("Timed out waiting for disk %s status to be OK", diskID)
+	err := fmt.Errorf("Timed out waiting for disk %s status to be OK", diskID)
+	log.Error(err)
+	return err
 }
 
 // cleanup is a best effort
 func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
+	log.Infof("Cleaning up image transfer due to failure")
+
 	iTran, err := ovit.GetImageTransfer(ovcli, transferID)
 	if err != nil || iTran == nil {
 		ovdisk.DeleteDisk(ovcli, diskID)
@@ -201,26 +236,27 @@ func cleanup(ovcli *ovclient.Client, transferID string, diskID string) {
 	ovdisk.DeleteDisk(ovcli, diskID)
 }
 
-func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string) error {
-	log.Infof("Uploading image to %s", proxy_url)
+func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string) (os.FileInfo, error) {
 	path, err := file.AbsDir(imagePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	log.Infof("Uploading image %s with %v bytes to %s", path, info.Size(), proxy_url)
 
 	reader, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = ovfile.UploadFile(ovcli, proxy_url, reader, info.Size())
+	err = ovit.UploadFile(ovcli, proxy_url, reader, info.Size())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return info, nil
 }
