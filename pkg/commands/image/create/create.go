@@ -230,6 +230,28 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 					},
 				},
 			},
+			Tolerations: []corev1.Toleration{
+				{
+					Key:      "node-role.kubernetes.io/control-plane",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/not-ready",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/unschedulable",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/unreachable",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+			},
 		},
 	}
 
