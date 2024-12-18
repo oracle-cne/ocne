@@ -100,8 +100,10 @@ $(CHART_BUILD_OUT_DIR): $(CHART_BUILD_DIR) ${DEVELOPER_CHART_BUILD_DIR}
 ifeq (${DEVELOPER_BUILD},true)
 	cp -r ${DEVELOPER_CHART_BUILD_DIR}/charts/* ${CHART_BUILD_DIR}/charts
 	cp ${DEVELOPER_CHART_BUILD_DIR}/olm/icons/* ${CHART_BUILD_DIR}/olm/icons
-endif
+	cd $< && SUPPORT_MATRIX_CHECKS=false make
+else
 	cd $< && make
+endif
 
 $(DEVELOPER_CHART_BUILD_DIR):
 ifeq (${DEVELOPER_BUILD},true)
