@@ -14,6 +14,7 @@ require (
 	github.com/coreos/butane v0.0.0-00010101000000-000000000000
 	github.com/coreos/ignition/v2 v2.19.0
 	github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
+	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-billy/v5 v5.6.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-logr/logr v1.4.2
@@ -92,7 +93,6 @@ require (
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect

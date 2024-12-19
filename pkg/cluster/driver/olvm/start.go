@@ -246,7 +246,7 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	// get the CA
-	ca, err := getCA(&cad.ClusterConfig.Providers.Olvm)
+	ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
 	if err != nil {
 		return err
 	}
@@ -269,8 +269,8 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	return nil
 }
 
-// getCA gets the oVirt CA string from the config, either inline or from a file.
-func getCA(prov *types.OlvmProvider) (string, error) {
+// GetCA gets the oVirt CA string from the config, either inline or from a file.
+func GetCA(prov *types.OlvmProvider) (string, error) {
 	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
@@ -316,9 +316,17 @@ func getCreds() (map[string][]byte, error) {
 }
 
 func (cad *OlvmDriver) credSecretName() string {
-	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCredSecretSuffix)
+	return CredSecretName(cad.ClusterConfig)
 }
 
 func (cad *OlvmDriver) caConfigMapName() string {
-	return fmt.Sprintf("%s-%s", cad.ClusterConfig.Name, constants.OLVMOVirtCAConfigMapSuffix)
+	return CaConfigMapName(cad.ClusterConfig)
+}
+
+func CredSecretName(cc *types.ClusterConfig) string {
+	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
+}
+
+func CaConfigMapName(cc *types.ClusterConfig) string {
+	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
 }
