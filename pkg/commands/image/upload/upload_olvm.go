@@ -197,7 +197,7 @@ func waitForImageTransferLenMatch(ovcli *ovclient.Client, transferID string, num
 			return err
 		}
 		if iTran.Transferred == numBytesTransferred {
-			log.Infof("imagetransfer.Transferred value %s matches the actual number of bytes transferred", iTran.Transferred)
+			log.Debugf("The imagetransfer.Transferred value %s matches the actual number of bytes transferred", iTran.Transferred)
 			return nil
 		}
 		time.Sleep(1 + time.Second)

@@ -156,7 +156,7 @@ func (o *Client) ClearAccessToken() {
 
 func getCredentials(cli kubernetes.Interface) (*Credentials, error) {
 	c := Credentials{}
-	
+
 	c.Username = os.Getenv(olvm.EnvUsername)
 	if c.Username == "" {
 		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", olvm.EnvUsername)
