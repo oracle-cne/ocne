@@ -60,9 +60,14 @@ chmod 400 /etc/keepalived/kubeconfig
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
 	// showing up in the /etc/systemd/system-preset files.
-	presetFilePath = "/etc/systemd/system-preset/80-ocne.preset"
-	presetFileData = `disable ocne.service
+	presetFilePathEtc = "/etc/systemd/system-preset/10-ocne.preset"
+	presetFilePathLib = "/etc/systemd/system-preset/80-ocne.preset"
+	presetFileData    = `disable ocne.service
 disable kubeadm.service
+disable crio.service
+disable kubelet.service
+enable keepalived.service
+enable ocne-nginx.service
 `
 )
 
@@ -95,15 +100,27 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		Enabled: util.BoolPtr(false),
 	})
 
-	// Disable some services via preset file
-	presetFile := &ignition.File{
-		Path: presetFilePath,
+	// Disable some services via preset file in /etc/systemd/system-preset/10-ocne.preset
+	// to override 20-ignition.preset
+	presetFileEtc := &ignition.File{
+		Path: presetFilePathEtc,
 		Mode: 0555,
 		Contents: ignition.FileContents{
 			Source: presetFileData,
 		},
 	}
-	ignition.AddFile(ign, presetFile)
+	ignition.AddFile(ign, presetFileEtc)
+
+	// Disable the same services via preset file in /etc/systemd/system-preset/80-ocne.preset
+	// make sure the name matches /lib/systemd/system-preset/80-ocne.preset
+	presetFileLib := &ignition.File{
+		Path: presetFilePathLib,
+		Mode: 0555,
+		Contents: ignition.FileContents{
+			Source: presetFileData,
+		},
+	}
+	ignition.AddFile(ign, presetFileLib)
 
 	// Update service configuration file
 	updateFile := &ignition.File{
