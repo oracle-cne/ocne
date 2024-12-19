@@ -57,7 +57,7 @@ The example below assumes Kubernetes 1.26, change it to your version.
     ```
 3. Drain the target node
     ```
-    kubectl drain $TARGET_NODE
+    kubectl drain --ignore-daemonsets $TARGET_NODE
     ```
 4. Reset the target node, run `kubeadm reset -f` on the node
     ```
