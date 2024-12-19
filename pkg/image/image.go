@@ -154,7 +154,7 @@ func GetOrPull(imageName string, arch string) (types.ImageReference, error) {
 	}
 
 	// Check the pull directory for the manifest contents.
-	// If its already there, then just return the reference.
+	// If it's already there, then return the reference.
 	layers, err := GetImageLayers(srcRef, arch)
 	if err != nil {
 		log.Debugf("Could not make image from source reference: %v", err)
@@ -183,7 +183,7 @@ func GetOrPull(imageName string, arch string) (types.ImageReference, error) {
 		return dstRef, nil
 	}
 
-	log.Debugf("Pulling image: %s", imageName)
+	log.Infof("Downloading image %s", imageName)
 
 	// The image was not found.  Pull it into the local storage
 	// location, so it can be accessed later.
@@ -364,7 +364,7 @@ func Copy(src string, dest string, arch string, imageSelection copy.ImageListSel
 	return err
 }
 
-// ChangeImageDomain takes a image with a valid transport and domain and changes the domain
+// ChangeImageDomain takes an image with a valid transport and domain and changes the domain
 func ChangeImageDomain(imageString string, newDomain string) (types.ImageReference, error) {
 	transport, afterTransport, found := strings.Cut(imageString, ":") // We may support non docker images in the future
 	if !found {
