@@ -19,6 +19,7 @@ import (
 
 const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
+const ProviderTypeOlvm = "olvm"
 
 func setCompartmentId(options *UploadOptions) error {
 	// Compartment ID is already resolved.
@@ -135,6 +136,7 @@ func UploadOstree(options UploadOptions) error {
 var providers map[string]func(UploadOptions) error = map[string]func(UploadOptions) error{
 	ProviderTypeOCI:    UploadOci,
 	ProviderTypeOstree: UploadOstree,
+	ProviderTypeOlvm:   UploadOlvm,
 }
 
 // Upload uploads a VM image to OCI Object storage and then imports
