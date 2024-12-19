@@ -837,7 +837,7 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 		if isRunning {
 			ld.Infof("Cluster %s is running already", ld.Name)
 		} else {
-			log.Errorf("Failed to start cluster %s", ld.Name)
+			log.Errorf("Failed to start cluster %q. The libvirt domain %q is running.", ld.Name, firstControlPlaneNode)
 		}
 		return isRunning, false, err
 	} else if err != nil {
