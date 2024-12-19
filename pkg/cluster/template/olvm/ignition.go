@@ -57,6 +57,13 @@ cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
 chmod 400 /etc/keepalived/kubeconfig
 `
+	// Disable ocne.server with a preset file
+	// These need to be disabled because the disable presets set by ignition are not
+	// showing up in the /etc/systemd/system-preset files.
+	presetFilePath = "/etc/systemd/system-preset/80-ocne.preset"
+	presetFileData = `disable ocne.service
+disable kubeadm.service
+`
 )
 
 // getExtraIgnition creates the ignition string that will be passed to the VM.
@@ -87,6 +94,16 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		Name:    "ocne.service",
 		Enabled: util.BoolPtr(false),
 	})
+
+	// Disable some services via preset file
+	presetFile := &ignition.File{
+		Path: presetFilePath,
+		Mode: 0555,
+		Contents: ignition.FileContents{
+			Source: presetFileData,
+		},
+	}
+	ignition.AddFile(ign, presetFile)
 
 	// Update service configuration file
 	updateFile := &ignition.File{
