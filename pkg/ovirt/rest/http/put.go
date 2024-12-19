@@ -9,8 +9,8 @@ import (
 	"net/http"
 )
 
-// Put puts an HTTP request and returns the body, status code, and an error
-func (r REST) Put(URL string, payload io.Reader, header *http.Header, contentLen int64) ([]byte, int, error) {
+// PutAbsURL puts an HTTP request and returns the body, status code, and an error
+func (r REST) PutAbsURL(URL string, payload io.Reader, header *http.Header, contentLen int64) ([]byte, int, error) {
 	body, statusCode, err := r.putPriv(URL, payload, header, contentLen)
 	if err != nil {
 		r.tokenResetter.ClearAccessToken()

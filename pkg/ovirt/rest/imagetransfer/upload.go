@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/ovirt/ovclient"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 )
@@ -50,16 +51,14 @@ func UploadFile(ovcli *ovclient.Client, inUrl string, reader io.Reader, totalLen
 		} else {
 			url = inUrl + "?flush=y"
 		}
-
 	}
-
 	return nil
 }
 
 func uploadChunk(ovcli *ovclient.Client, url string, reader io.Reader, chunkLen int64, start int64, end int64, totalLen int64) error {
-	//log.Infof("Upload: start %v, end %v, chunk %v, total %v", start, end, chunkLen, totalLen)
+	log.Debugf("Upload: start %v, end %v, chunk %v, total %v", start, end, chunkLen, totalLen)
 
-	// TEMP - until i figure out how to prevent http from closing the file stream
+	// HTTP closes the stream so copy to new reader
 	b := make([]byte, chunkLen)
 	n, err := io.ReadFull(reader, b)
 	if err != nil {
@@ -76,7 +75,7 @@ func uploadChunk(ovcli *ovclient.Client, url string, reader io.Reader, chunkLen 
 	ovcli.REST.HeaderContentRange(h, start, end, totalLen)
 	ovcli.REST.HeaderBearerToken(h, ovcli.AccessToken)
 	ovcli.REST.HeaderNoCache(h)
-	_, statusCode, err := ovcli.REST.Put(url, bytes.NewReader(b), h, chunkLen)
+	_, statusCode, err := ovcli.REST.PutAbsURL(url, bytes.NewReader(b), h, chunkLen)
 	if err != nil {
 		err = fmt.Errorf("Error calling HTTP PUT to upload a file: %v", err)
 		return err

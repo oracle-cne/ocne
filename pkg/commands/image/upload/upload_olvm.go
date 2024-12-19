@@ -68,14 +68,14 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
-	// Create imagetransfer
+	// Create imagetransfer resource
 	iTran, err := createImageTransfer(ovcli, disk, fileInfo)
 	if err != nil {
 		ovdisk.DeleteDisk(ovcli, disk.Id)
 		return err
 	}
 
-	// Wait for imagetransfer to be ready to transfer
+	// Wait for the imagetransfer resource to be ready to transfer
 	err = waitForImageTransferPhase(ovcli, iTran.Id, ovit.PhaseTransferring)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
@@ -83,7 +83,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Upload the image to the disk
-	err = uploadImageAndWait(ovcli, iTran.ProxyUrl, o.ImagePath, fileInfo)
+	err = uploadImageAndWait(ovcli, iTran.ProxyUrl, o.ImagePath, fileInfo, disk)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
@@ -91,14 +91,13 @@ func UploadOlvm(o UploadOptions) error {
 
 	// Wait until the imagetransfer resource reports the total bytes transferred
 	fileLenStr := fmt.Sprintf("%v", fileInfo.Size())
-
 	err = waitForImageTransferLenMatch(ovcli, iTran.Id, fileLenStr)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
 		return err
 	}
 
-	// Finish imagetransfer
+	// Finalize the image transfer
 	err = ovit.DoImageTransferAction(ovcli, iTran.Id, ovit.ActionFinalize)
 	if err != nil {
 		cleanup(ovcli, iTran.Id, disk.Id)
@@ -207,7 +206,6 @@ func waitForImageTransferLenMatch(ovcli *ovclient.Client, transferID string, num
 			return nil
 		}
 		time.Sleep(1 + time.Second)
-		log.Infof("Waiting for imagetransfer.Transferred value %s to match the actual number of bytes transferred %s", iTran.Transferred, numBytesTransferred)
 	}
 	err := fmt.Errorf("Timed out waiting for image transfer length to match")
 	log.Error(err)
@@ -263,10 +261,10 @@ func getImageInfo(imagePath string) (os.FileInfo, error) {
 	return info, nil
 }
 
-func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo) error {
+func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo, disk *ovdisk.Disk) error {
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
-			Message: fmt.Sprintf("Uploading image %s with %v bytes", imagePath, info.Size()),
+			Message: fmt.Sprintf("Uploading image %s with %v bytes to %s", imagePath, info.Size(), disk.Name),
 			WaitFunction: func(i interface{}) error {
 				err := uploadImage(ovcli, proxy_url, imagePath, info)
 				return err
