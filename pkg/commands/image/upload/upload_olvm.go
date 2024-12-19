@@ -19,7 +19,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // UploadOlvm uploads a boot image to an OLVM disk.
@@ -34,15 +33,11 @@ func UploadOlvm(o UploadOptions) error {
 	oCluster := o.ClusterConfig.Providers.Olvm.OlvmCluster
 
 	// Get OvClient
-	secretNsn := types.NamespacedName{
-		Namespace: o.ClusterConfig.Providers.Olvm.Namespace,
-		Name:      olvm.CredSecretName(o.ClusterConfig),
+	ca, err := olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
+	if err != nil {
+		return err
 	}
-	caConfigMapNsn := types.NamespacedName{
-		Namespace: o.ClusterConfig.Providers.Olvm.Namespace,
-		Name:      olvm.CaConfigMapName(o.ClusterConfig),
-	}
-	ovcli, err := ovclient.GetOVClient(kubeClient, secretNsn, caConfigMapNsn, oCluster.OVirtAPI.ServerURL)
+	ovcli, err := ovclient.GetOVClient(kubeClient, ca, oCluster.OVirtAPI.ServerURL)
 	if err != nil {
 		return err
 	}

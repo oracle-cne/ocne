@@ -5,13 +5,14 @@ package ovclient
 
 import (
 	"fmt"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	ovhttp "github.com/oracle-cne/ocne/pkg/ovirt/rest/http"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -47,18 +48,13 @@ type Client struct {
 }
 
 // GetOVClient gets an ovClient
-func GetOVClient(cli kubernetes.Interface, secretNsn types.NamespacedName, caNsn types.NamespacedName, apiServerURL string) (*Client, error) {
+func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string) (*Client, error) {
 	// validate the secret that has the oVirt REST creds
-	_, creds, err := GetCredentials(cli, secretNsn)
+	creds, err := getCredentials(cli)
 	if err != nil {
 		return nil, err
 	}
 
-	// validate the configmap that has the oVirt REST CA
-	ca, err := GetOvirtCA(cli, caNsn)
-	if err != nil {
-		return nil, err
-	}
 	creds.CA = ca
 
 	// Get an oVirt client
@@ -156,4 +152,23 @@ func (o *Client) ensureAccessToken() error {
 // ClearAccessToken is called when there is a REST HTTP error
 func (o *Client) ClearAccessToken() {
 	o.AccessToken = ""
+}
+
+func getCredentials(cli kubernetes.Interface) (*Credentials, error) {
+	c := Credentials{}
+	
+	c.Username = os.Getenv(olvm.EnvUsername)
+	if c.Username == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", olvm.EnvUsername)
+	}
+	c.Password = os.Getenv(olvm.EnvPassword)
+	if c.Password == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM password", olvm.EnvPassword)
+	}
+	c.Scope = os.Getenv(olvm.EnvScope)
+	if c.Scope == "" {
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", olvm.EnvScope)
+	}
+
+	return &c, nil
 }
