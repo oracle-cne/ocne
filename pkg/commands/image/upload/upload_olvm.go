@@ -30,7 +30,7 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
-	oCluster := o.ClusterConfig.Providers.Olvm.OlvmCluster
+	oCluster := &o.ClusterConfig.Providers.Olvm.OlvmCluster
 
 	// Get OvClient
 	ca, err := olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
@@ -110,7 +110,7 @@ func UploadOlvm(o UploadOptions) error {
 	return nil
 }
 
-func createDisk(ovcli *ovclient.Client, oCluster otypes.OlvmCluster, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
+func createDisk(ovcli *ovclient.Client, oCluster *otypes.OlvmCluster, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
 	// Get storage name
 	sd, err := ovsd.GetStorageDomain(ovcli, oCluster.OVirtOck.StorageDomainName)
 	if err != nil {
