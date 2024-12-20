@@ -126,7 +126,7 @@ extraIgnitionInline:
           nameserver 1.2.3.250
 ```
 
-## Top-levl OLVM configuration
+## Global OLVM configuration
 The global configuration has 2 sections, global fields and ignition fields.
 
 ## Global fields
