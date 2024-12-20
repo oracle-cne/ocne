@@ -47,6 +47,7 @@ resouces and terminology on the client.
 * The CA certificate used for the oVirt rest API must be downloaded to a local file, even if it is not self-signed.  See [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate)
 
 ## Restrictions
+* This is a developer release feature so you must be using the developer RPM for the Oracle Cloud Native Environment CLI.
 * The OLVM Cluster API Provider does not support DHCP, you must allocate a range of external IPs.
 
 #  Oracle Cloud Native Environment CLI cluster configuration for OLVM
@@ -271,18 +272,145 @@ The oVirt vmTemplate name.  This must exist in the oVirt instance
 (Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document.)
 
 
-# Creating a Cluster
+# Preparing to Create a Cluster
+This section describes the steps needed to create a cluster.  Make sure your cluster configuration file
+exists and has the correct values as described in previous sections.
 
-## Overview
+## Creating a workload cluster
+First create a workload cluster.  Even though and ephemeral cluster is automatically created, you can 
+also use any cluster you want as a workload cluster.  For this exercise, we will create the workload cluster.
+The workload cluster will be used to create an image so it needs to have enough resources.  The settings
+below were used to test this.
+
+~/.ocne/defaults.yaml
+```
+name: ocne
+provider: libvirt
+workerNodes: 0
+communityCatalog: false
+proxy:
+  (use your proxies)
+providers:
+  libvirt:
+    controlPlaneNode:
+       storage: 30G
+       memory: 10000000K
+       cpu: 3
+```
+
+Now create the workload cluster
+```
+ocne cluster start -u false
+INFO[2024-12-20T13:37:50-05:00] Creating new Kubernetes cluster with version 1.30 named ocne 
+INFO[2024-12-20T13:38:13-05:00] Waiting for the Kubernetes cluster to be ready: ok 
+INFO[2024-12-20T13:38:24-05:00] Installing flannel into kube-flannel: ok 
+INFO[2024-12-20T13:38:26-05:00] Installing ui into ocne-system: ok 
+INFO[2024-12-20T13:38:27-05:00] Installing ocne-catalog into ocne-system: ok 
+INFO[2024-12-20T13:38:27-05:00] Kubernetes cluster was created successfully 
+```
+
 
 ## Creating the OLVM OCK image
+The first step is to create an OCK image with the default Kubernetes version (1.30 at the time of this writing).
+
+```
+export KUBECONFIG=/Users/pmackin/.kube/kubeconfig.ocne.local
+
+ocne image create --type olvm --kubeconfig $KUBECONFIG
+INFO[2024-12-20T13:46:23-05:00] Creating Image                               
+INFO[2024-12-20T13:46:23-05:00] Preparing pod used to create image           
+INFO[2024-12-20T13:46:28-05:00] Waiting for pod ocne-system/ocne-image-builder to be ready: ok 
+INFO[2024-12-20T13:46:28-05:00] Getting local boot image for architecture: amd64 
+INFO[2024-12-20T13:46:56-05:00] Uploading boot image to pod ocne-system/ocne-image-builder: ok 
+INFO[2024-12-20T13:47:41-05:00] Downloading boot image from pod ocne-system/ocne-image-builder: ok 
+INFO[2024-12-20T13:47:41-05:00] New boot image was created successfully at /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm 
+```
 
 ## Uploading the OLVM OCK image
+Upload the OCK image that you just created to your 
+
+```
+ocne image upload --type olvm --arch amd64 --file  /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm   --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml --kubeconfig $KUBECONFIG
+INFO[2024-12-20T13:49:48-05:00] Starting uploaded OCK image `/Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm` to disk `demo-1-ock-1.30` in storage domain `oblock` 
+INFO[2024-12-20T13:49:48-05:00] Waiting for disk status to be OK             
+INFO[2024-12-20T13:49:53-05:00] Waiting for image transfer phase transferring 
+INFO[2024-12-20T13:51:56-05:00] Uploading image /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm with 2826567680 bytes to demo-1-ock-1.30: ok 
+INFO[2024-12-20T13:51:58-05:00] Waiting for image transfer phase finished_success 
+INFO[2024-12-20T13:52:11-05:00] Successfully uploaded OCK image    
+```
 
 ### Creating a VM template
+Now you need to use the OLVM oVirt console to create a template that uses the image you just uploaded.
 
-## Starting the cluster
+1. Navigate to Compute->Virtual Machines
+2. Click the New button to create a virtual machine
+3. Fill in the form, only change the following fields:
+   Template: Blank
+   Operating System: Red Hat Enterprise Linux CoreOS
+   Instance Images > Attach and select the boot.qcow2 disk/image on the list, select the OS (boot) checkbox.  THis is the last checkbox on the right.
 
-# Creating a Cluster
+4. After the VM creation is finished, select but do NOT run it, rather click the "Make Template" menu selection.
+Make sure the template name matches the vmTemplateName in your Oracle Cloud Native Environment CLI cluster configuration.
+5. Delete the VM that was used to create the template.
+
+# Create the cluster
+Now you are ready to create a cluster.  As the cluster is being created, you can look at the Virtual Machine page in your OLVM console and see the VMs being created.
+First the control plane VM (Kubernetes node) is created, followed by the worker VM/
+
+```
+ocne cluster start  --kubeconfig=/Users/pmackin/.kube/kubeconfig.ocne.local --provider olvm  --cluster-name demo --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml --kubeconfig $KUBECONFIG
+INFO[2024-12-20T14:09:31-05:00] Installing cert-manager into cert-manager: ok 
+INFO[2024-12-20T14:09:32-05:00] Installing core-capi into capi-system: ok 
+INFO[2024-12-20T14:09:33-05:00] Installing olvm-capi into cluster-api-provider-olvm: ok 
+INFO[2024-12-20T14:09:34-05:00] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+INFO[2024-12-20T14:09:35-05:00] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
+INFO[2024-12-20T14:10:05-05:00] Waiting for Core Cluster API Controllers: ok 
+INFO[2024-12-20T14:10:25-05:00] Waiting for Olvm Cluster API Controllers: ok 
+INFO[2024-12-20T14:10:45-05:00] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2024-12-20T14:11:15-05:00] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2024-12-20T14:11:15-05:00] Applying Cluster API resources               
+INFO[2024-12-20T14:11:17-05:00] Waiting for kubeconfig: ok       
+INFO[2024-12-20T14:13:35-05:00] Waiting for the Kubernetes cluster to be ready: ok 
+INFO[2024-12-20T14:13:35-05:00] Installing applications into workload cluster 
+INFO[2024-12-20T14:13:43-05:00] Installing flannel into kube-flannel: ok 
+INFO[2024-12-20T14:13:45-05:00] Installing ui into ocne-system: ok 
+INFO[2024-12-20T14:13:46-05:00] Installing ocne-catalog into ocne-system: ok 
+INFO[2024-12-20T14:13:46-05:00] Kubernetes cluster was created successfully  
+INFO[2024-12-20T14:16:47-05:00] Waiting for the UI to be ready: ok 
+
+Run the following command to create an authentication token to access the UI:
+    KUBECONFIG='/Users/pmackin/.kube/kubeconfig.demo' kubectl create token ui -n ocne-system
+Browser window opened, enter 'y' when ready to exit: y
+```
+
+You can see the Kubernetes nodes and access your new cluster as follows:
+```kubectl --kubeconfig ~/.kube/kubeconfig.demo get node
+NAME                       STATUS   ROLES           AGE     VERSION
+demo-control-plane-l2zrs   Ready    control-plane   2m27s   v1.30.3+1.el8
+demo-md-0-v5xsk-hsbcw      Ready    <none>          8s      v1.30.3+1.el8
+```
+
+# Scale the cluster
+You can scale the cluster control plane and worker nodes independently.
+
+Scale the control plane to 3 nodes:
+```
+kubectl get kubeadmcontrolplane -A
+NAMESPACE      NAME                 CLUSTER   INITIALIZED   API SERVER AVAILABLE   REPLICAS   READY   UPDATED   UNAVAILABLE   AGE     VERSION
+olvm-cluster   demo-control-plane   demo      true          true                   1          1       1         0             9m13s   v1.30.3
+
+kubectl scale kubeadmcontrolplane  -n olvm-cluster   demo-control-plane --replicas 3
+kubeadmcontrolplane.controlplane.cluster.x-k8s.io/demo-control-plane scaled
+```
+
+Scale the workers:
+```
+kubectl get machinedeployment -A
+NAMESPACE      NAME        CLUSTER   REPLICAS   READY   UPDATED   UNAVAILABLE   PHASE     AGE   VERSION
+olvm-cluster   demo-md-0   demo      1          1       1         0             Running   11m   v1.30.3
+
+kubectl scale machinedeployment -n olvm-cluster   demo-md-0  --replicas 5
+machinedeployment.cluster.x-k8s.io/demo-md-0 scaled
+```
 
 # Deleting a Cluster
