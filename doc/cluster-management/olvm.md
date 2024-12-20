@@ -144,7 +144,7 @@ The virtual IP is used as the Kubernetes control plane endpoint (the server fiel
 This IP must be external, and cannot be in the range used by the VMs.
 
 **provider**
-The provider must be olvm
+The provider must be olvm.
 
 **networkInterface**
 The interface used by OLVM virtual machines (VMs).  Currently, the value `enp1s0` is required.
@@ -191,7 +191,7 @@ The cluster configuration specifies fields for the OLVMCluster resource.
 The oVirt datacenter name
 
 ### olvmVmIpProfile
-The profile that describes VM IP information.  This profile is an OLVMMCluster concept (hence the name)
+The profile that describes VM IP information. This profile is an OLVMMCluster concept (hence the name).
 ```
       olvmVmIpProfile:
         name: default-ip
@@ -204,13 +204,13 @@ The profile that describes VM IP information.  This profile is an OLVMMCluster c
 The profile name. This is referenced by the control plane and machine sections.
 
 **gateway**
-The default gateway on the VM
+The default gateway on the VM.
 
 **netmask**
-The netmask used by the VM
+The netmask used by the VM.
 
 **device**
-The ethernet interface device on the VM
+The ethernet interface device on the VM.
 
 **startingIpAddress**
 The starting IP address to use for VMs.  NOTE: the **virtualIp** cannot be in this range.
