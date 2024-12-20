@@ -22,7 +22,7 @@ cluster can be its own management cluster.
 Using Cluster API always requires that a Kubernetes cluster is available.  If
 a cluster is not available, the Oracle Cloud Native Environment CLI will create
 one using the [libvirt](libvirt.md) provider.  It is referred to as a
-"boostrap cluster" or an "ephemeral cluster" depending on the context.
+"bootstrap cluster" or an "ephemeral cluster" depending on the context.
 
 The OLVM Cluster API Provider implements an infrastructure Cluster controller (OLVMCluster CRD) along with
 an infrastructure Machine controller (OLVMMachine CRD).  Both are housed in a single operator. This
@@ -33,15 +33,15 @@ Machine and OLVMMachines are CAPI resources. There is an OLVM VM created for eac
 The oVirt instance is the same as the oVirt installation.  It is where the oVirt console runs, the oVirt engine, etc.
 
 ## OLVM vs oVirt
-There is a sutle nuance in the terminology used for OLVM vs oVirt.  The term OLVM really has two meanings
-in this context.  First it reperesents the back-end OLVM instance, which is an oVirt implemenation.  So, the
-term oVirt **always** means the back-end OLVM oVirt instance.  Any resource or entity described as oVirt can
+There is some overlap in the terminology used for OLVM vs oVirt.  The term OLVM really has two meanings
+in this context.  First it represents the backend OLVM oVirt instance, which is an oVirt implementation.  So, the
+term oVirt **always** means the backend OLVM oVirt instance.  Any resource or entity described as oVirt can
 be viewed from the OLVM management console, or accessed via the oVirt REST API.
 
 There is also the client side, where you create Cluster API resources.  The OLVM Cluster API has an OLVMCluster 
 resource which is not to be confused with either a Kubernetes cluster, or an oVirt cluster. 
 So, when you see OLVM* field names or resource names described in this  document, it is **always** referring to OLVM Cluster API 
-resouces and terminology on the client.
+resources and terminology on the client.
 
 ## Prerequisites
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
@@ -216,8 +216,8 @@ The ethernet interface device on the VM
 The starting IP address to use for VMs.  NOTE: the **virtualIp** cannot be in this range.
 
 
-## Machine congfiguration
-The control plane and worker fiels are identical, but the values may be different.  These values
+## Machine configuration
+The control plane and worker fields are identical, but the values may be different.  These values
 apply to all the control plane nodes and worker nodes in the cluster.
 ```
     controlPlaneMachine:
@@ -274,6 +274,23 @@ The oVirt vmTemplate name.  This must exist in the oVirt instance
 # Preparing to Create a Cluster
 This section describes the steps needed to create a cluster.  Make sure your cluster configuration file
 exists and has the correct values as described in previous sections.
+
+## Credentials 
+Before using the OLVM Cluster API provider, you need to define the following environment variables on
+the machine where you are running `ocne`.
+
+OCNE_OLVM_USERNAME
+OCNE_OLVM_PASSWORD
+OCNE_OLVM_SCOPE
+
+Use "ovirt-app-api" as the scope, unless you have created a user with a different scope.
+The username must have @internal suffix.  So if you log into the OLVM console with "admin", then
+the OCNE_OLVM_USERNAME is "admin@internal"
+
+## oVirt REST API CA Certificate
+You also must download the oVirt REST API CA certificate and put it into a file referenced by the cluster configuration (see below).
+Make sure you only use the second certificate returned by the instructions at [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate).
+
 
 ## Creating a workload cluster
 First create a workload cluster.  Even though and ephemeral cluster is automatically created, you can 
@@ -345,7 +362,7 @@ Now you need to use the OLVM oVirt console to create a template that uses the im
 3. Fill in the form, only change the following fields:
    Template: Blank
    Operating System: Red Hat Enterprise Linux CoreOS
-   Instance Images > Attach and select the boot.qcow2 disk/image on the list, select the OS (boot) checkbox.  THis is the last checkbox on the right.
+   Instance Images > Attach and select the boot.qcow2 disk/image on the list, select the OS (boot) checkbox, which is the last checkbox on the right.
 
 4. After the VM creation is finished, select but do NOT run it, rather click the "Make Template" menu selection.
 Make sure the template name matches the vmTemplateName in your Oracle Cloud Native Environment CLI cluster configuration.
@@ -516,7 +533,7 @@ You must have available IPs that are reachable from the machine where you are ru
 This includes the virtual IP and all the IPs for the Kubernetes nodes.
 
 ## Capacity
-Make sure your workload cluster has the capacity as specfied in the instructions in the document.  If not, then you will see
+Make sure your workload cluster has the capacity as specified in the instructions in the document.  If not, then you will see
 problems like pods being evicted, etc.
 
 ## Cleanup
