@@ -58,13 +58,13 @@ configuration introduces a new olvm provider with custom configuration with 4 se
 * Global OLVM configuration
 * OLVMCluster configuration
 * OLVMMachine configuration for the control plane nodes
-* OLVMMachine configuraiton for the worker nodes
+* OLVMMachine configuration for the worker nodes
 
 ```
 name: demo
-workerNodes: 2
-controlPlaneNodes: 3
-virtualIp: 100.101.70.160 
+workerNodes: 1
+controlPlaneNodes: 1
+virtualIp: 1.2.3.100
 password: "$6...1"
 provider: olvm
 providers:
@@ -80,7 +80,7 @@ providers:
         device: enp1s0
         startingIpAddress: 1.2.3.161
       ovirtAPI:
-        serverURL: https://ovirt.example.oraclevcn.com/ovirt-engine
+        serverURL: https://ovirt.example.com/ovirt-engine
         serverCAPath: "~/olvm/ca.crt"
       ovirtOCK:
         storageDomainName: oblock
@@ -129,7 +129,7 @@ The global configuration has 2 sections, global fields and ignition fields.
 
 ## Global fields
 ```
-virtualIp: 100.101.70.160 
+virtualIp: 1.2.3.100 
 provider: olvm
 ...
 providers:
@@ -180,7 +180,7 @@ The cluster configuration specifies fields for the OLVMCluster resource.
         device: enp1s0
         startingIpAddress: 1.2.3.161
       ovirtAPI:
-        serverURL: https://ovirt.example.oraclevcn.com/ovirt-engine
+        serverURL: https://ovirt.example.com/ovirt-engine
         serverCAPath: "~/olvm/ca.crt"
       ovirtOCK:
         storageDomainName: oblock
@@ -358,7 +358,7 @@ Now you are ready to create a cluster.  As the cluster is being created, you can
 First the control plane VM (Kubernetes node) is created, followed by the worker VM/
 
 ```
-ocne cluster start  --kubeconfig=/Users/pmackin/.kube/kubeconfig.ocne.local --provider olvm  --cluster-name demo --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml --kubeconfig $KUBECONFIG
+ocne cluster start --provider olvm  --cluster-name demo --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml
 INFO[2024-12-20T14:09:31-05:00] Installing cert-manager into cert-manager: ok 
 INFO[2024-12-20T14:09:32-05:00] Installing core-capi into capi-system: ok 
 INFO[2024-12-20T14:09:33-05:00] Installing olvm-capi into cluster-api-provider-olvm: ok 
@@ -383,8 +383,10 @@ Run the following command to create an authentication token to access the UI:
 Browser window opened, enter 'y' when ready to exit: y
 ```
 
+The kubeconfig file needed to access your new CAPI cluster is at ~/.ocne/kubeconfig.<cluster-name>
 You can see the Kubernetes nodes and access your new cluster as follows:
-```kubectl --kubeconfig ~/.kube/kubeconfig.demo get node
+```
+kubectl --kubeconfig ~/.kube/kubeconfig.demo get node
 NAME                       STATUS   ROLES           AGE     VERSION
 demo-control-plane-l2zrs   Ready    control-plane   2m27s   v1.30.3+1.el8
 demo-md-0-v5xsk-hsbcw      Ready    <none>          8s      v1.30.3+1.el8
@@ -412,5 +414,97 @@ olvm-cluster   demo-md-0   demo      1          1       1         0             
 kubectl scale machinedeployment -n olvm-cluster   demo-md-0  --replicas 5
 machinedeployment.cluster.x-k8s.io/demo-md-0 scaled
 ```
+As mentioned previously, you can observe the Kubernetes cluster being scaled by looking at the OLVM console Virtual Machine page.
+The Cluster API controller creates control plane nodes one at the time, waiting until the new node is ready before
+creating the next.  However, all the worker nodes are created concurrently.
+
+Also, can watch the CAPI infrastructure machines being created (IPs redacted):
+```
+kubectl get OLVMMachine -A -o wide
+NAMESPACE      NAME                       CLUSTER   READY   AGE     OVIRT-CLUSTER   MEMORY   CORES   SOCKETS   VMSTATUS   VMIPADDRESS
+olvm-cluster   demo-control-plane-l2zrs   demo      true    14m     Default         7GB      2       2         up         1.2.3.1
+olvm-cluster   demo-control-plane-mkd4p   demo      true    2m19s   Default         7GB      2       2         up         1.2.3.2
+olvm-cluster   demo-control-plane-t5gvv   demo      true    5m      Default         7GB      2       2         up         1.2.3.3
+olvm-cluster   demo-md-0-v5xsk-hsbcw      demo      true    14m     Default         16GB     2       2         up         1.2.3.4
+olvm-cluster   demo-md-0-v5xsk-s9sm4      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.5
+olvm-cluster   demo-md-0-v5xsk-sfmfg      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.6
+olvm-cluster   demo-md-0-v5xsk-v6dw9      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.7
+olvm-cluster   demo-md-0-v5xsk-wfhjg      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.8
+```
+
+Eventually, you should see all the nodes created and ready:
+```
+kubectl --kubeconfig ~/.kube/kubeconfig.demo get node
+NAME                       STATUS   ROLES           AGE     VERSION
+demo-control-plane-l2zrs   Ready    control-plane   14m     v1.30.3+1.el8
+demo-control-plane-mkd4p   Ready    control-plane   2m32s   v1.30.3+1.el8
+demo-control-plane-t5gvv   Ready    control-plane   4m56s   v1.30.3+1.el8
+demo-md-0-v5xsk-hsbcw      Ready    <none>          12m     v1.30.3+1.el8
+demo-md-0-v5xsk-s9sm4      Ready    <none>          3m1s    v1.30.3+1.el8
+demo-md-0-v5xsk-sfmfg      Ready    <none>          3m      v1.30.3+1.el8
+demo-md-0-v5xsk-v6dw9      Ready    <none>          3m6s    v1.30.3+1.el8
+demo-md-0-v5xsk-wfhjg      Ready    <none>          3m      v1.30.3+1.el8
+```
+
+Here are the pods:
+```
+kubectl --kubeconfig ~/.kube/kubeconfig.demo get pods -A
+NAMESPACE      NAME                                               READY   STATUS    RESTARTS        AGE
+kube-flannel   kube-flannel-ds-4n8sc                              1/1     Running   1 (3m35s ago)   4m7s
+kube-flannel   kube-flannel-ds-d2x6x                              1/1     Running   0               15m
+kube-flannel   kube-flannel-ds-fwzk7                              1/1     Running   1 (3m35s ago)   4m6s
+kube-flannel   kube-flannel-ds-p6ktg                              1/1     Running   0               4m10s
+kube-flannel   kube-flannel-ds-pgtf9                              1/1     Running   1 (5m29s ago)   6m2s
+kube-flannel   kube-flannel-ds-sbbwm                              1/1     Running   1 (3m4s ago)    3m36s
+kube-flannel   kube-flannel-ds-tpwfq                              1/1     Running   1 (3m35s ago)   4m6s
+kube-flannel   kube-flannel-ds-vvtrq                              1/1     Running   1 (13m ago)     13m
+kube-system    coredns-f7d444b54-gbcm5                            1/1     Running   0               15m
+kube-system    coredns-f7d444b54-smj8z                            1/1     Running   0               15m
+kube-system    etcd-demo-control-plane-l2zrs                      1/1     Running   0               15m
+kube-system    etcd-demo-control-plane-mkd4p                      1/1     Running   0               3m37s
+kube-system    etcd-demo-control-plane-t5gvv                      1/1     Running   0               6m1s
+kube-system    kube-apiserver-demo-control-plane-l2zrs            1/1     Running   0               15m
+kube-system    kube-apiserver-demo-control-plane-mkd4p            1/1     Running   0               3m37s
+kube-system    kube-apiserver-demo-control-plane-t5gvv            1/1     Running   0               6m1s
+kube-system    kube-controller-manager-demo-control-plane-l2zrs   1/1     Running   0               15m
+kube-system    kube-controller-manager-demo-control-plane-mkd4p   1/1     Running   0               3m37s
+kube-system    kube-controller-manager-demo-control-plane-t5gvv   1/1     Running   0               6m1s
+kube-system    kube-proxy-55wp4                                   1/1     Running   0               4m7s
+kube-system    kube-proxy-599b2                                   1/1     Running   0               6m2s
+kube-system    kube-proxy-6lc2t                                   1/1     Running   0               4m10s
+kube-system    kube-proxy-f5md2                                   1/1     Running   0               15m
+kube-system    kube-proxy-fqm9g                                   1/1     Running   0               3m36s
+kube-system    kube-proxy-kwp2d                                   1/1     Running   0               4m6s
+kube-system    kube-proxy-pmvnw                                   1/1     Running   0               13m
+kube-system    kube-proxy-vshtx                                   1/1     Running   0               4m6s
+kube-system    kube-scheduler-demo-control-plane-l2zrs            1/1     Running   0               15m
+kube-system    kube-scheduler-demo-control-plane-mkd4p            1/1     Running   0               3m37s
+kube-system    kube-scheduler-demo-control-plane-t5gvv            1/1     Running   0               6m1s
+ocne-system    ocne-catalog-578c959566-5gxbd                      1/1     Running   0               15m
+ocne-system    ui-84dd57ff69-vv2c6                                1/1     Running   0               15m
+```
 
 # Deleting a Cluster
+Finally, you can delete the cluster as follows:
+```
+ocne cluster delete --cluster-name demo
+INFO[2024-12-20T14:32:30-05:00] Installing cert-manager into cert-manager: ok 
+INFO[2024-12-20T14:32:30-05:00] Installing core-capi into capi-system: ok 
+INFO[2024-12-20T14:32:31-05:00] Installing olvm-capi into cluster-api-provider-olvm: ok 
+INFO[2024-12-20T14:32:31-05:00] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+INFO[2024-12-20T14:32:32-05:00] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
+INFO[2024-12-20T14:32:32-05:00] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2024-12-20T14:32:32-05:00] Waiting for Olvm Cluster API Controllers: ok 
+INFO[2024-12-20T14:32:33-05:00] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2024-12-20T14:32:42-05:00] Waiting for Core Cluster API Controllers: ok 
+INFO[2024-12-20T14:32:42-05:00] Deleting Cluster olvm-cluster/demo           
+INFO[2024-12-20T14:33:09-05:00] Waiting for deletion: ok     
+```
+
+See that the CAPI cluster is gone
+```
+kubectl get cluster -A
+No resources found
+```
+
+
