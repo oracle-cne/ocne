@@ -28,6 +28,8 @@ The OLVM Cluster API Provider implements an infrastructure Cluster controller (O
 an infrastructure Machine controller (OLVMMachine CRD).  Both are housed in a single operator. This
 provider interacts with OLVM using the [oVirt REST API.](https://www.ovirt.org/documentation/doc-REST_API_Guide/)
 
+Machine and OLVMMachines are CAPI resources. There is an OLVM VM created for each Machine.  Each VM contains a single Kubernetes node.
+
 The oVirt instance is the same as the oVirt installation.  It is where the oVirt console runs, the oVirt engine, etc.
 
 ## OLVM vs oVirt
@@ -151,8 +153,7 @@ The interface used by OLVM virtual machines (VMs).  Currently, the value `enp1s0
 The namespace where CLUSTER API resources will be created in your management cluster.
 
 ## Ignition fields
-The ignition fields need to be updated with your nameserver IP.  The other fields should stay as is. 
-
+The ignition fields need to be updated with your nameserver IP.  The other fields should stay as is.
 ```
 extraIgnitionInline:
   variant: fcos
@@ -169,7 +170,6 @@ extraIgnitionInline:
 
 ## Cluster configuration
 The cluster configuration specifies fields for the OLVMCluster resource.
-
 ```
     olvmCluster:
       ovirtDatacenterName: Default
@@ -192,7 +192,6 @@ The oVirt datacenter name
 
 ### olvmVmIpProfile
 The profile that describes VM IP information.  This profile is an OVLMCluster concept (hence the name)
-
 ```
       olvmVmIpProfile:
         name: default-ip
@@ -298,7 +297,7 @@ providers:
        cpu: 3
 ```
 
-Now create the workload cluster
+Now create the workload cluster:
 ```
 ocne cluster start -u false
 INFO[2024-12-20T13:37:50-05:00] Creating new Kubernetes cluster with version 1.30 named ocne 
@@ -308,7 +307,6 @@ INFO[2024-12-20T13:38:26-05:00] Installing ui into ocne-system: ok
 INFO[2024-12-20T13:38:27-05:00] Installing ocne-catalog into ocne-system: ok 
 INFO[2024-12-20T13:38:27-05:00] Kubernetes cluster was created successfully 
 ```
-
 
 ## Creating the OLVM OCK image
 The first step is to create an OCK image with the default Kubernetes version (1.30 at the time of this writing).
@@ -405,7 +403,7 @@ kubectl scale kubeadmcontrolplane  -n olvm-cluster   demo-control-plane --replic
 kubeadmcontrolplane.controlplane.cluster.x-k8s.io/demo-control-plane scaled
 ```
 
-Scale the workers:
+Scale the workers to 5 nodes:
 ```
 kubectl get machinedeployment -A
 NAMESPACE      NAME        CLUSTER   REPLICAS   READY   UPDATED   UNAVAILABLE   PHASE     AGE   VERSION
@@ -446,7 +444,7 @@ demo-md-0-v5xsk-v6dw9      Ready    <none>          3m6s    v1.30.3+1.el8
 demo-md-0-v5xsk-wfhjg      Ready    <none>          3m      v1.30.3+1.el8
 ```
 
-Here are the pods:
+See the pods:
 ```
 kubectl --kubeconfig ~/.kube/kubeconfig.demo get pods -A
 NAMESPACE      NAME                                               READY   STATUS    RESTARTS        AGE
@@ -501,10 +499,31 @@ INFO[2024-12-20T14:32:42-05:00] Deleting Cluster olvm-cluster/demo
 INFO[2024-12-20T14:33:09-05:00] Waiting for deletion: ok     
 ```
 
-See that the CAPI cluster is gone
+See that the CAPI cluster is gone:
 ```
 kubectl get cluster -A
 No resources found
 ```
+
+# Troubleshooting
+This section list troubleshooting tips.
+
+## Proxies
+A common problem is misconfigured proxies.  Make sure the proxy settings in your cluster configuration file is correct for both httpsProxy and noProxy.
+
+## External IPs.
+You must have available IPs that are reachable from the machine where you are running the Oracle Cloud Native Environment CLI.
+This includes the virtual IP and all the IPs for the Kubernetes nodes.
+
+## Capacity
+Make sure your workload cluster has the capacity as specfied in the instructions in the document.  If not, then you will see
+problems like pods being evicted, etc.
+
+## Cleanup
+If for any reason the `ocne cluster start` command fails.  You need to do some manual steps to completely cleanup.
+
+1. ocne cluster delete   --cluster-name demo
+2. kubectl delete cl -n olvm-cluster demo
+3. rm ~/.kube/kubeconfig.demo
 
 
