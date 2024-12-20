@@ -1,7 +1,7 @@
 **NOTE: This is a developer release**
 
 # OLVM Cluster API Provider
-The OLVM Cluster API Provider allows you to create Kubernetes clusters on an
+The Oracle Linux Virtualization Manager (OLVM) Cluster API Provider allows you to create Kubernetes clusters on an
 existing OLVM instance. The cluster nodes can be spread
 across multiple OLVM hosts, where both the control plane and worker nodes can
 be scaled in and out as desired. Using the Oracle Cloud Native Environment CLI (`ocne`), 
@@ -191,7 +191,7 @@ The cluster configuration specifies fields for the OLVMCluster resource.
 The oVirt datacenter name
 
 ### olvmVmIpProfile
-The profile that describes VM IP information.  This profile is an OVLMCluster concept (hence the name)
+The profile that describes VM IP information.  This profile is an OLVMMCluster concept (hence the name)
 ```
       olvmVmIpProfile:
         name: default-ip
