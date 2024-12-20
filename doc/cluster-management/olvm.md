@@ -329,7 +329,7 @@ INFO[2024-12-20T13:38:27-05:00] Kubernetes cluster was created successfully
 The first step is to create an OCK image with the default Kubernetes version (1.30 at the time of this writing).
 
 ```
-export KUBECONFIG=/Users/pmackin/.kube/kubeconfig.ocne.local
+export KUBECONFIG=/Users/user/.kube/kubeconfig.ocne.local
 
 ocne image create --type olvm --kubeconfig $KUBECONFIG
 INFO[2024-12-20T13:46:23-05:00] Creating Image                               
@@ -338,18 +338,18 @@ INFO[2024-12-20T13:46:28-05:00] Waiting for pod ocne-system/ocne-image-builder t
 INFO[2024-12-20T13:46:28-05:00] Getting local boot image for architecture: amd64 
 INFO[2024-12-20T13:46:56-05:00] Uploading boot image to pod ocne-system/ocne-image-builder: ok 
 INFO[2024-12-20T13:47:41-05:00] Downloading boot image from pod ocne-system/ocne-image-builder: ok 
-INFO[2024-12-20T13:47:41-05:00] New boot image was created successfully at /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm 
+INFO[2024-12-20T13:47:41-05:00] New boot image was created successfully at /Users/user/.ocne/images/boot.qcow2-1.30-amd64.olvm 
 ```
 
 ## Uploading the OLVM OCK image
 Upload the OCK image that you just created to your 
 
 ```
-ocne image upload --type olvm --arch amd64 --file  /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm   --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml --kubeconfig $KUBECONFIG
-INFO[2024-12-20T13:49:48-05:00] Starting uploaded OCK image `/Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm` to disk `demo-1-ock-1.30` in storage domain `oblock` 
+ocne image upload --type olvm --arch amd64 --file  /Users/user/.ocne/images/boot.qcow2-1.30-amd64.olvm   --config /Users/user/.ocne/olvm-demo-cluster-config.yaml --kubeconfig $KUBECONFIG
+INFO[2024-12-20T13:49:48-05:00] Starting uploaded OCK image `/Users/user/.ocne/images/boot.qcow2-1.30-amd64.olvm` to disk `demo-1-ock-1.30` in storage domain `oblock` 
 INFO[2024-12-20T13:49:48-05:00] Waiting for disk status to be OK             
 INFO[2024-12-20T13:49:53-05:00] Waiting for image transfer phase transferring 
-INFO[2024-12-20T13:51:56-05:00] Uploading image /Users/pmackin/.ocne/images/boot.qcow2-1.30-amd64.olvm with 2826567680 bytes to demo-1-ock-1.30: ok 
+INFO[2024-12-20T13:51:56-05:00] Uploading image /Users/user/.ocne/images/boot.qcow2-1.30-amd64.olvm with 2826567680 bytes to demo-1-ock-1.30: ok 
 INFO[2024-12-20T13:51:58-05:00] Waiting for image transfer phase finished_success 
 INFO[2024-12-20T13:52:11-05:00] Successfully uploaded OCK image    
 ```
@@ -373,7 +373,7 @@ Now you are ready to create a cluster.  As the cluster is being created, you can
 First the control plane VM (Kubernetes node) is created, followed by the worker VM/
 
 ```
-ocne cluster start --provider olvm  --cluster-name demo --config /Users/pmackin/.ocne/olvm-demo-cluster-config.yaml
+ocne cluster start --provider olvm  --cluster-name demo --config /Users/user/.ocne/olvm-demo-cluster-config.yaml
 INFO[2024-12-20T14:09:31-05:00] Installing cert-manager into cert-manager: ok 
 INFO[2024-12-20T14:09:32-05:00] Installing core-capi into capi-system: ok 
 INFO[2024-12-20T14:09:33-05:00] Installing olvm-capi into cluster-api-provider-olvm: ok 
@@ -394,7 +394,7 @@ INFO[2024-12-20T14:13:46-05:00] Kubernetes cluster was created successfully
 INFO[2024-12-20T14:16:47-05:00] Waiting for the UI to be ready: ok 
 
 Run the following command to create an authentication token to access the UI:
-    KUBECONFIG='/Users/pmackin/.kube/kubeconfig.demo' kubectl create token ui -n ocne-system
+    KUBECONFIG='/Users/user/.kube/kubeconfig.demo' kubectl create token ui -n ocne-system
 Browser window opened, enter 'y' when ready to exit: y
 ```
 
