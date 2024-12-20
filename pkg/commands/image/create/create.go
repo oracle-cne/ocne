@@ -25,6 +25,7 @@ import (
 
 const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
+const ProviderTypeOlvm = "olvm"
 
 const (
 	podName         = "ocne-image-builder"
@@ -37,6 +38,7 @@ const (
 	envKargs        = "KARGS_APPEND_STANZA"
 
 	ociDefaultIgnition  = "oci"
+	olvmDefaultIgnition = "openstack"
 	qemuDefaultIgnition = "qemu"
 )
 
@@ -228,54 +230,33 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 					},
 				},
 			},
+			Tolerations: []corev1.Toleration{
+				{
+					Key:      "node-role.kubernetes.io/control-plane",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/not-ready",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/unschedulable",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+				{
+					Key:      "node.kubernetes.io/unreachable",
+					Effect:   corev1.TaintEffectNoSchedule,
+					Operator: corev1.TolerationOpExists,
+				},
+			},
 		},
 	}
 
 	_, err := client.CoreV1().Pods(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 	return err
-}
-
-func createOciConfigMap(namespace string, name string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Immutable: nil,
-		Data: map[string]string{
-			setProviderScriptName: setProviderScript,
-			modifyImageScriptName: modifyImageScript,
-			OciDhcpScriptPath:     OciDhcpScript,
-			OciDhclientScriptPath: OciDhclientScript,
-			OciDhclientPath:       OciDhclient,
-		},
-	}
-}
-
-func createOciImage(cc *copyConfig) error {
-	// copy the qcow2 image from the local system to the pod
-	kubectl.SetPipes(cc.KubectlConfig)
-	err := uploadImage(cc)
-	if err != nil {
-		return err
-	}
-
-	// run the script in the pod to change the provider in the qcow2 image
-	kubectl.SetPipes(cc.KubectlConfig)
-	if err := kubectl.RunScript(cc.KubectlConfig, cc.podName, imageMountPath, setProviderScriptName); err != nil {
-		return err
-	}
-
-	// copy boot image from pod to local system
-	kubectl.SetPipes(cc.KubectlConfig)
-	localBootImagePath, err := downloadImage(cc)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("New boot image was created successfully at %s", localBootImagePath)
-	return nil
 }
 
 var providers = map[string]providerFuncs{
@@ -288,6 +269,11 @@ var providers = map[string]providerFuncs{
 		defaultProvider: qemuDefaultIgnition,
 		createConfigMap: createOstreeConfigMap,
 		createImage:     createOstreeImage,
+	},
+	ProviderTypeOlvm: providerFuncs{
+		defaultProvider: olvmDefaultIgnition,
+		createConfigMap: createOlvmConfigMap,
+		createImage:     createOlvmImage,
 	},
 }
 
