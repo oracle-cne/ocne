@@ -5,6 +5,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -75,11 +76,19 @@ func GetKubeConfigLocation(kubeconfigPath string) (string, bool, error) {
 	}
 
 	if testKubeConfig := os.Getenv(EnvVarTestKubeConfig); len(testKubeConfig) > 0 {
-		return sanitizePath(testKubeConfig, false)
+		path, echo, err := sanitizePath(testKubeConfig, false)
+		if err != nil {
+			err = fmt.Errorf("Failed to access the kubeconfig set by the environment variable %s: ", EnvVarTestKubeConfig)
+		}
+		return path, echo, err
 	}
 
 	if kubeConfig := os.Getenv(EnvVarKubeConfig); len(kubeConfig) > 0 {
-		return sanitizePath(kubeConfig, false)
+		path, echo, err := sanitizePath(kubeConfig, false)
+		if err != nil {
+			err = fmt.Errorf("Failed to access the kubeconfig set by the environment variable %s: ", EnvVarKubeConfig)
+		}
+		return path, echo, err
 	}
 
 	if home := homedir.HomeDir(); home != "" {
