@@ -216,7 +216,7 @@ The ethernet interface device on the VM.
 The starting IP address to use for VMs.  NOTE: the **virtualIp** cannot be in this range.
 
 ### ovirtAPI
-The ovirtAPI specifies the information needed to access the oVirt engine via the REST API.
+The ovirtAPI section specifies the information needed to access the oVirt engine via the REST API.
 
 **serverURL**
 The serverURL is the URL of the oVirt engine that is accessed via the oVirt REST API. 
@@ -225,7 +225,7 @@ The serverURL is the URL of the oVirt engine that is accessed via the oVirt REST
 The local file that contains the oVirt CA certificate.
 
 ### ovirtOCK
-The ovirtOCK specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
+The ovirtOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
 
 **storageDomainName**
 The name of an existing oVirt storage domain where the image will be uploaded.
