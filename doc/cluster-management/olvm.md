@@ -215,6 +215,29 @@ The ethernet interface device on the VM.
 **startingIpAddress**
 The starting IP address to use for VMs.  NOTE: the **virtualIp** cannot be in this range.
 
+### ovirtAPI
+The ovirtAPI specifies the information needed to access the oVirt engine via the REST API.
+
+**serverURL**
+The serverURL is the URL of the oVirt engine that is accessed via the oVirt REST API. 
+
+**serverCAPath**
+The local file that contains the oVirt CA certificate.
+
+### ovirtOCK
+The ovirtOCK specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
+
+**storageDomainName**
+The name of an existing oVirt storage domain where the image will be uploaded.
+
+**diskName**
+The name of the disk that will be created in the storage domain as a result of the upload.
+This is the disk name that you specify when you create a VM template.
+
+**diskSize**
+The provisioned virtual disk size name to be used for the disk created in the storage domain.  This is the disk space that will
+be allocated for the VM regardless of the size of the image on disk.  For example, the image might be 2.5GB, but the provisioned size
+could be 16GB.
 
 ## Machine configuration
 The control plane and worker fields are identical, but the values may be different.  These values
