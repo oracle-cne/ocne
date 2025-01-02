@@ -129,6 +129,33 @@ func AddFile(ign *igntypes.Config, f *File) error {
 	return nil
 }
 
+// AddLink adds a link with the correct variables set, and also checks for any
+// conflicts that may have occurred.
+func AddLink(ign *igntypes.Config, l *igntypes.Link) error {
+	for _, sl := range ign.Storage.Links {
+		if sl.Node.Path == l.Node.Path {
+			return fmt.Errorf("A link with path %s is already defined", l.Node.Path)
+		}
+	}
+
+	ign.Storage.Links = append(ign.Storage.Links, *l)
+	return nil
+}
+
+// AddDir adds a directory with the correct variables et, and also checks
+// for any conflicts that may have occurred
+func AddDir(ign *igntypes.Config, d *igntypes.Directory) error {
+	for _, sd := range ign.Storage.Directories {
+		if sd.Node.Path == d.Node.Path {
+			return fmt.Errorf("A directory with path %s is already defined", d.Node.Path)
+		}
+	}
+
+	ign.Storage.Directories = append(ign.Storage.Directories, *d)
+	return nil
+}
+
+
 // AddUnit adds a unit to an existing ignition config.
 func AddUnit(ign *igntypes.Config, unit *igntypes.Unit) *igntypes.Config {
 	wrapped := NewIgnition()

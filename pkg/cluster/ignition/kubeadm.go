@@ -191,7 +191,7 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			"preflight",
 		},
 		Patches: &Patches{
-			Directory: "/etc/ocne/ock",
+			Directory: "/etc/ocne/ock/patches",
 		},
 	}
 	if !ci.ExpectingWorkerNodes {
@@ -230,7 +230,7 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 			},
 		},
 		Patches: &Patches{
-			Directory: "/etc/ocne/ock",
+			Directory: "/etc/ocne/ock/patches",
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {
