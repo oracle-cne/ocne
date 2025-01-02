@@ -1126,3 +1126,7 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
 }
+
+func (cad *ClusterApiDriver) Stage(version string) error {
+	return nil
+}

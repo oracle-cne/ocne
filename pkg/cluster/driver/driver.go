@@ -20,6 +20,7 @@ type ClusterDriver interface {
 	GetKubeAPIServerAddress() string
 	PostInstallHelpStanza() string
 	DefaultCNIInterfaces() []string
+	Stage(string) error
 }
 
 type DriverCreateFunc func(*types.Config, *types.ClusterConfig) (ClusterDriver, error)
