@@ -114,7 +114,7 @@ clusterDefinitionInline: |
   someotherkey: someotherval
   
 # This field specifies the password set for the ocne user.
-# This configuration is applied through igniton. Certain providers
+# This configuration is applied through ignition. Certain providers
 # require an ignition file to be passed in with the desired password
 # specified to enable log in. The ocne user is useful for obtaining the 
 # kubeconfig of a successful OCK instance and to access the rescue shell.
