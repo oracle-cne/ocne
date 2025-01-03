@@ -16,16 +16,20 @@ import (
 	"time"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
@@ -587,10 +591,12 @@ func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, err = oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
-	if err == nil {
+	_, found, err := oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
+	if found {
 		// An image was found.  Perfect.
 		return "", "", nil
+	} else if err != nil {
+		return "", "", err
 	}
 
 	// Check to see if a converted image already exists.  If so, don't bother
@@ -1125,4 +1131,175 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 
 func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
+}
+
+func (cad *ClusterApiDriver) updateImage(mt *unstructured.Unstructured, version string) (string, string, error) {
+	imageId, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "imageId")
+	if !found {
+		err = fmt.Errorf("MachineTemplate %s in %s has no imageId", mt.GetName(), mt.GetNamespace())
+	}
+	if err != nil {
+		return "", "" , err
+	}
+	log.Debugf("MachineTemplate %s in %s has imageId %s", mt.GetName(), mt.GetNamespace(), imageId)
+
+	compartmentId, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "compartmentId")
+	if !found {
+		err = fmt.Errorf("MachineTemplate %s in %s has no compartmentId", mt.GetName(), mt.GetNamespace())
+	}
+	if err != nil {
+		return "", "", err
+	}
+	log.Debugf("MachineTemplate %s in %s has compartmentId %s", mt.GetName(), mt.GetNamespace(), compartmentId)
+
+	shape, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "shape")
+	if !found {
+		err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
+	}
+	if err != nil {
+		return "", "", err
+	}
+
+	arch := oci.ArchitectureFromShape(shape)
+	log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
+
+	img, err := oci.GetImageById(imageId)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Update the image if:
+	// - The minor version is changing and an image for that version
+	//   does not exist
+	// - The minor version is not changing and the container image is
+	//   newer than the OCI image
+	imgKubeVersion, ok := img.FreeformTags[constants.OCIKubernetesVersionTag]
+	if !ok {
+		return "", "", fmt.Errorf("OCI Custom image for MachineTemplate %s in %s does not have a Kubernetes version tag", mt.GetName(), mt.GetNamespace())
+	}
+
+	imgName := *img.DisplayName
+
+	existingImg, found, err := oci.GetImage(imgName, version, arch, compartmentId)
+	if err != nil {
+		return "", "", err
+	}
+	if found {
+		log.Debugf("Found existing OCI Image for version %s with OCID %s", version, *existingImg.Id)
+	}
+
+	// If the versions are the same, check for newer OCI images first
+	kubeCmp, err := versions.CompareKubernetesVersions(imgKubeVersion, version)
+	uploadImage := false
+	if err != nil {
+		return "", "", err
+	} else if kubeCmp == 0 {
+		// GetImage returns the newest image with the same version and
+		// arch.  If the OCIDs of the image from the template and the
+		// newest image are the same, then it must be the latest.
+		// Otherwise it must not.
+		if *existingImg.Id == *img.Id {
+			// Check for a new image
+
+			containerImg, err := cmdutil.EnsureBootImageVersion(version, cad.ClusterConfig.BootVolumeContainerImage)
+			if err != nil {
+				return "", "", nil
+			}
+
+			ockImgSpec, err := image.GetImageSpec(containerImg, arch)
+			if err != nil {
+				return "", "", err
+			}
+			log.Debugf("Have container image spec for %s", containerImg)
+
+			ockImgInfo, err := ockImgSpec.Inspect(context.Background())
+			if err != nil {
+				return "", "", err
+			}
+			log.Debugf("Inspecting container image info for %s", containerImg)
+
+			log.Debugf("Checking %v against %v", ockImgInfo.Created, existingImg.TimeCreated.Time)
+			if ockImgInfo.Created.After(existingImg.TimeCreated.Time) {
+				// Upload the new image
+				uploadImage = true
+			}
+		}
+	} else if found {
+		// Don't upload the new image
+		uploadImage = false
+
+	} else {
+		// Upload the new image
+		uploadImage = true
+	}
+
+	if uploadImage {
+		log.Debugf("Uploading new image")
+	}
+
+	return "", "", nil
+}
+
+func (cad *ClusterApiDriver) Stage(version string) error {
+	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	if err != nil {
+		return err
+	}
+
+	if cad.FromTemplate {
+		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		if err != nil {
+			return err
+		}
+
+		cad.ClusterResources = cdi
+	}
+
+	clusterObj, err := cad.getClusterObject()
+	if err != nil {
+		return err
+	}
+
+	// Change any cluster resource state that may be required to move
+	// from one version to the next.
+
+	// Update OCIMachineDeployments to use the new images.
+	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
+	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
+	if err != nil {
+		return err
+	}
+
+	// Check the existing images for the machine templates and see if there
+	// are updates available.  If so, upload the new images and generate
+	// new machine templates that consume them.
+	for _, md := range graph.MachineDeployments {
+		log.Debugf("Inspecting MachineDeployment %s in %s", md.Object.GetName(), md.Object.GetNamespace())
+		for gvk, t := range md.Children {
+			mts, ok := graph.MachineTemplates[gvk]
+			log.Debugf("Looking for %s in MachineTemplates: %v", gvk, ok)
+			if !ok {
+				continue
+			}
+
+			for n, _ := range t {
+				mt, ok := mts[n]
+				log.Debugf("Looking for %s in MachineTemplates: %v", n, ok)
+				if !ok {
+					continue
+				}
+
+				_, _, err = cad.updateImage(mt.Object, version)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Spit out some state information and instructions.  The new machine
+	// templates that were generated need to get propagated into the
+	// MachineDeployments and KubeadmControlPlanes in the cluster.
+
+	return nil
 }

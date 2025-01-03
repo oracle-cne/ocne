@@ -15,6 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -42,8 +44,12 @@ type StageOptions struct {
 	// Transport is the type of transport that will be stored in the update.yaml for all nodes during a stage
 	Transport string
 
-	//timeout is how long the CLI waits for a pod to become available on a node
+	// Timeout is how long the CLI waits for a pod to become available on a node
 	Timeout string
+
+	// ClusterConfig can be used to get configuration values from a cluster config
+	ClusterConfig *types.ClusterConfig
+	Config *types.Config
 }
 
 // Stage stages a cluster update
@@ -57,6 +63,20 @@ func Stage(o StageOptions) error {
 	if _, err := versions.GetKubernetesVersions(o.KubeVersion); err != nil {
 		return errors.New("the kubernetes version is unsupported. Please choose a supported version of Kubernetes to update to")
 	}
+
+	// If a cluster config is given, do any provider-specific staging
+	if o.ClusterConfig != nil {
+		cd, err := driver.CreateDriver(o.Config, o.ClusterConfig)
+		if err != nil {
+			return err
+		}
+
+		err = cd.Stage(o.KubeVersion)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 
 	// get a kubernetes client
 	restConfig, KClient, err := client.GetKubeClient(o.KubeConfigPath)

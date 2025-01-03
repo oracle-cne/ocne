@@ -18,6 +18,22 @@ import (
 	crtpkg "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func GetResources(restConf *rest.Config, namespace string, apiVersion string, kind string) (*unstructured.UnstructuredList, error) {
+	client, err := crtpkg.New(restConf, crtpkg.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	u := &unstructured.UnstructuredList{}
+
+	u.SetGroupVersionKind(schema.FromAPIVersionAndKind(apiVersion, kind))
+	err = client.List(context.TODO(), u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
 func GetResource(restConf *rest.Config, u *unstructured.Unstructured) error {
 	client, err := crtpkg.New(restConf, crtpkg.Options{})
 	if err != nil {

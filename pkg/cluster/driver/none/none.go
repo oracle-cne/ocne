@@ -76,3 +76,8 @@ func (nd *NoneDriver) PostInstallHelpStanza() string {
 func (nd *NoneDriver) DefaultCNIInterfaces() []string {
 	return []string{""}
 }
+
+// Stage is a no-op
+func (nd *NoneDriver) Stage(version string) error {
+	return nil
+}

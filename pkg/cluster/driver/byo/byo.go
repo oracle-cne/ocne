@@ -376,3 +376,8 @@ func (bd *ByoDriver) validateClusterConfig() error {
 
 	return nil
 }
+
+// Stage is a no-op
+func (bd *ByoDriver) Stage(version string) error {
+	return nil
+}

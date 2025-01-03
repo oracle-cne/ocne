@@ -240,3 +240,7 @@ func (Cad *OlvmDriver) DefaultCNIInterfaces() []string {
 	// let CNI pick the interface
 	return nil
 }
+
+func (cad *OlvmDriver) Stage(version string) error {
+	return fmt.Errorf("Implement me")
+}

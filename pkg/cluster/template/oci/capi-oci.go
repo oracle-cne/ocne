@@ -285,14 +285,14 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		cid = newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Amd64 = imageId
+		img, _, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
+		if img != nil {
+			clusterConfig.Providers.Oci.Images.Amd64 = *img.Id
 		}
 
-		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Arm64 = imageId
+		img, _, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
+		if img != nil {
+			clusterConfig.Providers.Oci.Images.Arm64 = *img.Id
 		}
 	}
 

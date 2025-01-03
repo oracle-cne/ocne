@@ -5,6 +5,8 @@ package versions
 
 import (
 	"fmt"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 type KubernetesVersions struct {
@@ -62,4 +64,29 @@ func GetKubernetesVersions(ver string) (KubernetesVersions, error) {
 		return ret, fmt.Errorf("No Kubernetes version available for %s", ver)
 	}
 	return ret, nil
+}
+
+func CompareKubernetesVersions(v1 string, v2 string) (int, error) {
+	// Make sure these are valid versions
+	_, ok := kubernetesVersions[v1]
+	if !ok {
+		return 0, fmt.Errorf("%s is not a supported Kubernetes version", v1)
+	}
+
+	_, ok = kubernetesVersions[v2]
+	if !ok {
+		return 0, fmt.Errorf("%s is not a supported Kubernetes version", v2)
+	}
+
+	ver1, err := semver.NewVersion(v1)
+	if err != nil {
+		return 0, err
+	}
+
+	ver2, err := semver.NewVersion(v2)
+	if err != nil {
+		return 0, err
+	}
+
+	return ver1.Compare(ver2), nil
 }

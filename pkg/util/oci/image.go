@@ -20,19 +20,38 @@ import (
 // description.  A work request OCID is returned to as well to allow the
 // caller to monitor pogress.
 func EnsureImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string) (string, string, error) {
-	ocid, err := GetImage(imageName, k8sVersion, arch, compartmentId)
-	if err == nil {
-		return ocid, "", nil
+	img, found, err := GetImage(imageName, k8sVersion, arch, compartmentId)
+	if found {
+		return *img.Id, "", nil
+	} else if err != nil {
+		return "", "", err
 	}
 	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName)
 }
 
-// GetImage fetches the OCID of an image by name.
-func GetImage(imageName string, k8sVersion string, arch string, compartmentId string) (string, error) {
+func GetImageById(ocid string) (*core.Image, error) {
 	ctx := context.Background()
 	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+
+	// Check to see if the image already exists
+	img, err := c.GetImage(ctx, core.GetImageRequest{
+		ImageId: &ocid,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &img.Image, nil
+}
+
+// GetImage fetches the OCID of the latest image by name, Kubernetes version, and architecture.
+func GetImage(imageName string, k8sVersion string, arch string, compartmentId string) (*core.Image, bool, error) {
+	ctx := context.Background()
+	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	if err != nil {
+		return nil, false, err
 	}
 
 	// Check to see if the image already exists
@@ -41,10 +60,11 @@ func GetImage(imageName string, k8sVersion string, arch string, compartmentId st
 		DisplayName:   &imageName,
 	})
 	if err != nil {
-		return "", err
+		return nil, false, err
 	}
 
 	// Find an image with the right tags
+	var latestImg *core.Image = nil
 	for _, img := range lir.Items {
 		imgK8sVer, ok := img.FreeformTags[constants.OCIKubernetesVersionTag]
 		if !ok {
@@ -62,11 +82,19 @@ func GetImage(imageName string, k8sVersion string, arch string, compartmentId st
 			continue
 		}
 
-		// An image exists, and all the tags match.  Hand back the OCID
-		return *img.Id, nil
+		// An image exists and all the tags match, check the image
+		// creation time.  If that is the latest time, update the
+		// latest values
+		if latestImg == nil || latestImg.TimeCreated.Time.Before(img.TimeCreated.Time) {
+			latestImg = &img
+		}
 	}
 
-	return "", fmt.Errorf("could not find image named %s in %s", imageName, compartmentId)
+	if latestImg != nil {
+		return latestImg, true, nil
+	}
+
+	return nil, false, nil
 }
 
 // ImportImage creates a custom compute image from the contents of an
