@@ -38,7 +38,7 @@ const (
 
 // Start starts a cluster based on the given configuration and returns the
 // canonical kubeconfig
-func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func Start(clusterConfig *types.ClusterConfig) (string, error) {
 	// Check to see if the cluster already exists.  If it does, make
 	// sure it is the "same cluster" for some appropriate definition
 	// of same cluster.
@@ -48,8 +48,8 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	if err != nil {
 		return "", err
 	}
-	if clusterConfig.Provider != constants.ProviderTypeNone {
-		cachedClusterConfig := clusterCache.Get(clusterConfig.Name)
+	if *clusterConfig.Provider != constants.ProviderTypeNone {
+		cachedClusterConfig := clusterCache.Get(*clusterConfig.Name)
 		if cachedClusterConfig != nil {
 			if cachedClusterConfig.ClusterConfig.Provider != clusterConfig.Provider {
 				return "", fmt.Errorf("the provider of the existing cluster is %s. The target provider is %s", cachedClusterConfig.ClusterConfig.Provider, clusterConfig.Provider)
@@ -62,12 +62,12 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	infoFuncWait := logutils.Info
 	infoFunc := log.Info
 	infofFunc := log.Infof
-	if config.Quiet {
+	if *clusterConfig.Quiet {
 		infoFuncWait = func(string) {}
 		infoFunc = func(args ...interface{}) {}
 		infofFunc = func(s string, a ...any) {}
 	}
-	drv, err := driver.CreateDriver(config, clusterConfig)
+	drv, err := driver.CreateDriver(clusterConfig)
 	if err != nil {
 		return "", err
 	}
@@ -103,8 +103,8 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
 	var applications []install.ApplicationDescription
-	if clusterConfig.Provider != constants.ProviderTypeNone {
-		switch clusterConfig.CNI {
+	if *clusterConfig.Provider != constants.ProviderTypeNone {
+		switch *clusterConfig.CNI {
 		case "", constants.CNIFlannel:
 			log.Debugf("Flannel will be installed as the CNI")
 			args := []string{
@@ -136,12 +136,12 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		case constants.CNINone:
 			// If no CNI is installed, it is not possible for the UI
 			// to start.  Don't wait for it.
-			config.AutoStartUI = "false"
+			clusterConfig.AutoStartUI = "false"
 			log.Debugf("No CNI will be installed")
 		}
 	}
 
-	if !clusterConfig.Headless {
+	if !*clusterConfig.Headless {
 		log.Debugf("Installing UI")
 
 		// Determine if the image registry needs to be overridden
@@ -184,16 +184,16 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 			},
 		})
 	} else {
-		config.AutoStartUI = "false"
+		*clusterConfig.AutoStartUI = "false"
 	}
 
-	if clusterConfig.Catalog {
+	if *clusterConfig.Catalog {
 		log.Debugf("Installing Oracle Catalog")
 
 		// Determine if the image registry needs to be overridden
 		helmOverride := map[string]interface{}{}
-		if clusterConfig.Provider == constants.ProviderTypeNone &&
-			clusterConfig.Registry != constants.ContainerRegistry {
+		if *clusterConfig.Provider == constants.ProviderTypeNone &&
+			*clusterConfig.Registry != constants.ContainerRegistry {
 			helmOverride = map[string]interface{}{
 				"image": map[string]interface{}{
 					"registry": clusterConfig.Registry,
@@ -220,7 +220,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	// Get the list of applications to install
 	appsToInstall := getAppsToInstall(applications, releases)
-	err = install.InstallApplications(appsToInstall, localKubeConfig, config.Quiet)
+	err = install.InstallApplications(appsToInstall, localKubeConfig, *clusterConfig.Quiet)
 	if err != nil {
 		return localKubeConfig, err
 	}
@@ -260,14 +260,14 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		if app.Application == nil {
 			continue
 		}
-		if len(app.Application.Catalog) == 0 || app.Application.Catalog == constants.DefaultCatalogName {
+		if len(*app.Application.Catalog) == 0 || *app.Application.Catalog == constants.DefaultCatalogName {
 			if err := catalog.WaitForInternalCatalogInstall(kubeClient, infoFuncWait); err != nil {
 				return localKubeConfig, err
 			}
 			break
 		}
 	}
-	err = install.InstallApplications(appsToInstall, localKubeConfig, config.Quiet)
+	err = install.InstallApplications(appsToInstall, localKubeConfig, *clusterConfig.Quiet)
 	if err != nil {
 		return localKubeConfig, err
 	}
@@ -363,8 +363,8 @@ func getCatalogsToAdd(kubeConfig string, clusterConfig *types.ClusterConfig) ([]
 	for index := range clusterConfig.Catalogs {
 		catalogInstalled := false
 		for _, catalog := range allCatalogs {
-			if catalog.CatalogName == clusterConfig.Catalogs[index].Name &&
-				catalog.ServiceNsn.Namespace == clusterConfig.Catalogs[index].Namespace {
+			if catalog.CatalogName == *clusterConfig.Catalogs[index].Name &&
+				catalog.ServiceNsn.Namespace == *clusterConfig.Catalogs[index].Namespace {
 				catalogInstalled = true
 				break
 			}
@@ -375,7 +375,7 @@ func getCatalogsToAdd(kubeConfig string, clusterConfig *types.ClusterConfig) ([]
 		}
 	}
 
-	if clusterConfig.CommunityCatalog {
+	if *clusterConfig.CommunityCatalog {
 		catalogToInstall = append(clusterConfig.Catalogs, catalog.NewCommunityCatalog())
 	}
 

@@ -48,11 +48,11 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
-	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, flagConfig, flagConfigShort, "", flagConfigHelp)
-	cmd.Flags().StringVarP(&config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
+	cmd.Flags().StringVarP(clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
+	cmd.Flags().StringVarP(clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
 
 	return cmd
 }
@@ -79,28 +79,28 @@ func RunCmd(cmd *cobra.Command) error {
 		clusterName = cc.Name
 	}
 
-	cached := clusterCache.Get(clusterName)
+	cached := clusterCache.Get(*clusterName)
 
 	// If the cluster does not exist, fall back to the CLI options.
 	// This is a bail-out to make sure all the needful can be done in
 	// case of some poorly timed error.
 	if cached == nil {
-		c, cc, err = cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+		cc, err = cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		c, cc, err = cmdutil.GetFullConfig(&config, &cached.ClusterConfig, "")
+		cc, err = cmdutil.GetFullConfig(&config, &cached.ClusterConfig, "")
 		if err != nil {
 			return err
 		}
 	}
 
-	if cc.Name == "" {
-		cc.Name = "ocne"
+	if *cc.Name == "" {
+		*cc.Name = "ocne"
 	}
-	if cc.Provider == "" {
-		cc.Provider = pkgconst.ProviderTypeLibvirt
+	if *cc.Provider == "" {
+		*cc.Provider = pkgconst.ProviderTypeLibvirt
 	}
 
 	err = delete2.Delete(c, cc)

@@ -4,52 +4,50 @@
 package types
 
 type LibvirtProvider struct {
-	SessionURI                   string `yaml:"uri"`
-	SshKey                       string `yaml:"sshKey"`
-	StoragePool                  string `yaml:"storagePool"`
-	Network                      string `yaml:"network"`
-	ControlPlaneNode             Node   `yaml:"controlPlaneNode"`
-	WorkerNode                   Node   `yaml:"workerNode"`
-	BootVolumeName               string `yaml:"bootVolumeName"`
-	BootVolumeContainerImagePath string `yaml:"bootVolumeContainerImagePath"`
+	SessionURI                   *string `yaml:"uri,omitempty"`
+	SshKey                       *string `yaml:"sshKey,omitempty"`
+	StoragePool                  *string `yaml:"storagePool,omitempty"`
+	Network                      *string `yaml:"network,omitempty"`
+	ControlPlaneNode             Node    `yaml:"controlPlaneNode"`
+	WorkerNode                   Node    `yaml:"workerNode"`
+	BootVolumeName               *string `yaml:"bootVolumeName,omitempty"`
+	BootVolumeContainerImagePath *string `yaml:"bootVolumeContainerImagePath,omitempty"`
 }
 
 type OciInstanceShape struct {
-	Shape string `yaml:"shape"`
-	Ocpus int    `yaml:"ocpus"`
+	Shape *string `yaml:"shape,omitempty"`
+	Ocpus *int    `yaml:"ocpus,omitempty"`
 }
 
 type LoadBalancer struct {
-	Subnet1 string `yaml:"subnet1"`
-	Subnet2 string `yaml:"subnet2"`
+	Subnet1 *string `yaml:"subnet1,omitempty"`
+	Subnet2 *string `yaml:"subnet2,omitempty"`
 }
 
 type OciImageSet struct {
-	Amd64 string `yaml:"amd64"`
-	Arm64 string `yaml:"arm64"`
+	Amd64 *string `yaml:"amd64,omitempty"`
+	Arm64 *string `yaml:"arm64,omitempty"`
 }
 
 type OciProvider struct {
-	KubeConfigPath    string           `yaml:"kubeconfig"`
-	Compartment       string           `yaml:"compartment"`
-	Namespace         string           `yaml:"namespace"`
+	KubeConfigPath    *string          `yaml:"kubeconfig,omitempty"`
+	Compartment       *string          `yaml:"compartment,omitempty"`
+	Namespace         *string          `yaml:"namespace,omitempty"`
 	ControlPlaneShape OciInstanceShape `yaml:"controlPlaneShape"`
 	Images            OciImageSet      `yaml:"images"`
 	WorkerShape       OciInstanceShape `yaml:"workerShape"`
-	SelfManaged       bool             `yaml:"selfmanagedfake"`
-	SelfManagedPtr    *bool            `yaml:"selfManaged,omitempty"`
+	SelfManaged       *bool            `yaml:"selfManaged,omitempty"`
 	LoadBalancer      LoadBalancer     `yaml:"loadBalancer"`
-	Vcn               string           `yaml:"vcn"`
-	ImageBucket       string           `yaml:"imageBucket"`
+	Vcn               *string          `yaml:"vcn,omitempty"`
+	ImageBucket       *string          `yaml:"imageBucket,omitempty"`
 	Proxy             Proxy            `yaml:"proxy"`
 }
 
 type OlvmProvider struct {
-	Namespace           string               `yaml:"namespace"`
-	SelfManaged         bool                 `yaml:"selfmanagedfake"`
-	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
+	Namespace           *string              `yaml:"namespace,omitempty"`
+	SelfManaged         *bool                `yaml:"selfManaged,omitempty"`
 	Proxy               Proxy                `yaml:"proxy"`
-	NetworkInterface    string               `yaml:"networkInterface"`
+	NetworkInterface    *string              `yaml:"networkInterface,omitempty"`
 	OlvmCluster         OlvmCluster          `yaml:"olvmCluster"`
 	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
@@ -58,86 +56,85 @@ type OlvmProvider struct {
 
 type OlvmCluster struct {
 	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
-	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
+	DatacenterName       *string                  `yaml:"ovirtDatacenterName,omitempty"`
 	OVirtAPI             OlvmOvirtAPI             `yaml:"ovirtAPI"`
 	OVirtOck             OlvmOvirtOck             `yaml:"ovirtOCK"`
 	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
 }
 
 type OlvmOvirtOck struct {
-	DiskName          string `yaml:"diskName"`
-	DiskSize          string `yaml:"diskSize"`
-	StorageDomainName string `yaml:"storageDomainName"`
+	DiskName          *string `yaml:"diskName,omitempty"`
+	DiskSize          *string `yaml:"diskSize,omitempty"`
+	StorageDomainName *string `yaml:"storageDomainName,omitempty"`
 }
 
 type OlvmOvirtAPI struct {
-	ServerURL    string `yaml:"serverURL"`
-	ServerCA     string `yaml:"serverCA"`
-	ServerCAPath string `yaml:"serverCAPath"`
+	ServerURL    *string `yaml:"serverURL,omitempty"`
+	ServerCA     *string `yaml:"serverCA,omitempty"`
+	ServerCAPath *string `yaml:"serverCAPath,omitempty"`
 }
 
 type OlvmControlPlaneEndpoint struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Host *string `yaml:"host,omitempty"`
+	Port *string `yaml:"port,omitempty"`
 }
 
 type OlvmVmIpProfile struct {
-	Name              string `yaml:"name"`
-	StartingIpAddress string `yaml:"startingIpAddress"`
-	Device            string `yaml:"device"`
-	Gateway           string `yaml:"gateway"`
-	Netmask           string `yaml:"netmask"`
+	Name              *string `yaml:"name,omitempty"`
+	StartingIpAddress *string `yaml:"startingIpAddress,omitempty"`
+	Device            *string `yaml:"device,omitempty"`
+	Gateway           *string `yaml:"gateway,omitempty"`
+	Netmask           *string `yaml:"netmask,omitempty"`
 }
 
 type OlvmMachine struct {
-	Memory              string             `yaml:"memory"`
+	Memory              *string            `yaml:"memory,omitempty"`
 	Network             OlvmMachineNetwork `yaml:"network"`
 	Cpu                 OlvmMachineCpu     `yaml:"cpu"`
-	OVirtClusterName    string             `yaml:"ovirtClusterName"`
-	OlvmVmIpProfileName string             `yaml:"olvmVmIpProfileName"`
-	VMTemplateName      string             `yaml:"vmTemplateName"`
+	OVirtClusterName    *string            `yaml:"ovirtClusterName,omitempty"`
+	OlvmVmIpProfileName *string            `yaml:"olvmVmIpProfileName,omitempty"`
+	VMTemplateName      *string            `yaml:"vmTemplateName,omitempty"`
 }
 
 type OlvmMachineCpu struct {
-	Architecture string                `yaml:"architecture"`
+	Architecture *string               `yaml:"architecture,omitempty"`
 	Topology     OlvmMachineCpuToplogy `yaml:"topology"`
 }
 
 type OlvmMachineCpuToplogy struct {
-	Cores   int `yaml:"cores"`
-	Sockets int `yaml:"sockets"`
-	Threads int `yaml:"threads"`
+	Cores   *int `yaml:"cores,omitempty"`
+	Sockets *int `yaml:"sockets,omitempty"`
+	Threads *int `yaml:"threads,omitempty"`
 }
 
 type OlvmMachineNetwork struct {
-	NetworkName     string `yaml:"networkName"`
-	InterfaceType   string `yaml:"interfaceType"`
-	VnicName        string `yaml:"vnicName"`
-	VnicProfileName string `yaml:"vnicProfileName"`
+	NetworkName     *string `yaml:"networkName,omitempty"`
+	InterfaceType   *string `yaml:"interfaceType,omitempty"`
+	VnicName        *string `yaml:"vnicName,omitempty"`
+	VnicProfileName *string `yaml:"vnicProfileName,omitempty"`
 }
 
 type OlvmLocalAPIEndpoint struct {
-	BindPort         int    `yaml:"bindPort"`
-	AdvertiseAddress string `yaml:"advertiseAddress"`
+	BindPort         *int    `yaml:"bindPort,omitempty"`
+	AdvertiseAddress *string `yaml:"advertiseAddress,omitempty"`
 }
 
 type ByoProvider struct {
-	AutomaticTokenCreation    bool   `yaml:"automaticTokenCreationfake"`
-	AutomaticTokenCreationPtr *bool  `yaml:"automaticTokenCreation"`
-	NetworkInterface          string `yaml:"networkInterface"`
+	AutomaticTokenCreation *bool   `yaml:"automaticTokenCreation,omitempty"`
+	NetworkInterface       *string `yaml:"networkInterface,omitempty"`
 }
 
 type Node struct {
-	Memory  string `yaml:"memory"`
-	CPUs    int    `yaml:"cpu"`
-	Storage string `yaml:"storage"`
+	Memory  *string `yaml:"memory,omitempty"`
+	CPUs    *int    `yaml:"cpu,omitempty"`
+	Storage *string `yaml:"storage,omitempty"`
 }
 
 type CertificateInformation struct {
-	Country string `yaml:"country"`
-	Org     string `yaml:"org"`
-	OrgUnit string `yaml:"orgUnit"`
-	State   string `yaml:"state"`
+	Country *string `yaml:"country,omitempty"`
+	Org     *string `yaml:"org,omitempty"`
+	OrgUnit *string `yaml:"orgUnit,omitempty"`
+	State   *string `yaml:"state,omitempty"`
 }
 
 type Providers struct {
@@ -148,105 +145,102 @@ type Providers struct {
 }
 
 type Proxy struct {
-	HttpsProxy string `yaml:"httpsProxy"`
-	HttpProxy  string `yaml:"httpProxy"`
-	NoProxy    string `yaml:"noProxy"`
+	HttpsProxy *string `yaml:"httpsProxy,omitempty"`
+	HttpProxy  *string `yaml:"httpProxy,omitempty"`
+	NoProxy    *string `yaml:"noProxy,omitempty"`
 }
 
 type Catalog struct {
-	Protocol  string `yaml:"protocol"`
-	URI       string `yaml:"uri"`
-	Name      string `yaml:"name"`
-	Namespace string `yaml:"namespace"`
+	Protocol  *string `yaml:"protocol,omitempty"`
+	URI       *string `yaml:"uri,omitempty"`
+	Name      *string `yaml:"name,omitempty"`
+	Namespace *string `yaml:"namespace,omitempty"`
 }
 
 type Application struct {
-	Name       string      `yaml:"name"`
-	Release    string      `yaml:"release"`
-	Version    string      `yaml:"version"`
-	Catalog    string      `yaml:"catalog"`
-	Namespace  string      `yaml:"namespace"`
+	Name       *string     `yaml:"name,omitempty"`
+	Release    *string     `yaml:"release,omitempty"`
+	Version    *string     `yaml:"version,omitempty"`
+	Catalog    *string     `yaml:"catalog,omitempty"`
+	Namespace  *string     `yaml:"namespace,omitempty"`
 	Config     interface{} `yaml:"config"`
-	ConfigFrom string      `yaml:"configFrom"`
+	ConfigFrom *string     `yaml:"configFrom,omitempty"`
 }
 
 type EphemeralClusterConfig struct {
-	Name     string `yaml:"name"`
-	Preserve bool   `yaml:"preserve"`
-	Node     Node   `yaml:"node"`
+	Name     *string `yaml:"name,omitempty"`
+	Preserve *bool   `yaml:"preserve,omitempty"`
+	Node     Node    `yaml:"node"`
 }
 
 type Config struct {
-	Providers                Providers              `yaml:"providers"`
-	KubeConfig               string                 `yaml:"kubeconfig"`
-	AutoStartUI              string                 `yaml:"autoStartUI"`
-	Proxy                    Proxy                  `yaml:"proxy"`
-	KubeAPIServerBindPort    uint16                 `yaml:"kubeApiServerBindPort"`
-	KubeAPIServerBindPortAlt uint16                 `yaml:"kubeApiServerBindPortAlt"`
-	PodSubnet                string                 `yaml:"podSubnet"`
-	ServiceSubnet            string                 `yaml:"serviceSubnet"`
-	Registry                 string                 `yaml:"registry"`
-	CertificateInformation   CertificateInformation `yaml:"certificateInformation"`
-	OsTag                    string                 `yaml:"osTag"`
-	OsRegistry               string                 `yaml:"osRegistry"`
-	KubeProxyMode            string                 `yaml:"kubeProxyMode"`
-	BootVolumeContainerImage string                 `yaml:"bootVolumeContainerImage"`
-	CNI                      string                 `yaml:"cni"`
-	Headless                 bool                   `yaml:"headlessfake"`
-	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
-	Catalog                  bool                   `yaml:"catalogfake"`
-	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
-	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
-	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
+	Providers                Providers              `yaml:"providers,omitempty"`
+	KubeConfig               *string                `yaml:"kubeconfig,omitempty"`
+	AutoStartUI              *string                `yaml:"autoStartUI,omitempty"`
+	Proxy                    Proxy                  `yaml:"proxy,omitempty"`
+	KubeAPIServerBindPort    *uint16                `yaml:"kubeApiServerBindPort,omitempty"`
+	KubeAPIServerBindPortAlt *uint16                `yaml:"kubeApiServerBindPortAlt,omitempty"`
+	PodSubnet                *string                `yaml:"podSubnet,omitempty"`
+	ServiceSubnet            *string                `yaml:"serviceSubnet,omitempty"`
+	Registry                 *string                `yaml:"registry,omitempty"`
+	CertificateInformation   CertificateInformation `yaml:"certificateInformation,omitempty"`
+	OsTag                    *string                `yaml:"osTag,omitempty"`
+	OsRegistry               *string                `yaml:"osRegistry,omitempty"`
+	KubeProxyMode            *string                `yaml:"kubeProxyMode,omitempty"`
+	BootVolumeContainerImage *string                `yaml:"bootVolumeContainerImage,omitempty"`
+	CNI                      *string                `yaml:"cni,omitempty"`
+	Headless                 *bool                  `yaml:"headless,omitempty"`
+	Catalog                  *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         *bool                  `yaml:"communityCatalog,omitempty"`
 	EphemeralConfig          EphemeralClusterConfig `yaml:"ephemeralCluster"`
-	Quiet                    bool                   `yaml:"quiteFake"`
-	QuietPtr                 *bool                  `yaml:"quiet,omitempty"`
-	KubeVersion              string                 `yaml:"kubernetesVersion"`
-	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
-	SshPublicKey             string                 `yaml:"sshPublicKey"`
-	Password                 string                 `yaml:"password"`
-	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
-	ExtraIgnition            string                 `yaml:"extraIgnition"`
+	Quiet                    *bool                  `yaml:"quiet,omitempty"`
+	KubeVersion              *string                `yaml:"kubernetesVersion,omitempty"`
+	SshPublicKeyPath         *string                `yaml:"sshPublicKeyPath,omitempty"`
+	SshPublicKey             *string                `yaml:"sshPublicKey,omitempty"`
+	Password                 *string                `yaml:"password,omitempty"`
+	ExtraIgnitionInline      *string                `yaml:"extraIgnitionInline,omitempty"`
+	ExtraIgnition            *string                `yaml:"extraIgnition,omitempty"`
 }
 
 type ClusterConfig struct {
-	WorkingDirectory         string                 `yaml:"directory"`
-	Name                     string                 `yaml:"name"`
-	Provider                 string                 `yaml:"provider"`
+	WorkingDirectory         *string                `yaml:"directory,omitempty"`
+	Name                     *string                `yaml:"name,omitempty"`
+	Provider                 *string                `yaml:"provider,omitempty"`
 	Providers                Providers              `yaml:"providers"`
 	Proxy                    Proxy                  `yaml:"proxy"`
-	Registry                 string                 `yaml:"registry"`
-	WorkerNodes              uint16                 `yaml:"workerNodes"`
-	ControlPlaneNodes        uint16                 `yaml:"controlPlaneNodes"`
-	KubeAPIServerBindPort    uint16                 `yaml:"kubeApiServerBindPort"`
-	KubeAPIServerBindPortAlt uint16                 `yaml:"kubeApiServerBindPortAlt"`
-	VirtualIp                string                 `yaml:"virtualIp"`
-	LoadBalancer             string                 `yaml:"loadBalancer"`
-	PodSubnet                string                 `yaml:"podSubnet"`
-	ServiceSubnet            string                 `yaml:"serviceSubnet"`
+	Registry                 *string                `yaml:"registry,omitempty"`
+	WorkerNodes              *uint16                `yaml:"workerNodes,omitempty"`
+	ControlPlaneNodes        *uint16                `yaml:"controlPlaneNodes,omitempty"`
+	KubeAPIServerBindPort    *uint16                `yaml:"kubeApiServerBindPort,omitempty"`
+	KubeAPIServerBindPortAlt *uint16                `yaml:"kubeApiServerBindPortAlt,omitempty"`
+	VirtualIp                *string                `yaml:"virtualIp,omitempty"`
+	LoadBalancer             *string                `yaml:"loadBalancer,omitempty"`
+	PodSubnet                *string                `yaml:"podSubnet,omitempty"`
+	ServiceSubnet            *string                `yaml:"serviceSubnet,omitempty"`
 	CertificateInformation   CertificateInformation `yaml:"certificateInformation"`
-	OsTag                    string                 `yaml:"osTag"`
-	OsRegistry               string                 `yaml:"osRegistry"`
-	KubeProxyMode            string                 `yaml:"kubeProxyMode"`
-	BootVolumeContainerImage string                 `yaml:"bootVolumeContainerImage"`
-	CNI                      string                 `yaml:"cni"`
-	Headless                 bool                   `yaml:"headlessfake"`
-	HeadlessPtr              *bool                  `yaml:"headless,omitempty"`
-	Catalog                  bool                   `yaml:"catalogfake"`
-	CatalogPtr               *bool                  `yaml:"catalog,omitempty"`
-	CommunityCatalog         bool                   `yaml:"communityCatalogFake"`
-	CommunityCatalogPtr      *bool                  `yaml:"communityCatalog,omitempty"`
+	OsTag                    *string                `yaml:"osTag,omitempty"`
+	OsRegistry               *string                `yaml:"osRegistry,omitempty"`
+	KubeProxyMode            *string                `yaml:"kubeProxyMode,omitempty"`
+	BootVolumeContainerImage *string                `yaml:"bootVolumeContainerImage,omitempty"`
+	CNI                      *string                `yaml:"cni,omitempty"`
+	Headless                 *bool                  `yaml:"headless,omitempty"`
+	Catalog                  *bool                  `yaml:"catalog,omitempty"`
+	CommunityCatalog         *bool                  `yaml:"communityCatalog,omitempty"`
 	Catalogs                 []Catalog              `yaml:"catalogs"`
 	Applications             []Application          `yaml:"applications"`
-	KubeVersion              string                 `yaml:"kubernetesVersion"`
-	SshPublicKeyPath         string                 `yaml:"sshPublicKeyPath"`
-	SshPublicKey             string                 `yaml:"sshPublicKey"`
-	Password                 string                 `yaml:"password"`
-	CipherSuites             string                 `yaml:"cipherSuites"`
-	ClusterDefinitionInline  string                 `yaml:"clusterDefinitionInline"`
-	ClusterDefinition        string                 `yaml:"clusterDefinition"`
-	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
-	ExtraIgnition            string                 `yaml:"extraIgnition"`
+	EphemeralConfig          EphemeralClusterConfig `yaml:"ephemeralCluster"`
+	KubeVersion              *string                `yaml:"kubernetesVersion,omitempty"`
+	SshPublicKeyPath         *string                `yaml:"sshPublicKeyPath,omitempty"`
+	SshPublicKey             *string                `yaml:"sshPublicKey,omitempty"`
+	Password                 *string                `yaml:"password,omitempty"`
+	CipherSuites             *string                `yaml:"cipherSuites,omitempty"`
+	ClusterDefinitionInline  *string                `yaml:"clusterDefinitionInline,omitempty"`
+	ClusterDefinition        *string                `yaml:"clusterDefinition,omitempty"`
+	ExtraIgnitionInline      *string                `yaml:"extraIgnitionInline,omitempty"`
+	ExtraIgnition            *string                `yaml:"extraIgnition,omitempty"`
+	Quiet                    *bool                  `yaml:"quiet,omitempty"`
+	KubeConfig               *string                `yaml:"kubeconfig,omitempty"`
+	AutoStartUI              *string                `yaml:"autoStartUI,omitempty"`
 }
 
 type ImageInfo struct {
@@ -275,6 +269,20 @@ func ieu(i uint16, e uint16) uint16 {
 	return i
 }
 
+// ieu is short for "If Else Uint pointer".  If the second argument is
+// non-zero, it is returned.  Otherwise, the first argument
+// is returned.
+func ieup(i *uint16, e *uint16) *uint16 {
+	if e != nil {
+		return e
+	}
+	if i != nil {
+		return i
+	}
+	returnVal := uint16(0)
+	return &returnVal
+}
+
 // ieu is short for "If Else Int".  If the second argument is
 // non-zero, it is returned.  Otherwise, the first argument
 // is returned.
@@ -285,17 +293,45 @@ func iei(i int, e int) int {
 	return i
 }
 
+// ieip is short for "If Else Int Pointer".  If one of the values
+// // is non-nil but the other is nil, the non-nil one is returned.
+// is returned.
+func ieip(i *int, e *int) *int {
+	if e != nil {
+		return e
+	}
+	if i != nil {
+		return i
+	}
+	returnVal := int(0)
+	return &returnVal
+}
+
 // iebp is short for "If Else Bool Pointer".  If one of the values
 // is non-nil but the other is nil, the non-nil one is returned.
 // Otherwise, the value of the second argument is returned.
-func iebp(i *bool, e *bool, def bool) bool {
+func iebp(i *bool, e *bool, def bool) *bool {
 	if e != nil {
-		return *e
+		return e
 	}
 	if i != nil {
-		return *i
+		return i
 	}
-	return def
+	return &def
+}
+
+// iesp is short for "If Else String Pointer".  If one of the values
+// is non-nil but the other is nil, the non-nil one is returned.
+// Otherwise, the value of the second argument is returned.
+func iesp(i *string, e *string) *string {
+	if e != nil {
+		return e
+	}
+	if i != nil {
+		return i
+	}
+	returnVal := ""
+	return &returnVal
 }
 
 // iebpp is short for "If Else Bool Pointer Pointer".  If one
@@ -318,15 +354,11 @@ func iebpp(i *bool, e *bool) *bool {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeProxy(def *Proxy, ovr *Proxy) Proxy {
-	// This is safe to shallow copy because all values are scalars
-	if ovr == nil {
-		return *def
-	}
 
 	return Proxy{
-		HttpsProxy: ies(def.HttpsProxy, ovr.HttpsProxy),
-		HttpProxy:  ies(def.HttpProxy, ovr.HttpProxy),
-		NoProxy:    ies(def.NoProxy, ovr.NoProxy),
+		HttpsProxy: iesp(def.HttpsProxy, ovr.HttpsProxy),
+		HttpProxy:  iesp(def.HttpProxy, ovr.HttpProxy),
+		NoProxy:    iesp(def.NoProxy, ovr.NoProxy),
 	}
 }
 
@@ -348,16 +380,12 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
-	// This is safe to shallow copy because all values are scalars
-	if ovr == nil {
-		return *def
-	}
 
 	return CertificateInformation{
-		Country: ies(def.Country, ovr.Country),
-		Org:     ies(def.Org, ovr.Org),
-		OrgUnit: ies(def.OrgUnit, ovr.OrgUnit),
-		State:   ies(def.State, ovr.State),
+		Country: iesp(def.Country, ovr.Country),
+		Org:     iesp(def.Org, ovr.Org),
+		OrgUnit: iesp(def.OrgUnit, ovr.OrgUnit),
+		State:   iesp(def.State, ovr.State),
 	}
 }
 
@@ -365,15 +393,11 @@ func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateIn
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeNode(def *Node, ovr *Node) Node {
-	// This is safe to shallow copy because all values are scalars
-	if ovr == nil {
-		return *def
-	}
 
 	return Node{
-		Memory:  ies(def.Memory, ovr.Memory),
-		Storage: ies(def.Storage, ovr.Storage),
-		CPUs:    iei(def.CPUs, ovr.CPUs),
+		Memory:  iesp(def.Memory, ovr.Memory),
+		Storage: iesp(def.Storage, ovr.Storage),
+		CPUs:    ieip(def.CPUs, ovr.CPUs),
 	}
 }
 
@@ -381,21 +405,15 @@ func MergeNode(def *Node, ovr *Node) Node {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtProvider {
-	// It is currently safe to shallow copy this because all the
-	// values are scalars.  If that changes, a deep copy will have
-	// to be performed instead.
-	if ovr == nil {
-		return *def
-	}
 	return LibvirtProvider{
-		SessionURI:                   ies(def.SessionURI, ovr.SessionURI),
-		SshKey:                       ies(def.SshKey, ovr.SshKey),
-		StoragePool:                  ies(def.StoragePool, ovr.StoragePool),
-		Network:                      ies(def.Network, ovr.Network),
+		SessionURI:                   iesp(def.SessionURI, ovr.SessionURI),
+		SshKey:                       iesp(def.SshKey, ovr.SshKey),
+		StoragePool:                  iesp(def.StoragePool, ovr.StoragePool),
+		Network:                      iesp(def.Network, ovr.Network),
 		ControlPlaneNode:             MergeNode(&def.ControlPlaneNode, &ovr.ControlPlaneNode),
 		WorkerNode:                   MergeNode(&def.WorkerNode, &ovr.WorkerNode),
-		BootVolumeName:               ies(def.BootVolumeName, ovr.BootVolumeName),
-		BootVolumeContainerImagePath: ies(def.BootVolumeContainerImagePath, ovr.BootVolumeContainerImagePath),
+		BootVolumeName:               iesp(def.BootVolumeName, ovr.BootVolumeName),
+		BootVolumeContainerImagePath: iesp(def.BootVolumeContainerImagePath, ovr.BootVolumeContainerImagePath),
 	}
 }
 
@@ -405,8 +423,8 @@ func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtPro
 // takes precendence.
 func MergeOciInstanceShape(def *OciInstanceShape, ovr *OciInstanceShape) OciInstanceShape {
 	return OciInstanceShape{
-		Shape: ies(def.Shape, ovr.Shape),
-		Ocpus: iei(def.Ocpus, ovr.Ocpus),
+		Shape: iesp(def.Shape, ovr.Shape),
+		Ocpus: ieip(def.Ocpus, ovr.Ocpus),
 	}
 }
 
@@ -416,8 +434,8 @@ func MergeOciInstanceShape(def *OciInstanceShape, ovr *OciInstanceShape) OciInst
 // takes precedence.
 func MergeLoadBalancer(def *LoadBalancer, ovr *LoadBalancer) LoadBalancer {
 	return LoadBalancer{
-		Subnet1: ies(def.Subnet1, ovr.Subnet1),
-		Subnet2: ies(def.Subnet2, ovr.Subnet2),
+		Subnet1: iesp(def.Subnet1, ovr.Subnet1),
+		Subnet2: iesp(def.Subnet2, ovr.Subnet2),
 	}
 }
 
@@ -427,8 +445,8 @@ func MergeLoadBalancer(def *LoadBalancer, ovr *LoadBalancer) LoadBalancer {
 // takes precedence.
 func MergeOciImageSet(def *OciImageSet, ovr *OciImageSet) OciImageSet {
 	return OciImageSet{
-		Amd64: ies(def.Amd64, ovr.Amd64),
-		Arm64: ies(def.Arm64, ovr.Arm64),
+		Amd64: iesp(def.Amd64, ovr.Amd64),
+		Arm64: iesp(def.Arm64, ovr.Arm64),
 	}
 }
 
@@ -438,17 +456,16 @@ func MergeOciImageSet(def *OciImageSet, ovr *OciImageSet) OciImageSet {
 // values takes precedence.
 func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 	return OciProvider{
-		KubeConfigPath:    ies(def.KubeConfigPath, ovr.KubeConfigPath),
-		Compartment:       ies(def.Compartment, ovr.Compartment),
-		Namespace:         ies(def.Namespace, ovr.Namespace),
+		KubeConfigPath:    iesp(def.KubeConfigPath, ovr.KubeConfigPath),
+		Compartment:       iesp(def.Compartment, ovr.Compartment),
+		Namespace:         iesp(def.Namespace, ovr.Namespace),
 		Images:            MergeOciImageSet(&def.Images, &ovr.Images),
-		ImageBucket:       ies(def.ImageBucket, ovr.ImageBucket),
+		ImageBucket:       iesp(def.ImageBucket, ovr.ImageBucket),
 		ControlPlaneShape: MergeOciInstanceShape(&def.ControlPlaneShape, &ovr.ControlPlaneShape),
 		WorkerShape:       MergeOciInstanceShape(&def.WorkerShape, &ovr.WorkerShape),
 		LoadBalancer:      MergeLoadBalancer(&def.LoadBalancer, &ovr.LoadBalancer),
-		SelfManaged:       iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
-		SelfManagedPtr:    iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
-		Vcn:               ies(def.Vcn, ovr.Vcn),
+		SelfManaged:       iebp(def.SelfManaged, ovr.SelfManaged, false),
+		Vcn:               iesp(def.Vcn, ovr.Vcn),
 		Proxy:             MergeProxy(&def.Proxy, &ovr.Proxy),
 	}
 }
@@ -459,11 +476,10 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 // values takes precedence.
 func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 	return OlvmProvider{
-		Namespace:           ies(def.Namespace, ovr.Namespace),
-		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
-		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
+		Namespace:           iesp(def.Namespace, ovr.Namespace),
+		SelfManaged:         iebp(def.SelfManaged, ovr.SelfManaged, false),
 		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
-		NetworkInterface:    ies(def.NetworkInterface, ovr.NetworkInterface),
+		NetworkInterface:    iesp(def.NetworkInterface, ovr.NetworkInterface),
 		OlvmCluster:         MergeOlvmCluster(&def.OlvmCluster, &ovr.OlvmCluster),
 		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
@@ -478,7 +494,7 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
 	return OlvmCluster{
 		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
-		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
+		DatacenterName:       iesp(def.DatacenterName, ovr.DatacenterName),
 		OVirtAPI:             MergeOlvmOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
 		OVirtOck:             MergeOlvmOvirtOck(&def.OVirtOck, &ovr.OVirtOck),
 		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
@@ -491,11 +507,11 @@ func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
 // takes precedence.
 func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpProfile {
 	return OlvmVmIpProfile{
-		Name:              ies(def.Name, ovr.Name),
-		StartingIpAddress: ies(def.StartingIpAddress, ovr.StartingIpAddress),
-		Device:            ies(def.Device, ovr.Device),
-		Gateway:           ies(def.Gateway, ovr.Gateway),
-		Netmask:           ies(def.Netmask, ovr.Netmask),
+		Name:              iesp(def.Name, ovr.Name),
+		StartingIpAddress: iesp(def.StartingIpAddress, ovr.StartingIpAddress),
+		Device:            iesp(def.Device, ovr.Device),
+		Gateway:           iesp(def.Gateway, ovr.Gateway),
+		Netmask:           iesp(def.Netmask, ovr.Netmask),
 	}
 }
 
@@ -505,8 +521,8 @@ func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpPr
 // takes precedence.
 func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
 	return OlvmControlPlaneEndpoint{
-		Host: ies(def.Host, ovr.Host),
-		Port: ies(def.Port, ovr.Port),
+		Host: iesp(def.Host, ovr.Host),
+		Port: iesp(def.Port, ovr.Port),
 	}
 }
 
@@ -516,9 +532,9 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 // takes precedence.
 func MergeOlvmOvirtAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
 	return OlvmOvirtAPI{
-		ServerURL:    ies(def.ServerURL, ovr.ServerURL),
-		ServerCA:     ies(def.ServerCA, ovr.ServerCA),
-		ServerCAPath: ies(def.ServerCAPath, ovr.ServerCAPath),
+		ServerURL:    iesp(def.ServerURL, ovr.ServerURL),
+		ServerCA:     iesp(def.ServerCA, ovr.ServerCA),
+		ServerCAPath: iesp(def.ServerCAPath, ovr.ServerCAPath),
 	}
 }
 
@@ -528,9 +544,9 @@ func MergeOlvmOvirtAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
 // takes precedence.
 func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
 	return OlvmOvirtOck{
-		DiskName:          ies(def.DiskName, ovr.DiskName),
-		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
-		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
+		DiskName:          iesp(def.DiskName, ovr.DiskName),
+		DiskSize:          iesp(def.DiskSize, ovr.DiskSize),
+		StorageDomainName: iesp(def.StorageDomainName, ovr.StorageDomainName),
 	}
 }
 
@@ -540,12 +556,12 @@ func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
 // takes precedence.
 func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	return OlvmMachine{
-		OVirtClusterName:    ies(def.OVirtClusterName, ovr.OVirtClusterName),
-		OlvmVmIpProfileName: ies(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
-		Memory:              ies(def.Memory, ovr.Memory),
+		OVirtClusterName:    iesp(def.OVirtClusterName, ovr.OVirtClusterName),
+		OlvmVmIpProfileName: iesp(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
+		Memory:              iesp(def.Memory, ovr.Memory),
 		Network:             MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
 		Cpu:                 MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
-		VMTemplateName:      ies(def.VMTemplateName, ovr.VMTemplateName),
+		VMTemplateName:      iesp(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
 
@@ -555,10 +571,10 @@ func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 // takes precedence.
 func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) OlvmMachineNetwork {
 	return OlvmMachineNetwork{
-		NetworkName:     ies(def.NetworkName, ovr.NetworkName),
-		InterfaceType:   ies(def.InterfaceType, ovr.InterfaceType),
-		VnicName:        ies(def.VnicName, ovr.VnicName),
-		VnicProfileName: ies(def.VnicProfileName, ovr.VnicProfileName),
+		NetworkName:     iesp(def.NetworkName, ovr.NetworkName),
+		InterfaceType:   iesp(def.InterfaceType, ovr.InterfaceType),
+		VnicName:        iesp(def.VnicName, ovr.VnicName),
+		VnicProfileName: iesp(def.VnicProfileName, ovr.VnicProfileName),
 	}
 }
 
@@ -568,7 +584,7 @@ func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) O
 // takes precedence.
 func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCpu {
 	return OlvmMachineCpu{
-		Architecture: ies(def.Architecture, ovr.Architecture),
+		Architecture: iesp(def.Architecture, ovr.Architecture),
 		Topology:     MergeOlvmMachineCpuToplogy(&def.Topology, &ovr.Topology),
 	}
 }
@@ -579,9 +595,9 @@ func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCp
 // takes precedence.
 func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuToplogy) OlvmMachineCpuToplogy {
 	return OlvmMachineCpuToplogy{
-		Cores:   iei(def.Cores, ovr.Cores),
-		Sockets: iei(def.Sockets, ovr.Sockets),
-		Threads: iei(def.Threads, ovr.Threads),
+		Cores:   ieip(def.Cores, ovr.Cores),
+		Sockets: ieip(def.Sockets, ovr.Sockets),
+		Threads: ieip(def.Threads, ovr.Threads),
 	}
 }
 
@@ -591,8 +607,8 @@ func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuT
 // takes precedence.
 func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpoint) OlvmLocalAPIEndpoint {
 	return OlvmLocalAPIEndpoint{
-		BindPort:         iei(def.BindPort, ovr.BindPort),
-		AdvertiseAddress: ies(def.AdvertiseAddress, ovr.AdvertiseAddress),
+		BindPort:         ieip(def.BindPort, ovr.BindPort),
+		AdvertiseAddress: iesp(def.AdvertiseAddress, ovr.AdvertiseAddress),
 	}
 }
 
@@ -602,9 +618,8 @@ func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpo
 // takes precedence.
 func MergeByoProvider(def *ByoProvider, ovr *ByoProvider) ByoProvider {
 	return ByoProvider{
-		AutomaticTokenCreation:    iebp(def.AutomaticTokenCreationPtr, ovr.AutomaticTokenCreationPtr, false),
-		AutomaticTokenCreationPtr: iebpp(def.AutomaticTokenCreationPtr, ovr.AutomaticTokenCreationPtr),
-		NetworkInterface:          ies(def.NetworkInterface, ovr.NetworkInterface),
+		AutomaticTokenCreation: iebp(def.AutomaticTokenCreation, ovr.AutomaticTokenCreation, false),
+		NetworkInterface:       iesp(def.NetworkInterface, ovr.NetworkInterface),
 	}
 }
 
@@ -626,7 +641,7 @@ func MergeProviders(def *Providers, ovr *Providers) Providers {
 // delete something.
 func MergeEphemeralConfig(def *EphemeralClusterConfig, ovr *EphemeralClusterConfig) EphemeralClusterConfig {
 	return EphemeralClusterConfig{
-		Name: ies(def.Name, ovr.Name),
+		Name: iesp(def.Name, ovr.Name),
 		Node: MergeNode(&def.Node, &ovr.Node),
 	}
 }
@@ -637,35 +652,31 @@ func MergeEphemeralConfig(def *EphemeralClusterConfig, ovr *EphemeralClusterConf
 func MergeConfig(def *Config, ovr *Config) Config {
 	return Config{
 		Providers:                MergeProviders(&def.Providers, &ovr.Providers),
-		KubeConfig:               ies(def.KubeConfig, ovr.KubeConfig),
-		AutoStartUI:              ies(def.AutoStartUI, ovr.AutoStartUI),
+		KubeConfig:               iesp(def.KubeConfig, ovr.KubeConfig),
+		AutoStartUI:              iesp(def.AutoStartUI, ovr.AutoStartUI),
 		Proxy:                    MergeProxy(&def.Proxy, &ovr.Proxy),
-		KubeAPIServerBindPort:    ieu(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
-		KubeAPIServerBindPortAlt: ieu(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
-		PodSubnet:                ies(def.PodSubnet, ovr.PodSubnet),
-		ServiceSubnet:            ies(def.ServiceSubnet, ovr.ServiceSubnet),
-		Registry:                 ies(def.Registry, ovr.Registry),
+		KubeAPIServerBindPort:    ieup(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: ieup(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
+		PodSubnet:                iesp(def.PodSubnet, ovr.PodSubnet),
+		ServiceSubnet:            iesp(def.ServiceSubnet, ovr.ServiceSubnet),
+		Registry:                 iesp(def.Registry, ovr.Registry),
 		CertificateInformation:   MergeCertificateInformation(&def.CertificateInformation, &ovr.CertificateInformation),
-		OsRegistry:               ies(def.OsRegistry, ovr.OsRegistry),
-		OsTag:                    ies(def.OsTag, ovr.OsTag),
-		KubeProxyMode:            ies(def.KubeProxyMode, ovr.KubeProxyMode),
-		BootVolumeContainerImage: ies(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
-		CNI:                      ies(def.CNI, ovr.CNI),
-		Headless:                 iebp(def.HeadlessPtr, ovr.HeadlessPtr, false),
-		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
-		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
-		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
-		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, false),
-		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
+		OsRegistry:               iesp(def.OsRegistry, ovr.OsRegistry),
+		OsTag:                    iesp(def.OsTag, ovr.OsTag),
+		KubeProxyMode:            iesp(def.KubeProxyMode, ovr.KubeProxyMode),
+		BootVolumeContainerImage: iesp(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
+		CNI:                      iesp(def.CNI, ovr.CNI),
+		Headless:                 iebp(def.Headless, ovr.Headless, false),
+		Catalog:                  iebp(def.Catalog, ovr.Catalog, true),
+		CommunityCatalog:         iebp(def.CommunityCatalog, ovr.CommunityCatalog, false),
 		EphemeralConfig:          MergeEphemeralConfig(&def.EphemeralConfig, &ovr.EphemeralConfig),
-		Quiet:                    iebp(def.QuietPtr, ovr.QuietPtr, false),
-		QuietPtr:                 iebpp(def.QuietPtr, ovr.QuietPtr),
-		KubeVersion:              ies(def.KubeVersion, ovr.KubeVersion),
-		SshPublicKeyPath:         ies(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
-		SshPublicKey:             ies(def.SshPublicKey, ovr.SshPublicKey),
-		Password:                 ies(def.Password, ovr.Password),
-		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
-		ExtraIgnitionInline:      ies(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
+		Quiet:                    iebp(def.Quiet, ovr.Quiet, false),
+		KubeVersion:              iesp(def.KubeVersion, ovr.KubeVersion),
+		SshPublicKeyPath:         iesp(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
+		SshPublicKey:             iesp(def.SshPublicKey, ovr.SshPublicKey),
+		Password:                 iesp(def.Password, ovr.Password),
+		ExtraIgnition:            iesp(def.ExtraIgnition, ovr.ExtraIgnition),
+		ExtraIgnitionInline:      iesp(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
 	}
 }
 
@@ -674,43 +685,40 @@ func MergeConfig(def *Config, ovr *Config) Config {
 // is set in the second argument, that value takes precedence.
 func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 	return ClusterConfig{
-		WorkingDirectory:         ies(def.WorkingDirectory, ovr.WorkingDirectory),
-		Name:                     ies(def.Name, ovr.Name),
-		Provider:                 ies(def.Provider, ovr.Provider),
+		WorkingDirectory:         iesp(def.WorkingDirectory, ovr.WorkingDirectory),
+		Name:                     iesp(def.Name, ovr.Name),
+		Provider:                 iesp(def.Provider, ovr.Provider),
 		Providers:                MergeProviders(&def.Providers, &ovr.Providers),
-		WorkerNodes:              ieu(def.WorkerNodes, ovr.WorkerNodes),
-		ControlPlaneNodes:        ieu(def.ControlPlaneNodes, ovr.ControlPlaneNodes),
+		WorkerNodes:              ieup(def.WorkerNodes, ovr.WorkerNodes),
+		ControlPlaneNodes:        ieup(def.ControlPlaneNodes, ovr.ControlPlaneNodes),
 		Proxy:                    MergeProxy(&def.Proxy, &ovr.Proxy),
-		KubeAPIServerBindPort:    ieu(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
-		KubeAPIServerBindPortAlt: ieu(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
-		VirtualIp:                ies(def.VirtualIp, ovr.VirtualIp),
-		LoadBalancer:             ies(def.LoadBalancer, ovr.LoadBalancer),
-		PodSubnet:                ies(def.PodSubnet, ovr.PodSubnet),
-		ServiceSubnet:            ies(def.ServiceSubnet, ovr.ServiceSubnet),
-		Registry:                 ies(def.Registry, ovr.Registry),
+		KubeAPIServerBindPort:    ieup(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: ieup(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
+		VirtualIp:                iesp(def.VirtualIp, ovr.VirtualIp),
+		LoadBalancer:             iesp(def.LoadBalancer, ovr.LoadBalancer),
+		PodSubnet:                iesp(def.PodSubnet, ovr.PodSubnet),
+		ServiceSubnet:            iesp(def.ServiceSubnet, ovr.ServiceSubnet),
+		Registry:                 iesp(def.Registry, ovr.Registry),
 		CertificateInformation:   MergeCertificateInformation(&def.CertificateInformation, &ovr.CertificateInformation),
-		OsTag:                    ies(def.OsTag, ovr.OsTag),
-		OsRegistry:               ies(def.OsRegistry, ovr.OsRegistry),
-		KubeProxyMode:            ies(def.KubeProxyMode, ovr.KubeProxyMode),
-		CNI:                      ies(def.CNI, ovr.CNI),
-		Headless:                 iebp(def.HeadlessPtr, ovr.HeadlessPtr, false),
-		HeadlessPtr:              iebpp(def.HeadlessPtr, ovr.HeadlessPtr),
-		Catalog:                  iebp(def.CatalogPtr, ovr.CatalogPtr, true),
-		CommunityCatalog:         iebp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr, false),
-		BootVolumeContainerImage: ies(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
+		OsTag:                    iesp(def.OsTag, ovr.OsTag),
+		OsRegistry:               iesp(def.OsRegistry, ovr.OsRegistry),
+		KubeProxyMode:            iesp(def.KubeProxyMode, ovr.KubeProxyMode),
+		CNI:                      iesp(def.CNI, ovr.CNI),
+		Headless:                 iebp(def.Headless, ovr.Headless, false),
+		Catalog:                  iebp(def.Catalog, ovr.Catalog, true),
+		CommunityCatalog:         iebp(def.CommunityCatalog, ovr.CommunityCatalog, false),
+		BootVolumeContainerImage: iesp(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
 		Applications:             MergeApplications(def.Applications, ovr.Applications),
 		Catalogs:                 MergeCatalogs(def.Catalogs, ovr.Catalogs),
-		CatalogPtr:               iebpp(def.CatalogPtr, ovr.CatalogPtr),
-		CommunityCatalogPtr:      iebpp(def.CommunityCatalogPtr, ovr.CommunityCatalogPtr),
-		KubeVersion:              ies(def.KubeVersion, ovr.KubeVersion),
-		SshPublicKeyPath:         ies(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
-		SshPublicKey:             ies(def.SshPublicKey, ovr.SshPublicKey),
-		Password:                 ies(def.Password, ovr.Password),
-		CipherSuites:             ies(def.CipherSuites, ovr.CipherSuites),
-		ClusterDefinitionInline:  ies(def.ClusterDefinitionInline, ovr.ClusterDefinitionInline),
-		ClusterDefinition:        ies(def.ClusterDefinition, ovr.ClusterDefinition),
-		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
-		ExtraIgnitionInline:      ies(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
+		KubeVersion:              iesp(def.KubeVersion, ovr.KubeVersion),
+		SshPublicKeyPath:         iesp(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
+		SshPublicKey:             iesp(def.SshPublicKey, ovr.SshPublicKey),
+		Password:                 iesp(def.Password, ovr.Password),
+		CipherSuites:             iesp(def.CipherSuites, ovr.CipherSuites),
+		ClusterDefinitionInline:  iesp(def.ClusterDefinitionInline, ovr.ClusterDefinitionInline),
+		ClusterDefinition:        iesp(def.ClusterDefinition, ovr.ClusterDefinition),
+		ExtraIgnition:            iesp(def.ExtraIgnition, ovr.ExtraIgnition),
+		ExtraIgnitionInline:      iesp(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
 	}
 }
 
@@ -726,36 +734,33 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		ControlPlaneNodes:        cc.ControlPlaneNodes,
 		Providers:                MergeProviders(&c.Providers, &cc.Providers),
 		Proxy:                    MergeProxy(&c.Proxy, &cc.Proxy),
-		KubeAPIServerBindPort:    ieu(c.KubeAPIServerBindPort, cc.KubeAPIServerBindPort),
-		KubeAPIServerBindPortAlt: ieu(c.KubeAPIServerBindPortAlt, cc.KubeAPIServerBindPortAlt),
+		KubeAPIServerBindPort:    ieup(c.KubeAPIServerBindPort, cc.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: ieup(c.KubeAPIServerBindPortAlt, cc.KubeAPIServerBindPortAlt),
 		VirtualIp:                cc.VirtualIp,
 		LoadBalancer:             cc.LoadBalancer,
-		PodSubnet:                ies(c.PodSubnet, cc.PodSubnet),
-		ServiceSubnet:            ies(c.ServiceSubnet, cc.ServiceSubnet),
-		Registry:                 ies(c.Registry, cc.Registry),
+		PodSubnet:                iesp(c.PodSubnet, cc.PodSubnet),
+		ServiceSubnet:            iesp(c.ServiceSubnet, cc.ServiceSubnet),
+		Registry:                 iesp(c.Registry, cc.Registry),
 		CertificateInformation:   MergeCertificateInformation(&c.CertificateInformation, &cc.CertificateInformation),
-		OsRegistry:               ies(c.OsRegistry, cc.OsRegistry),
-		OsTag:                    ies(c.OsTag, cc.OsTag),
-		KubeProxyMode:            ies(c.KubeProxyMode, cc.KubeProxyMode),
-		BootVolumeContainerImage: ies(c.BootVolumeContainerImage, cc.BootVolumeContainerImage),
-		CNI:                      ies(c.CNI, cc.CNI),
-		Headless:                 iebp(c.HeadlessPtr, cc.HeadlessPtr, false),
-		HeadlessPtr:              iebpp(c.HeadlessPtr, cc.HeadlessPtr),
-		Catalog:                  iebp(c.CatalogPtr, cc.CatalogPtr, true),
-		CatalogPtr:               iebpp(c.CatalogPtr, cc.CatalogPtr),
-		CommunityCatalog:         iebp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr, false),
-		CommunityCatalogPtr:      iebpp(c.CommunityCatalogPtr, cc.CommunityCatalogPtr),
+		OsRegistry:               iesp(c.OsRegistry, cc.OsRegistry),
+		OsTag:                    iesp(c.OsTag, cc.OsTag),
+		KubeProxyMode:            iesp(c.KubeProxyMode, cc.KubeProxyMode),
+		BootVolumeContainerImage: iesp(c.BootVolumeContainerImage, cc.BootVolumeContainerImage),
+		CNI:                      iesp(c.CNI, cc.CNI),
+		Headless:                 iebp(c.Headless, cc.Headless, false),
+		Catalog:                  iebp(c.Catalog, cc.Catalog, true),
+		CommunityCatalog:         iebp(c.CommunityCatalog, cc.CommunityCatalog, false),
 		Applications:             MergeApplications(cc.Applications, nil),
 		Catalogs:                 MergeCatalogs(cc.Catalogs, nil),
-		KubeVersion:              ies(c.KubeVersion, cc.KubeVersion),
-		SshPublicKeyPath:         ies(c.SshPublicKeyPath, cc.SshPublicKeyPath),
-		SshPublicKey:             ies(c.SshPublicKey, cc.SshPublicKey),
-		Password:                 ies(c.Password, cc.Password),
+		KubeVersion:              iesp(c.KubeVersion, cc.KubeVersion),
+		SshPublicKeyPath:         iesp(c.SshPublicKeyPath, cc.SshPublicKeyPath),
+		SshPublicKey:             iesp(c.SshPublicKey, cc.SshPublicKey),
+		Password:                 iesp(c.Password, cc.Password),
 		CipherSuites:             cc.CipherSuites,
 		ClusterDefinitionInline:  cc.ClusterDefinitionInline,
 		ClusterDefinition:        cc.ClusterDefinition,
-		ExtraIgnition:            ies(c.ExtraIgnition, cc.ExtraIgnition),
-		ExtraIgnitionInline:      ies(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
+		ExtraIgnition:            iesp(c.ExtraIgnition, cc.ExtraIgnition),
+		ExtraIgnitionInline:      iesp(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
 	}
 	return clusterConfigToReturn
 }

@@ -77,12 +77,12 @@ func RunCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
 
-	imageTransport := alltransports.TransportFromImageName(cc.BootVolumeContainerImage)
+	imageTransport := alltransports.TransportFromImageName(*cc.BootVolumeContainerImage)
 	if imageTransport == nil {
 		// No transport protocol detected. Adding docker transport protocol as default.
 		cc.BootVolumeContainerImage = "docker://" + cc.BootVolumeContainerImage
@@ -92,19 +92,19 @@ func RunCmd(cmd *cobra.Command) error {
 	// Note that c.BootVolumeContainerImage has the image that will be used to create the ephemeral cluster where
 	// we spin up a pod to create the custom image (which might be different than the base image we use to
 	// create the custom image).
-	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(*cc.KubeVersion, *cc.BootVolumeContainerImage)
 	if err != nil {
 		return err
 	}
 
 	// if the user has not overridden the osTag and the requested k8s version is not the default, make the osTag
 	// match the k8s version
-	if cc.OsTag == pkgconst.KubeVersion && cc.KubeVersion != pkgconst.KubeVersion {
+	if *cc.OsTag == pkgconst.KubeVersion && *cc.KubeVersion != pkgconst.KubeVersion {
 		cc.OsTag = cc.KubeVersion
 	}
 
 	log.Info("Creating Image")
-	err = create.Create(c, cc, createOptions)
+	err = create.Create(cc, createOptions)
 
 	return err
 }

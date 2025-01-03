@@ -75,7 +75,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	cmd.Flags().StringVarP(&options.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&options.DestKubeConfigPath, flagDestination, flagDestinationShort, "", flagDestinationHelp)
-	cmd.Flags().StringVarP(&options.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(options.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&options.Node, flagNode, flagNodeShort, "", flagNodeHelp)
 	cmd.Flags().IntVarP(&options.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
 	cmd.Flags().IntVarP(&options.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
@@ -102,11 +102,11 @@ func RunCmd(cmd *cobra.Command) error {
 			return err
 		}
 		// Make sure the tag matches Kubeversion, unless it is overridden
-		if options.ClusterConfig.OsTag == "" {
+		if *options.ClusterConfig.OsTag == "" {
 			options.ClusterConfig.OsTag = options.ClusterConfig.KubeVersion
 		}
 
-		clusterName = options.ClusterConfig.Name
+		clusterName = *options.ClusterConfig.Name
 	}
 
 	cached := clusterCache.Get(clusterName)
@@ -115,7 +115,7 @@ func RunCmd(cmd *cobra.Command) error {
 	// This is a bail-out to make sure all the needful can be done in
 	// case of some poorly timed error.
 	if cached == nil {
-		options.Config, options.ClusterConfig, err = cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
+		options.ClusterConfig, err = cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}

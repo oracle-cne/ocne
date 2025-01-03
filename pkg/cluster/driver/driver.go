@@ -22,7 +22,7 @@ type ClusterDriver interface {
 	DefaultCNIInterfaces() []string
 }
 
-type DriverCreateFunc func(*types.Config, *types.ClusterConfig) (ClusterDriver, error)
+type DriverCreateFunc func(*types.ClusterConfig) (ClusterDriver, error)
 
 var drivers = map[string]DriverCreateFunc{}
 
@@ -30,11 +30,11 @@ func RegisterDriver(name string, ftor DriverCreateFunc) {
 	drivers[name] = ftor
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (ClusterDriver, error) {
-	ftor, ok := drivers[clusterConfig.Provider]
+func CreateDriver(clusterConfig *types.ClusterConfig) (ClusterDriver, error) {
+	ftor, ok := drivers[*clusterConfig.Provider]
 	if !ok {
 		return nil, fmt.Errorf("No implementation exists for the %s driver", clusterConfig.Provider)
 	}
 
-	return ftor(config, clusterConfig)
+	return ftor(clusterConfig)
 }

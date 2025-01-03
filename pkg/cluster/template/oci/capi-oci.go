@@ -130,7 +130,7 @@ fi
 `
 )
 
-func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func getExtraIgnition(clusterConfig *types.ClusterConfig) (string, error) {
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
@@ -251,24 +251,24 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 func imageFromShape(shape string, imgs *types.OciImageSet) string {
 	arch := oci.ArchitectureFromShape(shape)
 	if arch == "arm64" {
-		return imgs.Arm64
+		return *imgs.Arm64
 	}
-	return imgs.Amd64
+	return *imgs.Amd64
 }
 
-func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func GetOciTemplate(clusterConfig *types.ClusterConfig) (string, error) {
 	tmplBytes, err := template.ReadTemplate("capi-oci.yaml")
 
 	if err != nil {
 		return "", err
 	}
 
-	if clusterConfig.ControlPlaneNodes%2 == 0 {
+	if *clusterConfig.ControlPlaneNodes%2 == 0 {
 		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
 	// Get the Kubernetes version configuration
-	kubeVer, err := versions.GetKubernetesVersions(clusterConfig.KubeVersion)
+	kubeVer, err := versions.GetKubernetesVersions(*clusterConfig.KubeVersion)
 	if err != nil {
 		return "", err
 	}
@@ -276,28 +276,28 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 	// If the compartment name is non-empty
 	// resolve it to an ID.
 	cid := clusterConfig.Providers.Oci.Compartment
-	if cid != "" {
-		newCid, err := oci.GetCompartmentId(cid)
+	if *cid != "" {
+		newCid, err := oci.GetCompartmentId(*cid)
 		if err != nil {
 			return "", err
 		}
-		clusterConfig.Providers.Oci.Compartment = newCid
-		cid = newCid
+		clusterConfig.Providers.Oci.Compartment = &newCid
+		cid = &newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
+		imageId, err := oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "amd64", cid)
 		if err == nil {
-			clusterConfig.Providers.Oci.Images.Amd64 = imageId
+			*clusterConfig.Providers.Oci.Images.Amd64 = imageId
 		}
 
-		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
+		imageId, err = oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "arm64", cid)
 		if err == nil {
-			clusterConfig.Providers.Oci.Images.Arm64 = imageId
+			*clusterConfig.Providers.Oci.Images.Arm64 = imageId
 		}
 	}
 
 	// Build up the extra ignition structures
-	ign, err := getExtraIgnition(config, clusterConfig)
+	ign, err := getExtraIgnition(clusterConfig)
 	if err != nil {
 		return "", err
 	}
@@ -307,7 +307,7 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		ExtraConfig:     ign,
 		KubeVersions:    &kubeVer,
 		VolumePluginDir: ignition.VolumePluginDir,
-		CipherSuite:     clusterConfig.CipherSuites,
+		CipherSuite:     *clusterConfig.CipherSuites,
 	}, map[string]any{
 		"shapeImage": imageFromShape,
 	})

@@ -11,14 +11,14 @@ import (
 	"github.com/oracle-cne/ocne/pkg/constants"
 )
 
-func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func GetTemplate(clusterConfig *types.ClusterConfig) (string, error) {
 	var tmpl string
 	var err error
-	switch clusterConfig.Provider {
+	switch *clusterConfig.Provider {
 	case constants.ProviderTypeOCI:
-		tmpl, err = oci.GetOciTemplate(config, clusterConfig)
+		tmpl, err = oci.GetOciTemplate(clusterConfig)
 	case constants.ProviderTypeOlvm:
-		tmpl, err = olvm.GetOlvmTemplate(config, clusterConfig)
+		tmpl, err = olvm.GetOlvmTemplate(clusterConfig)
 
 	default:
 		return "", fmt.Errorf("templates not implemented for provider %s", clusterConfig.Provider)

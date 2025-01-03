@@ -15,7 +15,7 @@ import (
 // EnsureCluster returns the kubeconfig to a functioning cluster.  If there is
 // a kubeconfig provided, it will return that.  If not, it will create a
 // cluster using the libvirt provider that mostly uses the default configuration.
-func EnsureCluster(kubeconfigPath string, config *types.Config, clusterConfig *types.ClusterConfig) (string, bool, error) {
+func EnsureCluster(kubeconfigPath string, clusterConfig *types.ClusterConfig) (string, bool, error) {
 	// Try to get a valid kubeconfig.  If one exists, then a cluster
 	// is available.
 
@@ -26,13 +26,13 @@ func EnsureCluster(kubeconfigPath string, config *types.Config, clusterConfig *t
 		return path, false, err
 	}
 
-	kubeConfigPath, err := StartEphemeralCluster(config, clusterConfig)
+	kubeConfigPath, err := StartEphemeralCluster(clusterConfig)
 	return kubeConfigPath, true, err
 }
 
 // StartEphemeralCluster
-func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
-	log.Debugf("Starting ephemeral cluster %s", config.EphemeralConfig.Name)
+func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
+	log.Debugf("Starting ephemeral cluster %s", clusterConfig.config.EphemeralConfig.Name)
 
 	// Make local copies of the configuration that is passed
 	// in so that it can be edited.
@@ -44,17 +44,16 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 
 	// Force some settings to what is required for
 	// the ephemeral cluster.
-	clusterConfig.Provider = libvirt.DriverName
-	clusterConfig.ControlPlaneNodes = 1
-	clusterConfig.WorkerNodes = 0
-	clusterConfig.Headless = true
-	clusterConfig.Catalog = false
-	clusterConfig.CommunityCatalog = false
-	clusterConfig.CNI = constants.CNIFlannel
+	*clusterConfig.Provider = libvirt.DriverName
+	*clusterConfig.ControlPlaneNodes = 1
+	*clusterConfig.WorkerNodes = 0
+	*clusterConfig.Headless = true
+	*clusterConfig.Catalog = false
+	*clusterConfig.CommunityCatalog = false
+	*clusterConfig.CNI = constants.CNIFlannel
 	clusterConfig.Name = config.EphemeralConfig.Name
 	clusterConfig.Providers.Libvirt.ControlPlaneNode = config.EphemeralConfig.Node
 	config.Quiet = true
-	config.QuietPtr = &config.Quiet
 	config.BootVolumeContainerImage = clusterConfig.BootVolumeContainerImage
 	config.KubeVersion = constants.KubeVersion
 	clusterConfig.KubeVersion = constants.KubeVersion
@@ -78,9 +77,9 @@ func StartEphemeralCluster(config *types.Config, clusterConfig *types.ClusterCon
 }
 
 // StopEphemeralCluster
-func StopEphemeralCluster(config *types.Config, clusterConfig *types.ClusterConfig) error {
+func StopEphemeralCluster(clusterConfig *types.ClusterConfig) error {
 	// If the cluster is supposed to be preserved, then nothing else matters.
-	if config.EphemeralConfig.Preserve {
+	if *clusterConfig.EphemeralConfig.Preserve {
 		return nil
 	}
 
@@ -89,7 +88,7 @@ func StopEphemeralCluster(config *types.Config, clusterConfig *types.ClusterConf
 	config = &c
 	clusterConfig = &cc
 
-	clusterConfig.Provider = libvirt.DriverName
+	*clusterConfig.Provider = libvirt.DriverName
 	clusterConfig.Name = config.EphemeralConfig.Name
 	config.Quiet = true
 	return delete2.Delete(config, clusterConfig)

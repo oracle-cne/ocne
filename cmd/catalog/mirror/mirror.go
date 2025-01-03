@@ -100,7 +100,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne catalog mirror" command
 func RunCmd(cmd *cobra.Command) error {
-	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
 	if err != nil {
 		err = errors.New("Configuration error: " + err.Error())
 		return err
@@ -125,7 +125,6 @@ func RunCmd(cmd *cobra.Command) error {
 		DestinationURI:  destination,
 		ConfigURI:       clusterConfigPath,
 		Push:            push,
-		Config:          c,
 		ClusterConfig:   cc,
 		DefaultRegistry: defaultRegistry,
 		Download:        download,
