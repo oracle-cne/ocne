@@ -1142,6 +1142,7 @@ type OciImageData struct {
 	WorkRequestId string
 	MachineTemplates []*capi.GraphNode
 }
+
 func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error) {
 	imageId, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "imageId")
 	if !found {
@@ -1163,10 +1164,15 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error
 func doUpdate(img *core.Image, arch string, version string, bvImage string) (bool, error) {
 
 	// Update the image if:
+	// - An environment variable forces the update (typically for testing)
 	// - The minor version is changing and an image for that version
 	//   does not exist
 	// - The minor version is not changing and the container image is
 	//   newer than the OCI image
+	if os.Getenv("OCNE_OCI_STAGE_FORCE_UPLOAD") != "" {
+		return true, nil
+	}
+
 	imgKubeVersion, ok := img.FreeformTags[constants.OCIKubernetesVersionTag]
 	if !ok {
 		return false, fmt.Errorf("OCI Custom image %s does not have a Kubernetes version tag", *img.Id)
@@ -1233,56 +1239,40 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
-	for _, md := range graph.MachineDeployments {
-		log.Debugf("Inspecting MachineDeployment %s in %s", md.Object.GetName(), md.Object.GetNamespace())
-		for gvk, t := range md.Children {
-			mts, ok := graph.MachineTemplates[gvk]
-			log.Debugf("Looking for %s in MachineTemplates: %v", gvk, ok)
-			if !ok {
-				continue
-			}
-
-			for n, _ := range t {
-				mtNode, ok := mts[n]
-				log.Debugf("Looking for %s in MachineTemplates: %v", n, ok)
-				if !ok {
-					continue
-				}
-				mt := mtNode.Object
-
-				img, err := imageFromMachineTemplate(mt)
-				if err != nil {
-					return nil, err
-				}
-
-
-				shape, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "shape")
-				if !found {
-					err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
-				}
-				if err != nil {
-					return nil, err
-				}
-
-				arch := oci.ArchitectureFromShape(shape)
-				log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
-
-				imgData, ok := ret[*img.Id]
-				if !ok {
-					ret[*img.Id] = &OciImageData{
-						Image: img,
-						HasUpdate: false,
-						Arch: arch,
-						MachineTemplates: []*capi.GraphNode{mtNode},
-					}
-				} else {
-					imgData.MachineTemplates = append(imgData.MachineTemplates, mtNode)
-				}
-			}
+	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+		mt := mtNode.Object
+		retVal := arg.(map[string]*OciImageData)
+		img, err := imageFromMachineTemplate(mt)
+		if err != nil {
+			return err
 		}
-	}
 
-	return ret, nil
+
+		shape, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "shape")
+		if !found {
+			err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
+		}
+		if err != nil {
+			return err
+		}
+
+		arch := oci.ArchitectureFromShape(shape)
+		log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
+
+		imgData, ok := retVal[*img.Id]
+		if !ok {
+			retVal[*img.Id] = &OciImageData{
+				Image: img,
+				HasUpdate: false,
+				Arch: arch,
+				MachineTemplates: []*capi.GraphNode{mtNode},
+			}
+		} else {
+			imgData.MachineTemplates = append(imgData.MachineTemplates, mtNode)
+		}
+		return nil
+	}, ret)
+	return ret, err
 }
 
 func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) error {
@@ -1373,8 +1363,12 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 	// Make new machine templates
 	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
-	for id, img := range ociImages {
-		if !img.HasUpdate {
+	for _, img := range ociImages {
+		log.Debugf("Creating template for %s", *img.Image.Id)
+		newId := img.NewId
+		if os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
+			newId = *img.Image.Id
+		} else if !img.HasUpdate {
 			continue
 		}
 
@@ -1383,7 +1377,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 			name := util.IncrementCount(mt.GetName(), "-")
 			mt.SetName(name)
 
-			err = unstructured.SetNestedField(mt.Object, id, "spec", "template", "spec", "imageId")
+			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "imageId")
 			if err != nil {
 				return err
 			}
@@ -1400,31 +1394,28 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	// Spit out some state information and instructions.  The new machine
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
-	for _, md := range graph.MachineDeployments {
-		for gvk, t := range md.Children {
-			_, ok := graph.MachineTemplates[gvk]
-			if !ok {
-				log.Debugf("%s is not a machine tempalate", gvk)
-				continue
-			}
+	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
 
-			var umt *unstructured.Unstructured
-			for _, tmt := range t {
-				cmt, ok := updatedMts[tmt]
-				if ok {
-					umt = cmt
-					break
-				}
-			}
+		var umt *unstructured.Unstructured
+		umt, ok := updatedMts[mtNode]
+		if !ok {
 
-			if umt == nil {
-				log.Debugf("%s/%s in %s does not have an update available", gvk, md.Object.GetName(), md.Object.GetNamespace())
-				continue
-			}
-
-			fmt.Println("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s -p '{\"spec\":{\"template\":{\"spec\":\"infrastructureRef\":{\"name\":\"%s\"}}}}'", md.Object.GetName(), md.Object.GetNamespace(), md.Object.GetNamespace(), md.Object.GetName(), umt.GetName())
+			return nil
 		}
-	}
+
+		if parent == graph.ControlPlane {
+			kubeVersions, err := versions.GetKubernetesVersions(version)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("To update KubeadmControlPlane %s in %s, run: kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/version\",\"value\":\"%s\"},{\"op\":\"replace\",\"path\":\"/spec/machineTemplate/infrastructureRef/name\",\"value\":\"%s\"}]'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), kubeVersions.Kubernetes, umt.GetName())
+		} else {
+			fmt.Printf("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/infrastructureRef/name\",\"value\":\"%s\"}]'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), umt.GetName())
+		}
+
+		return nil
+	}, updatedMts)
 
 	return nil
 }

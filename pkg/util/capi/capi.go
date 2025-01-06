@@ -60,7 +60,7 @@ func addToNestedMap[V Named](m map[string]map[string]V, firstKey string, v V) {
 }
 
 func (gn *GraphNode) AddChild(c *GraphNode) {
-	addToNestedMap(gn.Children, gn.Object.GroupVersionKind().String(), c)
+	addToNestedMap(gn.Children, c.Object.GroupVersionKind().String(), c)
 }
 
 func (gn *GraphNode) GetName() string {
@@ -191,7 +191,7 @@ func populateMachineDeployments(restConf *rest.Config, graph *ClusterGraph, clus
 
 		machineTemplate = graph.AddToAll(machineTemplate)
 		md.AddChild(machineTemplate)
-		addToNestedMap(graph.MachineTemplates, md.Object.GroupVersionKind().String(), machineTemplate)
+		addToNestedMap(graph.MachineTemplates, machineTemplate.Object.GroupVersionKind().String(), machineTemplate)
 	}
 
 	return nil
@@ -247,4 +247,44 @@ func (cg *ClusterGraph) AddToAll(gn *GraphNode) *GraphNode {
 	}
 	addToNestedMap(cg.All, gn.Object.GroupVersionKind().String(), gn)
 	return gn
+}
+
+type WalkResourceCb func(*GraphNode, *GraphNode, interface{})error
+
+func (cg *ClusterGraph) walkGraphNodeForMachineTemplates(gn *GraphNode, cb WalkResourceCb, arg interface{}) error {
+	for gvk, children := range gn.Children {
+		// This kind does not represent a machine template
+		mts, ok := cg.MachineTemplates[gvk]
+		if !ok {
+			return nil
+		}
+
+		for n, _ := range children {
+			// This child is not in the MachineTemplates, which is odd.
+			mtNode, ok := mts[n]
+			if !ok {
+				continue
+			}
+
+			err := cb(gn, mtNode, arg)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (cg *ClusterGraph) WalkMachineTemplates(cb WalkResourceCb, arg interface{}) error {
+	err := cg.walkGraphNodeForMachineTemplates(cg.ControlPlane, cb, arg)
+	if err != nil {
+		return err
+	}
+	for _, md := range cg.MachineDeployments {
+		err = cg.walkGraphNodeForMachineTemplates(md, cb, arg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
