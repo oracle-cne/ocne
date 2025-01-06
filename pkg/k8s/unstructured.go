@@ -53,6 +53,13 @@ func CreateResource(restConf *rest.Config, u *unstructured.Unstructured) error {
 		return err
 	}
 
+
+	// Delete any fields that can't be defined for new objects.
+	unstructured.RemoveNestedField(u.Object, "metadata", "resourceVersion")
+	unstructured.RemoveNestedField(u.Object, "metadata", "uid")
+	unstructured.RemoveNestedField(u.Object, "metadata", "creationTimestamp")
+	unstructured.RemoveNestedField(u.Object, "metadata", "ownerReferences")
+
 	return client.Create(context.TODO(), u, &crtpkg.CreateOptions{})
 }
 

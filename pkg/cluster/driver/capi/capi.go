@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -583,7 +584,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	return cad, nil
 }
 
-func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
+func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string) (string, string, error) {
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return "", "", err
@@ -658,7 +659,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	if controlPlaneArch == workerArch {
 		workRequest := ""
 		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(controlPlaneArch)
+		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion)
 		if err != nil {
 			return err
 		}
@@ -669,11 +670,11 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		controlPlaneWorkRequest := ""
 		workerWorkRequest := ""
 		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(controlPlaneArch)
+		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion)
 		if err != nil {
 			return err
 		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(workerArch)
+		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion)
 		if err != nil {
 			return err
 		}
@@ -1133,40 +1134,33 @@ func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
 }
 
-func (cad *ClusterApiDriver) updateImage(mt *unstructured.Unstructured, version string) (string, string, error) {
+type OciImageData struct {
+	Image *core.Image
+	HasUpdate bool
+	Arch string
+	NewId string
+	WorkRequestId string
+	MachineTemplates []*capi.GraphNode
+}
+func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error) {
 	imageId, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "imageId")
 	if !found {
 		err = fmt.Errorf("MachineTemplate %s in %s has no imageId", mt.GetName(), mt.GetNamespace())
 	}
 	if err != nil {
-		return "", "" , err
+		return nil, err
 	}
 	log.Debugf("MachineTemplate %s in %s has imageId %s", mt.GetName(), mt.GetNamespace(), imageId)
 
-	compartmentId, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "compartmentId")
-	if !found {
-		err = fmt.Errorf("MachineTemplate %s in %s has no compartmentId", mt.GetName(), mt.GetNamespace())
-	}
-	if err != nil {
-		return "", "", err
-	}
-	log.Debugf("MachineTemplate %s in %s has compartmentId %s", mt.GetName(), mt.GetNamespace(), compartmentId)
-
-	shape, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "shape")
-	if !found {
-		err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
-	}
-	if err != nil {
-		return "", "", err
-	}
-
-	arch := oci.ArchitectureFromShape(shape)
-	log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
-
 	img, err := oci.GetImageById(imageId)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
+
+	return img, nil
+}
+
+func doUpdate(img *core.Image, arch string, version string, bvImage string) (bool, error) {
 
 	// Update the image if:
 	// - The minor version is changing and an image for that version
@@ -1175,14 +1169,15 @@ func (cad *ClusterApiDriver) updateImage(mt *unstructured.Unstructured, version 
 	//   newer than the OCI image
 	imgKubeVersion, ok := img.FreeformTags[constants.OCIKubernetesVersionTag]
 	if !ok {
-		return "", "", fmt.Errorf("OCI Custom image for MachineTemplate %s in %s does not have a Kubernetes version tag", mt.GetName(), mt.GetNamespace())
+		return false, fmt.Errorf("OCI Custom image %s does not have a Kubernetes version tag", *img.Id)
 	}
 
 	imgName := *img.DisplayName
+	compartmentId := *img.CompartmentId
 
 	existingImg, found, err := oci.GetImage(imgName, version, arch, compartmentId)
 	if err != nil {
-		return "", "", err
+		return false, err
 	}
 	if found {
 		log.Debugf("Found existing OCI Image for version %s with OCID %s", version, *existingImg.Id)
@@ -1190,9 +1185,8 @@ func (cad *ClusterApiDriver) updateImage(mt *unstructured.Unstructured, version 
 
 	// If the versions are the same, check for newer OCI images first
 	kubeCmp, err := versions.CompareKubernetesVersions(imgKubeVersion, version)
-	uploadImage := false
 	if err != nil {
-		return "", "", err
+		return false, err
 	} else if kubeCmp == 0 {
 		// GetImage returns the newest image with the same version and
 		// arch.  If the OCIDs of the image from the template and the
@@ -1201,43 +1195,105 @@ func (cad *ClusterApiDriver) updateImage(mt *unstructured.Unstructured, version 
 		if *existingImg.Id == *img.Id {
 			// Check for a new image
 
-			containerImg, err := cmdutil.EnsureBootImageVersion(version, cad.ClusterConfig.BootVolumeContainerImage)
+			containerImg, err := cmdutil.EnsureBootImageVersion(version, bvImage)
 			if err != nil {
-				return "", "", nil
+				return false, nil
 			}
 
 			ockImgSpec, err := image.GetImageSpec(containerImg, arch)
 			if err != nil {
-				return "", "", err
+				return false, err
 			}
 			log.Debugf("Have container image spec for %s", containerImg)
 
 			ockImgInfo, err := ockImgSpec.Inspect(context.Background())
 			if err != nil {
-				return "", "", err
+				return false, err
 			}
 			log.Debugf("Inspecting container image info for %s", containerImg)
 
 			log.Debugf("Checking %v against %v", ockImgInfo.Created, existingImg.TimeCreated.Time)
 			if ockImgInfo.Created.After(existingImg.TimeCreated.Time) {
 				// Upload the new image
-				uploadImage = true
+				return true, nil
 			}
 		}
 	} else if found {
 		// Don't upload the new image
-		uploadImage = false
+		return false, nil
 
 	} else {
 		// Upload the new image
-		uploadImage = true
+		return true, nil
 	}
 
-	if uploadImage {
-		log.Debugf("Uploading new image")
+	return false, nil
+}
+
+func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
+	ret := map[string]*OciImageData{}
+
+	for _, md := range graph.MachineDeployments {
+		log.Debugf("Inspecting MachineDeployment %s in %s", md.Object.GetName(), md.Object.GetNamespace())
+		for gvk, t := range md.Children {
+			mts, ok := graph.MachineTemplates[gvk]
+			log.Debugf("Looking for %s in MachineTemplates: %v", gvk, ok)
+			if !ok {
+				continue
+			}
+
+			for n, _ := range t {
+				mtNode, ok := mts[n]
+				log.Debugf("Looking for %s in MachineTemplates: %v", n, ok)
+				if !ok {
+					continue
+				}
+				mt := mtNode.Object
+
+				img, err := imageFromMachineTemplate(mt)
+				if err != nil {
+					return nil, err
+				}
+
+
+				shape, found, err := unstructured.NestedString(mt.Object, "spec", "template", "spec", "shape")
+				if !found {
+					err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
+				}
+				if err != nil {
+					return nil, err
+				}
+
+				arch := oci.ArchitectureFromShape(shape)
+				log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
+
+				imgData, ok := ret[*img.Id]
+				if !ok {
+					ret[*img.Id] = &OciImageData{
+						Image: img,
+						HasUpdate: false,
+						Arch: arch,
+						MachineTemplates: []*capi.GraphNode{mtNode},
+					}
+				} else {
+					imgData.MachineTemplates = append(imgData.MachineTemplates, mtNode)
+				}
+			}
+		}
 	}
 
-	return "", "", nil
+	return ret, nil
+}
+
+func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) error {
+	for _, img := range imgs {
+		var err error
+		img.HasUpdate, err = doUpdate(img.Image, img.Arch, version, bvImage)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (cad *ClusterApiDriver) Stage(version string) error {
@@ -1273,33 +1329,102 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	// Check the existing images for the machine templates and see if there
 	// are updates available.  If so, upload the new images and generate
 	// new machine templates that consume them.
-	for _, md := range graph.MachineDeployments {
-		log.Debugf("Inspecting MachineDeployment %s in %s", md.Object.GetName(), md.Object.GetNamespace())
-		for gvk, t := range md.Children {
-			mts, ok := graph.MachineTemplates[gvk]
-			log.Debugf("Looking for %s in MachineTemplates: %v", gvk, ok)
-			if !ok {
-				continue
+	ociImages, err := graphToImages(graph)
+	if err != nil {
+		return err
+	}
+
+	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
+	if err != nil {
+		return err
+	}
+
+	imageImports := map[string]string{}
+	for id, img := range ociImages {
+		if img.HasUpdate {
+			log.Debugf("OCI image %s with architecture %s has an update", id, img.Arch)
+		} else {
+			log.Debugf("OCI image %s with architecture %s does not have an update", id, img.Arch)
+			continue
+		}
+
+		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version)
+		if err != nil {
+			return err
+		}
+
+		imageImports[img.WorkRequestId] = fmt.Sprintf("Importing updated image for %s", *img.Image.DisplayName)
+	}
+
+	err = oci.WaitForWorkRequests(imageImports)
+	if err != nil {
+		return err
+	}
+
+	for id, img := range ociImages {
+		if img.WorkRequestId != "" {
+			err = upload.EnsureImageDetails(*img.Image.CompartmentId, id, img.Arch)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Make new machine templates
+	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
+	for id, img := range ociImages {
+		if !img.HasUpdate {
+			continue
+		}
+
+		for _, mtNode := range img.MachineTemplates {
+			mt := mtNode.Object.DeepCopy()
+			name := util.IncrementCount(mt.GetName(), "-")
+			mt.SetName(name)
+
+			err = unstructured.SetNestedField(mt.Object, id, "spec", "template", "spec", "imageId")
+			if err != nil {
+				return err
 			}
 
-			for n, _ := range t {
-				mt, ok := mts[n]
-				log.Debugf("Looking for %s in MachineTemplates: %v", n, ok)
-				if !ok {
-					continue
-				}
-
-				_, _, err = cad.updateImage(mt.Object, version)
-				if err != nil {
-					return err
-				}
+			err = k8s.CreateResource(restConfig, mt)
+			if err != nil {
+				return err
 			}
+
+			updatedMts[mtNode] = mt
 		}
 	}
 
 	// Spit out some state information and instructions.  The new machine
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
+	for _, md := range graph.MachineDeployments {
+		for gvk, t := range md.Children {
+			_, ok := graph.MachineTemplates[gvk]
+			if !ok {
+				log.Debugf("%s is not a machine tempalate", gvk)
+				continue
+			}
+
+			var umt *unstructured.Unstructured
+			for _, tmt := range t {
+				cmt, ok := updatedMts[tmt]
+				if ok {
+					umt = cmt
+					break
+				}
+			}
+
+			if umt == nil {
+				log.Debugf("%s/%s in %s does not have an update available", gvk, md.Object.GetName(), md.Object.GetNamespace())
+				continue
+			}
+
+			fmt.Println("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s -p '{\"spec\":{\"template\":{\"spec\":\"infrastructureRef\":{\"name\":\"%s\"}}}}'", md.Object.GetName(), md.Object.GetNamespace(), md.Object.GetNamespace(), md.Object.GetName(), umt.GetName())
+		}
+	}
 
 	return nil
 }
