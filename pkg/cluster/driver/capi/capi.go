@@ -584,7 +584,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	return cad, nil
 }
 
-func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string) (string, string, error) {
+func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return "", "", err
@@ -593,7 +593,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
 	_, found, err := oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
-	if found {
+	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
 	} else if err != nil {
@@ -608,7 +608,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	}
 
 	_, err = os.Stat(imageName)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) && !force {
 		return "", "", err
 	}
 
@@ -659,7 +659,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	if controlPlaneArch == workerArch {
 		workRequest := ""
 		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion)
+		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -670,11 +670,11 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		controlPlaneWorkRequest := ""
 		workerWorkRequest := ""
 		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion)
+		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion)
+		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -1227,7 +1227,6 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 	} else if found {
 		// Don't upload the new image
 		return false, nil
-
 	} else {
 		// Upload the new image
 		return true, nil
@@ -1338,7 +1337,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 			continue
 		}
 
-		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version)
+		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version, true)
 		if err != nil {
 			return err
 		}
@@ -1351,9 +1350,9 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 		return err
 	}
 
-	for id, img := range ociImages {
+	for _, img := range ociImages {
 		if img.WorkRequestId != "" {
-			err = upload.EnsureImageDetails(*img.Image.CompartmentId, id, img.Arch)
+			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch)
 
 			if err != nil {
 				return err
