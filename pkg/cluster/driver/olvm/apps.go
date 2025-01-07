@@ -16,9 +16,9 @@ import (
 // These applications will be installed in the bootstrap cluster
 func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, error) {
 	proxyValues := map[string]interface{}{
-		"httpsProxy": cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
-		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpsProxy": *cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
+		"httpProxy":  *cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    *cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
