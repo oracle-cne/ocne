@@ -46,21 +46,30 @@ func ParseConfigFile(configPath string) (*types.Config, error) {
 // global overrides file.  If such a file is found, the entries in
 // that file are merged into the hard-coded defaults.
 func GetDefaultConfig() (*types.Config, error) {
+	sessionURI := constants.SessionURI
+	storagePool := constants.StoragePool
+	network := constants.Network
+	controlNodeMemory := constants.NodeMemory
+	controlNodeStorage := constants.NodeStorage
+	controlNodeCPUs := constants.NodeCPUs
+	workerNodeMemory := constants.NodeMemory
+	workerNodeStorage := constants.NodeStorage
+	workerNodeCPUs := constants.NodeCPUs
 	defaultConfig := types.Config{
 		Providers: types.Providers{
 			Libvirt: types.LibvirtProvider{
-				SessionURI:  constants.SessionURI,
-				StoragePool: constants.StoragePool,
-				Network:     constants.Network,
+				SessionURI:  &sessionURI,
+				StoragePool: &storagePool,
+				Network:     &network,
 				ControlPlaneNode: types.Node{
-					Memory:  constants.NodeMemory,
-					Storage: constants.NodeStorage,
-					CPUs:    constants.NodeCPUs,
+					Memory:  &controlNodeMemory,
+					Storage: &controlNodeStorage,
+					CPUs:    &controlNodeCPUs,
 				},
 				WorkerNode: types.Node{
-					Memory:  constants.NodeMemory,
-					Storage: constants.NodeStorage,
-					CPUs:    constants.NodeCPUs,
+					Memory:  &workerNodeMemory,
+					Storage: &workerNodeStorage,
+					CPUs:    &workerNodeCPUs,
 				},
 				BootVolumeName:               constants.BootVolumeName,
 				BootVolumeContainerImagePath: constants.BootVolumeContainerImagePath,
@@ -129,7 +138,7 @@ func GetDefaultConfig() (*types.Config, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	defaultConfig.SshPublicKeyPath = sshKeyPath
+	*defaultConfig.SshPublicKeyPath = sshKeyPath
 
 	// Load in the defaults.  Prefer the path set by OCNE_DEFAULTS_FILE.
 	// If that is not set, use the default path.
@@ -175,7 +184,7 @@ func ParseClusterConfigFile(configPath string) (*types.ClusterConfig, error) {
 
 	// If the directory is not set, then set it to the
 	// directory containing the config file itself.
-	if ret.WorkingDirectory == "" {
+	if *ret.WorkingDirectory == "" {
 		wd, err := filepath.Abs(configPath)
 		if err != nil {
 			return nil, err

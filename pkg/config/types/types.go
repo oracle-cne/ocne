@@ -354,6 +354,10 @@ func iebpp(i *bool, e *bool) *bool {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeProxy(def *Proxy, ovr *Proxy) Proxy {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
 
 	return Proxy{
 		HttpsProxy: iesp(def.HttpsProxy, ovr.HttpsProxy),
@@ -380,6 +384,10 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
 
 	return CertificateInformation{
 		Country: iesp(def.Country, ovr.Country),
@@ -393,6 +401,10 @@ func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateIn
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeNode(def *Node, ovr *Node) Node {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
 
 	return Node{
 		Memory:  iesp(def.Memory, ovr.Memory),
@@ -405,6 +417,12 @@ func MergeNode(def *Node, ovr *Node) Node {
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtProvider {
+	// It is currently safe to shallow copy this because all the
+	// values are scalars.  If that changes, a deep copy will have
+	// to be performed instead.
+	if ovr == nil {
+		return *def
+	}
 	return LibvirtProvider{
 		SessionURI:                   iesp(def.SessionURI, ovr.SessionURI),
 		SshKey:                       iesp(def.SshKey, ovr.SshKey),

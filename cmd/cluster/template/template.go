@@ -68,7 +68,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 	// if cluster name is empty, then default it to ocne
 	if *cc.Name == "" {
-		cc.Name = "ocne"
+		*cc.Name = "ocne"
 	}
 
 	// if number of control plane nodes is 0, then default it to 1

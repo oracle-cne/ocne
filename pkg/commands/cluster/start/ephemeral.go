@@ -32,7 +32,7 @@ func EnsureCluster(kubeconfigPath string, clusterConfig *types.ClusterConfig) (s
 
 // StartEphemeralCluster
 func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
-	log.Debugf("Starting ephemeral cluster %s", clusterConfig.config.EphemeralConfig.Name)
+	log.Debugf("Starting ephemeral cluster %s", clusterConfig.EphemeralConfig.Name)
 
 	// Make local copies of the configuration that is passed
 	// in so that it can be edited.
@@ -51,18 +51,15 @@ func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
 	*clusterConfig.Catalog = false
 	*clusterConfig.CommunityCatalog = false
 	*clusterConfig.CNI = constants.CNIFlannel
-	clusterConfig.Name = config.EphemeralConfig.Name
-	clusterConfig.Providers.Libvirt.ControlPlaneNode = config.EphemeralConfig.Node
-	config.Quiet = true
-	config.BootVolumeContainerImage = clusterConfig.BootVolumeContainerImage
-	config.KubeVersion = constants.KubeVersion
-	clusterConfig.KubeVersion = constants.KubeVersion
-	config.OsTag = clusterConfig.OsTag
+	clusterConfig.Name = clusterConfig.EphemeralConfig.Name
+	clusterConfig.Providers.Libvirt.ControlPlaneNode = clusterConfig.EphemeralConfig.Node
+	*clusterConfig.Quiet = true
+	*clusterConfig.KubeVersion = constants.KubeVersion
 
 	// If there was no valid kubeconfig, then a cluster is needed.  Make
 	// an ephemeral cluster that has basic functionality.  That is, there
 	// is a basic CNI in the form of flannel and nothing else.
-	kubeConfigPath, err := Start(config, clusterConfig)
+	kubeConfigPath, err := Start(clusterConfig)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +85,7 @@ func StopEphemeralCluster(clusterConfig *types.ClusterConfig) error {
 	config = &c
 	clusterConfig = &cc
 
-	*clusterConfig.Provider = libvirt.DriverName
+	clusterConfig.Provider = libvirt.DriverName
 	clusterConfig.Name = config.EphemeralConfig.Name
 	config.Quiet = true
 	return delete2.Delete(config, clusterConfig)

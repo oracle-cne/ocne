@@ -61,12 +61,12 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
-	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
 	cmd.Flags().StringVarP(&createOptions.KernelArguments, flagKargs, flagKargsShort, "", flagKargsHelp)
-	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
+	cmd.Flags().StringVarP(clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
 
 	return cmd
 }
@@ -85,14 +85,14 @@ func RunCmd(cmd *cobra.Command) error {
 	imageTransport := alltransports.TransportFromImageName(*cc.BootVolumeContainerImage)
 	if imageTransport == nil {
 		// No transport protocol detected. Adding docker transport protocol as default.
-		cc.BootVolumeContainerImage = "docker://" + cc.BootVolumeContainerImage
+		*cc.BootVolumeContainerImage = "docker://" + *cc.BootVolumeContainerImage
 	}
 
 	// Make sure we create the new image using the base image that goes with the requested version of k8s.
 	// Note that c.BootVolumeContainerImage has the image that will be used to create the ephemeral cluster where
 	// we spin up a pod to create the custom image (which might be different than the base image we use to
 	// create the custom image).
-	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(*cc.KubeVersion, *cc.BootVolumeContainerImage)
+	*cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(*cc.KubeVersion, *cc.BootVolumeContainerImage)
 	if err != nil {
 		return err
 	}
