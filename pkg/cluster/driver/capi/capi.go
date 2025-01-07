@@ -69,9 +69,9 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	}
 
 	proxyValues := map[string]interface{}{
-		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpsProxy": *cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
+		"httpProxy":  *cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    *cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{

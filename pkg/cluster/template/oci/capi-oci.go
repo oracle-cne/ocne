@@ -132,19 +132,19 @@ fi
 
 func getExtraIgnition(clusterConfig *types.ClusterConfig) (string, error) {
 	// Accept proxy configuration
-	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
+	proxy, err := ignition.Proxy(&clusterConfig.Proxy, *clusterConfig.ServiceSubnet, *clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
 		return "", err
 	}
 
 	// Get the basic container configuration
-	container, err := ignition.ContainerConfiguration(clusterConfig.Registry)
+	container, err := ignition.ContainerConfiguration(*clusterConfig.Registry)
 	if err != nil {
 		return "", err
 	}
 
 	// Set up the user
-	usr, err := ignition.OcneUser(clusterConfig.SshPublicKey, clusterConfig.SshPublicKeyPath, clusterConfig.Password)
+	usr, err := ignition.OcneUser(*clusterConfig.SshPublicKey, *clusterConfig.SshPublicKeyPath, *clusterConfig.Password)
 	if err != nil {
 		return "", err
 	}
@@ -216,15 +216,15 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 	ign = ignition.Merge(ign, usr)
 
 	// Add any additional configuration
-	if clusterConfig.ExtraIgnition != "" {
-		fromExtra, err := ignition.FromPath(clusterConfig.ExtraIgnition)
+	if *clusterConfig.ExtraIgnition != "" {
+		fromExtra, err := ignition.FromPath(*clusterConfig.ExtraIgnition)
 		if err != nil {
 			return "", err
 		}
 		ign = ignition.Merge(ign, fromExtra)
 	}
-	if clusterConfig.ExtraIgnitionInline != "" {
-		fromExtra, err := ignition.FromString(clusterConfig.ExtraIgnitionInline)
+	if *clusterConfig.ExtraIgnitionInline != "" {
+		fromExtra, err := ignition.FromString(*clusterConfig.ExtraIgnitionInline)
 		if err != nil {
 			return "", err
 		}
@@ -285,12 +285,12 @@ func GetOciTemplate(clusterConfig *types.ClusterConfig) (string, error) {
 		cid = &newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "amd64", cid)
+		imageId, err := oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "amd64", *cid)
 		if err == nil {
 			*clusterConfig.Providers.Oci.Images.Amd64 = imageId
 		}
 
-		imageId, err = oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "arm64", cid)
+		imageId, err = oci.GetImage(constants.OciImageName, *clusterConfig.KubeVersion, "arm64", *cid)
 		if err == nil {
 			*clusterConfig.Providers.Oci.Images.Arm64 = imageId
 		}

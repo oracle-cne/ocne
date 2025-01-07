@@ -72,21 +72,21 @@ enable ocne-nginx.service
 )
 
 // getExtraIgnition creates the ignition string that will be passed to the VM.
-func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
+func getExtraIgnition(clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
 	// Accept proxy configuration
-	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
+	proxy, err := ignition.Proxy(&clusterConfig.Proxy, *clusterConfig.ServiceSubnet, *clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
 		return "", err
 	}
 
 	// Get the basic container configuration
-	container, err := ignition.ContainerConfiguration(clusterConfig.Registry)
+	container, err := ignition.ContainerConfiguration(*clusterConfig.Registry)
 	if err != nil {
 		return "", err
 	}
 
 	// Set up the user
-	usr, err := ignition.OcneUser(clusterConfig.SshPublicKey, clusterConfig.SshPublicKeyPath, clusterConfig.Password)
+	usr, err := ignition.OcneUser(*clusterConfig.SshPublicKey, *clusterConfig.SshPublicKeyPath, *clusterConfig.Password)
 	if err != nil {
 		return "", err
 	}
@@ -195,23 +195,23 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			},
 		})
 
-		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
-			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
+		ign, err = ignition.IgnitionForVirtualIp(ign, *clusterConfig.KubeAPIServerBindPort, *clusterConfig.KubeAPIServerBindPortAlt,
+			*clusterConfig.VirtualIp, &clusterConfig.Proxy, *clusterConfig.Providers.Olvm.NetworkInterface)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	// Add any additional configuration
-	if clusterConfig.ExtraIgnition != "" {
-		fromExtra, err := ignition.FromPath(clusterConfig.ExtraIgnition)
+	if *clusterConfig.ExtraIgnition != "" {
+		fromExtra, err := ignition.FromPath(*clusterConfig.ExtraIgnition)
 		if err != nil {
 			return "", err
 		}
 		ign = ignition.Merge(ign, fromExtra)
 	}
-	if clusterConfig.ExtraIgnitionInline != "" {
-		fromExtra, err := ignition.FromString(clusterConfig.ExtraIgnitionInline)
+	if *clusterConfig.ExtraIgnitionInline != "" {
+		fromExtra, err := ignition.FromString(*clusterConfig.ExtraIgnitionInline)
 		if err != nil {
 			return "", err
 		}

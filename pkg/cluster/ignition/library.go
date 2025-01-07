@@ -474,7 +474,7 @@ func Proxy(inProxy *types.Proxy, noProxies ...string) (*igntypes.Config, error) 
 	proxy := appendNoProxies(*inProxy, noProxies)
 
 	// If there is no proxy configured, then
-	if proxy.HttpsProxy == "" && proxy.HttpProxy == "" && proxy.NoProxy == "" {
+	if *proxy.HttpsProxy == "" && *proxy.HttpProxy == "" && *proxy.NoProxy == "" {
 		return ret, nil
 	}
 
@@ -571,12 +571,12 @@ func OcneUser(sshKey string, sshKeyPath string, password string) (*igntypes.Conf
 // append additional NoProxies to the proxy struct
 func appendNoProxies(proxy types.Proxy, np []string) *types.Proxy {
 	nps := strings.Join(np, ",")
-	if proxy.NoProxy != "" {
-		nps = strings.Join([]string{proxy.NoProxy, nps}, ",")
+	if *proxy.NoProxy != "" {
+		nps = strings.Join([]string{*proxy.NoProxy, nps}, ",")
 	}
 	return &types.Proxy{
 		HttpsProxy: proxy.HttpsProxy,
 		HttpProxy:  proxy.HttpProxy,
-		NoProxy:    nps,
+		NoProxy:    &nps,
 	}
 }

@@ -79,14 +79,11 @@ func StopEphemeralCluster(clusterConfig *types.ClusterConfig) error {
 	if *clusterConfig.EphemeralConfig.Preserve {
 		return nil
 	}
-
-	c := types.CopyConfig(config)
 	cc := types.CopyClusterConfig(clusterConfig)
-	config = &c
 	clusterConfig = &cc
 
-	clusterConfig.Provider = libvirt.DriverName
-	clusterConfig.Name = config.EphemeralConfig.Name
-	config.Quiet = true
-	return delete2.Delete(config, clusterConfig)
+	*clusterConfig.Provider = libvirt.DriverName
+	clusterConfig.Name = clusterConfig.EphemeralConfig.Name
+	*clusterConfig.Quiet = true
+	return delete2.Delete(clusterConfig)
 }

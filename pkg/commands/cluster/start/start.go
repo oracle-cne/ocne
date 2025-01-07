@@ -51,11 +51,11 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 	if *clusterConfig.Provider != constants.ProviderTypeNone {
 		cachedClusterConfig := clusterCache.Get(*clusterConfig.Name)
 		if cachedClusterConfig != nil {
-			if cachedClusterConfig.ClusterConfig.Provider != clusterConfig.Provider {
-				return "", fmt.Errorf("the provider of the existing cluster is %s. The target provider is %s", cachedClusterConfig.ClusterConfig.Provider, clusterConfig.Provider)
+			if *cachedClusterConfig.ClusterConfig.Provider != *clusterConfig.Provider {
+				return "", fmt.Errorf("the provider of the existing cluster is %s. The target provider is %s", *cachedClusterConfig.ClusterConfig.Provider, *clusterConfig.Provider)
 			}
-			if cachedClusterConfig != nil && cachedClusterConfig.ClusterConfig.KubeVersion != clusterConfig.KubeVersion {
-				return "", fmt.Errorf("the Kubernetes version of the existing cluster is %s. The target Kubernetes version is %s", cachedClusterConfig.ClusterConfig.KubeVersion, clusterConfig.KubeVersion)
+			if cachedClusterConfig != nil && *cachedClusterConfig.ClusterConfig.KubeVersion != *clusterConfig.KubeVersion {
+				return "", fmt.Errorf("the Kubernetes version of the existing cluster is %s. The target Kubernetes version is %s", *cachedClusterConfig.ClusterConfig.KubeVersion, *clusterConfig.KubeVersion)
 			}
 		}
 	}
@@ -136,7 +136,7 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 		case constants.CNINone:
 			// If no CNI is installed, it is not possible for the UI
 			// to start.  Don't wait for it.
-			clusterConfig.AutoStartUI = "false"
+			*clusterConfig.AutoStartUI = "false"
 			log.Debugf("No CNI will be installed")
 		}
 	}
@@ -146,8 +146,8 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 
 		// Determine if the image registry needs to be overridden
 		helmOverride := map[string]interface{}{}
-		if clusterConfig.Provider == constants.ProviderTypeNone &&
-			clusterConfig.Registry != constants.ContainerRegistry {
+		if *clusterConfig.Provider == constants.ProviderTypeNone &&
+			*clusterConfig.Registry != constants.ContainerRegistry {
 			helmOverride = map[string]interface{}{
 				"image": map[string]interface{}{
 					"registry": clusterConfig.Registry,
@@ -233,12 +233,12 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 
 	for _, c := range catalogsToAdd {
 		// Generate a service name from the catalog name
-		svcName := strings.ReplaceAll(c.Name, " ", "")
+		svcName := strings.ReplaceAll(*c.Name, " ", "")
 		svcName = strings.ToLower(svcName)
 		if len(svcName) >= 64 {
 			svcName = svcName[:63]
 		}
-		err = add.Add(localKubeConfig, svcName, c.Namespace, c.URI, c.Protocol, c.Name)
+		err = add.Add(localKubeConfig, svcName, *c.Namespace, *c.URI, *c.Protocol, *c.Name)
 		if err != nil {
 			return localKubeConfig, err
 		}
@@ -285,13 +285,13 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 	infoFunc("Kubernetes cluster was created successfully")
 
 	// Determine if port forwards need to be setup and a browser started
-	if config.AutoStartUI == "true" {
+	if *clusterConfig.AutoStartUI == "true" {
 		if err := autoStartUI(kubeClient, localKubeConfig, infoFuncWait); err != nil {
 			return localKubeConfig, err
 		}
 	}
 
-	if !clusterConfig.Headless {
+	if !*clusterConfig.Headless {
 		accessUI := fmt.Sprintf("To access the UI, first do kubectl port-forward to allow the browser to access the UI.\nRun the following command, then access the UI from the browser using via https://localhost:%s", uiServicePort)
 		portForward1 := fmt.Sprintf("    kubectl port-forward -n %s service/%s %s:%s", constants.OCNESystemNamespace, constants.UIServiceName, uiServicePort, uiTargetPort)
 		createToken := fmt.Sprintf(createTokenFormatText, fmt.Sprintf(createTokenStanzaFormatText, "", constants.OCNESystemNamespace))
@@ -397,7 +397,7 @@ func getAppsToInstall(allApps []install.ApplicationDescription, releases []*rele
 	for index := range allApps {
 		appInstalled := false
 		for _, rel := range releases {
-			if rel.Name == allApps[index].Application.Release && rel.Namespace == allApps[index].Application.Namespace {
+			if rel.Name == *allApps[index].Application.Release && rel.Namespace == *allApps[index].Application.Namespace {
 				log.Debugf("The application with release name %s is already deployed", rel.Name)
 				appInstalled = true
 				break

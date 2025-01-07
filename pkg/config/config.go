@@ -190,7 +190,7 @@ func ParseClusterConfigFile(configPath string) (*types.ClusterConfig, error) {
 			return nil, err
 		}
 
-		ret.WorkingDirectory = filepath.Dir(wd)
+		*ret.WorkingDirectory = filepath.Dir(wd)
 	}
 	return ret, nil
 }

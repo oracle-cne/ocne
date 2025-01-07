@@ -104,8 +104,8 @@ type Pool struct {
 // LibvirtDriver manages resource creation and cluster management for libvirt
 // targets.
 type LibvirtDriver struct {
-	Name   string // Name is the name of the cluster
-	Config conftypes.ClusterConfig
+	Name          string // Name is the name of the cluster
+	ClusterConfig conftypes.ClusterConfig
 
 	// Basic connection information
 	Connection *libvirt.Libvirt // Connection is the connection to libvirt
@@ -131,7 +131,7 @@ type LibvirtDriver struct {
 	UploadCertificateKey     string
 }
 
-func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
 	cc := conftypes.OverlayConfig(clusterConfig, config)
 	clusterConfig = &cc
 	lp := clusterConfig.Providers.Libvirt
@@ -142,7 +142,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	//        to session URIs.  Specifically, the path to the socket it uses
 	//        is incorrect.  Patch this up so that it is accurate for a default
 	//        libvirt install.
-	uri, err := url.Parse(lp.SessionURI)
+	uri, err := url.Parse(*lp.SessionURI)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +163,8 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		// no host.  However, the path field is populated with the connection
 		// string.  This check may break in the future if the implementation of
 		// url.Parse changes.
-		lp.SessionURI = fmt.Sprintf("qemu+ssh://%s/system", uri.Path)
-		uri, err = url.Parse(lp.SessionURI)
+		*lp.SessionURI = fmt.Sprintf("qemu+ssh://%s/system", uri.Path)
+		uri, err = url.Parse(*lp.SessionURI)
 		hostIP, isLocal, err = util.ResolveURIToIP(uri)
 		if err != nil {
 			return nil, err
@@ -178,8 +178,8 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 			return nil, err
 		}
 
-		lp.SessionURI = fmt.Sprintf("%s?socket=%s", lp.SessionURI, filepath.Join(homedir, constants.DarwinLibvirtSocketPath))
-		uri, err = url.Parse(lp.SessionURI)
+		*lp.SessionURI = fmt.Sprintf("%s?socket=%s", *lp.SessionURI, filepath.Join(homedir, constants.DarwinLibvirtSocketPath))
+		uri, err = url.Parse(*lp.SessionURI)
 	}
 
 	log.Debugf("Connecting to %s", uri.String())
@@ -188,8 +188,8 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 		return nil, err
 	}
 
-	localKubeconfigName := fmt.Sprintf("kubeconfig.%s.local", clusterConfig.Name)
-	vmKubeconfigName := fmt.Sprintf("kubeconfig.%s.vm", clusterConfig.Name)
+	localKubeconfigName := fmt.Sprintf("kubeconfig.%s.local", *clusterConfig.Name)
+	vmKubeconfigName := fmt.Sprintf("kubeconfig.%s.vm", *clusterConfig.Name)
 
 	vmKubeConfig, err := client.GetKubeconfigPath(vmKubeconfigName)
 	if err != nil {
@@ -218,13 +218,13 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}
 
 	ret := &LibvirtDriver{
-		Name:                     clusterConfig.Name,
+		Name:                     *clusterConfig.Name,
 		Config:                   cc,
 		Connection:               connection,
 		URI:                      uri,
 		Local:                    isLocal,
 		TargetIP:                 hostIP,
-		NetworkName:              lp.Network,
+		NetworkName:              *lp.Network,
 		BridgeNetworking:         true,
 		LocalKubeconfigName:      localKubeconfigName,
 		LocalKubeconfigPath:      localKubeConfig,
@@ -253,7 +253,7 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 	}
 
 	internalLB := true
-	if ld.Config.LoadBalancer != "" {
+	if *ld.ClusterConfig.LoadBalancer != "" {
 		internalLB = false
 	}
 	if ld.KubeAPIServerIP == "127.0.0.1" {
@@ -276,27 +276,27 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 			return nil, err
 		}
 
-		expectingWorkerNodes := ld.Config.WorkerNodes > 0
+		expectingWorkerNodes := *ld.ClusterConfig.WorkerNodes > 0
 		ign, err = ignition.InitializeCluster(&ignition.ClusterInit{
-			OsTag:                ld.Config.OsTag,
-			OsRegistry:           ld.Config.OsRegistry,
+			OsTag:                *ld.ClusterConfig.OsTag,
+			OsRegistry:           *ld.ClusterConfig.OsRegistry,
 			KubeAPIServerIP:      ld.KubeAPIServerIP,
-			KubeAPIBindPort:      ld.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   ld.Config.KubeAPIServerBindPortAlt,
+			KubeAPIBindPort:      *ld.ClusterConfig.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:   *ld.ClusterConfig.KubeAPIServerBindPortAlt,
 			InternalLB:           internalLB,
-			Proxy:                ld.Config.Proxy,
+			Proxy:                ld.ClusterConfig.Proxy,
 			KubeAPIExtraSans:     []string{ld.TargetIP},
 			KubePKICert:          string(caCert),
 			KubePKIKey:           string(caKey),
-			ServiceSubnet:        ld.Config.ServiceSubnet,
-			PodSubnet:            ld.Config.PodSubnet,
+			ServiceSubnet:        *ld.ClusterConfig.ServiceSubnet,
+			PodSubnet:            *ld.ClusterConfig.PodSubnet,
 			ExpectingWorkerNodes: expectingWorkerNodes,
-			ProxyMode:            ld.Config.KubeProxyMode,
-			ImageRegistry:        ld.Config.Registry,
+			ProxyMode:            *ld.ClusterConfig.KubeProxyMode,
+			ImageRegistry:        *ld.ClusterConfig.Registry,
 			NetInterface:         netInterface,
 			UploadCertificateKey: ld.UploadCertificateKey,
 			KubeVersion:          ld.KubeVersion,
-			TLSCipherSuites:      ld.Config.CipherSuites,
+			TLSCipherSuites:      *ld.ClusterConfig.CipherSuites,
 		})
 	} else {
 		// Worker nodes do not get two networks.  On remote clusters,
@@ -307,20 +307,20 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 		// the real default route is not deleted.
 		ign, err = ignition.JoinCluster(&ignition.ClusterJoin{
 			Role:                 role,
-			OsTag:                ld.Config.OsTag,
-			OsRegistry:           ld.Config.OsRegistry,
+			OsTag:                *ld.ClusterConfig.OsTag,
+			OsRegistry:           *ld.ClusterConfig.OsRegistry,
 			KubeAPIServerIP:      ld.KubeAPIServerIP,
 			JoinToken:            joinToken,
 			KubePKICertHashes:    caCertHashes,
-			ImageRegistry:        ld.Config.Registry,
-			KubeAPIBindPort:      ld.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   ld.Config.KubeAPIServerBindPortAlt,
+			ImageRegistry:        *ld.ClusterConfig.Registry,
+			KubeAPIBindPort:      *ld.ClusterConfig.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:   *ld.ClusterConfig.KubeAPIServerBindPortAlt,
 			InternalLB:           internalLB,
-			Proxy:                ld.Config.Proxy,
-			ProxyMode:            ld.Config.KubeProxyMode,
+			Proxy:                ld.ClusterConfig.Proxy,
+			ProxyMode:            *ld.ClusterConfig.KubeProxyMode,
 			NetInterface:         netInterface,
 			UploadCertificateKey: ld.UploadCertificateKey,
-			TLSCipherSuites:      ld.Config.CipherSuites,
+			TLSCipherSuites:      *ld.ClusterConfig.CipherSuites,
 		})
 	}
 
@@ -359,7 +359,7 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 	}
 
 	// Respect any proxy configuration that may be defined
-	proxy, err := ignition.Proxy(&ld.Config.Proxy, ld.KubeAPIServerIP, ld.Config.ServiceSubnet, ld.Config.PodSubnet)
+	proxy, err := ignition.Proxy(&ld.ClusterConfig.Proxy, ld.KubeAPIServerIP, *ld.ClusterConfig.ServiceSubnet, *ld.ClusterConfig.PodSubnet)
 	if err != nil {
 		return nil, err
 	}
@@ -376,17 +376,17 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 	}
 	ignition.AddFile(ign, &hostnameFile)
 
-	usrIgn, err := ignition.OcneUser(ld.Config.SshPublicKey, ld.Config.SshPublicKeyPath, ld.Config.Password)
+	usrIgn, err := ignition.OcneUser(*ld.ClusterConfig.SshPublicKey, *ld.ClusterConfig.SshPublicKeyPath, *ld.ClusterConfig.Password)
 	if err != nil {
 		return nil, err
 	}
 	ign = ignition.Merge(ign, usrIgn)
 
 	// Add any additional configuration
-	if ld.Config.ExtraIgnition != "" {
-		ei := ld.Config.ExtraIgnition
+	if *ld.ClusterConfig.ExtraIgnition != "" {
+		ei := *ld.ClusterConfig.ExtraIgnition
 		if !filepath.IsAbs(ei) {
-			ei, err = filepath.Abs(filepath.Join(ld.Config.WorkingDirectory, ei))
+			ei, err = filepath.Abs(filepath.Join(*ld.ClusterConfig.WorkingDirectory, ei))
 			if err != nil {
 				return nil, err
 			}
@@ -397,8 +397,8 @@ func (ld *LibvirtDriver) generateIgnition(nodeName string, role types.NodeRole, 
 		}
 		ign = ignition.Merge(ign, fromExtra)
 	}
-	if ld.Config.ExtraIgnitionInline != "" {
-		fromExtra, err := ignition.FromString(ld.Config.ExtraIgnitionInline)
+	if *ld.ClusterConfig.ExtraIgnitionInline != "" {
+		fromExtra, err := ignition.FromString(*ld.ClusterConfig.ExtraIgnitionInline)
 		if err != nil {
 			return nil, err
 		}
@@ -427,7 +427,7 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 
 	// Ensure all necessary libvirt infrastructure exists
 	log.Debugf("Ensuring presence of storage pool")
-	imagesPool, err := FindOrCreateStoragePool(ld.Connection, ld.URI, ld.Config.Providers.Libvirt.StoragePool)
+	imagesPool, err := FindOrCreateStoragePool(ld.Connection, ld.URI, *ld.ClusterConfig.Providers.Libvirt.StoragePool)
 	if err != nil {
 		return err
 	}
@@ -435,7 +435,7 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 	// If the volume of the base image does not exist on the system, it is not downloaded
 	log.Debugf("Checking if base image exists")
 
-	bootVolumeName := ld.Config.Providers.Libvirt.BootVolumeName
+	bootVolumeName := *ld.ClusterConfig.Providers.Libvirt.BootVolumeName
 	if bootVolumeName == constants.BootVolumeName {
 		// Boot volume name has not been overridden, add the k8s version to the name
 		bootVolumeName = bootVolumeName + "-" + ld.KubeVersion
@@ -461,9 +461,9 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 		// Make a volume
 		log.Debugf("Creating volume %s", libvirtVolumeName)
 		if role == types.ControlPlaneRole {
-			_, err = createVolumeFromImagesPool(ld.Config.Providers.Libvirt.ControlPlaneNode, ld.Connection, imagesPool, libvirtVolumeName, bootVolumeName)
+			_, err = createVolumeFromImagesPool(ld.ClusterConfig.Providers.Libvirt.ControlPlaneNode, ld.Connection, imagesPool, libvirtVolumeName, bootVolumeName)
 		} else {
-			_, err = createVolumeFromImagesPool(ld.Config.Providers.Libvirt.WorkerNode, ld.Connection, imagesPool, libvirtVolumeName, bootVolumeName)
+			_, err = createVolumeFromImagesPool(ld.ClusterConfig.Providers.Libvirt.WorkerNode, ld.Connection, imagesPool, libvirtVolumeName, bootVolumeName)
 		}
 	}
 	if err != nil {
@@ -510,7 +510,7 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 			Bus:  fmt.Sprintf("%d", UserBus),
 			Slot: fmt.Sprintf("%d", UserSlot),
 		}
-		if ld.Config.LoadBalancer == "" {
+		if *ld.ClusterConfig.LoadBalancer == "" {
 			userNetwork.PortForwards = []PortForward{
 				{
 					From:   ld.TunnelPort,
@@ -547,9 +547,9 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 		Networks:     domNets,
 	}
 	if role == types.ControlPlaneRole {
-		err = createDomainFromTemplate(ld.Config.Providers.Libvirt.ControlPlaneNode, ld.Connection, &domainInformation)
+		err = createDomainFromTemplate(ld.ClusterConfig.Providers.Libvirt.ControlPlaneNode, ld.Connection, &domainInformation)
 	} else {
-		err = createDomainFromTemplate(ld.Config.Providers.Libvirt.WorkerNode, ld.Connection, &domainInformation)
+		err = createDomainFromTemplate(ld.ClusterConfig.Providers.Libvirt.WorkerNode, ld.Connection, &domainInformation)
 	}
 	if err != nil {
 		return err
@@ -571,7 +571,7 @@ func (ld *LibvirtDriver) removeNode(libvirtDomainName string) error {
 		return err
 	}
 
-	imagesPool, err := FindStoragePool(ld.Connection, ld.Config.Providers.Libvirt.StoragePool, poolPath)
+	imagesPool, err := FindStoragePool(ld.Connection, *ld.ClusterConfig.Providers.Libvirt.StoragePool, poolPath)
 	if err != nil {
 		return err
 	} else if imagesPool == nil {
@@ -650,25 +650,25 @@ func (ld *LibvirtDriver) initializeCluster() error {
 	// API server.  The other is one that talks to the user-network tunnel
 	// between the target host and the VM itself.
 	certOptions := certificate.CertOptions{
-		Country: ld.Config.CertificateInformation.Country,
-		Org:     ld.Config.CertificateInformation.Org,
-		OrgUnit: ld.Config.CertificateInformation.OrgUnit,
-		State:   ld.Config.CertificateInformation.State,
+		Country: *ld.ClusterConfig.CertificateInformation.Country,
+		Org:     *ld.ClusterConfig.CertificateInformation.Org,
+		OrgUnit: *ld.ClusterConfig.CertificateInformation.OrgUnit,
+		State:   *ld.ClusterConfig.CertificateInformation.State,
 	}
 	var krLocal kubepki.KubeconfigRequest
-	if ld.Config.LoadBalancer == "" {
+	if *ld.ClusterConfig.LoadBalancer == "" {
 		krLocal = kubepki.KubeconfigRequest{
 			Path:          ld.LocalKubeconfigPath,
 			Host:          ld.TargetIP,
 			Port:          port,
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			ServiceSubnet: *ld.ClusterConfig.ServiceSubnet,
 		}
 	} else {
 		krLocal = kubepki.KubeconfigRequest{
 			Path:          ld.LocalKubeconfigPath,
-			Host:          ld.Config.LoadBalancer,
+			Host:          *ld.ClusterConfig.LoadBalancer,
 			Port:          uint16(6443),
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			ServiceSubnet: *ld.ClusterConfig.ServiceSubnet,
 		}
 	}
 	pkiInfo, err := kubepki.GeneratePKI(certOptions,
@@ -676,7 +676,7 @@ func (ld *LibvirtDriver) initializeCluster() error {
 			Path:          ld.VMKubeconfigPath,
 			Host:          ld.KubeAPIServerIP,
 			Port:          uint16(6443),
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			ServiceSubnet: *ld.ClusterConfig.ServiceSubnet,
 		},
 		krLocal,
 	)
@@ -705,10 +705,10 @@ func (ld *LibvirtDriver) create() error {
 		// use VirtualIp as KubeAPIServerIP if VirtualIp is specified
 		// use LoadBalancer as KubeAPIServerIP if LoadBalancer is specified
 		// otherwise, allocate an IP that will be used for the VM if a remote
-		if ld.Config.VirtualIp != "" {
-			kubeAPIServerIP = ld.Config.VirtualIp
-		} else if ld.Config.LoadBalancer != "" {
-			kubeAPIServerIP = ld.Config.LoadBalancer
+		if *ld.ClusterConfig.VirtualIp != "" {
+			kubeAPIServerIP = *ld.ClusterConfig.VirtualIp
+		} else if *ld.ClusterConfig.LoadBalancer != "" {
+			kubeAPIServerIP = *ld.ClusterConfig.LoadBalancer
 		} else {
 			kubeAPIServerIP, err = allocateIP(ld.Connection, ld.URI.Hostname(), ld.NetworkName)
 			if err != nil {
@@ -736,15 +736,15 @@ func (ld *LibvirtDriver) create() error {
 	}
 
 	// Add in other control plane nodes
-	if ld.Config.ControlPlaneNodes > 1 {
-		err = ld.join(types.ControlPlaneRole, ld.Config.ControlPlaneNodes)
+	if *ld.ClusterConfig.ControlPlaneNodes > 1 {
+		err = ld.join(types.ControlPlaneRole, *ld.ClusterConfig.ControlPlaneNodes)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add in worker nodes
-	err = ld.join(types.WorkerRole, ld.Config.WorkerNodes)
+	err = ld.join(types.WorkerRole, *ld.ClusterConfig.WorkerNodes)
 	if err != nil {
 		return err
 	}
@@ -802,11 +802,11 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 		return false, false, err
 	}
 
-	existingClusterConfig := clusterCache.Get(ld.Config.Name)
+	existingClusterConfig := clusterCache.Get(*ld.ClusterConfig.Name)
 	if existingClusterConfig != nil {
 		// Make sure the sessions are the same
-		if ld.Config.Providers.Libvirt.SessionURI != existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI {
-			return false, false, fmt.Errorf("A cluster named %s already exists for the libvirt provider but has session URI %s", ld.Config.Name, existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI)
+		if ld.ClusterConfig.Providers.Libvirt.SessionURI != existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI {
+			return false, false, fmt.Errorf("A cluster named %s already exists for the libvirt provider but has session URI %s", ld.ClusterConfig.Name, *existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI)
 		}
 	}
 
@@ -816,14 +816,14 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 	}
 
 	// Do some quick validation.
-	if !ld.BridgeNetworking && ld.Config.WorkerNodes > 0 {
+	if !ld.BridgeNetworking && *ld.ClusterConfig.WorkerNodes > 0 {
 		return false, false, fmt.Errorf("Adding worker nodes to user-networking clusters is not supported")
 	}
-	if !ld.BridgeNetworking && ld.Config.ControlPlaneNodes > 1 {
+	if !ld.BridgeNetworking && *ld.ClusterConfig.ControlPlaneNodes > 1 {
 		return false, false, fmt.Errorf("Adding more than one control plane nodes to user-networking clusters is not supported")
 	}
 
-	if ld.Config.VirtualIp != "" && ld.Config.LoadBalancer != "" {
+	if *ld.ClusterConfig.VirtualIp != "" && *ld.ClusterConfig.LoadBalancer != "" {
 		return false, false, fmt.Errorf("Can not specify both virtual IP and load balancer")
 	}
 
