@@ -21,6 +21,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
+	"github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -77,20 +78,20 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	return []install.ApplicationDescription{
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CertManagerChart,
-				Namespace: constants.CertManagerNamespace,
-				Release:   constants.CertManagerRelease,
-				Version:   constants.CertManagerVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.CertManagerChart),
+				Namespace: config.GenerateStringPointer(constants.CertManagerNamespace),
+				Release:   config.GenerateStringPointer(constants.CertManagerRelease),
+				Version:   config.GenerateStringPointer(constants.CertManagerVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 			},
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CoreCAPIChart,
-				Namespace: constants.CoreCAPINamespace,
-				Release:   constants.CoreCAPIRelease,
-				Version:   constants.CoreCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.CoreCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.CoreCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.CoreCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.CoreCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -98,11 +99,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.OCICAPIChart,
-				Namespace: constants.OCICAPINamespace,
-				Release:   constants.OCICAPIRelease,
-				Version:   constants.OCICAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.OCICAPIChart),
+				Namespace: config.GenerateStringPointer(constants.OCICAPINamespace),
+				Release:   config.GenerateStringPointer(constants.OCICAPIRelease),
+				Version:   config.GenerateStringPointer(constants.OCICAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"authConfig": map[string]interface{}{
 						"fingerprint":          ociConfig.Fingerprint,
@@ -119,11 +120,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmBootstrapCAPIChart,
-				Namespace: constants.KubeadmBootstrapCAPINamespace,
-				Release:   constants.KubeadmBootstrapCAPIRelease,
-				Version:   constants.KubeadmBootstrapCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.KubeadmBootstrapCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.KubeadmBootstrapCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.KubeadmBootstrapCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.KubeadmBootstrapCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -131,11 +132,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmControlPlaneCAPIChart,
-				Namespace: constants.KubeadmControlPlaneCAPINamespace,
-				Release:   constants.KubeadmControlPlaneCAPIRelease,
-				Version:   constants.KubeadmControlPlaneCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.KubeadmControlPlaneCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -150,7 +151,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 		return nil, err
 	}
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(*cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return nil, err
 	}
@@ -209,11 +210,11 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 				return err
 			},
 			Application: &types.Application{
-				Name:      OciCcmChart,
-				Namespace: OciCcmNamespace,
-				Release:   OciCcmRelease,
-				Version:   OciCcmVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(OciCcmChart),
+				Namespace: config.GenerateStringPointer(OciCcmNamespace),
+				Release:   config.GenerateStringPointer(OciCcmRelease),
+				Version:   config.GenerateStringPointer(OciCcmVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 			},
 		},
 	}
@@ -611,7 +612,7 @@ func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
 		ProviderType: create.ProviderTypeOCI,
 		Architecture: arch,
 	})
-	cad.Config.KubeConfig = oldKcfg
+	cad.ClusterConfig.KubeConfig = oldKcfg
 	if err != nil {
 		return "", "", err
 	}

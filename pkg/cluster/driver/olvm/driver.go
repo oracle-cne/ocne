@@ -47,7 +47,7 @@ type OlvmDriver struct {
 }
 
 // CreateDriver creates an OLVM CAPI driver.
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
 	cd := clusterConfig.ClusterDefinition
@@ -95,13 +95,12 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	}
 
 	cad := &OlvmDriver{
-		Config:           config,
 		ClusterConfig:    clusterConfig,
 		ClusterResources: *cdi,
 		FromTemplate:     doTemplate,
 	}
 
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.KubeConfig, config, clusterConfig)
+	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(*clusterConfig.KubeConfig, clusterConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -132,8 +132,6 @@ type LibvirtDriver struct {
 }
 
 func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
-	cc := conftypes.OverlayConfig(clusterConfig, config)
-	clusterConfig = &cc
 	lp := clusterConfig.Providers.Libvirt
 
 	// Connect to the given libvirt URI.
@@ -207,7 +205,7 @@ func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver,
 	}
 	info := log.Info
 	infof := log.Infof
-	if config.Quiet && log.GetLevel() != log.DebugLevel {
+	if *clusterConfig.Quiet && log.GetLevel() != log.DebugLevel {
 		info = func(a ...interface{}) {}
 		infof = func(s string, a ...interface{}) {}
 	}
@@ -219,7 +217,7 @@ func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver,
 
 	ret := &LibvirtDriver{
 		Name:                     *clusterConfig.Name,
-		Config:                   cc,
+		ClusterConfig:            *clusterConfig,
 		Connection:               connection,
 		URI:                      uri,
 		Local:                    isLocal,
@@ -231,8 +229,8 @@ func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver,
 		VMKubeconfigName:         vmKubeconfigName,
 		VMKubeconfigPath:         vmKubeConfig,
 		CPUArch:                  architecture,
-		KubeVersion:              config.KubeVersion,
-		BootVolumeContainerImage: config.BootVolumeContainerImage,
+		KubeVersion:              *clusterConfig.KubeVersion,
+		BootVolumeContainerImage: *clusterConfig.BootVolumeContainerImage,
 		Info:                     info,
 		Infof:                    infof,
 		UploadCertificateKey:     uploadCertificateKey,

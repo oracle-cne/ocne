@@ -36,10 +36,8 @@ func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
 
 	// Make local copies of the configuration that is passed
 	// in so that it can be edited.
-	origConfig := config
-	c := types.CopyConfig(config)
+	origClusterConfig := clusterConfig
 	cc := types.CopyClusterConfig(clusterConfig)
-	config = &c
 	clusterConfig = &cc
 
 	// Force some settings to what is required for
@@ -68,7 +66,7 @@ func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
 	// is done so that callers can automatically pick up the new
 	// path and to scratch down that the ephemeral cluster is being
 	// used.
-	origConfig.KubeConfig = kubeConfigPath
+	*origClusterConfig.KubeConfig = kubeConfigPath
 
 	return kubeConfigPath, nil
 }

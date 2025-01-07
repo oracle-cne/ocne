@@ -55,6 +55,9 @@ func GetDefaultConfig() (*types.Config, error) {
 	workerNodeMemory := constants.NodeMemory
 	workerNodeStorage := constants.NodeStorage
 	workerNodeCPUs := constants.NodeCPUs
+	bootVolumeName := constants.BootVolumeName
+	bootVolumeContainerImagePath := constants.BootVolumeContainerImagePath
+	ociNamespace := "ocne"
 	defaultConfig := types.Config{
 		Providers: types.Providers{
 			Libvirt: types.LibvirtProvider{
@@ -71,60 +74,60 @@ func GetDefaultConfig() (*types.Config, error) {
 					Storage: &workerNodeStorage,
 					CPUs:    &workerNodeCPUs,
 				},
-				BootVolumeName:               constants.BootVolumeName,
-				BootVolumeContainerImagePath: constants.BootVolumeContainerImagePath,
+				BootVolumeName:               &bootVolumeName,
+				BootVolumeContainerImagePath: &bootVolumeContainerImagePath,
 			},
 			Oci: types.OciProvider{
-				Namespace:   "ocne",
-				ImageBucket: constants.OciBucket,
+				Namespace:   &ociNamespace,
+				ImageBucket: GenerateStringPointer(constants.OciBucket),
 				ControlPlaneShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardA1Flex,
-					Ocpus: constants.OciControlPlaneOcpus,
+					Shape: GenerateStringPointer(constants.OciVmStandardA1Flex),
+					Ocpus: GenerateIntegerPointer(constants.OciControlPlaneOcpus),
 				},
 				WorkerShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardE4Flex,
-					Ocpus: constants.OciWorkerOcpus,
+					Shape: GenerateStringPointer(constants.OciVmStandardE4Flex),
+					Ocpus: GenerateIntegerPointer(constants.OciWorkerOcpus),
 				},
 			},
 			Olvm: types.OlvmProvider{
-				Namespace: constants.OLVMCAPIResourcesNamespace,
+				Namespace: GenerateStringPointer(constants.OLVMCAPIResourcesNamespace),
 				ControlPlaneMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIControlPlaneMemory,
+					Memory: GenerateStringPointer(constants.OLVMCAPIControlPlaneMemory),
 				},
 				WorkerMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIWorkerMemory,
+					Memory: GenerateStringPointer(constants.OLVMCAPIWorkerMemory),
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
-					BindPort: 6444,
+					BindPort: GenerateIntegerPointer(6444),
 				},
 			},
 		},
-		PodSubnet:                constants.PodSubnet,
-		ServiceSubnet:            constants.ServiceSubnet,
-		KubeAPIServerBindPort:    constants.KubeAPIServerBindPort,
-		KubeAPIServerBindPortAlt: constants.KubeAPIServerBindPortAlt,
-		AutoStartUI:              "true",
+		PodSubnet:                GenerateStringPointer(constants.PodSubnet),
+		ServiceSubnet:            GenerateStringPointer(constants.ServiceSubnet),
+		KubeAPIServerBindPort:    GenerateUInt16Pointer(constants.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: GenerateUInt16Pointer(constants.KubeAPIServerBindPortAlt),
+		AutoStartUI:              GenerateStringPointer("true"),
 		CertificateInformation: types.CertificateInformation{
-			Country: ignition.Country,
-			Org:     ignition.Org,
-			OrgUnit: ignition.OrgUnit,
-			State:   ignition.State,
+			Country: GenerateStringPointer(ignition.Country),
+			Org:     GenerateStringPointer(ignition.Org),
+			OrgUnit: GenerateStringPointer(ignition.OrgUnit),
+			State:   GenerateStringPointer(ignition.State),
 		},
-		OsRegistry:               cmdconstants.OsRegistry,
-		OsTag:                    constants.KubeVersion,
-		KubeProxyMode:            ignition.KubeProxyMode,
-		BootVolumeContainerImage: constants.BootVolumeContainerImage,
-		Registry:                 constants.ContainerRegistry,
+		OsRegistry:               GenerateStringPointer(cmdconstants.OsRegistry),
+		OsTag:                    GenerateStringPointer(constants.KubeVersion),
+		KubeProxyMode:            GenerateStringPointer(ignition.KubeProxyMode),
+		BootVolumeContainerImage: GenerateStringPointer(constants.BootVolumeContainerImage),
+		Registry:                 GenerateStringPointer(constants.ContainerRegistry),
 		EphemeralConfig: types.EphemeralClusterConfig{
-			Name:     constants.EphemeralClusterName,
-			Preserve: constants.EphemeralClusterPreserve,
+			Name:     GenerateStringPointer(constants.EphemeralClusterName),
+			Preserve: GenerateBooleanPointer(constants.EphemeralClusterPreserve),
 			Node: types.Node{
-				Memory:  constants.NodeMemory,
-				CPUs:    constants.NodeCPUs,
-				Storage: constants.EphemeralNodeStorage,
+				Memory:  GenerateStringPointer(constants.NodeMemory),
+				CPUs:    GenerateIntegerPointer(constants.NodeCPUs),
+				Storage: GenerateStringPointer(constants.EphemeralNodeStorage),
 			},
 		},
-		KubeVersion: constants.KubeVersion,
+		KubeVersion: GenerateStringPointer(constants.KubeVersion),
 	}
 	homedir, err := os.UserHomeDir()
 	if err != nil {
@@ -156,6 +159,30 @@ func GetDefaultConfig() (*types.Config, error) {
 	}
 	ret := types.MergeConfig(&defaultConfig, configFileDefaults)
 	return &ret, err
+}
+
+// GenerateStringPointer is a helper function used to generate a string pointer
+// This is useful when working with constants
+func GenerateStringPointer(s string) *string {
+	return &s
+}
+
+// GenerateIntegerPointer is a helper function used to generate an integer pointer
+// This is useful when working with constants
+func GenerateIntegerPointer(i int) *int {
+	return &i
+}
+
+// GenerateUInt16Pointer is a helper function used to generate an Uint16 pointer
+// This is useful when working with constants
+func GenerateUInt16Pointer(u uint16) *uint16 {
+	return &u
+}
+
+// GenerateBooleanPointer is a helper function used to generate an boolean pointer
+// This is useful when working with constants
+func GenerateBooleanPointer(b bool) *bool {
+	return &b
 }
 
 // ParseClusterConfig taks a yaml-encoded string and parses it

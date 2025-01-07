@@ -63,8 +63,6 @@ func RunCmd(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-
-	var c *types.Config
 	var cc *types.ClusterConfig
 	clusterName := clusterConfig.Name
 
@@ -103,6 +101,6 @@ func RunCmd(cmd *cobra.Command) error {
 		*cc.Provider = pkgconst.ProviderTypeLibvirt
 	}
 
-	err = delete2.Delete(c, cc)
+	err = delete2.Delete(cc)
 	return err
 }

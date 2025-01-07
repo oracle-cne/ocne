@@ -15,6 +15,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/add"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/ls"
+	"github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
@@ -117,11 +118,11 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 			}
 			applications = append(applications, install.ApplicationDescription{
 				Application: &types.Application{
-					Name:      constants.CNIFlannelChart,
-					Namespace: constants.CNIFlannelNamespace,
-					Release:   constants.CNIFlannelRelease,
-					Version:   constants.CNIFlannelVersion,
-					Catalog:   catalog.InternalCatalog,
+					Name:      config.GenerateStringPointer(constants.CNIFlannelChart),
+					Namespace: config.GenerateStringPointer(constants.CNIFlannelNamespace),
+					Release:   config.GenerateStringPointer(constants.CNIFlannelRelease),
+					Version:   config.GenerateStringPointer(constants.CNIFlannelVersion),
+					Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 					Config: map[string]interface{}{
 						"podCidr": clusterConfig.PodSubnet,
 						"flannel": map[string]interface{}{
@@ -175,11 +176,11 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 				return err
 			},
 			Application: &types.Application{
-				Name:      constants.UIChart,
-				Namespace: constants.UINamespace,
-				Release:   constants.UIRelease,
-				Version:   constants.UIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.UIChart),
+				Namespace: config.GenerateStringPointer(constants.UINamespace),
+				Release:   config.GenerateStringPointer(constants.UIRelease),
+				Version:   config.GenerateStringPointer(constants.UIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config:    helmOverride,
 			},
 		})
@@ -202,11 +203,11 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 		}
 		applications = append(applications, install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CatalogChart,
-				Namespace: constants.CatalogNamespace,
-				Release:   constants.CatalogRelease,
-				Version:   constants.CatalogVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.CatalogChart),
+				Namespace: config.GenerateStringPointer(constants.CatalogNamespace),
+				Release:   config.GenerateStringPointer(constants.CatalogRelease),
+				Version:   config.GenerateStringPointer(constants.CatalogVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config:    helmOverride,
 			},
 		})

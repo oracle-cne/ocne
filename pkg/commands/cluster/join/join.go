@@ -52,7 +52,7 @@ func Join(options *JoinOptions) error {
 		return joinNodeToCluster(options)
 	}
 
-	drv, err := driver.CreateDriver(options.Config, options.ClusterConfig)
+	drv, err := driver.CreateDriver(options.ClusterConfig)
 	if err != nil {
 		return err
 	}

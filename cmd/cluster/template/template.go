@@ -9,6 +9,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
+	"github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ var clusterConfigPath string
 var opts = template.TemplateOptions{
 	Config: types.Config{},
 	ClusterConfig: types.ClusterConfig{
-		WorkerNodes: pkgconst.WorkerNodes,
+		WorkerNodes: config.GenerateUInt16Pointer(pkgconst.WorkerNodes),
 	},
 }
 
