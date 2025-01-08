@@ -471,7 +471,7 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	return ociClusterObj, err
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
 	cd := clusterConfig.ClusterDefinition

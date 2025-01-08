@@ -104,3 +104,7 @@ func RunCmd(cmd *cobra.Command) error {
 	err = delete2.Delete(cc)
 	return err
 }
+
+func populateCLIArguments(config) {
+
+}

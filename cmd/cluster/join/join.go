@@ -75,7 +75,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	cmd.Flags().StringVarP(&options.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&options.DestKubeConfigPath, flagDestination, flagDestinationShort, "", flagDestinationHelp)
-	cmd.Flags().StringVarP(options.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&options.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&options.Node, flagNode, flagNodeShort, "", flagNodeHelp)
 	cmd.Flags().IntVarP(&options.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
 	cmd.Flags().IntVarP(&options.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
@@ -147,6 +147,9 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func validateOptions(options *cmdjoin.JoinOptions, cmd *cobra.Command) error {
+	// This is a workaround for using the Cobra CLI to populate a structure that has fields that are pointers
+	*options.ClusterConfig.Provider = options.Provider
+
 	if options.DestKubeConfigPath != "" || options.Node != "" {
 		// this is the case where we are joining an existing node to another cluster, both of these options must be specified
 		if options.DestKubeConfigPath == "" {

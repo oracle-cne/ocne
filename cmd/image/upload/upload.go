@@ -95,7 +95,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne image upload" command
 func RunCmd(cmd *cobra.Command) error {
-	_, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}

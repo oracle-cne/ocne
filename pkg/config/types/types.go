@@ -273,13 +273,12 @@ func ieu(i uint16, e uint16) uint16 {
 // non-zero, it is returned.  Otherwise, the first argument
 // is returned.
 func ieup(i *uint16, e *uint16) *uint16 {
-	if e != nil {
-		return e
-	}
-	if i != nil {
-		return i
-	}
 	returnVal := uint16(0)
+	if e != nil {
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
+	}
 	return &returnVal
 }
 
@@ -297,13 +296,12 @@ func iei(i int, e int) int {
 // // is non-nil but the other is nil, the non-nil one is returned.
 // is returned.
 func ieip(i *int, e *int) *int {
-	if e != nil {
-		return e
-	}
-	if i != nil {
-		return i
-	}
 	returnVal := int(0)
+	if e != nil {
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
+	}
 	return &returnVal
 }
 
@@ -311,26 +309,25 @@ func ieip(i *int, e *int) *int {
 // is non-nil but the other is nil, the non-nil one is returned.
 // Otherwise, the value of the second argument is returned.
 func iebp(i *bool, e *bool, def bool) *bool {
+	returnVal := def
 	if e != nil {
-		return e
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
 	}
-	if i != nil {
-		return i
-	}
-	return &def
+	return &returnVal
 }
 
 // iesp is short for "If Else String Pointer".  If one of the values
-// is non-nil but the other is nil, the non-nil one is returned.
-// Otherwise, the value of the second argument is returned.
+// is non-nil but the other is nil, a separate pointer pointing to the same value is returned.
+// Otherwise, a separate pointer that points to the value of the second argument is returned.
 func iesp(i *string, e *string) *string {
-	if e != nil {
-		return e
-	}
-	if i != nil {
-		return i
-	}
 	returnVal := ""
+	if e != nil {
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
+	}
 	return &returnVal
 }
 

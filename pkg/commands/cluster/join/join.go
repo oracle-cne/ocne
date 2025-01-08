@@ -40,6 +40,7 @@ type JoinOptions struct {
 	Config             *types.Config
 	ClusterConfig      *types.ClusterConfig
 	KubeConfigPath     string
+	Provider           string
 	ControlPlaneNodes  int
 	WorkerNodes        int
 	Node               string
