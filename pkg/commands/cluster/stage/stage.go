@@ -76,7 +76,6 @@ func Stage(o StageOptions) error {
 			return err
 		}
 	}
-	return nil
 
 	// get a kubernetes client
 	restConfig, KClient, err := client.GetKubeClient(o.KubeConfigPath)
