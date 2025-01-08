@@ -15,7 +15,6 @@ import (
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
 )
 
 const (
@@ -28,10 +27,11 @@ ocne image create --arch arm64 --type oci
 `
 )
 
-var config types.Config
-var clusterConfig types.ClusterConfig
 var clusterConfigPath string
-var createOptions create.CreateOptions
+var createOptions create.CreateOptions = create.CreateOptions{
+	Config:        &types.Config{},
+	ClusterConfig: &types.ClusterConfig{},
+}
 var flagArchitectureHelp = "The architecture of the image to create, allowed values: " + strings.Join(flags.ValidArchs, ", ")
 
 const (
@@ -62,23 +62,24 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
-	cmd.Flags().StringVarP(config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(&createOptions.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
 	cmd.Flags().StringVarP(&createOptions.KernelArguments, flagKargs, flagKargsShort, "", flagKargsHelp)
-	cmd.Flags().StringVarP(clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
+	cmd.Flags().StringVarP(&createOptions.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
 
 	return cmd
 }
 
 // RunCmd runs the "ocne image create" command
 func RunCmd(cmd *cobra.Command) error {
+	populateConfigurationFromCommandLine(&createOptions)
 	if err := flags.ValidateArchitecture(createOptions.Architecture); err != nil {
 		return err
 	}
 
-	cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(createOptions.Config, createOptions.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
@@ -111,5 +112,6 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func populateConfigurationFromCommandLine(options *create.CreateOptions) {
-	*options. = options.KubeConfig
+	options.Config.KubeConfig = &options.KubeConfig
+	options.ClusterConfig.KubeVersion = &options.KubeVersion
 }

@@ -148,7 +148,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 func validateOptions(options *cmdjoin.JoinOptions) error {
 	// This is a workaround for using the Cobra CLI to populate a structure that has fields that are pointers
-	*options.ClusterConfig.Provider = options.Provider
+	options.ClusterConfig.Provider = &options.Provider
 
 	if options.DestKubeConfigPath != "" || options.Node != "" {
 		// this is the case where we are joining an existing node to another cluster, both of these options must be specified

@@ -44,6 +44,12 @@ const (
 
 // CreateOptions are the options for the create image command
 type CreateOptions struct {
+	// Config is a pointer to the default configuration
+	Config *otypes.Config
+
+	// ClusterConfig is a pointer to the cluster configuration
+	ClusterConfig *otypes.ClusterConfig
+
 	// IgnitionProvider is the provider type for ignition
 	IgnitionProvider string
 
@@ -64,6 +70,9 @@ type CreateOptions struct {
 
 	// KubeConfig is the path to the KubeConfig file
 	KubeConfig string
+
+	// KubeConfig is the Kubernetes major.minor version
+	KubeVersion string
 }
 
 type providerFuncs struct {

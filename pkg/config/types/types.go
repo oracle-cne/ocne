@@ -3,6 +3,8 @@
 
 package types
 
+import "github.com/oracle-cne/ocne/pkg/constants"
+
 type LibvirtProvider struct {
 	SessionURI                   *string `yaml:"uri,omitempty"`
 	SshKey                       *string `yaml:"sshKey,omitempty"`
@@ -656,8 +658,9 @@ func MergeProviders(def *Providers, ovr *Providers) Providers {
 // delete something.
 func MergeEphemeralConfig(def *EphemeralClusterConfig, ovr *EphemeralClusterConfig) EphemeralClusterConfig {
 	return EphemeralClusterConfig{
-		Name: iesp(def.Name, ovr.Name),
-		Node: MergeNode(&def.Node, &ovr.Node),
+		Name:     iesp(def.Name, ovr.Name),
+		Preserve: iebp(def.Preserve, ovr.Preserve, constants.EphemeralClusterPreserve),
+		Node:     MergeNode(&def.Node, &ovr.Node),
 	}
 }
 
@@ -706,6 +709,7 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		Providers:                MergeProviders(&def.Providers, &ovr.Providers),
 		WorkerNodes:              ieup(def.WorkerNodes, ovr.WorkerNodes),
 		ControlPlaneNodes:        ieup(def.ControlPlaneNodes, ovr.ControlPlaneNodes),
+		EphemeralConfig:          MergeEphemeralConfig(&def.EphemeralConfig, &ovr.EphemeralConfig),
 		Proxy:                    MergeProxy(&def.Proxy, &ovr.Proxy),
 		KubeAPIServerBindPort:    ieup(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
 		KubeAPIServerBindPortAlt: ieup(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
@@ -742,17 +746,18 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 // Precalculate Kubeversion above the return, feed that value into the right field
 func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 	clusterConfigToReturn := ClusterConfig{
-		WorkingDirectory:         cc.WorkingDirectory,
-		Name:                     cc.Name,
-		Provider:                 cc.Provider,
-		WorkerNodes:              cc.WorkerNodes,
-		ControlPlaneNodes:        cc.ControlPlaneNodes,
+		WorkingDirectory:         iesp(cc.WorkingDirectory, nil),
+		Name:                     iesp(cc.Name, nil),
+		Provider:                 iesp(cc.Provider, nil),
+		WorkerNodes:              ieup(cc.WorkerNodes, nil),
+		ControlPlaneNodes:        ieup(cc.ControlPlaneNodes, nil),
 		Providers:                MergeProviders(&c.Providers, &cc.Providers),
 		Proxy:                    MergeProxy(&c.Proxy, &cc.Proxy),
+		EphemeralConfig:          MergeEphemeralConfig(&c.EphemeralConfig, &cc.EphemeralConfig),
 		KubeAPIServerBindPort:    ieup(c.KubeAPIServerBindPort, cc.KubeAPIServerBindPort),
 		KubeAPIServerBindPortAlt: ieup(c.KubeAPIServerBindPortAlt, cc.KubeAPIServerBindPortAlt),
-		VirtualIp:                cc.VirtualIp,
-		LoadBalancer:             cc.LoadBalancer,
+		VirtualIp:                iesp(cc.VirtualIp, nil),
+		LoadBalancer:             iesp(cc.LoadBalancer, nil),
 		PodSubnet:                iesp(c.PodSubnet, cc.PodSubnet),
 		ServiceSubnet:            iesp(c.ServiceSubnet, cc.ServiceSubnet),
 		Registry:                 iesp(c.Registry, cc.Registry),
@@ -771,9 +776,9 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		SshPublicKeyPath:         iesp(c.SshPublicKeyPath, cc.SshPublicKeyPath),
 		SshPublicKey:             iesp(c.SshPublicKey, cc.SshPublicKey),
 		Password:                 iesp(c.Password, cc.Password),
-		CipherSuites:             cc.CipherSuites,
-		ClusterDefinitionInline:  cc.ClusterDefinitionInline,
-		ClusterDefinition:        cc.ClusterDefinition,
+		CipherSuites:             iesp(cc.CipherSuites, nil),
+		ClusterDefinitionInline:  iesp(cc.ClusterDefinitionInline, nil),
+		ClusterDefinition:        iesp(cc.ClusterDefinition, nil),
 		ExtraIgnition:            iesp(c.ExtraIgnition, cc.ExtraIgnition),
 		ExtraIgnitionInline:      iesp(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
 	}

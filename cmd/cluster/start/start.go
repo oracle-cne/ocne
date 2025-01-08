@@ -118,17 +118,21 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func populateConfigurationFromCommandLine(options *start.StartOptions) {
-	*options.ClusterConfig.Name = options.Name
-	*options.Config.KubeConfig = options.KubeConfigPath
-	*options.Config.Providers.Libvirt.SessionURI = options.SessionURI
-	*options.ClusterConfig.Provider = options.Provider
-	*options.Config.Providers.Libvirt.SshKey = options.SSHKey
-	*options.Config.BootVolumeContainerImage = options.BootVolumeContainerImage
-	*options.Config.AutoStartUI = options.AutoStartUI
-	*options.ClusterConfig.ControlPlaneNodes = options.ControlPlaneNodes
-	*options.ClusterConfig.WorkerNodes = options.WorkerNodes
-	*options.ClusterConfig.KubeVersion = options.KubeVersion
-	*options.ClusterConfig.VirtualIp = options.VirtualIp
-	*options.ClusterConfig.LoadBalancer = options.LoadBalancer
+	if options.Name != "" {
+		options.ClusterConfig.Name = &options.Name
+	}
+	if options.KubeConfigPath != "" {
+		options.Config.KubeConfig = &options.KubeConfigPath
+	}
+	options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
+	options.ClusterConfig.Provider = &options.Provider
+	options.Config.Providers.Libvirt.SshKey = &options.SSHKey
+	options.Config.BootVolumeContainerImage = &options.BootVolumeContainerImage
+	options.Config.AutoStartUI = &options.AutoStartUI
+	options.ClusterConfig.ControlPlaneNodes = &options.ControlPlaneNodes
+	options.ClusterConfig.WorkerNodes = &options.WorkerNodes
+	options.ClusterConfig.KubeVersion = &options.KubeVersion
+	options.ClusterConfig.VirtualIp = &options.VirtualIp
+	options.ClusterConfig.LoadBalancer = &options.LoadBalancer
 
 }

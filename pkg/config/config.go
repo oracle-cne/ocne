@@ -141,7 +141,7 @@ func GetDefaultConfig() (*types.Config, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	*defaultConfig.SshPublicKeyPath = sshKeyPath
+	defaultConfig.SshPublicKeyPath = &sshKeyPath
 
 	// Load in the defaults.  Prefer the path set by OCNE_DEFAULTS_FILE.
 	// If that is not set, use the default path.
