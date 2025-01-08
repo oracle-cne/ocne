@@ -14,6 +14,12 @@ import (
 
 )
 
+// These should be treated as constants
+var ClusterInfrastructureRef []string = []string{"spec", "infrastructureRef"}
+var ClusterControlPlaneRef []string = []string{"spec", "controlPlaneRef"}
+var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
+var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "spec", "infrastructureRef"}
+
 type GraphNode struct {
 	Object *unstructured.Unstructured
 	Children map[string]map[string]*GraphNode
@@ -161,7 +167,7 @@ func populateControlPlane(restConf *rest.Config, graph *ClusterGraph, controlPla
 		return fmt.Errorf("Only KubeadmControlPlanes are supported")
 	}
 
-	machineTemplate, err := getByRef(restConf, controlPlane.Object, "spec", "machineTemplate", "infrastructureRef")
+	machineTemplate, err := getByRef(restConf, controlPlane.Object, ControlPlaneMachineTemplateInfrastructureRef...)
 	if err != nil {
 		return err
 	}
@@ -184,7 +190,7 @@ func populateMachineDeployments(restConf *rest.Config, graph *ClusterGraph, clus
 		cluster.AddChild(md)
 		graph.MachineDeployments[md.Object.GetName()] = md
 
-		machineTemplate, err := getByRef(restConf, md.Object, "spec", "template", "spec", "infrastructureRef")
+		machineTemplate, err := getByRef(restConf, md.Object, MachineDeploymentInfrastructureRef...)
 		if err != nil {
 			return err
 		}
@@ -211,7 +217,7 @@ func GetClusterGraph(restConf *rest.Config, namespace string, name string) (*Clu
 	ret.AddToAll(cluster)
 
 	// The cluster has two references, an infrastructureRef and a controlPlaneRef
-	infraCluster, err := getByRef(restConf, cluster.Object, "spec", "infrastructureRef")
+	infraCluster, err := getByRef(restConf, cluster.Object, ClusterInfrastructureRef...)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +225,7 @@ func GetClusterGraph(restConf *rest.Config, namespace string, name string) (*Clu
 	cluster.AddChild(infraCluster)
 	ret.InfrastructureCluster = ret.AddToAll(infraCluster)
 
-	controlPlane, err := getByRef(restConf, cluster.Object, "spec", "controlPlaneRef")
+	controlPlane, err := getByRef(restConf, cluster.Object, ClusterControlPlaneRef...)
 	if err != nil {
 		return nil, err
 	}
