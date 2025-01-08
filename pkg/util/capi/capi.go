@@ -17,6 +17,7 @@ import (
 // These should be treated as constants
 var ClusterInfrastructureRef []string = []string{"spec", "infrastructureRef"}
 var ClusterControlPlaneRef []string = []string{"spec", "controlPlaneRef"}
+var ControlPlaneVersion []string = []string{"spec", "version"}
 var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
 var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "spec", "infrastructureRef"}
 

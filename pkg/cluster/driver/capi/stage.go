@@ -37,7 +37,6 @@ type OciImageData struct {
 var MachineTemplateImageId []string = []string{"spec", "template", "spec", "imageId"}
 var MachineTemplateShape []string = []string{"spec", "template", "spec", "shape"}
 
-
 func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error) {
 	imageId, found, err := unstructured.NestedString(mt.Object, MachineTemplateImageId...)
 	if !found {
@@ -303,9 +302,13 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("To update KubeadmControlPlane %s in %s, run: kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/version\",\"value\":\"%s\"},{\"op\":\"replace\",\"path\":\"/spec/machineTemplate/infrastructureRef/name\",\"value\":\"%s\"}]'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), kubeVersions.Kubernetes, umt.GetName())
+
+			patches := (&util.JsonPatches{}).Replace(capi.ControlPlaneVersion, kubeVersions.Kubernetes).Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), umt.GetName()).String()
+
+			fmt.Printf("To update KubeadmControlPlane %s in %s, run: kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		} else {
-			fmt.Printf("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/infrastructureRef/name\",\"value\":\"%s\"}]'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), umt.GetName())
+			patches := (&util.JsonPatches{}).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
+			fmt.Printf("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		}
 
 		return nil
