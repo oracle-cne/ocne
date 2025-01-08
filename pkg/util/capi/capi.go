@@ -20,6 +20,7 @@ var ClusterControlPlaneRef []string = []string{"spec", "controlPlaneRef"}
 var ControlPlaneVersion []string = []string{"spec", "version"}
 var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
 var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "spec", "infrastructureRef"}
+var MachineDeploymentVersion []string = []string{"spec", "template", "spec", "version"}
 
 type GraphNode struct {
 	Object *unstructured.Unstructured

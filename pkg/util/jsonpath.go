@@ -4,6 +4,7 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ type JsonPatches struct {
 func (jp *JsonPatches) AddPatch(op string, path []string, value string) *JsonPatches {
 	jp.Patches = append(jp.Patches, &JsonPatch{
 		Op: op,
-		Path: strings.Join(path, "/"),
+		Path: fmt.Sprintf("/%s", strings.Join(path, "/")),
 		Value: value,
 	})
 	return jp

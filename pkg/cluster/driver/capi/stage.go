@@ -209,6 +209,20 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 		return err
 	}
 
+	// Make sure that there is a control plane defined.  Also check to see
+	// if the minor version changed.
+	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
+	if err != nil {
+		return err
+	} else if !found {
+		return fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
+	}
+	minorVersionCmp, err := versions.CompareKubernetesVersions(currentKubeVersion, version)
+	if err != nil {
+		return err
+	}
+	minorVersionChanged := minorVersionCmp != 0
+
 	// Check the existing images for the machine templates and see if there
 	// are updates available.  If so, upload the new images and generate
 	// new machine templates that consume them.
@@ -226,6 +240,25 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	for id, img := range ociImages {
 		if img.HasUpdate {
 			log.Debugf("OCI image %s with architecture %s has an update", id, img.Arch)
+		} else if minorVersionChanged {
+			log.Debugf("Updating image OCID due to Kubernetes minor version change")
+			// If the minor version has changed, go get the latest
+			// image for the new minor version.
+			existingImg, found, err := oci.GetImage(*img.Image.DisplayName, version, img.Arch, *img.Image.CompartmentId)
+			if !found {
+				// In theory this is impossible because the
+				// check to see if a new image must be uploaded
+				// has already found one, but impossible things
+				// happen every day.
+				return fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
+			}
+			if err != nil {
+				return err
+			}
+
+			img.HasUpdate = true
+			img.NewId = *existingImg.Id
+			continue
 		} else {
 			log.Debugf("OCI image %s with architecture %s does not have an update", id, img.Arch)
 			continue
@@ -259,7 +292,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	for _, img := range ociImages {
 		log.Debugf("Creating template for %s", *img.Image.Id)
 		newId := img.NewId
-		if os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
+		if  os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
 			newId = *img.Image.Id
 		} else if !img.HasUpdate {
 			continue
@@ -307,7 +340,12 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 			fmt.Printf("To update KubeadmControlPlane %s in %s, run: kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		} else {
-			patches := (&util.JsonPatches{}).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
+			kubeVersions, err := versions.GetKubernetesVersions(version)
+			if err != nil {
+				return err
+			}
+
+			patches := (&util.JsonPatches{}).Replace(capi.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
 			fmt.Printf("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		}
 
