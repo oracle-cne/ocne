@@ -37,6 +37,23 @@ const (
 	createTokenStanzaFormatText = "%skubectl create token ui -n %s"
 )
 
+type StartOptions struct {
+	Config                   *types.Config
+	ClusterConfig            *types.ClusterConfig
+	KubeConfigPath           string
+	ControlPlaneNodes        uint16
+	WorkerNodes              uint16
+	SessionURI               string
+	SSHKey                   string
+	BootVolumeContainerImage string
+	Name                     string
+	Provider                 string
+	AutoStartUI              string
+	KubeVersion              string
+	VirtualIp                string
+	LoadBalancer             string
+}
+
 // Start starts a cluster based on the given configuration and returns the
 // canonical kubeconfig
 func Start(clusterConfig *types.ClusterConfig) (string, error) {

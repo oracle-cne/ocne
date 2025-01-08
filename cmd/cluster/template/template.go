@@ -49,13 +49,14 @@ func NewCmd() *cobra.Command {
 	cmdutil.SilenceUsage(cmd)
 
 	cmd.Flags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
-	cmd.Flags().StringVarP(opts.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, pkgconst.ProviderTypeOCI, constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&opts.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, pkgconst.ProviderTypeOCI, constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	return cmd
 }
 
 // RunCmd runs the "ocne cluster template" command
 func RunCmd(cmd *cobra.Command) error {
+	populateConfigurationFromCommandLine(&opts)
 	cc, err := cmdutil.GetFullConfig(&opts.Config, &opts.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
@@ -83,4 +84,8 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 	fmt.Println(tmpl)
 	return nil
+}
+
+func populateConfigurationFromCommandLine(options *template.TemplateOptions) {
+	*options.ClusterConfig.Provider = options.Provider
 }

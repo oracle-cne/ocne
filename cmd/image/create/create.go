@@ -15,6 +15,7 @@ import (
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
 )
 
 const (
@@ -107,4 +108,8 @@ func RunCmd(cmd *cobra.Command) error {
 	err = create.Create(cc, createOptions)
 
 	return err
+}
+
+func populateConfigurationFromCommandLine(options *create.CreateOptions) {
+	*options. = options.KubeConfig
 }

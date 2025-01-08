@@ -61,6 +61,9 @@ type CreateOptions struct {
 
 	// Destination
 	Destination string
+
+	// KubeConfig is the path to the KubeConfig file
+	KubeConfig string
 }
 
 type providerFuncs struct {

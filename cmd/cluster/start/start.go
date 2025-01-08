@@ -24,8 +24,10 @@ ocne cluster start --config ~/example-path/config-file --control-plane-nodes 2 -
 `
 )
 
-var config types.Config
-var clusterConfig types.ClusterConfig
+var options start.StartOptions = start.StartOptions{
+	Config:        &types.Config{},
+	ClusterConfig: &types.ClusterConfig{},
+}
 var clusterConfigPath string
 
 const (
@@ -58,19 +60,19 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
-	cmd.Flags().StringVarP(config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(&options.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
-	cmd.Flags().Uint16VarP(clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
-	cmd.Flags().Uint16VarP(clusterConfig.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
-	cmd.Flags().StringVarP(config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
-	cmd.Flags().StringVarP(config.Providers.Libvirt.SshKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
-	cmd.Flags().StringVarP(config.BootVolumeContainerImage, constants.FlagBootVolumeContainerImage, constants.FlagBootVolumeContainerImageShort, "", constants.FlagBootVolumeContainerImageHelp)
-	cmd.Flags().StringVarP(clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
-	cmd.Flags().StringVarP(clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
-	cmd.Flags().StringVarP(config.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "", constants.FlagAutoStartUIHelp)
-	cmd.Flags().StringVarP(clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
-	cmd.Flags().StringVar(clusterConfig.VirtualIp, flagVirtualIP, "", flagVirtualIPHelp)
-	cmd.Flags().StringVar(clusterConfig.LoadBalancer, flagLoadBalancer, "", flagLoadBalancerHelp)
+	cmd.Flags().Uint16VarP(&options.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
+	cmd.Flags().Uint16VarP(&options.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
+	cmd.Flags().StringVarP(&options.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
+	cmd.Flags().StringVarP(&options.SSHKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
+	cmd.Flags().StringVarP(&options.BootVolumeContainerImage, constants.FlagBootVolumeContainerImage, constants.FlagBootVolumeContainerImageShort, "", constants.FlagBootVolumeContainerImageHelp)
+	cmd.Flags().StringVarP(&options.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
+	cmd.Flags().StringVarP(&options.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&options.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "", constants.FlagAutoStartUIHelp)
+	cmd.Flags().StringVarP(&options.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
+	cmd.Flags().StringVar(&options.VirtualIp, flagVirtualIP, "", flagVirtualIPHelp)
+	cmd.Flags().StringVar(&options.LoadBalancer, flagLoadBalancer, "", flagLoadBalancerHelp)
 	cmd.MarkFlagsMutuallyExclusive(flagVirtualIP, flagLoadBalancer)
 
 	return cmd
@@ -78,7 +80,8 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne cluster start" command
 func RunCmd(cmd *cobra.Command) error {
-	cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	populateConfigurationFromCommandLine(&options)
+	cc, err := cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
@@ -112,4 +115,20 @@ func RunCmd(cmd *cobra.Command) error {
 	_, err = start.Start(cc)
 
 	return err
+}
+
+func populateConfigurationFromCommandLine(options *start.StartOptions) {
+	*options.ClusterConfig.Name = options.Name
+	*options.Config.KubeConfig = options.KubeConfigPath
+	*options.Config.Providers.Libvirt.SessionURI = options.SessionURI
+	*options.ClusterConfig.Provider = options.Provider
+	*options.Config.Providers.Libvirt.SshKey = options.SSHKey
+	*options.Config.BootVolumeContainerImage = options.BootVolumeContainerImage
+	*options.Config.AutoStartUI = options.AutoStartUI
+	*options.ClusterConfig.ControlPlaneNodes = options.ControlPlaneNodes
+	*options.ClusterConfig.WorkerNodes = options.WorkerNodes
+	*options.ClusterConfig.KubeVersion = options.KubeVersion
+	*options.ClusterConfig.VirtualIp = options.VirtualIp
+	*options.ClusterConfig.LoadBalancer = options.LoadBalancer
+
 }

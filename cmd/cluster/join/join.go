@@ -86,7 +86,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne cluster join" command
 func RunCmd(cmd *cobra.Command) error {
-	if err := validateOptions(&options, cmd); err != nil {
+	if err := validateOptions(&options); err != nil {
 		return err
 	}
 	clusterCache, err := cache.GetCache()
@@ -146,7 +146,7 @@ func RunCmd(cmd *cobra.Command) error {
 	return cmdjoin.Join(&options)
 }
 
-func validateOptions(options *cmdjoin.JoinOptions, cmd *cobra.Command) error {
+func validateOptions(options *cmdjoin.JoinOptions) error {
 	// This is a workaround for using the Cobra CLI to populate a structure that has fields that are pointers
 	*options.ClusterConfig.Provider = options.Provider
 

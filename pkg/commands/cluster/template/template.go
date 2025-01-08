@@ -13,6 +13,7 @@ type TemplateOptions struct {
 	Config types.Config
 	// ClusterConfig is the cluster configuration
 	ClusterConfig types.ClusterConfig
+	Provider      string
 }
 
 func Template(opt TemplateOptions) (string, error) {

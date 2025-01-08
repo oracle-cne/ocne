@@ -10,6 +10,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type DeleteOptions struct {
+	Config         *types.Config
+	ClusterConfig  *types.ClusterConfig
+	KubeConfigPath string
+	Provider       string
+	Name           string
+	SessionURI     string
+}
+
 func Delete(clusterConfig *types.ClusterConfig) error {
 
 	drv, err := driver.CreateDriver(clusterConfig)
