@@ -60,10 +60,10 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 		config = string(yamlValues)
 	}
 	// This code block is designed to protect the case from when a config from is not specified, passing in the empty string instead
-	emptyConfigFrom := ""
-	if app.Application.ConfigFrom == nil {
-		app.Application.ConfigFrom = &emptyConfigFrom
-	}
+	//	emptyConfigFrom := ""
+	//	if app.Application.ConfigFrom == nil {
+	//		app.Application.ConfigFrom = &emptyConfigFrom
+	//	}
 	opt := application.InstallOptions{
 		Catalog:        catalog,
 		KubeConfigPath: app.kubeConfigPath,
