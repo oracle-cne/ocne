@@ -124,15 +124,35 @@ func populateConfigurationFromCommandLine(options *start.StartOptions) {
 	if options.KubeConfigPath != "" {
 		options.Config.KubeConfig = &options.KubeConfigPath
 	}
-	options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
-	options.ClusterConfig.Provider = &options.Provider
-	options.Config.Providers.Libvirt.SshKey = &options.SSHKey
-	options.Config.BootVolumeContainerImage = &options.BootVolumeContainerImage
-	options.Config.AutoStartUI = &options.AutoStartUI
-	options.ClusterConfig.ControlPlaneNodes = &options.ControlPlaneNodes
-	options.ClusterConfig.WorkerNodes = &options.WorkerNodes
-	options.ClusterConfig.KubeVersion = &options.KubeVersion
-	options.ClusterConfig.VirtualIp = &options.VirtualIp
-	options.ClusterConfig.LoadBalancer = &options.LoadBalancer
+	if options.SessionURI != "" {
+		options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
+	}
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
+	if options.SSHKey != "" {
+		options.Config.Providers.Libvirt.SshKey = &options.SSHKey
+	}
+	if options.BootVolumeContainerImage != "" {
+		options.Config.BootVolumeContainerImage = &options.BootVolumeContainerImage
+	}
+	if options.AutoStartUI != "" {
+		options.Config.AutoStartUI = &options.AutoStartUI
+	}
+	if options.ControlPlaneNodes != uint16(0) {
+		options.ClusterConfig.ControlPlaneNodes = &options.ControlPlaneNodes
+	}
+	if options.WorkerNodes != uint16(0) {
+		options.ClusterConfig.WorkerNodes = &options.WorkerNodes
+	}
+	if options.KubeVersion != "" {
+		options.ClusterConfig.KubeVersion = &options.KubeVersion
+	}
+	if options.VirtualIp != "" {
+		options.ClusterConfig.VirtualIp = &options.VirtualIp
+	}
+	if options.LoadBalancer != "" {
+		options.ClusterConfig.LoadBalancer = &options.LoadBalancer
+	}
 
 }

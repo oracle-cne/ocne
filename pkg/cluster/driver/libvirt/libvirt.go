@@ -804,7 +804,7 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 	if existingClusterConfig != nil {
 		// Make sure the sessions are the same
 		if ld.ClusterConfig.Providers.Libvirt.SessionURI != existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI {
-			return false, false, fmt.Errorf("A cluster named %s already exists for the libvirt provider but has session URI %s", ld.ClusterConfig.Name, *existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI)
+			return false, false, fmt.Errorf("A cluster named %s already exists for the libvirt provider but has session URI %s", *ld.ClusterConfig.Name, *existingClusterConfig.ClusterConfig.Providers.Libvirt.SessionURI)
 		}
 	}
 

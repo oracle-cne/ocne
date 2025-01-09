@@ -781,6 +781,9 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		ClusterDefinition:        iesp(cc.ClusterDefinition, nil),
 		ExtraIgnition:            iesp(c.ExtraIgnition, cc.ExtraIgnition),
 		ExtraIgnitionInline:      iesp(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
+		Quiet:                    iebp(c.Quiet, cc.Quiet, false),
+		AutoStartUI:              iesp(c.AutoStartUI, cc.AutoStartUI),
+		KubeConfig:               iesp(c.KubeConfig, cc.KubeConfig),
 	}
 	return clusterConfigToReturn
 }
