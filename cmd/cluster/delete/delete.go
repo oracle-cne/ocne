@@ -110,9 +110,17 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func populateConfigurationFromCommandLine(options *delete2.DeleteOptions) {
-	options.ClusterConfig.Name = &options.Name
-	options.Config.KubeConfig = &options.KubeConfigPath
-	options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
-	options.ClusterConfig.Provider = &options.Provider
+	if options.Name != "" {
+		options.ClusterConfig.Name = &options.Name
+	}
+	if options.KubeConfigPath != "" {
+		options.Config.KubeConfig = &options.KubeConfigPath
+	}
+	if options.SessionURI != "" {
+		options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
+	}
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
 
 }
