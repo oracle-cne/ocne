@@ -81,7 +81,10 @@ func RunCmd(cmd *cobra.Command) error {
 		clusterName = cc.Name
 	}
 
-	cached := clusterCache.Get(*clusterName)
+	var cached *cache.Cluster
+	if clusterName != nil {
+		cached = clusterCache.Get(*clusterName)
+	}
 
 	// If the cluster does not exist, fall back to the CLI options.
 	// This is a bail-out to make sure all the needful can be done in

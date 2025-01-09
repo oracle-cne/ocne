@@ -738,6 +738,9 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		ClusterDefinition:        iesp(def.ClusterDefinition, ovr.ClusterDefinition),
 		ExtraIgnition:            iesp(def.ExtraIgnition, ovr.ExtraIgnition),
 		ExtraIgnitionInline:      iesp(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
+		Quiet:                    iebp(def.Quiet, ovr.Quiet, false),
+		AutoStartUI:              iesp(def.AutoStartUI, ovr.AutoStartUI),
+		KubeConfig:               iesp(def.KubeConfig, ovr.KubeConfig),
 	}
 }
 
@@ -786,11 +789,6 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		KubeConfig:               iesp(c.KubeConfig, cc.KubeConfig),
 	}
 	return clusterConfigToReturn
-}
-
-// CopyConfig returns a deep copy of a Config
-func CopyConfig(c *Config) Config {
-	return MergeConfig(&Config{}, c)
 }
 
 // CopyClusterConfig returns a deep copy of a ClusterConfig

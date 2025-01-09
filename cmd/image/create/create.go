@@ -112,6 +112,10 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func populateConfigurationFromCommandLine(options *create.CreateOptions) {
-	options.Config.KubeConfig = &options.KubeConfig
-	options.ClusterConfig.KubeVersion = &options.KubeVersion
+	if options.KubeConfig != "" {
+		options.Config.KubeConfig = &options.KubeConfig
+	}
+	if options.KubeVersion != "" {
+		options.ClusterConfig.KubeVersion = &options.KubeVersion
+	}
 }

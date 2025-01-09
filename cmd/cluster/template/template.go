@@ -87,5 +87,7 @@ func RunCmd(cmd *cobra.Command) error {
 }
 
 func populateConfigurationFromCommandLine(options *template.TemplateOptions) {
-	options.ClusterConfig.Provider = &options.Provider
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
 }
