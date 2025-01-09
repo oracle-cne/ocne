@@ -67,6 +67,12 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 	//   does not exist
 	// - The minor version is not changing and the container image is
 	//   newer than the OCI image
+	//
+	// An image can be forcibly created and uploaded to make it easier
+	// to test the upload process.  This logic is reliant on existing
+	// resources and timestamps that are difficult to control.  Instead of
+	// forcing testers to design complex harnesses, this environment
+	// variable makes it easy to simulate an available update.
 	if os.Getenv("OCNE_OCI_STAGE_FORCE_UPLOAD") != "" {
 		return true, nil
 	}
@@ -305,6 +311,13 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 	for _, img := range ociImages {
 		log.Debugf("Creating template for %s", *img.Image.Id)
 		newId := img.NewId
+
+		// Template updates can be forced for testing purposes.
+		// This is useful because the templates are generated only
+		// if there a reasonable update to perform.  This calculation
+		// is made by looking at resources, timestamps, and other
+		// durable data that is difficult to set up within the
+		// context of a test harness.
 		if  os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
 			newId = *img.Image.Id
 		} else if !img.HasUpdate {
