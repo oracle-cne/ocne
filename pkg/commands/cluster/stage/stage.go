@@ -71,9 +71,13 @@ func Stage(o StageOptions) error {
 			return err
 		}
 
-		err = cd.Stage(o.KubeVersion)
+		keepGoing, err := cd.Stage(o.KubeVersion)
 		if err != nil {
 			return err
+		}
+
+		if !keepGoing {
+			return nil
 		}
 	}
 

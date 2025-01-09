@@ -78,6 +78,6 @@ func (nd *NoneDriver) DefaultCNIInterfaces() []string {
 }
 
 // Stage is a no-op
-func (nd *NoneDriver) Stage(version string) error {
-	return nil
+func (nd *NoneDriver) Stage(version string) (bool, error) {
+	return true, nil
 }

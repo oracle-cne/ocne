@@ -179,16 +179,16 @@ func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) 
 	return nil
 }
 
-func (cad *ClusterApiDriver) Stage(version string) error {
+func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if cad.FromTemplate {
 		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		cad.ClusterResources = cdi
@@ -196,7 +196,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 	clusterObj, err := cad.getClusterObject()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Change any cluster resource state that may be required to move
@@ -206,20 +206,20 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
 	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Make sure that there is a control plane defined.  Also check to see
 	// if the minor version changed.
 	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
 	if err != nil {
-		return err
+		return false, err
 	} else if !found {
-		return fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
+		return false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
 	}
 	minorVersionCmp, err := versions.CompareKubernetesVersions(currentKubeVersion, version)
 	if err != nil {
-		return err
+		return false, err
 	}
 	minorVersionChanged := minorVersionCmp != 0
 
@@ -228,12 +228,12 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 	// new machine templates that consume them.
 	ociImages, err := graphToImages(graph)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	imageImports := map[string]string{}
@@ -250,10 +250,10 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 				// check to see if a new image must be uploaded
 				// has already found one, but impossible things
 				// happen every day.
-				return fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
+				return false, fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
 			}
 			if err != nil {
-				return err
+				return false, err
 			}
 
 			img.HasUpdate = true
@@ -266,7 +266,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version, true)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		imageImports[img.WorkRequestId] = fmt.Sprintf("Importing updated image for %s", *img.Image.DisplayName)
@@ -274,7 +274,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 	err = oci.WaitForWorkRequests(imageImports)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	for _, img := range ociImages {
@@ -282,7 +282,7 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch)
 
 			if err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
@@ -305,12 +305,12 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "imageId")
 			if err != nil {
-				return err
+				return false, err
 			}
 
 			err = k8s.CreateResource(restConfig, mt)
 			if err != nil {
-				return err
+				return false, err
 			}
 
 			updatedMts[mtNode] = mt
@@ -326,7 +326,6 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 		var umt *unstructured.Unstructured
 		umt, ok := updatedMts[mtNode]
 		if !ok {
-
 			return nil
 		}
 
@@ -351,6 +350,9 @@ func (cad *ClusterApiDriver) Stage(version string) error {
 
 		return nil
 	}, updatedMts)
+	if err != nil {
+		return false, nil
+	}
 
-	return nil
+	return false, nil
 }

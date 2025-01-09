@@ -241,6 +241,6 @@ func (Cad *OlvmDriver) DefaultCNIInterfaces() []string {
 	return nil
 }
 
-func (cad *OlvmDriver) Stage(version string) error {
-	return fmt.Errorf("Implement me")
+func (cad *OlvmDriver) Stage(version string) (bool, error) {
+	return false, fmt.Errorf("Implement me")
 }

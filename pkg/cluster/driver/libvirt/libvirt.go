@@ -933,6 +933,6 @@ func (ld *LibvirtDriver) DefaultCNIInterfaces() []string {
 }
 
 // Stage is a no-op
-func (ld *LibvirtDriver) Stage(version string) error {
-	return nil
+func (ld *LibvirtDriver) Stage(version string) (bool, error) {
+	return true, nil
 }
