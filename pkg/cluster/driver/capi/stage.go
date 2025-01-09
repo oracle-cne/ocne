@@ -350,7 +350,7 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 
 			patches := (&util.JsonPatches{}).Replace(capi.ControlPlaneVersion, kubeVersions.Kubernetes).Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), umt.GetName()).String()
 
-			fmt.Printf("To update KubeadmControlPlane %s in %s, run: kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
+			fmt.Printf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		} else {
 			kubeVersions, err := versions.GetKubernetesVersions(version)
 			if err != nil {
@@ -358,7 +358,7 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 			}
 
 			patches := (&util.JsonPatches{}).Replace(capi.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
-			fmt.Printf("To update MachineDeployment %s in %s, run: kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
+			fmt.Printf("To update MachineDeployment %s in %s, run:\n    kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
 		}
 
 		return nil
