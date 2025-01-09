@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -65,8 +64,8 @@ func Stage(o StageOptions) error {
 		return errors.New("the kubernetes version is unsupported. Please choose a supported version of Kubernetes to update to")
 	}
 
-	var restConfig *rest.Config
 	var doNodes bool
+	var helpStanza string
 
 	// If a cluster config is given, do any provider-specific staging
 	if o.ClusterConfig != nil {
@@ -75,19 +74,23 @@ func Stage(o StageOptions) error {
 			return err
 		}
 
-		restConfig, doNodes, err = cd.Stage(o.KubeVersion)
+		kcfgPath, helpStanzaLocal, doNodesLocal, err := cd.Stage(o.KubeVersion)
 		if err != nil {
 			return err
 		}
+		doNodes = doNodesLocal
+		helpStanza = helpStanzaLocal
 
-	} else {
-		restConfig, err = client.GetKubeConfig(o.KubeConfigPath)
-		if err != nil {
-			return err
-		}
+		o.KubeConfigPath = kcfgPath
+	}
+
+	restConfig, err := client.GetKubeConfig(o.KubeConfigPath)
+	if err != nil {
+		return err
 	}
 
 	if !doNodes {
+		fmt.Println(helpStanza)
 		return nil
 	}
 
@@ -158,7 +161,12 @@ func Stage(o StageOptions) error {
 		return nil, true, nil
 	}, nil, 60*time.Second)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(helpStanza)
+	return nil
 }
 
 // StageNode stages a cluster update

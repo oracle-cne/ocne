@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"k8s.io/client-go/rest"
-
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -380,6 +378,6 @@ func (bd *ByoDriver) validateClusterConfig() error {
 }
 
 // Stage is a no-op
-func (bd *ByoDriver) Stage(version string) (*rest.Config, bool, error) {
-	return nil, true, nil
+func (bd *ByoDriver) Stage(version string) (string, string, bool, error) {
+	return "", "", true, nil
 }

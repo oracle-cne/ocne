@@ -6,11 +6,12 @@ package capi
 import (
 	"context"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"os"
+	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -22,7 +23,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/rest"
 )
 
 type OciImageData struct {
@@ -200,16 +200,16 @@ func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) 
 // necessary, getting the OCIDs of the latest OCI custom images, and then
 // creating new OCIMachineTemplates that use them.  Finally, some instructions
 // are printed that tell a user how to apply the staged update to their cluster.
-func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
+func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error) {
 	restConfig, clientIface, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	if cad.FromTemplate {
 		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
-			return nil, false, err
+			return "", "", false, err
 		}
 
 		cad.ClusterResources = cdi
@@ -217,27 +217,27 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 
 	clusterObj, err := cad.getClusterObject()
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	// Update OCIMachineDeployments to use the new images.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
 	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	// Make sure that there is a control plane defined.  Also check to see
 	// if the minor version changed.
 	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	} else if !found {
-		return nil, false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
+		return "", "", false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
 	}
 	minorVersionCmp, err := versions.CompareKubernetesVersions(currentKubeVersion, version)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 	minorVersionChanged := minorVersionCmp != 0
 
@@ -246,12 +246,12 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 	// new machine templates that consume them.
 	ociImages, err := graphToImages(graph)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	imageImports := map[string]string{}
@@ -268,10 +268,10 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 				// check to see if a new image must be uploaded
 				// has already found one, but impossible things
 				// happen every day.
-				return nil, false, fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
+				return "", "", false, fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
 			}
 			if err != nil {
-				return nil, false, err
+				return "", "", false, err
 			}
 
 			img.HasUpdate = true
@@ -284,7 +284,7 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 
 		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version, true)
 		if err != nil {
-			return nil, false, err
+			return "", "", false, err
 		}
 
 		imageImports[img.WorkRequestId] = fmt.Sprintf("Importing updated image for %s", *img.Image.DisplayName)
@@ -292,7 +292,7 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 
 	err = oci.WaitForWorkRequests(imageImports)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	for _, img := range ociImages {
@@ -300,7 +300,7 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch)
 
 			if err != nil {
-				return nil, false, err
+				return "", "", false, err
 			}
 		}
 	}
@@ -332,12 +332,12 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 
 			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "imageId")
 			if err != nil {
-				return nil, false, err
+				return "", "", false, err
 			}
 
 			err = k8s.CreateResource(restConfig, mt)
 			if err != nil {
-				return nil, false, err
+				return "", "", false, err
 			}
 
 			updatedMts[mtNode] = mt
@@ -347,6 +347,7 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 	// Spit out some state information and instructions.  The new machine
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
+	helpMessages := []string{}
 	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
 		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
 
@@ -364,7 +365,7 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 
 			patches := (&util.JsonPatches{}).Replace(capi.ControlPlaneVersion, kubeVersions.Kubernetes).Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), umt.GetName()).String()
 
-			fmt.Printf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
+			helpMessages = append(helpMessages, fmt.Sprintf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		} else {
 			kubeVersions, err := versions.GetKubernetesVersions(version)
 			if err != nil {
@@ -372,22 +373,29 @@ func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
 			}
 
 			patches := (&util.JsonPatches{}).Replace(capi.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
-			fmt.Printf("To update MachineDeployment %s in %s, run:\n    kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches)
+			helpMessages = append(helpMessages, fmt.Sprintf("To update MachineDeployment %s in %s, run:\n    kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		}
 
 		return nil
 	}, updatedMts)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
 	}
 
 	// Hand back the kubeconfig for the managed cluster.
 	clusterName, _ := clusterObj.GetLabels()[ClusterNameLabel]
 	kcfg, err := cad.waitForKubeconfig(clientIface, clusterName)
-	restConfig, err = client.GetKubeConfigFromString(kcfg)
+	kcfgPath, err := util.InMemoryFile(fmt.Sprintf("kcfg.%s", clusterName))
+
+	f, err := os.OpenFile(kcfgPath, os.O_RDWR, 0)
 	if err != nil {
-		return nil, false, err
+		return "", "", false, err
+	}
+	_, err = f.Write([]byte(kcfg))
+	f.Close()
+	if err != nil {
+		return "", "", false, err
 	}
 
-	return restConfig, false, nil
+	return kcfgPath, strings.Join(helpMessages, "\n"), true, nil
 }

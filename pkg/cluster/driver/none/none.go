@@ -5,8 +5,6 @@ package none
 import (
 	"fmt"
 
-	"k8s.io/client-go/rest"
-
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -80,6 +78,6 @@ func (nd *NoneDriver) DefaultCNIInterfaces() []string {
 }
 
 // Stage is a no-op
-func (nd *NoneDriver) Stage(version string) (*rest.Config, bool, error) {
-	return nil, true, nil
+func (nd *NoneDriver) Stage(version string) (string, string, bool, error) {
+	return "", "", true, nil
 }
