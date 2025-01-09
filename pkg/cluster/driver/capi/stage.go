@@ -37,6 +37,8 @@ type OciImageData struct {
 var MachineTemplateImageId []string = []string{"spec", "template", "spec", "imageId"}
 var MachineTemplateShape []string = []string{"spec", "template", "spec", "shape"}
 
+// imageFromMachineTemplate gets an OCI Image object from an OCIMachineTemplate
+// by gathering the Image ID from the template and then looking up the image.
 func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error) {
 	imageId, found, err := unstructured.NestedString(mt.Object, MachineTemplateImageId...)
 	if !found {
@@ -55,6 +57,8 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error
 	return img, nil
 }
 
+// doUpdate calculates if there is reason to upload a new OCI custom image
+// for a given existing image.
 func doUpdate(img *core.Image, arch string, version string, bvImage string) (bool, error) {
 
 	// Update the image if:
@@ -129,6 +133,9 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 	return false, nil
 }
 
+// graphToImages scrapes the graph of CAPI resources and extracts the
+// OCI images from the OCIMachineTemplates.  The return value maps the OCID
+// of those images to a collection of data about them.
 func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
@@ -168,6 +175,7 @@ func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 	return ret, err
 }
 
+// findUpdates checks to see if an update is available for a set of images.
 func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) error {
 	for _, img := range imgs {
 		var err error
@@ -179,6 +187,12 @@ func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) 
 	return nil
 }
 
+// Stage looks at the resources for an OCI CAPI cluster and generates as
+// much of the material necessary to update a cluster from one version to
+// another.  This typically includes uploading new OCI custom images if
+// necessary, getting the OCIDs of the latest OCI custom images, and then
+// creating new OCIMachineTemplates that use them.  Finally, some instructions
+// are printed that tell a user how to apply the staged update to their cluster.
 func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
@@ -198,9 +212,6 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	// Change any cluster resource state that may be required to move
-	// from one version to the next.
 
 	// Update OCIMachineDeployments to use the new images.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
@@ -287,7 +298,9 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 		}
 	}
 
-	// Make new machine templates
+	// Make new machine templates.  This is done by creating a new
+	// OCIMachineTemplate for each existing one that uses an existing
+	// OCI custom image.
 	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
 	for _, img := range ociImages {
 		log.Debugf("Creating template for %s", *img.Image.Id)
