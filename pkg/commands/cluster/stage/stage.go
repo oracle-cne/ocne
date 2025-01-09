@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -64,6 +65,9 @@ func Stage(o StageOptions) error {
 		return errors.New("the kubernetes version is unsupported. Please choose a supported version of Kubernetes to update to")
 	}
 
+	var restConfig *rest.Config
+	var doNodes bool
+
 	// If a cluster config is given, do any provider-specific staging
 	if o.ClusterConfig != nil {
 		cd, err := driver.CreateDriver(o.Config, o.ClusterConfig)
@@ -71,18 +75,24 @@ func Stage(o StageOptions) error {
 			return err
 		}
 
-		keepGoing, err := cd.Stage(o.KubeVersion)
+		restConfig, doNodes, err = cd.Stage(o.KubeVersion)
 		if err != nil {
 			return err
 		}
 
-		if !keepGoing {
-			return nil
+	} else {
+		restConfig, err = client.GetKubeConfig(o.KubeConfigPath)
+		if err != nil {
+			return err
 		}
 	}
 
+	if !doNodes {
+		return nil
+	}
+
 	// get a kubernetes client
-	restConfig, KClient, err := client.GetKubeClient(o.KubeConfigPath)
+	KClient, err := client.GetGoClient(restConfig)
 	if err != nil {
 		return err
 	}

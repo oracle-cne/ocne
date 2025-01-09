@@ -22,6 +22,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/rest"
 )
 
 type OciImageData struct {
@@ -199,16 +200,16 @@ func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) 
 // necessary, getting the OCIDs of the latest OCI custom images, and then
 // creating new OCIMachineTemplates that use them.  Finally, some instructions
 // are printed that tell a user how to apply the staged update to their cluster.
-func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
-	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+func (cad *ClusterApiDriver) Stage(version string) (*rest.Config, bool, error) {
+	restConfig, clientIface, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	if cad.FromTemplate {
 		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
 		if err != nil {
-			return false, err
+			return nil, false, err
 		}
 
 		cad.ClusterResources = cdi
@@ -216,27 +217,27 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 
 	clusterObj, err := cad.getClusterObject()
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	// Update OCIMachineDeployments to use the new images.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
 	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	// Make sure that there is a control plane defined.  Also check to see
 	// if the minor version changed.
 	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	} else if !found {
-		return false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
+		return nil, false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
 	}
 	minorVersionCmp, err := versions.CompareKubernetesVersions(currentKubeVersion, version)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 	minorVersionChanged := minorVersionCmp != 0
 
@@ -245,12 +246,12 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 	// new machine templates that consume them.
 	ociImages, err := graphToImages(graph)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	imageImports := map[string]string{}
@@ -267,10 +268,10 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 				// check to see if a new image must be uploaded
 				// has already found one, but impossible things
 				// happen every day.
-				return false, fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
+				return nil, false, fmt.Errorf("Could not find latest OCI image for Kubernetes version %s and architecture %s", version, img.Arch)
 			}
 			if err != nil {
-				return false, err
+				return nil, false, err
 			}
 
 			img.HasUpdate = true
@@ -283,7 +284,7 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 
 		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version, true)
 		if err != nil {
-			return false, err
+			return nil, false, err
 		}
 
 		imageImports[img.WorkRequestId] = fmt.Sprintf("Importing updated image for %s", *img.Image.DisplayName)
@@ -291,7 +292,7 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 
 	err = oci.WaitForWorkRequests(imageImports)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	for _, img := range ociImages {
@@ -299,7 +300,7 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch)
 
 			if err != nil {
-				return false, err
+				return nil, false, err
 			}
 		}
 	}
@@ -331,12 +332,12 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 
 			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "imageId")
 			if err != nil {
-				return false, err
+				return nil, false, err
 			}
 
 			err = k8s.CreateResource(restConfig, mt)
 			if err != nil {
-				return false, err
+				return nil, false, err
 			}
 
 			updatedMts[mtNode] = mt
@@ -377,8 +378,16 @@ func (cad *ClusterApiDriver) Stage(version string) (bool, error) {
 		return nil
 	}, updatedMts)
 	if err != nil {
-		return false, nil
+		return nil, false, err
 	}
 
-	return false, nil
+	// Hand back the kubeconfig for the managed cluster.
+	clusterName, _ := clusterObj.GetLabels()[ClusterNameLabel]
+	kcfg, err := cad.waitForKubeconfig(clientIface, clusterName)
+	restConfig, err = client.GetKubeConfigFromString(kcfg)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return restConfig, false, nil
 }

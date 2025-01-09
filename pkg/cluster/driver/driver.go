@@ -6,6 +6,8 @@ package driver
 import (
 	"fmt"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/oracle-cne/ocne/pkg/config/types"
 )
 
@@ -20,7 +22,7 @@ type ClusterDriver interface {
 	GetKubeAPIServerAddress() string
 	PostInstallHelpStanza() string
 	DefaultCNIInterfaces() []string
-	Stage(string) (bool, error)
+	Stage(string) (*rest.Config, bool, error)
 }
 
 type DriverCreateFunc func(*types.Config, *types.ClusterConfig) (ClusterDriver, error)

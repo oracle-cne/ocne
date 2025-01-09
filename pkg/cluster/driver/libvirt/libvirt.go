@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/oracle-cne/ocne/pkg/certificate"
@@ -933,6 +935,6 @@ func (ld *LibvirtDriver) DefaultCNIInterfaces() []string {
 }
 
 // Stage is a no-op
-func (ld *LibvirtDriver) Stage(version string) (bool, error) {
-	return true, nil
+func (ld *LibvirtDriver) Stage(version string) (*rest.Config, bool, error) {
+	return nil, true, nil
 }
