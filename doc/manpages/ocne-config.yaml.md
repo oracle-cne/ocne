@@ -113,12 +113,12 @@ clusterDefinitionInline: |
   somekey: someval
   someotherkey: someotherval
   
-# This field specifies the password set for the ocne user.
+# This field specifies the password set for the "ocne" user.
 # This configuration is applied through ignition. Certain providers
 # require an ignition file to be passed in with the desired password
-# specified to enable log in. The ocne user is useful for obtaining the 
+# specified to enable log in. The "ocne" user is useful for obtaining the 
 # kubeconfig of a successful OCK instance and to access the rescue shell.
-# The rescue shell is only available when OCNE fails to start
+# The rescue shell is only available when Oracle Cloud Native Environment fails to start
 # properly on that instance. The password hash must be generated
 # using SHA512. 
 password: <some-password-hash>
