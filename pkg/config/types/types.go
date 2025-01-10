@@ -251,29 +251,9 @@ type ImageInfo struct {
 	Digest    string
 }
 
-// ies is short for "If Else String".  If the second argument is
-// non-empty, it is returned.  Otherwise, the first argument
-// is returned.
-func ies(i string, e string) string {
-	if e != "" {
-		return e
-	}
-	return i
-}
-
-// ieu is short for "If Else Uint".  If the second argument is
-// non-zero, it is returned.  Otherwise, the first argument
-// is returned.
-func ieu(i uint16, e uint16) uint16 {
-	if e != 0 {
-		return e
-	}
-	return i
-}
-
-// ieu is short for "If Else Uint pointer".  If the second argument is
-// non-zero, it is returned.  Otherwise, the first argument
-// is returned.
+// ieup is short for "If Else Uint pointer". If the second argument is
+// non-zero, it is returned. Otherwise, the first argument
+// is returned. If both arguments are nil, a pointer to the value of 0 is returned.
 func ieup(i *uint16, e *uint16) *uint16 {
 	returnVal := uint16(0)
 	if e != nil {
@@ -284,19 +264,25 @@ func ieup(i *uint16, e *uint16) *uint16 {
 	return &returnVal
 }
 
-// ieu is short for "If Else Int".  If the second argument is
-// non-zero, it is returned.  Otherwise, the first argument
-// is returned.
-func iei(i int, e int) int {
-	if e != 0 {
-		return e
+// ieupn is short for "If Else Uint pointer nil". If one
+// // the second value is not nil, a pointer to a copy of its value
+// // is returned.  If the first argument is not nil but the second
+// // one is, then a pointer to a copy of the first argument is
+// // returned.  If both are nil, nil is returned.
+func ieupn(i *uint16, e *uint16) *uint16 {
+	returnVal := uint16(0)
+	if e != nil {
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
 	}
-	return i
+	return &returnVal
 }
 
-// ieip is short for "If Else Int Pointer".  If one of the values
+// ieip is short for "If Else Int Pointer". If one of the values
 // // is non-nil but the other is nil, the non-nil one is returned.
-// is returned.
+// is returned. Otherwise, the value of the second argument is returned.
+// If both are nil, zero is returned
 func ieip(i *int, e *int) *int {
 	returnVal := int(0)
 	if e != nil {
@@ -307,9 +293,24 @@ func ieip(i *int, e *int) *int {
 	return &returnVal
 }
 
-// iebp is short for "If Else Bool Pointer".  If one of the values
+// ieipn is short for "If Else Int Pointer nil". If one
+// // the second value is not nil, a pointer to a copy of its value
+// // is returned.  If the first argument is not nil but the second
+// // one is, then a pointer to a copy of the first argument is
+// // returned.  If both are nil, nil is returned.
+func ieipn(i *int, e *int) *int {
+	returnVal := int(0)
+	if e != nil {
+		returnVal = *e
+	} else if i != nil {
+		returnVal = *i
+	}
+	return &returnVal
+}
+
+// iebp is short for "If Else Bool Pointer". If one of the values
 // is non-nil but the other is nil, the non-nil one is returned.
-// Otherwise, the value of the second argument is returned.
+// Otherwise, the value of the default argument is returned.
 func iebp(i *bool, e *bool, def bool) *bool {
 	returnVal := def
 	if e != nil {
@@ -318,6 +319,22 @@ func iebp(i *bool, e *bool, def bool) *bool {
 		returnVal = *i
 	}
 	return &returnVal
+}
+
+// iebpn is short for "If Else Bool Pointer". If one
+// // the second value is not nil, a pointer to a copy of its value
+// // is returned.  If the first argument is not nil but the second
+// // one is, then a pointer to a copy of the first argument is
+// // returned.  If both are nil, nil is returned.
+func iebpn(i *bool, e *bool) *bool {
+	if e != nil {
+		ret := *e
+		return &ret
+	} else if i != nil {
+		ret := *i
+		return &ret
+	}
+	return nil
 }
 
 // iesp is short for "If Else String Pointer".  If one of the values
@@ -331,6 +348,22 @@ func iesp(i *string, e *string) *string {
 		returnVal = *i
 	}
 	return &returnVal
+}
+
+// iespn is short for "If Else String Pointer Nil".  If one
+// // the second value is not nil, a pointer to a copy of its value
+// // is returned.  If the first argument is not nil but the second
+// // one is, then a pointer to a copy of the first argument is
+// // returned.  If both are nil, nil is returned.
+func iespn(i *string, e *string) *string {
+	if e != nil {
+		ret := *e
+		return &ret
+	} else if i != nil {
+		ret := *i
+		return &ret
+	}
+	return nil
 }
 
 // iebpp is short for "If Else Bool Pointer Pointer".  If one
@@ -365,6 +398,23 @@ func MergeProxy(def *Proxy, ovr *Proxy) Proxy {
 	}
 }
 
+// MergeProxyPointer takes two Proxies and merges them into a third.
+// The default values for the result come from the first argument.  If a value
+// is set in the second argument, that value takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeProxyPointer(def *Proxy, ovr *Proxy) Proxy {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
+
+	return Proxy{
+		HttpsProxy: iespn(def.HttpsProxy, ovr.HttpsProxy),
+		HttpProxy:  iespn(def.HttpProxy, ovr.HttpProxy),
+		NoProxy:    iespn(def.NoProxy, ovr.NoProxy),
+	}
+}
+
 // MergeCatalogs takes two Catalogs and merges them into a third.
 // The two lists are appended to one another, and a unique slice
 // is returned
@@ -379,7 +429,7 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 	return append(append([]Application{}, def...), ovr...)
 }
 
-// MergeCertificationInformation takes two CertificateInformations and merges them into a third.
+// MergeCertificateInformation takes two CertificateInformations and merges them into a third.
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
@@ -393,6 +443,24 @@ func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateIn
 		Org:     iesp(def.Org, ovr.Org),
 		OrgUnit: iesp(def.OrgUnit, ovr.OrgUnit),
 		State:   iesp(def.State, ovr.State),
+	}
+}
+
+// MergeCertificateInformationPointer takes two CertificateInformations and merges them into a third.
+// The default values for the result come from the first argument.  If a value
+// is set in the second argument, that value takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeCertificateInformationPointer(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
+
+	return CertificateInformation{
+		Country: iespn(def.Country, ovr.Country),
+		Org:     iespn(def.Org, ovr.Org),
+		OrgUnit: iespn(def.OrgUnit, ovr.OrgUnit),
+		State:   iespn(def.State, ovr.State),
 	}
 }
 
@@ -412,9 +480,27 @@ func MergeNode(def *Node, ovr *Node) Node {
 	}
 }
 
+// MergeNodePointer takes two Nodes and merges them into a third.
+// The default values for the result come from the first argument.
+// If a value is set in the second argument, that value takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeNodePointer(def *Node, ovr *Node) Node {
+	// This is safe to shallow copy because all values are scalars
+	if ovr == nil {
+		return *def
+	}
+
+	return Node{
+		Memory:  iespn(def.Memory, ovr.Memory),
+		Storage: iespn(def.Storage, ovr.Storage),
+		CPUs:    ieipn(def.CPUs, ovr.CPUs),
+	}
+}
+
 // MergeLibvirtProvider takes two LibvirtProviders and merges them into a third.
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
 func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtProvider {
 	// It is currently safe to shallow copy this because all the
 	// values are scalars.  If that changes, a deep copy will have
@@ -434,6 +520,28 @@ func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtPro
 	}
 }
 
+// MergeLibvirtProviderPointer takes two LibvirtProviders and merges them into a third.
+// The default values for the result come from the first argument.  If a value
+// is set in the second argument, that value takes precedence.
+func MergeLibvirtProviderPointer(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtProvider {
+	// It is currently safe to shallow copy this because all the
+	// values are scalars.  If that changes, a deep copy will have
+	// to be performed instead.
+	if ovr == nil {
+		return *def
+	}
+	return LibvirtProvider{
+		SessionURI:                   iespn(def.SessionURI, ovr.SessionURI),
+		SshKey:                       iespn(def.SshKey, ovr.SshKey),
+		StoragePool:                  iespn(def.StoragePool, ovr.StoragePool),
+		Network:                      iespn(def.Network, ovr.Network),
+		ControlPlaneNode:             MergeNodePointer(&def.ControlPlaneNode, &ovr.ControlPlaneNode),
+		WorkerNode:                   MergeNodePointer(&def.WorkerNode, &ovr.WorkerNode),
+		BootVolumeName:               iespn(def.BootVolumeName, ovr.BootVolumeName),
+		BootVolumeContainerImagePath: iespn(def.BootVolumeContainerImagePath, ovr.BootVolumeContainerImagePath),
+	}
+}
+
 // MergeOciInstanceShape takes two OciInstanceShapes and merges them into
 // a third.  The default values from the result come from the first
 // argument.  If a value is set in the second argument, that value
@@ -442,6 +550,18 @@ func MergeOciInstanceShape(def *OciInstanceShape, ovr *OciInstanceShape) OciInst
 	return OciInstanceShape{
 		Shape: iesp(def.Shape, ovr.Shape),
 		Ocpus: ieip(def.Ocpus, ovr.Ocpus),
+	}
+}
+
+// MergeOciInstanceShapePointer takes two OciInstanceShapes and merges them into
+// a third.  The default values from the result come from the first
+// argument.  If a value is set in the second argument, that value
+// takes precendence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOciInstanceShapePointer(def *OciInstanceShape, ovr *OciInstanceShape) OciInstanceShape {
+	return OciInstanceShape{
+		Shape: iespn(def.Shape, ovr.Shape),
+		Ocpus: ieipn(def.Ocpus, ovr.Ocpus),
 	}
 }
 
@@ -456,6 +576,18 @@ func MergeLoadBalancer(def *LoadBalancer, ovr *LoadBalancer) LoadBalancer {
 	}
 }
 
+// MergeLoadBalancerPointer takes two LoadBalancers and merges them into
+// a third.  The default values for the result come from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeLoadBalancerPointer(def *LoadBalancer, ovr *LoadBalancer) LoadBalancer {
+	return LoadBalancer{
+		Subnet1: iespn(def.Subnet1, ovr.Subnet1),
+		Subnet2: iespn(def.Subnet2, ovr.Subnet2),
+	}
+}
+
 // MergeOciImageSet takes two OciImageSets and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -464,6 +596,18 @@ func MergeOciImageSet(def *OciImageSet, ovr *OciImageSet) OciImageSet {
 	return OciImageSet{
 		Amd64: iesp(def.Amd64, ovr.Amd64),
 		Arm64: iesp(def.Arm64, ovr.Arm64),
+	}
+}
+
+// MergeOciImageSetPointer takes two OciImageSets and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOciImageSetPointer(def *OciImageSet, ovr *OciImageSet) OciImageSet {
+	return OciImageSet{
+		Amd64: iespn(def.Amd64, ovr.Amd64),
+		Arm64: iespn(def.Arm64, ovr.Arm64),
 	}
 }
 
@@ -487,6 +631,27 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 	}
 }
 
+// MergeOciProviderPointer takes two OciProviders and merges
+// them into a third.  The default values for the result come from
+// the first argument.  If a value is set in the second argument, that
+// values takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOciProviderPointer(def *OciProvider, ovr *OciProvider) OciProvider {
+	return OciProvider{
+		KubeConfigPath:    iespn(def.KubeConfigPath, ovr.KubeConfigPath),
+		Compartment:       iespn(def.Compartment, ovr.Compartment),
+		Namespace:         iespn(def.Namespace, ovr.Namespace),
+		Images:            MergeOciImageSetPointer(&def.Images, &ovr.Images),
+		ImageBucket:       iespn(def.ImageBucket, ovr.ImageBucket),
+		ControlPlaneShape: MergeOciInstanceShapePointer(&def.ControlPlaneShape, &ovr.ControlPlaneShape),
+		WorkerShape:       MergeOciInstanceShapePointer(&def.WorkerShape, &ovr.WorkerShape),
+		LoadBalancer:      MergeLoadBalancerPointer(&def.LoadBalancer, &ovr.LoadBalancer),
+		SelfManaged:       iebpn(def.SelfManaged, ovr.SelfManaged),
+		Vcn:               iespn(def.Vcn, ovr.Vcn),
+		Proxy:             MergeProxyPointer(&def.Proxy, &ovr.Proxy),
+	}
+}
+
 // MergeOlvmProvider takes two OlvmProviders and merges
 // them into a third.  The default values for the result come from
 // the first argument.  If a value is set in the second argument, that
@@ -504,6 +669,24 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 	}
 }
 
+// MergeOlvmProviderPointer takes two OlvmProviders and merges
+// them into a third.  The default values for the result come from
+// the first argument.  If a value is set in the second argument, that
+// values takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmProviderPointer(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
+	return OlvmProvider{
+		Namespace:           iespn(def.Namespace, ovr.Namespace),
+		SelfManaged:         iebpn(def.SelfManaged, ovr.SelfManaged),
+		Proxy:               MergeProxyPointer(&def.Proxy, &ovr.Proxy),
+		NetworkInterface:    iespn(def.NetworkInterface, ovr.NetworkInterface),
+		OlvmCluster:         MergeOlvmClusterPointer(&def.OlvmCluster, &ovr.OlvmCluster),
+		ControlPlaneMachine: MergeOlvmMachinePointer(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
+		WorkerMachine:       MergeOlvmMachinePointer(&def.WorkerMachine, &ovr.WorkerMachine),
+		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpointPointer(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
+	}
+}
+
 // MergeOlvmCluster takes two OlvmClusters and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -515,6 +698,21 @@ func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
 		OVirtAPI:             MergeOlvmOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
 		OVirtOck:             MergeOlvmOvirtOck(&def.OVirtOck, &ovr.OVirtOck),
 		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
+	}
+}
+
+// MergeOlvmClusterPointer takes two OlvmClusters and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmClusterPointer(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
+	return OlvmCluster{
+		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpointPointer(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
+		DatacenterName:       iespn(def.DatacenterName, ovr.DatacenterName),
+		OVirtAPI:             MergeOlvmOvirtAPIPointer(&def.OVirtAPI, &ovr.OVirtAPI),
+		OVirtOck:             MergeOlvmOvirtOckPointer(&def.OVirtOck, &ovr.OVirtOck),
+		OlvmVmIpProfile:      MergeOlvmVmIpProfilePointer(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
 	}
 }
 
@@ -532,6 +730,21 @@ func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpPr
 	}
 }
 
+// MergeOlvmVmIpProfilePointer takes two OlvmVmIpProfiles and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmVmIpProfilePointer(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpProfile {
+	return OlvmVmIpProfile{
+		Name:              iespn(def.Name, ovr.Name),
+		StartingIpAddress: iespn(def.StartingIpAddress, ovr.StartingIpAddress),
+		Device:            iespn(def.Device, ovr.Device),
+		Gateway:           iespn(def.Gateway, ovr.Gateway),
+		Netmask:           iespn(def.Netmask, ovr.Netmask),
+	}
+}
+
 // MergeOlvmControlPlaneEndpoint takes two OlvmControlPlaneEndpoints and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -540,6 +753,18 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 	return OlvmControlPlaneEndpoint{
 		Host: iesp(def.Host, ovr.Host),
 		Port: iesp(def.Port, ovr.Port),
+	}
+}
+
+// MergeOlvmControlPlaneEndpointPointer takes two OlvmControlPlaneEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmControlPlaneEndpointPointer(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
+	return OlvmControlPlaneEndpoint{
+		Host: iespn(def.Host, ovr.Host),
+		Port: iespn(def.Port, ovr.Port),
 	}
 }
 
@@ -555,6 +780,19 @@ func MergeOlvmOvirtAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
 	}
 }
 
+// MergeOlvmOvirtAPIPointer takes two OlvmOvirtAPIs and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmOvirtAPIPointer(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
+	return OlvmOvirtAPI{
+		ServerURL:    iespn(def.ServerURL, ovr.ServerURL),
+		ServerCA:     iespn(def.ServerCA, ovr.ServerCA),
+		ServerCAPath: iespn(def.ServerCAPath, ovr.ServerCAPath),
+	}
+}
+
 // MergeOlvmOvirtOck takes two OlvmOvirtOcks and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -564,6 +802,19 @@ func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
 		DiskName:          iesp(def.DiskName, ovr.DiskName),
 		DiskSize:          iesp(def.DiskSize, ovr.DiskSize),
 		StorageDomainName: iesp(def.StorageDomainName, ovr.StorageDomainName),
+	}
+}
+
+// MergeOlvmOvirtOckPointer takes two OlvmOvirtOcks and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmOvirtOckPointer(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
+	return OlvmOvirtOck{
+		DiskName:          iespn(def.DiskName, ovr.DiskName),
+		DiskSize:          iespn(def.DiskSize, ovr.DiskSize),
+		StorageDomainName: iespn(def.StorageDomainName, ovr.StorageDomainName),
 	}
 }
 
@@ -582,6 +833,22 @@ func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	}
 }
 
+// MergeOlvmMachinePointer takes two OlvmMachines and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmMachinePointer(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
+	return OlvmMachine{
+		OVirtClusterName:    iespn(def.OVirtClusterName, ovr.OVirtClusterName),
+		OlvmVmIpProfileName: iespn(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
+		Memory:              iespn(def.Memory, ovr.Memory),
+		Network:             MergeOlvmMachineNetworkPointer(&def.Network, &ovr.Network),
+		Cpu:                 MergeOlvmMachineCpuPointer(&def.Cpu, &ovr.Cpu),
+		VMTemplateName:      iespn(def.VMTemplateName, ovr.VMTemplateName),
+	}
+}
+
 // MergeOlvmMachineNetwork takes two OlvmMachineNetworks and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -595,6 +862,20 @@ func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) O
 	}
 }
 
+// MergeOlvmMachineNetworkPointer takes two OlvmMachineNetworks and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmMachineNetworkPointer(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) OlvmMachineNetwork {
+	return OlvmMachineNetwork{
+		NetworkName:     iespn(def.NetworkName, ovr.NetworkName),
+		InterfaceType:   iespn(def.InterfaceType, ovr.InterfaceType),
+		VnicName:        iespn(def.VnicName, ovr.VnicName),
+		VnicProfileName: iespn(def.VnicProfileName, ovr.VnicProfileName),
+	}
+}
+
 // MergeOlvmMachineCpu takes two OlvmMachineCpus and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -603,6 +884,18 @@ func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCp
 	return OlvmMachineCpu{
 		Architecture: iesp(def.Architecture, ovr.Architecture),
 		Topology:     MergeOlvmMachineCpuToplogy(&def.Topology, &ovr.Topology),
+	}
+}
+
+// MergeOlvmMachineCpuPointer takes two OlvmMachineCpus and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmMachineCpuPointer(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCpu {
+	return OlvmMachineCpu{
+		Architecture: iespn(def.Architecture, ovr.Architecture),
+		Topology:     MergeOlvmMachineCpuToplogyPointer(&def.Topology, &ovr.Topology),
 	}
 }
 
@@ -618,6 +911,19 @@ func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuT
 	}
 }
 
+// MergeOlvmMachineCpuToplogyPointer takes two OlvmMachineCpuToplogies and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeOlvmMachineCpuToplogyPointer(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuToplogy) OlvmMachineCpuToplogy {
+	return OlvmMachineCpuToplogy{
+		Cores:   ieipn(def.Cores, ovr.Cores),
+		Sockets: ieipn(def.Sockets, ovr.Sockets),
+		Threads: ieipn(def.Threads, ovr.Threads),
+	}
+}
+
 // MergeOlvmLocalAPIEndpoint takes two OlvmLocalAPIEndpoints and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -629,6 +935,17 @@ func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpo
 	}
 }
 
+// MergeOlvmLocalAPIEndpointPointer takes two OlvmLocalAPIEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmLocalAPIEndpointPointer(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpoint) OlvmLocalAPIEndpoint {
+	return OlvmLocalAPIEndpoint{
+		BindPort:         ieipn(def.BindPort, ovr.BindPort),
+		AdvertiseAddress: iespn(def.AdvertiseAddress, ovr.AdvertiseAddress),
+	}
+}
+
 // MergeByoProvider takes two ByoProviders and merged them into a
 // third.  The default values for the result come from the first
 // argument.  If a value is set in the second argument, that value
@@ -637,6 +954,18 @@ func MergeByoProvider(def *ByoProvider, ovr *ByoProvider) ByoProvider {
 	return ByoProvider{
 		AutomaticTokenCreation: iebp(def.AutomaticTokenCreation, ovr.AutomaticTokenCreation, false),
 		NetworkInterface:       iesp(def.NetworkInterface, ovr.NetworkInterface),
+	}
+}
+
+// MergeByoProviderPointer takes two ByoProviders and merged them into a
+// third.  The default values for the result come from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeByoProviderPointer(def *ByoProvider, ovr *ByoProvider) ByoProvider {
+	return ByoProvider{
+		AutomaticTokenCreation: iebpn(def.AutomaticTokenCreation, ovr.AutomaticTokenCreation),
+		NetworkInterface:       iespn(def.NetworkInterface, ovr.NetworkInterface),
 	}
 }
 
@@ -652,6 +981,19 @@ func MergeProviders(def *Providers, ovr *Providers) Providers {
 	}
 }
 
+// MergeProvidersPointer takes two Providers and merges them into a third.
+// The default values for the result come from the first argument.  If a value
+// is set in the second argument, that value takes precedence.
+// If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeProvidersPointer(def *Providers, ovr *Providers) Providers {
+	return Providers{
+		Libvirt: MergeLibvirtProviderPointer(&def.Libvirt, &ovr.Libvirt),
+		Oci:     MergeOciProviderPointer(&def.Oci, &ovr.Oci),
+		Byo:     MergeByoProviderPointer(&def.Byo, &ovr.Byo),
+		Olvm:    MergeOlvmProviderPointer(&def.Olvm, &ovr.Olvm),
+	}
+}
+
 // MergeEphemeralConfig takes two EphemeralClusterConfigs and merges them
 // into a third.  If a value is set in the second argument, that value
 // takes precedence.  "Preserve" is ignored so as not to accidentally
@@ -664,37 +1006,49 @@ func MergeEphemeralConfig(def *EphemeralClusterConfig, ovr *EphemeralClusterConf
 	}
 }
 
+// MergeEphemeralConfigPointer takes two EphemeralClusterConfigs and merges them
+// into a third.  If a value is set in the second argument, that value
+// takes precedence. If a pointer to a scalar value (int, uint, string, bool) is nil in both configs, then nil is returned.
+func MergeEphemeralConfigPointer(def *EphemeralClusterConfig, ovr *EphemeralClusterConfig) EphemeralClusterConfig {
+	return EphemeralClusterConfig{
+		Name:     iespn(def.Name, ovr.Name),
+		Preserve: iebpn(def.Preserve, ovr.Preserve),
+		Node:     MergeNodePointer(&def.Node, &ovr.Node),
+	}
+}
+
 // MergeConfig takes two Configs and merges them into a third.
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
+// The resulting struct does not have nil values
 func MergeConfig(def *Config, ovr *Config) Config {
 	return Config{
-		Providers:                MergeProviders(&def.Providers, &ovr.Providers),
-		KubeConfig:               iesp(def.KubeConfig, ovr.KubeConfig),
-		AutoStartUI:              iesp(def.AutoStartUI, ovr.AutoStartUI),
-		Proxy:                    MergeProxy(&def.Proxy, &ovr.Proxy),
-		KubeAPIServerBindPort:    ieup(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
-		KubeAPIServerBindPortAlt: ieup(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
-		PodSubnet:                iesp(def.PodSubnet, ovr.PodSubnet),
-		ServiceSubnet:            iesp(def.ServiceSubnet, ovr.ServiceSubnet),
-		Registry:                 iesp(def.Registry, ovr.Registry),
-		CertificateInformation:   MergeCertificateInformation(&def.CertificateInformation, &ovr.CertificateInformation),
-		OsRegistry:               iesp(def.OsRegistry, ovr.OsRegistry),
-		OsTag:                    iesp(def.OsTag, ovr.OsTag),
-		KubeProxyMode:            iesp(def.KubeProxyMode, ovr.KubeProxyMode),
-		BootVolumeContainerImage: iesp(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
-		CNI:                      iesp(def.CNI, ovr.CNI),
-		Headless:                 iebp(def.Headless, ovr.Headless, false),
-		Catalog:                  iebp(def.Catalog, ovr.Catalog, true),
-		CommunityCatalog:         iebp(def.CommunityCatalog, ovr.CommunityCatalog, false),
-		EphemeralConfig:          MergeEphemeralConfig(&def.EphemeralConfig, &ovr.EphemeralConfig),
-		Quiet:                    iebp(def.Quiet, ovr.Quiet, false),
-		KubeVersion:              iesp(def.KubeVersion, ovr.KubeVersion),
-		SshPublicKeyPath:         iesp(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
-		SshPublicKey:             iesp(def.SshPublicKey, ovr.SshPublicKey),
-		Password:                 iesp(def.Password, ovr.Password),
-		ExtraIgnition:            iesp(def.ExtraIgnition, ovr.ExtraIgnition),
-		ExtraIgnitionInline:      iesp(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
+		Providers:                MergeProvidersPointer(&def.Providers, &ovr.Providers),
+		KubeConfig:               iespn(def.KubeConfig, ovr.KubeConfig),
+		AutoStartUI:              iespn(def.AutoStartUI, ovr.AutoStartUI),
+		Proxy:                    MergeProxyPointer(&def.Proxy, &ovr.Proxy),
+		KubeAPIServerBindPort:    ieupn(def.KubeAPIServerBindPort, ovr.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: ieupn(def.KubeAPIServerBindPortAlt, ovr.KubeAPIServerBindPortAlt),
+		PodSubnet:                iespn(def.PodSubnet, ovr.PodSubnet),
+		ServiceSubnet:            iespn(def.ServiceSubnet, ovr.ServiceSubnet),
+		Registry:                 iespn(def.Registry, ovr.Registry),
+		CertificateInformation:   MergeCertificateInformationPointer(&def.CertificateInformation, &ovr.CertificateInformation),
+		OsRegistry:               iespn(def.OsRegistry, ovr.OsRegistry),
+		OsTag:                    iespn(def.OsTag, ovr.OsTag),
+		KubeProxyMode:            iespn(def.KubeProxyMode, ovr.KubeProxyMode),
+		BootVolumeContainerImage: iespn(def.BootVolumeContainerImage, ovr.BootVolumeContainerImage),
+		CNI:                      iespn(def.CNI, ovr.CNI),
+		Headless:                 iebpn(def.Headless, ovr.Headless),
+		Catalog:                  iebpn(def.Catalog, ovr.Catalog),
+		CommunityCatalog:         iebpn(def.CommunityCatalog, ovr.CommunityCatalog),
+		EphemeralConfig:          MergeEphemeralConfigPointer(&def.EphemeralConfig, &ovr.EphemeralConfig),
+		Quiet:                    iebpn(def.Quiet, ovr.Quiet),
+		KubeVersion:              iespn(def.KubeVersion, ovr.KubeVersion),
+		SshPublicKeyPath:         iespn(def.SshPublicKeyPath, ovr.SshPublicKeyPath),
+		SshPublicKey:             iespn(def.SshPublicKey, ovr.SshPublicKey),
+		Password:                 iespn(def.Password, ovr.Password),
+		ExtraIgnition:            iespn(def.ExtraIgnition, ovr.ExtraIgnition),
+		ExtraIgnitionInline:      iespn(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
 	}
 }
 
@@ -749,44 +1103,44 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 // Precalculate Kubeversion above the return, feed that value into the right field
 func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 	clusterConfigToReturn := ClusterConfig{
-		WorkingDirectory:         iesp(cc.WorkingDirectory, nil),
-		Name:                     iesp(cc.Name, nil),
-		Provider:                 iesp(cc.Provider, nil),
-		WorkerNodes:              ieup(cc.WorkerNodes, nil),
-		ControlPlaneNodes:        ieup(cc.ControlPlaneNodes, nil),
-		Providers:                MergeProviders(&c.Providers, &cc.Providers),
-		Proxy:                    MergeProxy(&c.Proxy, &cc.Proxy),
-		EphemeralConfig:          MergeEphemeralConfig(&c.EphemeralConfig, &cc.EphemeralConfig),
-		KubeAPIServerBindPort:    ieup(c.KubeAPIServerBindPort, cc.KubeAPIServerBindPort),
-		KubeAPIServerBindPortAlt: ieup(c.KubeAPIServerBindPortAlt, cc.KubeAPIServerBindPortAlt),
-		VirtualIp:                iesp(cc.VirtualIp, nil),
-		LoadBalancer:             iesp(cc.LoadBalancer, nil),
-		PodSubnet:                iesp(c.PodSubnet, cc.PodSubnet),
-		ServiceSubnet:            iesp(c.ServiceSubnet, cc.ServiceSubnet),
-		Registry:                 iesp(c.Registry, cc.Registry),
-		CertificateInformation:   MergeCertificateInformation(&c.CertificateInformation, &cc.CertificateInformation),
-		OsRegistry:               iesp(c.OsRegistry, cc.OsRegistry),
-		OsTag:                    iesp(c.OsTag, cc.OsTag),
-		KubeProxyMode:            iesp(c.KubeProxyMode, cc.KubeProxyMode),
-		BootVolumeContainerImage: iesp(c.BootVolumeContainerImage, cc.BootVolumeContainerImage),
-		CNI:                      iesp(c.CNI, cc.CNI),
-		Headless:                 iebp(c.Headless, cc.Headless, false),
-		Catalog:                  iebp(c.Catalog, cc.Catalog, true),
-		CommunityCatalog:         iebp(c.CommunityCatalog, cc.CommunityCatalog, false),
+		WorkingDirectory:         iespn(cc.WorkingDirectory, nil),
+		Name:                     iespn(cc.Name, nil),
+		Provider:                 iespn(cc.Provider, nil),
+		WorkerNodes:              ieupn(cc.WorkerNodes, nil),
+		ControlPlaneNodes:        ieupn(cc.ControlPlaneNodes, nil),
+		Providers:                MergeProvidersPointer(&c.Providers, &cc.Providers),
+		Proxy:                    MergeProxyPointer(&c.Proxy, &cc.Proxy),
+		EphemeralConfig:          MergeEphemeralConfigPointer(&c.EphemeralConfig, &cc.EphemeralConfig),
+		KubeAPIServerBindPort:    ieupn(c.KubeAPIServerBindPort, cc.KubeAPIServerBindPort),
+		KubeAPIServerBindPortAlt: ieupn(c.KubeAPIServerBindPortAlt, cc.KubeAPIServerBindPortAlt),
+		VirtualIp:                iespn(cc.VirtualIp, nil),
+		LoadBalancer:             iespn(cc.LoadBalancer, nil),
+		PodSubnet:                iespn(c.PodSubnet, cc.PodSubnet),
+		ServiceSubnet:            iespn(c.ServiceSubnet, cc.ServiceSubnet),
+		Registry:                 iespn(c.Registry, cc.Registry),
+		CertificateInformation:   MergeCertificateInformationPointer(&c.CertificateInformation, &cc.CertificateInformation),
+		OsRegistry:               iespn(c.OsRegistry, cc.OsRegistry),
+		OsTag:                    iespn(c.OsTag, cc.OsTag),
+		KubeProxyMode:            iespn(c.KubeProxyMode, cc.KubeProxyMode),
+		BootVolumeContainerImage: iespn(c.BootVolumeContainerImage, cc.BootVolumeContainerImage),
+		CNI:                      iespn(c.CNI, cc.CNI),
+		Headless:                 iebpn(c.Headless, cc.Headless),
+		Catalog:                  iebpn(c.Catalog, cc.Catalog),
+		CommunityCatalog:         iebpn(c.CommunityCatalog, cc.CommunityCatalog),
 		Applications:             MergeApplications(cc.Applications, nil),
 		Catalogs:                 MergeCatalogs(cc.Catalogs, nil),
-		KubeVersion:              iesp(c.KubeVersion, cc.KubeVersion),
-		SshPublicKeyPath:         iesp(c.SshPublicKeyPath, cc.SshPublicKeyPath),
-		SshPublicKey:             iesp(c.SshPublicKey, cc.SshPublicKey),
-		Password:                 iesp(c.Password, cc.Password),
-		CipherSuites:             iesp(cc.CipherSuites, nil),
-		ClusterDefinitionInline:  iesp(cc.ClusterDefinitionInline, nil),
-		ClusterDefinition:        iesp(cc.ClusterDefinition, nil),
-		ExtraIgnition:            iesp(c.ExtraIgnition, cc.ExtraIgnition),
-		ExtraIgnitionInline:      iesp(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
-		Quiet:                    iebp(c.Quiet, cc.Quiet, false),
-		AutoStartUI:              iesp(c.AutoStartUI, cc.AutoStartUI),
-		KubeConfig:               iesp(c.KubeConfig, cc.KubeConfig),
+		KubeVersion:              iespn(c.KubeVersion, cc.KubeVersion),
+		SshPublicKeyPath:         iespn(c.SshPublicKeyPath, cc.SshPublicKeyPath),
+		SshPublicKey:             iespn(c.SshPublicKey, cc.SshPublicKey),
+		Password:                 iespn(c.Password, cc.Password),
+		CipherSuites:             iespn(cc.CipherSuites, nil),
+		ClusterDefinitionInline:  iespn(cc.ClusterDefinitionInline, nil),
+		ClusterDefinition:        iespn(cc.ClusterDefinition, nil),
+		ExtraIgnition:            iespn(c.ExtraIgnition, cc.ExtraIgnition),
+		ExtraIgnitionInline:      iespn(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
+		Quiet:                    iebpn(c.Quiet, cc.Quiet),
+		AutoStartUI:              iespn(c.AutoStartUI, cc.AutoStartUI),
+		KubeConfig:               iespn(c.KubeConfig, cc.KubeConfig),
 	}
 	return clusterConfigToReturn
 }

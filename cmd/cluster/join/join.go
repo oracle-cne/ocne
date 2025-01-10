@@ -115,7 +115,7 @@ func RunCmd(cmd *cobra.Command) error {
 	// This is a bail-out to make sure all the needful can be done in
 	// case of some poorly timed error.
 	if cached == nil {
-		options.ClusterConfig, err = cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
+		options.ClusterConfig, err = cmdutil.GetFullConfig(options.ClusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}

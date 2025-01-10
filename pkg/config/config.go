@@ -211,13 +211,14 @@ func ParseClusterConfigFile(configPath string) (*types.ClusterConfig, error) {
 
 	// If the directory is not set, then set it to the
 	// directory containing the config file itself.
-	if *ret.WorkingDirectory == "" {
+	if ret.WorkingDirectory == nil {
 		wd, err := filepath.Abs(configPath)
 		if err != nil {
 			return nil, err
 		}
+		workingDirectory := filepath.Dir(wd)
 
-		*ret.WorkingDirectory = filepath.Dir(wd)
+		ret.WorkingDirectory = &workingDirectory
 	}
 	return ret, nil
 }

@@ -90,12 +90,12 @@ func RunCmd(cmd *cobra.Command) error {
 	// This is a bail-out to make sure all the needful can be done in
 	// case of some poorly timed error.
 	if cached == nil {
-		cc, err = cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
+		cc, err = cmdutil.GetFullConfig(options.ClusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		cc, err = cmdutil.GetFullConfig(options.Config, &cached.ClusterConfig, "")
+		cc, err = cmdutil.GetFullConfig(&cached.ClusterConfig, "")
 		if err != nil {
 			return err
 		}
@@ -117,10 +117,10 @@ func populateConfigurationFromCommandLine(options *delete2.DeleteOptions) {
 		options.ClusterConfig.Name = &options.Name
 	}
 	if options.KubeConfigPath != "" {
-		options.Config.KubeConfig = &options.KubeConfigPath
+		options.ClusterConfig.KubeConfig = &options.KubeConfigPath
 	}
 	if options.SessionURI != "" {
-		options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
+		options.ClusterConfig.Providers.Libvirt.SessionURI = &options.SessionURI
 	}
 	if options.Provider != "" {
 		options.ClusterConfig.Provider = &options.Provider

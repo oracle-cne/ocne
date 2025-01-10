@@ -57,7 +57,7 @@ func NewCmd() *cobra.Command {
 // RunCmd runs the "ocne cluster template" command
 func RunCmd(cmd *cobra.Command) error {
 	populateConfigurationFromCommandLine(&opts)
-	cc, err := cmdutil.GetFullConfig(&opts.Config, &opts.ClusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(&opts.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}

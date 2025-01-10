@@ -81,7 +81,7 @@ func NewCmd() *cobra.Command {
 // RunCmd runs the "ocne cluster start" command
 func RunCmd(cmd *cobra.Command) error {
 	populateConfigurationFromCommandLine(&options)
-	cc, err := cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(options.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
@@ -122,22 +122,22 @@ func populateConfigurationFromCommandLine(options *start.StartOptions) {
 		options.ClusterConfig.Name = &options.Name
 	}
 	if options.KubeConfigPath != "" {
-		options.Config.KubeConfig = &options.KubeConfigPath
+		options.ClusterConfig.KubeConfig = &options.KubeConfigPath
 	}
 	if options.SessionURI != "" {
-		options.Config.Providers.Libvirt.SessionURI = &options.SessionURI
+		options.ClusterConfig.Providers.Libvirt.SessionURI = &options.SessionURI
 	}
 	if options.Provider != "" {
 		options.ClusterConfig.Provider = &options.Provider
 	}
 	if options.SSHKey != "" {
-		options.Config.Providers.Libvirt.SshKey = &options.SSHKey
+		options.ClusterConfig.Providers.Libvirt.SshKey = &options.SSHKey
 	}
 	if options.BootVolumeContainerImage != "" {
-		options.Config.BootVolumeContainerImage = &options.BootVolumeContainerImage
+		options.ClusterConfig.BootVolumeContainerImage = &options.BootVolumeContainerImage
 	}
 	if options.AutoStartUI != "" {
-		options.Config.AutoStartUI = &options.AutoStartUI
+		options.ClusterConfig.AutoStartUI = &options.AutoStartUI
 	}
 	if options.ControlPlaneNodes != uint16(0) {
 		options.ClusterConfig.ControlPlaneNodes = &options.ControlPlaneNodes

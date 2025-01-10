@@ -29,7 +29,6 @@ ocne image create --arch arm64 --type oci
 
 var clusterConfigPath string
 var createOptions create.CreateOptions = create.CreateOptions{
-	Config:        &types.Config{},
 	ClusterConfig: &types.ClusterConfig{},
 }
 var flagArchitectureHelp = "The architecture of the image to create, allowed values: " + strings.Join(flags.ValidArchs, ", ")
@@ -79,7 +78,7 @@ func RunCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	cc, err := cmdutil.GetFullConfig(createOptions.Config, createOptions.ClusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(createOptions.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 func populateConfigurationFromCommandLine(options *create.CreateOptions) {
 	if options.KubeConfig != "" {
-		options.Config.KubeConfig = &options.KubeConfig
+		options.ClusterConfig.KubeConfig = &options.KubeConfig
 	}
 	if options.KubeVersion != "" {
 		options.ClusterConfig.KubeVersion = &options.KubeVersion
