@@ -22,7 +22,7 @@ func InMemoryFile(name string) (string, error) {
 		return "", err
 	}
 	garbage.Add(func(a interface{}){
-		f, _ := a(*os.File)
+		f, _ := a.(*os.File)
 		f.Close()
 		os.Remove(f.Name())
 	}, f)
