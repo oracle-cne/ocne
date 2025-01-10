@@ -1,12 +1,12 @@
 // Copyright (c) 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+//go:build linux
 
 package util
 
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"golang.org/x/sys/unix"
 )
@@ -27,11 +27,7 @@ func InMemoryFile(name string) (string, error) {
 		return "", err
 	}
 
-	fnamePattern := "/proc/self/fd/%d"
-	if runtime.GOOS == "darwin" {
-		fnamePattern = "/dev/fd/%d"
-	}
-	fname := fmt.Sprintf(fnamePattern, fd)
+	fname := fmt.Sprintf("/proc/self/fc/%s", fd)
 	f := os.NewFile(uintptr(fd), name)
 	holds[fname] = f
 	return fname, nil
