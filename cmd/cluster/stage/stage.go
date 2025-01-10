@@ -63,6 +63,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&options.OsRegistry, flagOsRegistry, flagOsRegistryShort, "", flagOsRegistryHelp)
 	cmd.Flags().StringVarP(&clusterName, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
+	cmd.MarkFlagsMutuallyExclusive(constants.FlagConfig, constants.FlagClusterName)
 	err := cmd.MarkFlagRequired(flagVersion)
 	if err != nil {
 		return nil
@@ -70,39 +71,12 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-// RunCmd runs the "ocne node update" command
+// RunCmd runs the "ocne cluster stage" command
 func RunCmd(cmd *cobra.Command) error {
-	// If the cluster name is not set, check for an existing
-	// cluster named "ocne".  If a cluster with that name is
-	// not in the cache, then treat the invocation as not
-	// using a cluster config file.
-	//
-	// This is a loop to access break, but should never
-	// execute more than once.
-	if clusterName == "" {
-		for clusterName == "" {
-			clusterName = "ocne"
-			clusterCache, err := cache.GetCache()
-			if err != nil {
-				break
-			}
-
-			cached := clusterCache.Get(clusterName)
-			if cached == nil {
-				break
-			}
-
-			c := &types.Config{}
-			cc := &types.ClusterConfig{}
-			c, cc, err = cmdutil.GetFullConfig(c, &cached.ClusterConfig, clusterConfigPath)
-			if err != nil {
-				return err
-			}
-
-			options.ClusterConfig = cc
-			options.Config = c
-		}
-	} else {
+	// Only try to look in the cache if a name was explicitly given.
+	// This protects against accidentally staging the "ocne" cluster
+	// when supplying only a kubeconfig.
+	if clusterName != "" {
 		clusterCache, err := cache.GetCache()
 		if err != nil {
 			return err
@@ -122,7 +96,6 @@ func RunCmd(cmd *cobra.Command) error {
 
 		options.ClusterConfig = cc
 		options.Config = c
-
 	}
 
 	if clusterConfigPath != "" {
