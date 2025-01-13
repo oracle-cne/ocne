@@ -26,7 +26,7 @@ func Delete(clusterConfig *types.ClusterConfig) error {
 		return err
 	}
 
-	log.Debugf("Deleting cluster %s", clusterConfig.Name)
+	log.Debugf("Deleting cluster %s", *clusterConfig.Name)
 	err = drv.Delete()
 	if err != nil {
 		return err
