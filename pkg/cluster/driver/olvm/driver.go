@@ -152,13 +152,13 @@ func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error
 			},
 		},
 		{
-			Message: "Waiting for Kubadm Boostrap Cluster API Controllers",
+			Message: "Waiting for Kubeadm Bootstrap Cluster API Controllers",
 			WaitFunction: func(i interface{}) error {
 				return k8s.WaitForDeployment(kubeClient, constants.KubeadmBootstrapCAPINamespace, constants.KubeadmBootstrapCAPIDeployment, 1)
 			},
 		},
 		{
-			Message: "Waiting for Kubadm Control Plane Cluster API Controllers",
+			Message: "Waiting for Kubeadm Control Plane Cluster API Controllers",
 			WaitFunction: func(i interface{}) error {
 				return k8s.WaitForDeployment(kubeClient, constants.KubeadmControlPlaneCAPINamespace, constants.KubeadmControlPlaneCAPIDeployment, 1)
 			},

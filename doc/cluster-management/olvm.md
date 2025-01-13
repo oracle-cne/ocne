@@ -404,8 +404,8 @@ INFO[2024-12-20T14:09:34-05:00] Installing bootstrap-capi into capi-kubeadm-boot
 INFO[2024-12-20T14:09:35-05:00] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
 INFO[2024-12-20T14:10:05-05:00] Waiting for Core Cluster API Controllers: ok 
 INFO[2024-12-20T14:10:25-05:00] Waiting for Olvm Cluster API Controllers: ok 
-INFO[2024-12-20T14:10:45-05:00] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
-INFO[2024-12-20T14:11:15-05:00] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2024-12-20T14:10:45-05:00] Waiting for Kubeadm Bootstrap Cluster API Controllers: ok 
+INFO[2024-12-20T14:11:15-05:00] Waiting for Kubeadm Control Plane Cluster API Controllers: ok 
 INFO[2024-12-20T14:11:15-05:00] Applying Cluster API resources               
 INFO[2024-12-20T14:11:17-05:00] Waiting for kubeconfig: ok       
 INFO[2024-12-20T14:13:35-05:00] Waiting for the Kubernetes cluster to be ready: ok 
@@ -533,7 +533,7 @@ INFO[2024-12-20T14:32:31-05:00] Installing bootstrap-capi into capi-kubeadm-boot
 INFO[2024-12-20T14:32:32-05:00] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
 INFO[2024-12-20T14:32:32-05:00] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
 INFO[2024-12-20T14:32:32-05:00] Waiting for Olvm Cluster API Controllers: ok 
-INFO[2024-12-20T14:32:33-05:00] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2024-12-20T14:32:33-05:00] Waiting for Kubeadm Bootstrap Cluster API Controllers: ok 
 INFO[2024-12-20T14:32:42-05:00] Waiting for Core Cluster API Controllers: ok 
 INFO[2024-12-20T14:32:42-05:00] Deleting Cluster olvm-cluster/demo           
 INFO[2024-12-20T14:33:09-05:00] Waiting for deletion: ok     

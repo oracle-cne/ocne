@@ -18,7 +18,7 @@ cluster can be its own management cluster.
 Using Cluster API always requires that a Kubernetes cluster is available.  If
 a cluster is not available, the Oracle Cloud Native Environment CLI will create
 one using the [libvirt](libvirt.md) provider.  It is referred to as a 
-"boostrap cluster" or an "ephemeral cluster" depending on the context.
+"bootstrap cluster" or an "ephemeral cluster" depending on the context.
 
 ## Configuration
 
@@ -72,7 +72,7 @@ INFO[2024-06-10T17:43:53Z] Installing capoci into cluster-api-provider-oci-syste
 INFO[2024-06-10T17:43:53Z] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok
 INFO[2024-06-10T17:43:53Z] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok
 INFO[2024-06-10T17:43:54Z] Waiting for Core Cluster API Controllers: ok
-INFO[2024-06-10T17:43:54Z] Waiting for Kubadm Boostrap Cluster API Controllers: ok
+INFO[2024-06-10T17:43:54Z] Waiting for Kubadm Bootstrap Cluster API Controllers: ok
 INFO[2024-06-10T17:43:54Z] Waiting for Kubadm Control Plane Cluster API Controllers: ok
 INFO[2024-06-10T17:43:54Z] Waiting for OCI Cluster API Controllers: ok
 INFO[2024-06-10T17:43:54Z] Preparing pod used to create image
@@ -207,7 +207,7 @@ details.
 ## Self-Managed Clusters
 
 A workload cluster can be its own management cluster.  This is known as a
-"self-managed" cluster.  Once the cluster has been deployed by a boostrap
+"self-managed" cluster.  Once the cluster has been deployed by a bootstrap
 cluster, the API resources are migrated from the bootstrap cluster into the
 new cluster.
 

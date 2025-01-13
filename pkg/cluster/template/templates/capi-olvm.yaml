@@ -129,7 +129,7 @@ spec:
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
         bootDisk:
           storageDomainName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.StorageDomainName}}"
-          DiskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
+          diskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
         network:
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.InterfaceType}}"
           networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
@@ -179,7 +179,7 @@ spec:
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
         bootDisk:
           storageDomainName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.StorageDomainName}}"
-          DiskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
+          diskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
         network:
           interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.InterfaceType}}"
           networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.NetworkName}}"
