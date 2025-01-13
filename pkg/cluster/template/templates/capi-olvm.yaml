@@ -127,6 +127,9 @@ spec:
         memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
         ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OVirtClusterName}}"
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
+        bootDisk:
+          storageDomainName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.StorageDomainName}}"
+          DiskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
         network:
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.InterfaceType}}"
           networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
@@ -174,6 +177,9 @@ spec:
         memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
         ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OVirtClusterName}}"
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
+        bootDisk:
+          storageDomainName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.StorageDomainName}}"
+          DiskName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtOck.DiskName}}"
         network:
           interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.InterfaceType}}"
           networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.NetworkName}}"
