@@ -570,7 +570,7 @@ func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, err
 		return nil, err
 	}
 
-	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", cad.ClusterConfig.Name))
+	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", *cad.ClusterConfig.Name))
 	if err != nil {
 		return nil, err
 	}
