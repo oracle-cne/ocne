@@ -28,6 +28,8 @@ func GetFullConfig(clusterConfig *types.ClusterConfig, clusterConfigPath string)
 			return nil, err
 		}
 		cc = types.OverlayConfig(ncc, df)
+	} else {
+		cc = types.OverlayConfig(&cc, df)
 	}
 
 	ncc := types.MergeClusterConfig(&cc, clusterConfig)
