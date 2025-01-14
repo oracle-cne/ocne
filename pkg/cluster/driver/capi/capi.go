@@ -474,32 +474,32 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
-	cd := clusterConfig.ClusterDefinition
-	cdi := clusterConfig.ClusterDefinitionInline
-	if *cd != "" && *cdi != "" {
+	cd := *clusterConfig.ClusterDefinition
+	cdi := *clusterConfig.ClusterDefinitionInline
+	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
 		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
-	} else if *cd == "" && *cdi == "" {
+	} else if cd == "" && cdi == "" {
 		// If no configuration is provided, make one.  We may need to upload an
 		// image.
 		doTemplate = true
 
-	} else if *cd != "" {
+	} else if cd != "" {
 		// If the path to the cluster definition is not
 		// absolute, then assume it is relative to the
 		// cluster config working directory.
-		if !filepath.IsAbs(*cd) {
-			*cd = filepath.Join(*clusterConfig.WorkingDirectory, *cd)
-			*cd, err = filepath.Abs(*cd)
+		if !filepath.IsAbs(cd) {
+			cd = filepath.Join(*clusterConfig.WorkingDirectory, cd)
+			cd, err = filepath.Abs(cd)
 			if err != nil {
 				return nil, err
 			}
 		}
-		cdiBytes, err := os.ReadFile(*cd)
+		cdiBytes, err := os.ReadFile(cd)
 		if err != nil {
 			return nil, err
 		}
-		*cdi = string(cdiBytes)
+		cdi = string(cdiBytes)
 	}
 
 	// Unlike other cluster drivers, it is not feasible to have zero
@@ -534,7 +534,7 @@ func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, err
 
 	cad := &ClusterApiDriver{
 		ClusterConfig:    clusterConfig,
-		ClusterResources: *cdi,
+		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
 	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(*clusterConfig.Providers.Oci.KubeConfigPath, clusterConfig)
