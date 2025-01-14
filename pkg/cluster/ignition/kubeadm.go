@@ -10,6 +10,7 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 )
 
 // Why all the structs?  Can't you just use the structs from the Kubernetes
@@ -191,7 +192,7 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			"preflight",
 		},
 		Patches: &Patches{
-			Directory: "/etc/ocne/ock/patches",
+			Directory: update.OckPatchDirectory,
 		},
 	}
 	if !ci.ExpectingWorkerNodes {
@@ -230,7 +231,7 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 			},
 		},
 		Patches: &Patches{
-			Directory: "/etc/ocne/ock/patches",
+			Directory: update.OckPatchDirectory,
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {
