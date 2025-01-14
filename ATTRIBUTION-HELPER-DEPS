@@ -11,7 +11,7 @@ github.com/
   Masterminds/semver/v3 v3.3.0
   Masterminds/sprig/v3 v3.2.3
   Masterminds/squirrel v1.5.4
-  ProtonMail/go-crypto v1.0.0
+  ProtonMail/go-crypto v1.1.3
   VividCortex/ewma v1.2.0
   acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
   adrg/xdg v0.5.0
@@ -41,7 +41,7 @@ github.com/
   coreos/ignition/v2 v2.19.0
   coreos/vcontext v0.0.0-20231102161604-685dc7299dc5
   cyberphone/json-canonicalization v0.0.0-20231217050601-ba74d44ecf5f
-  cyphar/filepath-securejoin v0.3.4
+  cyphar/filepath-securejoin v0.3.6
   davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
   digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
   distribution/reference v0.6.0
@@ -65,8 +65,8 @@ github.com/
   fvbommel/sortorder v1.1.0
   go-errors/errors v1.4.2
   go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376
-  go-git/go-billy/v5 v5.6.0
-  go-git/go-git/v5 v5.12.0
+  go-git/go-billy/v5 v5.6.1
+  go-git/go-git/v5 v5.13.1
   go-gorp/gorp/v3 v3.1.0
   go-jose/go-jose/v4 v4.0.4
   go-logr/logr v1.4.2
@@ -183,7 +183,7 @@ github.com/
   spf13/viper v1.19.0
   stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
   stoewer/go-strcase v1.2.0
-  stretchr/testify v1.9.0
+  stretchr/testify v1.10.0
   subosito/gotenv v1.6.0
   sylabs/sif/v2 v2.19.1
   tchap/go-patricia/v2 v2.3.1
@@ -211,14 +211,14 @@ go.opentelemetry.io/
   proto/otlp v1.2.0
 go.starlark.net v0.0.0-20230525235612-a134d8f9ddca
 golang.org/
-  x/crypto v0.29.0
+  x/crypto v0.31.0
   x/exp v0.0.0-20241009180824-f66d83c29e7c
-  x/net v0.30.0
+  x/net v0.33.0
   x/oauth2 v0.23.0
-  x/sync v0.9.0
-  x/sys v0.27.0
-  x/term v0.26.0
-  x/text v0.20.0
+  x/sync v0.10.0
+  x/sys v0.28.0
+  x/term v0.27.0
+  x/text v0.21.0
   x/time v0.6.0
 gomodules.xyz/jsonpatch/v2 v2.4.0
 google.golang.org/
