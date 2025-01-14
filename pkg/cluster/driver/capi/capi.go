@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package capi
@@ -12,6 +12,7 @@ import (
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,7 +37,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"slices"
 )
 
 const (
@@ -579,7 +579,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	return cad, nil
 }
 
-func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
+func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return "", "", err
@@ -587,10 +587,12 @@ func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, err = oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
-	if err == nil {
+	_, found, err := oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
+	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
+	} else if err != nil {
+		return "", "", err
 	}
 
 	// Check to see if a converted image already exists.  If so, don't bother
@@ -601,7 +603,7 @@ func (cad *ClusterApiDriver) ensureImage(arch string) (string, string, error) {
 	}
 
 	_, err = os.Stat(imageName)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) && !force {
 		return "", "", err
 	}
 
@@ -652,7 +654,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	if controlPlaneArch == workerArch {
 		workRequest := ""
 		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(controlPlaneArch)
+		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -663,11 +665,11 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		controlPlaneWorkRequest := ""
 		workerWorkRequest := ""
 		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(controlPlaneArch)
+		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(workerArch)
+		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -1125,8 +1127,4 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 
 func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
-}
-
-func (cad *ClusterApiDriver) Stage(version string) error {
-	return nil
 }

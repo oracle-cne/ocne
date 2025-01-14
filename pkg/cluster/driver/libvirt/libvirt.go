@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package libvirt
@@ -837,7 +837,7 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 		if isRunning {
 			ld.Infof("Cluster %s is running already", ld.Name)
 		} else {
-			log.Errorf("Failed to start cluster %s", ld.Name)
+			log.Errorf("Failed to start cluster %q. The libvirt domain %q is running.", ld.Name, firstControlPlaneNode)
 		}
 		return isRunning, false, err
 	} else if err != nil {
@@ -933,6 +933,6 @@ func (ld *LibvirtDriver) DefaultCNIInterfaces() []string {
 }
 
 // Stage is a no-op
-func (ld *LibvirtDriver) Stage(version string) error {
-	return nil
+func (ld *LibvirtDriver) Stage(version string) (string, string, bool, error) {
+	return "", "", true, nil
 }

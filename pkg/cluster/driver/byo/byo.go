@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package byo
@@ -378,6 +378,6 @@ func (bd *ByoDriver) validateClusterConfig() error {
 }
 
 // Stage is a no-op
-func (bd *ByoDriver) Stage(version string) error {
-	return nil
+func (bd *ByoDriver) Stage(version string) (string, string, bool, error) {
+	return "", "", true, nil
 }

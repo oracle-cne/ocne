@@ -1,10 +1,11 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -75,11 +77,19 @@ func GetKubeConfigLocation(kubeconfigPath string) (string, bool, error) {
 	}
 
 	if testKubeConfig := os.Getenv(EnvVarTestKubeConfig); len(testKubeConfig) > 0 {
-		return sanitizePath(testKubeConfig, false)
+		path, echo, err := sanitizePath(testKubeConfig, false)
+		if err != nil {
+			err = fmt.Errorf("Failed to access the kubeconfig set by the environment variable %s: ", EnvVarTestKubeConfig)
+		}
+		return path, echo, err
 	}
 
 	if kubeConfig := os.Getenv(EnvVarKubeConfig); len(kubeConfig) > 0 {
-		return sanitizePath(kubeConfig, false)
+		path, echo, err := sanitizePath(kubeConfig, false)
+		if err != nil {
+			err = fmt.Errorf("Failed to access the kubeconfig set by the environment variable %s: ", EnvVarKubeConfig)
+		}
+		return path, echo, err
 	}
 
 	if home := homedir.HomeDir(); home != "" {
@@ -133,6 +143,13 @@ func GetKubeConfigGivenPathAndContext(kubeConfigPath string, kubeContext string)
 	}
 	setConfigQPSBurst(config)
 	return config, nil
+}
+
+// GetKubeConfigFromString returns a kubeconfig from an in-memory string
+func GetKubeConfigFromString(kcfg string) (*rest.Config, error) {
+	return clientcmd.BuildConfigFromKubeconfigGetter("", func()(*clientcmdapi.Config, error){
+		return clientcmd.Load([]byte(kcfg))
+	})
 }
 
 func setConfigQPSBurst(config *rest.Config) {

@@ -1,10 +1,13 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package versions
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 type KubernetesVersions struct {
@@ -62,4 +65,32 @@ func GetKubernetesVersions(ver string) (KubernetesVersions, error) {
 		return ret, fmt.Errorf("No Kubernetes version available for %s", ver)
 	}
 	return ret, nil
+}
+
+func CompareKubernetesVersions(v1 string, v2 string) (int, error) {
+	// Sometimes a 'v' gets prepended somewhere along the line. Strip it.
+	v1 = strings.TrimPrefix(v1, "v")
+	v2 = strings.TrimPrefix(v2, "v")
+	// Make sure these are valid versions
+	_, ok := kubernetesVersions[v1]
+	if !ok {
+		return 0, fmt.Errorf("%s is not a supported Kubernetes version", v1)
+	}
+
+	_, ok = kubernetesVersions[v2]
+	if !ok {
+		return 0, fmt.Errorf("%s is not a supported Kubernetes version", v2)
+	}
+
+	ver1, err := semver.NewVersion(v1)
+	if err != nil {
+		return 0, err
+	}
+
+	ver2, err := semver.NewVersion(v2)
+	if err != nil {
+		return 0, err
+	}
+
+	return ver1.Compare(ver2), nil
 }

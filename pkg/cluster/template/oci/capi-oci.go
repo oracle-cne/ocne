@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -15,6 +15,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 )
@@ -200,11 +201,18 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 	ignition.AddFile(ign, proxyConfigFile)
 
 	// Update service configuration file
+	ostreeTransport, registry, tag, err := image.ParseOstreeReference(clusterConfig.OsRegistry)
+	if err != nil {
+		return "", err
+	}
+	if tag != "" {
+		return "", fmt.Errorf("osRegistry field cannot have a tag")
+	}
 	updateFile := &ignition.File{
 		Path: ignition.OcneUpdateConfigPath,
 		Mode: 0400,
 		Contents: ignition.FileContents{
-			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, clusterConfig.OsRegistry, clusterConfig.OsTag),
+			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, registry, clusterConfig.OsTag, ostreeTransport),
 		},
 	}
 	ignition.AddFile(ign, updateFile)
@@ -291,14 +299,14 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		cid = newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		imageId, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Amd64 = imageId
+		img, _, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
+		if img != nil {
+			clusterConfig.Providers.Oci.Images.Amd64 = *img.Id
 		}
 
-		imageId, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
-		if err == nil {
-			clusterConfig.Providers.Oci.Images.Arm64 = imageId
+		img, _, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
+		if img != nil {
+			clusterConfig.Providers.Oci.Images.Arm64 = *img.Id
 		}
 	}
 

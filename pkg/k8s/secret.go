@@ -14,6 +14,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// GetSecret gets a secret
+func GetSecret(client kubernetes.Interface, namespace string, name string) (*v1.Secret, error) {
+	// Retrieve the existing Secret
+	return client.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
 // CreateSecret creates a Secret
 func CreateSecret(client kubernetes.Interface, namespace string, secret *v1.Secret) error {
 	_, err := client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
