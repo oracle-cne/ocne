@@ -541,10 +541,7 @@ func OcneUser(sshKey string, sshKeyPath string, password string) (*igntypes.Conf
 
 	if sshKey != "" {
 		logutils.Debug("User specified sshKey in configuration, ignoring sshKeyPath")
-		sshKeyPath = ""
-	}
-
-	if sshKeyPath != "" {
+	} else if sshKeyPath != "" {
 		logutils.Debug("User specified sshKeyPath in configuration, reading key file")
 		keyBytes, err := os.ReadFile(sshKeyPath)
 		if err != nil {
