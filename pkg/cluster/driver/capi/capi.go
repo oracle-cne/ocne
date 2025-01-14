@@ -1024,7 +1024,7 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 }
 
 func (cad *ClusterApiDriver) Delete() error {
-	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
+	log.Debugf("Entering Delete for CAPI cluster %s", *cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
 		cdi, err := common.GetTemplate(cad.ClusterConfig)

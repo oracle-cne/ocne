@@ -21,7 +21,7 @@ import (
 
 // Delete deletes the CAPI resources in the bootstrap cluster which results in the CAPI cluster being deleted.
 func (cad *OlvmDriver) Delete() error {
-	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
+	log.Debugf("Entering Delete for CAPI cluster %s", *cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
 		cdi, err := common.GetTemplate(cad.ClusterConfig)
