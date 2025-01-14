@@ -99,7 +99,7 @@ sshPublicKeyPath:
 # The rescue shell is only available when Oracle Cloud Native Environment fails to start
 # properly on that instance. The password hash must be generated
 # using SHA512. 
-password: <some-password-hash>
+password: 
 
 # Provider-specific configuration options.
 providers:
