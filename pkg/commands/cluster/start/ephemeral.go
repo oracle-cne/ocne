@@ -32,7 +32,7 @@ func EnsureCluster(kubeconfigPath string, clusterConfig *types.ClusterConfig) (s
 
 // StartEphemeralCluster
 func StartEphemeralCluster(clusterConfig *types.ClusterConfig) (string, error) {
-	log.Debugf("Starting ephemeral cluster %s", clusterConfig.EphemeralConfig.Name)
+	log.Debugf("Starting ephemeral cluster %s", *clusterConfig.EphemeralConfig.Name)
 
 	// Make local copies of the configuration that is passed
 	// in so that it can be edited.
