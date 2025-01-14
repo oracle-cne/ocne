@@ -9,8 +9,6 @@ import (
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
-	"github.com/oracle-cne/ocne/pkg/config"
-	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/spf13/cobra"
 )
@@ -27,12 +25,7 @@ ocne cluster template
 var kubeConfig string
 var clusterConfigPath string
 
-var opts = template.TemplateOptions{
-	Config: types.Config{},
-	ClusterConfig: types.ClusterConfig{
-		WorkerNodes: config.GenerateUInt16Pointer(pkgconst.WorkerNodes),
-	},
-}
+var opts = template.TemplateOptions{}
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
