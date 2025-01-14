@@ -36,7 +36,7 @@ type ByoDriver struct {
 
 func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
 
-	kubeconfigPath, err := client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", clusterConfig.Name))
+	kubeconfigPath, err := client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", *clusterConfig.Name))
 	if err != nil {
 		return nil, err
 	}
