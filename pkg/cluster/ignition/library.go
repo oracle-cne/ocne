@@ -15,6 +15,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
 )
 
 const (
@@ -538,12 +539,13 @@ func Proxy(inProxy *types.Proxy, noProxies ...string) (*igntypes.Config, error) 
 func OcneUser(sshKey string, sshKeyPath string, password string) (*igntypes.Config, error) {
 	ret := NewIgnition()
 
-	// Only allow either ssh key or path to be specified
-	if sshKey != "" && sshKeyPath != "" {
-		return nil, fmt.Errorf("Cannot specify both an ssh key and a path to an ssh key file")
+	if sshKey != "" {
+		logutils.Debug("User specified sshKey in configuration, ignoring sshKeyPath")
+		sshKeyPath = ""
 	}
 
 	if sshKeyPath != "" {
+		logutils.Debug("User specified sshKeyPath in configuration, reading key file")
 		keyBytes, err := os.ReadFile(sshKeyPath)
 		if err != nil {
 			return nil, err
