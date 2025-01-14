@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package libvirt
@@ -930,4 +930,9 @@ func (ld *LibvirtDriver) DefaultCNIInterfaces() []string {
 		return []string{fmt.Sprintf(BridgeNicPattern, BridgeBus, BridgeSlot)}
 	}
 	return []string{""}
+}
+
+// Stage is a no-op
+func (ld *LibvirtDriver) Stage(version string) (string, string, bool, error) {
+	return "", "", true, nil
 }

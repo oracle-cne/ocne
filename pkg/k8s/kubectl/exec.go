@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package kubectl
@@ -34,7 +34,9 @@ func RunCommand(kc *KubectlConfig, podName string, cmdArgs ...string) error {
 
 	// must override BehaviorOnFatal or else kubectl just exits the process if the script returns non-zero
 	fatalErr := false
+	var fatalErrError error
 	kutil.BehaviorOnFatal(func(s string, c int) {
+		fatalErrError = fmt.Errorf("Error running script: %s", s)
 		fatalErr = true
 	})
 
@@ -62,6 +64,8 @@ func RunCommand(kc *KubectlConfig, podName string, cmdArgs ...string) error {
 			retErr = fmt.Errorf("Error running script: %s", kc.ErrBuf.String())
 		} else if err != nil {
 			retErr = err
+		} else if fatalErrError != nil {
+			retErr = fatalErrError
 		} else {
 			retErr = fmt.Errorf("Error running script")
 		}

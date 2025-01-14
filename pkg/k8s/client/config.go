@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package client
@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -142,6 +143,13 @@ func GetKubeConfigGivenPathAndContext(kubeConfigPath string, kubeContext string)
 	}
 	setConfigQPSBurst(config)
 	return config, nil
+}
+
+// GetKubeConfigFromString returns a kubeconfig from an in-memory string
+func GetKubeConfigFromString(kcfg string) (*rest.Config, error) {
+	return clientcmd.BuildConfigFromKubeconfigGetter("", func()(*clientcmdapi.Config, error){
+		return clientcmd.Load([]byte(kcfg))
+	})
 }
 
 func setConfigQPSBurst(config *rest.Config) {
