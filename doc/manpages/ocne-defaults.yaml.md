@@ -83,6 +83,14 @@ clusterDefinitionInline: |
   somekey: someval
   someotherkey: someotherval
 
+# Optional public ssh key for the "ocne" user. The public key is added to the authorized_keys file for the "ocne" user.
+# If both the sshPublicKey and sshPublicKeyPath fields are specified then the sshPublicKeyPath field is ignored.
+sshPublicKey: 
+
+# Optional path to a public ssh key for the "ocne" user on the local host. The public key is added to the authorized_keys file for the "ocne" user.
+# If both the sshPublicKey and sshPublicKeyPath fields are specified then the sshPublicKeyPath field is ignored.
+sshPublicKeyPath:
+
 # Provider-specific configuration options.
 providers:
   libvirt:
