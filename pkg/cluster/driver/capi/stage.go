@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
@@ -21,16 +20,17 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type OciImageData struct {
-	Image *core.Image
-	HasUpdate bool
-	Arch string
-	NewId string
-	WorkRequestId string
+	Image            *core.Image
+	HasUpdate        bool
+	Arch             string
+	NewId            string
+	WorkRequestId    string
 	MachineTemplates []*capi.GraphNode
 }
 
@@ -146,14 +146,13 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
-	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
 		retVal := arg.(map[string]*OciImageData)
 		img, err := imageFromMachineTemplate(mt)
 		if err != nil {
 			return err
 		}
-
 
 		shape, found, err := unstructured.NestedString(mt.Object, MachineTemplateShape...)
 		if !found {
@@ -169,9 +168,9 @@ func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 		imgData, ok := retVal[*img.Id]
 		if !ok {
 			retVal[*img.Id] = &OciImageData{
-				Image: img,
-				HasUpdate: false,
-				Arch: arch,
+				Image:            img,
+				HasUpdate:        false,
+				Arch:             arch,
 				MachineTemplates: []*capi.GraphNode{mtNode},
 			}
 		} else {
@@ -207,7 +206,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	}
 
 	if cad.FromTemplate {
-		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.ClusterConfig)
 		if err != nil {
 			return "", "", false, err
 		}
@@ -249,7 +248,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		return "", "", false, err
 	}
 
-	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
+	err = findUpdates(ociImages, version, *cad.ClusterConfig.BootVolumeContainerImage)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -319,7 +318,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		// is made by looking at resources, timestamps, and other
 		// durable data that is difficult to set up within the
 		// context of a test harness.
-		if  os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
+		if os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
 			newId = *img.Image.Id
 		} else if !img.HasUpdate {
 			continue
@@ -348,7 +347,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
 	helpMessages := []string{}
-	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
 
 		var umt *unstructured.Unstructured

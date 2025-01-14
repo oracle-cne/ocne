@@ -6,12 +6,12 @@ package stage
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/stage"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -87,28 +87,24 @@ func RunCmd(cmd *cobra.Command) error {
 			return fmt.Errorf("Cluster %s is not in the cache", clusterName)
 		}
 
-		c := &types.Config{}
 		cc := &types.ClusterConfig{}
-		c, cc, err = cmdutil.GetFullConfig(c, &cached.ClusterConfig, clusterConfigPath)
+		cc, err = cmdutil.GetFullConfig(&cached.ClusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}
 
 		options.ClusterConfig = cc
-		options.Config = c
 	}
 
 	if clusterConfigPath != "" {
-		c := &types.Config{}
 		cc := &types.ClusterConfig{}
 
-		c, cc, err := cmdutil.GetFullConfig(c, cc, clusterConfigPath)
+		cc, err := cmdutil.GetFullConfig(cc, clusterConfigPath)
 		if err != nil {
 			return err
 		}
 
 		options.ClusterConfig = cc
-		options.Config = c
 	}
 
 	err := stage.Stage(options)
