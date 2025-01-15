@@ -103,8 +103,7 @@ func RunCmd(cmd *cobra.Command) error {
 		}
 		// Make sure the tag matches Kubeversion, unless it is overridden
 		if options.ClusterConfig.OsTag == nil {
-			kubeVersion := *options.ClusterConfig.KubeVersion
-			options.ClusterConfig.OsTag = &kubeVersion
+			options.ClusterConfig.OsTag = options.ClusterConfig.KubeVersion
 		}
 
 		clusterName = *options.ClusterConfig.Name
