@@ -421,7 +421,7 @@ func MergeProxyPointer(def *Proxy, ovr *Proxy) Proxy {
 // // For each catalog in the slice, its  *string values are set to the empty string, if that value does not exist
 func MergeCatalogs(def []Catalog, ovr []Catalog) []Catalog {
 	catalogToReturn := append(append([]Catalog{}, def...), ovr...)
-	for _, catalog := range catalogToReturn {
+	for i, catalog := range catalogToReturn {
 		if catalog.Name == nil {
 			catalog.Name = iesp(catalog.Name, nil)
 		}
@@ -434,8 +434,16 @@ func MergeCatalogs(def []Catalog, ovr []Catalog) []Catalog {
 		if catalog.Protocol == nil {
 			catalog.Protocol = iesp(catalog.Protocol, nil)
 		}
+		catalogToReturn[i] = catalog
 	}
 	return catalogToReturn
+}
+
+// MergeCatalogsIncludeNil takes two Catalogs and merges them into
+// a third.  The two lists are appended to one another, and a unique
+// slice is returned
+func MergeCatalogsIncludeNil(def []Catalog, ovr []Catalog) []Catalog {
+	return append(append([]Catalog{}, def...), ovr...)
 }
 
 // MergeApplications takes two Applications and merges them into
@@ -444,7 +452,7 @@ func MergeCatalogs(def []Catalog, ovr []Catalog) []Catalog {
 // For each application in the slice, its  *string values are set to the empty string, if that value does not exist
 func MergeApplications(def []Application, ovr []Application) []Application {
 	applicationsToReturn := append(append([]Application{}, def...), ovr...)
-	for _, app := range applicationsToReturn {
+	for i, app := range applicationsToReturn {
 		if app.ConfigFrom == nil {
 			app.ConfigFrom = iesp(app.ConfigFrom, nil)
 		}
@@ -463,8 +471,16 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 		if app.Release == nil {
 			app.Release = iesp(app.Release, nil)
 		}
+		applicationsToReturn[i] = app
 	}
 	return applicationsToReturn
+}
+
+// MergeApplicationsIncludeNil takes two Applications and merges them into
+// a third.  The two lists are appended to one another, and a unique
+// slice is returned
+func MergeApplicationsIncludeNil(def []Application, ovr []Application) []Application {
+	return append(append([]Application{}, def...), ovr...)
 }
 
 // MergeCertificateInformation takes two CertificateInformations and merges them into a third.
@@ -1165,8 +1181,8 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		Headless:                 iebpn(c.Headless, cc.Headless),
 		Catalog:                  iebpn(c.Catalog, cc.Catalog),
 		CommunityCatalog:         iebpn(c.CommunityCatalog, cc.CommunityCatalog),
-		Applications:             MergeApplications(cc.Applications, nil),
-		Catalogs:                 MergeCatalogs(cc.Catalogs, nil),
+		Applications:             MergeApplicationsIncludeNil(cc.Applications, nil),
+		Catalogs:                 MergeCatalogsIncludeNil(cc.Catalogs, nil),
 		KubeVersion:              iespn(c.KubeVersion, cc.KubeVersion),
 		SshPublicKeyPath:         iespn(c.SshPublicKeyPath, cc.SshPublicKeyPath),
 		SshPublicKey:             iespn(c.SshPublicKey, cc.SshPublicKey),

@@ -265,7 +265,7 @@ func Start(clusterConfig *types.ClusterConfig) (string, error) {
 	// Install any other configured applications
 	applications = []install.ApplicationDescription{}
 	for i := range clusterConfig.Applications {
-		log.Debugf("Queueing application %s with release name %s queued up", clusterConfig.Applications[i].Name, clusterConfig.Applications[i].Release)
+		log.Debugf("Queueing application %s with release name %s queued up", *clusterConfig.Applications[i].Name, *clusterConfig.Applications[i].Release)
 		applications = append(applications, install.ApplicationDescription{
 			Application: &clusterConfig.Applications[i],
 		})
