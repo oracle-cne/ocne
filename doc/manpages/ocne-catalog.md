@@ -119,6 +119,20 @@ SUBCOMMANDS
 `-a`, `--archive`
     If specified, set the file path of the .tgz archive of the downloaded images. Useful for working in air-gapped environments.
 
+`copy` [OPTIONS]...
+  Copy images from one location to another. The source file should contain a list of images delimited by the newline character.
+  The destination should be a valid domain pointing to a container registry. The copy command copies each image from the source file
+  to the destination and writes the new image uri to the file specified by the destinationfilepath.
+
+`-f`, `--filepath` *filepath*
+    The name of the source file populated with the original container images.
+
+`-e`, `--destinationfilepath` *destinationfilepath*
+    The name of the file to contain new container images.
+
+`-d`, `--destination` *destination*
+    The new domain name of the images. For example, container-registry.oracle.com is a valid destination.
+
 SEE ALSO
 --------
 

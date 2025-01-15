@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package k8s
@@ -18,6 +18,22 @@ import (
 	crtpkg "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func GetResources(restConf *rest.Config, namespace string, apiVersion string, kind string) (*unstructured.UnstructuredList, error) {
+	client, err := crtpkg.New(restConf, crtpkg.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	u := &unstructured.UnstructuredList{}
+
+	u.SetGroupVersionKind(schema.FromAPIVersionAndKind(apiVersion, kind))
+	err = client.List(context.TODO(), u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
 func GetResource(restConf *rest.Config, u *unstructured.Unstructured) error {
 	client, err := crtpkg.New(restConf, crtpkg.Options{})
 	if err != nil {
@@ -36,6 +52,13 @@ func CreateResource(restConf *rest.Config, u *unstructured.Unstructured) error {
 	if err != nil {
 		return err
 	}
+
+
+	// Delete any fields that can't be defined for new objects.
+	unstructured.RemoveNestedField(u.Object, "metadata", "resourceVersion")
+	unstructured.RemoveNestedField(u.Object, "metadata", "uid")
+	unstructured.RemoveNestedField(u.Object, "metadata", "creationTimestamp")
+	unstructured.RemoveNestedField(u.Object, "metadata", "ownerReferences")
 
 	return client.Create(context.TODO(), u, &crtpkg.CreateOptions{})
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package main
@@ -16,6 +16,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/byo"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/libvirt"
+	"github.com/oracle-cne/ocne/pkg/util/garbage"
 	"github.com/spf13/pflag"
 )
 
@@ -45,6 +46,8 @@ func main() {
 
 	rootCmd := root.NewRootCmd()
 	if err := rootCmd.Execute(); err != nil {
+		garbage.Cleanup()
 		os.Exit(1)
 	}
+	garbage.Cleanup()
 }

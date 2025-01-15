@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package image
@@ -96,14 +96,36 @@ func GetSystemContext(arch string) *types.SystemContext {
 	}
 }
 
-// GetImageLayers fetches the BlobInfos for all the layers of the
-// given ImageReference.
-func GetImageLayers(imgRef types.ImageReference, arch string) ([]types.BlobInfo, error) {
+// GetImageSpecFromRef gets the OCI image specification from
+// an image reference.
+func GetImageSpecFromRef(imgRef types.ImageReference, arch string) (types.Image, error) {
 	imgSrc, err := imgRef.NewImageSource(context.Background(), GetSystemContext(arch))
 	if err != nil {
 		return nil, err
 	}
+
 	img, err := image.FromSource(context.Background(), GetSystemContext(arch), imgSrc)
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+// GetImageSpec gets the OCI image specification for a container image
+func GetImageSpec(imageName string, arch string) (types.Image, error) {
+	srcRef, err := alltransports.ParseImageName(imageName)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetImageSpecFromRef(srcRef, arch)
+}
+
+// GetImageLayers fetches the BlobInfos for all the layers of the
+// given ImageReference.
+func GetImageLayers(imgRef types.ImageReference, arch string) ([]types.BlobInfo, error) {
+	img, err := GetImageSpecFromRef(imgRef, arch)
 	if err != nil {
 		return nil, err
 	}
