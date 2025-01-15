@@ -64,7 +64,7 @@ func Stage(o StageOptions) error {
 		return errors.New("the kubernetes version is unsupported. Please choose a supported version of Kubernetes to update to")
 	}
 
-	var doNodes bool
+	doNodes := true
 	var helpStanza string
 
 	// If a cluster config is given, do any provider-specific staging
@@ -84,18 +84,12 @@ func Stage(o StageOptions) error {
 		o.KubeConfigPath = kcfgPath
 	}
 
-	restConfig, err := client.GetKubeConfig(o.KubeConfigPath)
-	if err != nil {
-		return err
-	}
-
 	if !doNodes {
 		fmt.Println(helpStanza)
 		return nil
 	}
 
-	// get a kubernetes client
-	KClient, err := client.GetGoClient(restConfig)
+	restConfig, KClient, err := client.GetKubeClient(o.KubeConfigPath)
 	if err != nil {
 		return err
 	}
