@@ -418,15 +418,53 @@ func MergeProxyPointer(def *Proxy, ovr *Proxy) Proxy {
 // MergeCatalogs takes two Catalogs and merges them into a third.
 // The two lists are appended to one another, and a unique slice
 // is returned
+// // For each catalog in the slice, its  *string values are set to the empty string, if that value does not exist
 func MergeCatalogs(def []Catalog, ovr []Catalog) []Catalog {
-	return append(append([]Catalog{}, def...), ovr...)
+	catalogToReturn := append(append([]Catalog{}, def...), ovr...)
+	for _, catalog := range catalogToReturn {
+		if catalog.Name == nil {
+			catalog.Name = iesp(catalog.Name, nil)
+		}
+		if catalog.URI == nil {
+			catalog.URI = iesp(catalog.URI, nil)
+		}
+		if catalog.Namespace == nil {
+			catalog.Namespace = iesp(catalog.Namespace, nil)
+		}
+		if catalog.Protocol == nil {
+			catalog.Protocol = iesp(catalog.Protocol, nil)
+		}
+	}
+	return catalogToReturn
 }
 
 // MergeApplications takes two Applications and merges them into
 // a third.  The two lists are appended to one another, and a unique
 // slice is returned
+// For each application in the slice, its  *string values are set to the empty string, if that value does not exist
 func MergeApplications(def []Application, ovr []Application) []Application {
-	return append(append([]Application{}, def...), ovr...)
+	applicationsToReturn := append(append([]Application{}, def...), ovr...)
+	for _, app := range applicationsToReturn {
+		if app.ConfigFrom == nil {
+			app.ConfigFrom = iesp(app.ConfigFrom, nil)
+		}
+		if app.Name == nil {
+			app.Name = iesp(app.Name, nil)
+		}
+		if app.Namespace == nil {
+			app.Namespace = iesp(app.Namespace, nil)
+		}
+		if app.Catalog == nil {
+			app.Catalog = iesp(app.Catalog, nil)
+		}
+		if app.Version == nil {
+			app.Version = iesp(app.Version, nil)
+		}
+		if app.Release == nil {
+			app.Release = iesp(app.Release, nil)
+		}
+	}
+	return applicationsToReturn
 }
 
 // MergeCertificateInformation takes two CertificateInformations and merges them into a third.
