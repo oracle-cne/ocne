@@ -597,7 +597,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Check to see if a converted image already exists.  If so, don't bother
 	// making a new one.
-	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, cad.ClusterConfig.KubeVersion, arch)
+	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, version, arch)
 	if err != nil {
 		return "", "", err
 	}
@@ -611,6 +611,9 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// the ephemeral one.  Set it back when done.
 	oldKcfg := cad.Config.KubeConfig
 	cad.Config.KubeConfig = cad.BootstrapKubeConfig
+	if cad.ClusterConfig.OsTag == "" {
+		cad.ClusterConfig.OsTag = version
+	}
 	err = create.Create(cad.Config, cad.ClusterConfig, create.CreateOptions{
 		ProviderType: create.ProviderTypeOCI,
 		Architecture: arch,

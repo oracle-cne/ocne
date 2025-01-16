@@ -435,6 +435,8 @@ spec:
         extraArgs:
           tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
+      patches:
+        directory: /etc/ocne/ock/patches
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock
         kubeletExtraArgs:

@@ -9,9 +9,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -22,6 +24,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -58,10 +61,59 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error
 	return img, nil
 }
 
+// patchControlPlane adds any changes required to a KubeadmControlPlane
+func patchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) error {
+	// Ensure this is a KubeadmControlPlane
+	if kcp.GetAPIVersion() != capi.ControlPlaneAPI || kcp.GetKind() != capi.KubeadmControlPlane {
+		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), capi.ControlPlaneAPI, capi.KubeadmControlPlane)
+	}
+
+	annots := kcp.GetAnnotations()
+	_, ok := annots[capi.SkipKubeProxyAnnotation]
+	if ok {
+		// If the annotation is already set, no need to do so again.
+		return nil
+	}
+	annots[capi.SkipKubeProxyAnnotation] = "true"
+	kcp.SetAnnotations(annots)
+
+	err := k8s.UpdateResource(restConfig, kcp)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getControlPlanePatches calculates the set of patches that need to be
+// applied to the KubeadmControlPlane after staging is complete to
+// apply the new configuration
+func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtName string) *util.JsonPatches {
+	ret := &util.JsonPatches{}
+
+	// These are mandatory changes to update control plane nodes
+	ret.Replace(capi.ControlPlaneVersion, version)
+	ret.Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
+
+	//  The joinConfiguration needs to apply the OCK patches
+	_, found, err := unstructured.NestedString(kcp.Object, capi.ControlPlaneJoinPatches...)
+	if err != nil {
+		log.Warnf("Error getting KubeadmControlPlane.%s: %v", strings.Join(capi.ControlPlaneJoinPatches, "."), err)
+		return ret
+	}
+
+	if found {
+		return ret
+	}
+
+	ret.Replace(capi.ControlPlaneJoinPatches, update.OckPatchDirectory)
+
+	return ret
+}
+
 // doUpdate calculates if there is reason to upload a new OCI custom image
 // for a given existing image.
 func doUpdate(img *core.Image, arch string, version string, bvImage string) (bool, error) {
-
 	// Update the image if:
 	// - An environment variable forces the update (typically for testing)
 	// - The minor version is changing and an image for that version
@@ -282,7 +334,14 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 			continue
 		}
 
+		oldBv := cad.ClusterConfig.BootVolumeContainerImage
+		imgXport := alltransports.TransportFromImageName(cad.ClusterConfig.BootVolumeContainerImage)
+		if imgXport == nil {
+			cad.ClusterConfig.BootVolumeContainerImage = fmt.Sprintf("docker://%s", cad.ClusterConfig.BootVolumeContainerImage)
+		}
+		cad.ClusterConfig.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(version, cad.ClusterConfig.BootVolumeContainerImage)
 		img.NewId, img.WorkRequestId, err = cad.ensureImage(*img.Image.DisplayName, img.Arch, version, true)
+		cad.ClusterConfig.BootVolumeContainerImage = oldBv
 		if err != nil {
 			return "", "", false, err
 		}
@@ -363,7 +422,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 				return err
 			}
 
-			patches := (&util.JsonPatches{}).Replace(capi.ControlPlaneVersion, kubeVersions.Kubernetes).Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), umt.GetName()).String()
+			patches := getControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
 
 			helpMessages = append(helpMessages, fmt.Sprintf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		} else {
