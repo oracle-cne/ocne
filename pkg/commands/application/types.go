@@ -81,6 +81,10 @@ type InstallOptions struct {
 
 	// ResetValues is used to reset the values to the ones built into the chart.
 	ResetValues bool
+
+	// Force causes the application to overwrite and take ownership
+	// of existing resources.
+	Force bool
 }
 type UpdateOptions struct {
 

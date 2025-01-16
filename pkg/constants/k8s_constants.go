@@ -50,6 +50,14 @@ const (
 	CNIFlannelVersion   = "0.22.3"
 	CNIFlannelImageTag  = "v0.22.3-2"
 
+	KubeProxyRelease   = "kube-proxy"
+	KubeProxyNamespace = "kube-proxy"
+	KubeProxyChart     = "kube-proxy"
+	KubeProxyVersion   = "2.0.0"
+	KubeProxyDaemonSet = "kube-proxy"
+	KubeProxyImage     = "container-registry.oracle.com/olcne/kube-proxy"
+	CurrentTag         = "current"
+
 	CatalogRelease   = "ocne-catalog"
 	CatalogNamespace = "ocne-system"
 	CatalogChart     = "ocne-catalog"
@@ -114,4 +122,8 @@ const (
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
+
+	CoreDNSDeployment = "coredns"
+	CoreDNSNamespace = "kube-system"
+	CoreDNSImage     = "container-registry.oracle.com/olcne/coredns"
 )

@@ -57,7 +57,7 @@ func Install(opt application.InstallOptions) error {
 		})
 	}
 	// Upload the helm chart stored at the temporary directory
-	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues)
+	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues, opt.Force)
 	return err
 }
 

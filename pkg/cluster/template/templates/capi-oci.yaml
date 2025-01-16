@@ -392,6 +392,8 @@ apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   name: "{{.ClusterConfig.Name}}-control-plane"
   namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
+  annotations:
+    controlplane.cluster.x-k8s.io/skip-kube-proxy: "true"
 spec:
   version: "{{.KubeVersions.Kubernetes}}"
   replicas: {{.ClusterConfig.ControlPlaneNodes}}
