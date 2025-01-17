@@ -22,6 +22,7 @@ import (
 // It downloads the helm chart for that entry locally and uploads it to a cluster
 func Install(opt application.InstallOptions) error {
 	// Download the helm chart that you want to install into the cluster
+	log.Debugf("Installing application with arguments: %+v", opt)
 	chartReader, err := DownloadApplication(opt.Catalog, opt.AppName, opt.Version)
 	if err != nil {
 		return err

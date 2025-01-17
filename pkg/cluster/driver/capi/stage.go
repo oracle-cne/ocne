@@ -96,7 +96,7 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 	ret.Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
 
 	//  The joinConfiguration needs to apply the OCK patches
-	_, found, err := unstructured.NestedString(kcp.Object, capi.ControlPlaneJoinPatches...)
+	patches, found, err := unstructured.NestedStringMap(kcp.Object, capi.ControlPlaneJoinPatches...)
 	if err != nil {
 		log.Warnf("Error getting KubeadmControlPlane.%s: %v", strings.Join(capi.ControlPlaneJoinPatches, "."), err)
 		return ret
@@ -106,7 +106,14 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 		return ret
 	}
 
-	ret.Replace(capi.ControlPlaneJoinPatches, update.OckPatchDirectory)
+	patchDir, ok := patches[capi.PatchesDirectory]
+	if ok {
+		if patchDir != update.OckPatchDirectory {
+			ret.Replace(append(capi.ControlPlaneJoinPatches, capi.PatchesDirectory), update.OckPatchDirectory)
+		}
+	} else {
+		ret.Add(capi.ControlPlaneJoinPatches, map[string]string{capi.PatchesDirectory: update.OckPatchDirectory})
+	}
 
 	return ret
 }
