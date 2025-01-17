@@ -55,6 +55,9 @@ const (
 	KubeProxyChart     = "kube-proxy"
 	KubeProxyVersion   = "2.0.0"
 	KubeProxyDaemonSet = "kube-proxy"
+	KubeProxyConfigMap = "kube-proxy"
+	KubeProxyConfigMapConfig = "config.conf"
+	KubeProxyConfigMapKubeconfig = "kubeconfig.conf"
 	KubeProxyImage     = "container-registry.oracle.com/olcne/kube-proxy"
 	CurrentTag         = "current"
 

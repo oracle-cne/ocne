@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -150,7 +151,37 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
 }
 
-func updateKubeProxy(kubeConfigPath string) error {
+func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
+	// TODO check to see if this is already an application
+
+	// Get the existing kube-proxy configuration and use that for the overrides.
+	cm, err := k8s.GetConfigmap(client, constants.KubeProxyNamespace, constants.KubeProxyConfigMap)
+	if err != nil {
+		return err
+	}
+
+	conf, ok := cm.Data[constants.KubeProxyConfigMapConfig]
+	if !ok {
+		return fmt.Errorf("ConfigMap %s in %s did not have a %s key", constants.KubeProxyConfigMap, constants.KubeProxyNamespace, constants.KubeProxyConfigMapConfig)
+	}
+
+	confParsed := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(conf), confParsed)
+	if err != nil {
+		return err
+	}
+
+	kcfg, ok := cm.Data[constants.KubeProxyConfigMapKubeconfig]
+	if !ok {
+		return fmt.Errorf("ConfigMap %s in %s did not have a %s key", constants.KubeProxyConfigMap, constants.KubeProxyNamespace, constants.KubeProxyConfigMapKubeconfig)
+	}
+
+	kcfgParsed := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(kcfg), kcfgParsed)
+	if err != nil {
+		return err
+	}
+
 	return install.InstallApplications([]install.ApplicationDescription{
 		install.ApplicationDescription{
 			Force: true,
@@ -161,14 +192,8 @@ func updateKubeProxy(kubeConfigPath string) error {
 				Version:   constants.KubeProxyVersion,
 				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
-					"apiServer": map[string]interface{}{
-						"host": "127.0.0.1",
-						"port": "6443",
-					},
-					"config": map[string]interface{}{
-						"mode": "iptables",
-						"clusterCIDR": "10.244.0.0/16",
-					},
+					"kubeconfig": kcfgParsed,
+					"config": confParsed,
 				},
 			},
 		},
@@ -256,7 +281,7 @@ func preUpdate(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 
 	// Once at least some nodes have the current tags, update the
 	// kube-proxy daemonset and coredns deployment to use them.
-	err := updateKubeProxy(kubeConfigPath)
+	err := updateKubeProxy(client, kubeConfigPath)
 	if err != nil {
 		return err
 	}

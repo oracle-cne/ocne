@@ -210,7 +210,7 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.DryRun = dryRun
 		client.Wait = wait
 		client.ResetValues = resetValues
-		client.Force = force
+		client.TakeOwnership = force
 
 		// Reuse the original set of input values as the base set of helm overrides
 		helmValues := map[string]interface{}{}
@@ -240,6 +240,7 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.Replace = true
 		client.Wait = wait
 		client.CreateNamespace = createNamespace
+		client.TakeOwnership = force
 
 		rel, err = client.Run(theChart, vals)
 		if err != nil {
