@@ -27,40 +27,39 @@ type olvmData struct {
 }
 
 // GetOlvmTemplate renders the OLVM template that specifies the CAPI resources.
-func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (string, error) {
+func GetOlvmTemplate(clusterConfig *types.ClusterConfig) (string, error) {
 	tmplBytes, err := template.ReadTemplate("capi-olvm.yaml")
 
 	if err != nil {
 		return "", err
 	}
 
-	if clusterConfig.ControlPlaneNodes%2 == 0 {
+	if *clusterConfig.ControlPlaneNodes%2 == 0 {
 		return "", errors.New("the number of control plane nodes must be odd")
 	}
 
 	// Get the Kubernetes version configuration
-	kubeVer, err := versions.GetKubernetesVersions(clusterConfig.KubeVersion)
+	kubeVer, err := versions.GetKubernetesVersions(*clusterConfig.KubeVersion)
 	if err != nil {
 		return "", err
 	}
 
 	// Build up the extra ignition structures.  Internal LB for control plane only
-	cpIgn, err := getExtraIgnition(config, clusterConfig, true)
+	cpIgn, err := getExtraIgnition(clusterConfig, true)
 	if err != nil {
 		return "", err
 	}
-	workerIgn, err := getExtraIgnition(config, clusterConfig, false)
+	workerIgn, err := getExtraIgnition(clusterConfig, false)
 	if err != nil {
 		return "", err
 	}
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
-		Config:                  config,
 		ClusterConfig:           clusterConfig,
 		ExtraConfigControlPlane: cpIgn,
 		ExtraConfigWorker:       workerIgn,
 		KubeVersions:            &kubeVer,
 		VolumePluginDir:         ignition.VolumePluginDir,
-		CipherSuite:             clusterConfig.CipherSuites,
+		CipherSuite:             *clusterConfig.CipherSuites,
 	}, nil)
 }
 

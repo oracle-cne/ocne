@@ -157,7 +157,7 @@ func createVolumeFromImagesPool(node configtypes.Node, l *libvirt.Libvirt, pool 
 	if err != nil {
 		return nil, err
 	}
-	resourceUnits, size, err := createLibvirtCapacityInfo(node.Storage)
+	resourceUnits, size, err := createLibvirtCapacityInfo(*node.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -191,8 +191,8 @@ func createVolumeFromImagesPool(node configtypes.Node, l *libvirt.Libvirt, pool 
 
 // createDomainFromTemplate dynamically creates a domain from a template and defines and spins up a libvirt VM
 func createDomainFromTemplate(node configtypes.Node, l *libvirt.Libvirt, domainInformation *Domain) error {
-	domainInformation.CPUs = node.CPUs
-	resourceUnits, size, err := createLibvirtCapacityInfo(node.Memory)
+	domainInformation.CPUs = *node.CPUs
+	resourceUnits, size, err := createLibvirtCapacityInfo(*node.Memory)
 	if err != nil {
 		return err
 	}

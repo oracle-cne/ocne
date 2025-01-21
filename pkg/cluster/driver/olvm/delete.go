@@ -21,10 +21,10 @@ import (
 
 // Delete deletes the CAPI resources in the bootstrap cluster which results in the CAPI cluster being deleted.
 func (cad *OlvmDriver) Delete() error {
-	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
+	log.Debugf("Entering Delete for CAPI cluster %s", *cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
-		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.ClusterConfig)
 		if err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func (cad *OlvmDriver) Delete() error {
 	clusterName := clusterObj.GetName()
 
 	// If this is a self-managed cluster, pivot back into the bootstrap cluster.
-	if cad.ClusterConfig.Providers.Oci.SelfManaged {
+	if *cad.ClusterConfig.Providers.Oci.SelfManaged {
 		log.Infof("Migrating Cluster API resources to bootstrap cluster")
 		capiClient, err := capiclient.New(context.TODO(), "")
 		if err != nil {
@@ -80,13 +80,13 @@ func (cad *OlvmDriver) Delete() error {
 	}
 
 	secretName := cad.credSecretName()
-	if err = k8s.DeleteSecret(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
+	if err = k8s.DeleteSecret(clientIface, *cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
 		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v",
 			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
 	}
 
 	cmName := cad.caConfigMapName()
-	if err = k8s.DeleteConfigmap(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
+	if err = k8s.DeleteConfigmap(clientIface, *cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
 		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v",
 			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
 	}
@@ -105,8 +105,8 @@ func (cad *OlvmDriver) Close() error {
 		return nil
 	}
 
-	if cad.Ephemeral && cad.ClusterConfig.Providers.Oci.SelfManaged {
-		err := start.StopEphemeralCluster(cad.Config, cad.ClusterConfig)
+	if cad.Ephemeral && *cad.ClusterConfig.Providers.Oci.SelfManaged {
+		err := start.StopEphemeralCluster(cad.ClusterConfig)
 		if err != nil {
 			return err
 		}

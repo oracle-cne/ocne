@@ -22,6 +22,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
+	"github.com/oracle-cne/ocne/pkg/config"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -55,7 +56,6 @@ type ClusterApiDriver struct {
 	Ephemeral           bool
 	BootstrapKubeConfig string
 	KubeConfig          string
-	Config              *types.Config
 	ClusterConfig       *types.ClusterConfig
 	ClusterResources    string
 	ResourceNamespace   string
@@ -70,28 +70,28 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	}
 
 	proxyValues := map[string]interface{}{
-		"httpsProxy": cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
-		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpsProxy": *cad.ClusterConfig.Providers.Oci.Proxy.HttpsProxy,
+		"httpProxy":  *cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    *cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
 	return []install.ApplicationDescription{
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CertManagerChart,
-				Namespace: constants.CertManagerNamespace,
-				Release:   constants.CertManagerRelease,
-				Version:   constants.CertManagerVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.CertManagerChart),
+				Namespace: config.GenerateStringPointer(constants.CertManagerNamespace),
+				Release:   config.GenerateStringPointer(constants.CertManagerRelease),
+				Version:   config.GenerateStringPointer(constants.CertManagerVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 			},
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CoreCAPIChart,
-				Namespace: constants.CoreCAPINamespace,
-				Release:   constants.CoreCAPIRelease,
-				Version:   constants.CoreCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.CoreCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.CoreCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.CoreCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.CoreCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -99,11 +99,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.OCICAPIChart,
-				Namespace: constants.OCICAPINamespace,
-				Release:   constants.OCICAPIRelease,
-				Version:   constants.OCICAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.OCICAPIChart),
+				Namespace: config.GenerateStringPointer(constants.OCICAPINamespace),
+				Release:   config.GenerateStringPointer(constants.OCICAPIRelease),
+				Version:   config.GenerateStringPointer(constants.OCICAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"authConfig": map[string]interface{}{
 						"fingerprint":          ociConfig.Fingerprint,
@@ -120,11 +120,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmBootstrapCAPIChart,
-				Namespace: constants.KubeadmBootstrapCAPINamespace,
-				Release:   constants.KubeadmBootstrapCAPIRelease,
-				Version:   constants.KubeadmBootstrapCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.KubeadmBootstrapCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.KubeadmBootstrapCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.KubeadmBootstrapCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.KubeadmBootstrapCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -132,11 +132,11 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmControlPlaneCAPIChart,
-				Namespace: constants.KubeadmControlPlaneCAPINamespace,
-				Release:   constants.KubeadmControlPlaneCAPIRelease,
-				Version:   constants.KubeadmControlPlaneCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIChart),
+				Namespace: config.GenerateStringPointer(constants.KubeadmControlPlaneCAPINamespace),
+				Release:   config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIRelease),
+				Version:   config.GenerateStringPointer(constants.KubeadmControlPlaneCAPIVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -151,7 +151,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 		return nil, err
 	}
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(*cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return nil, err
 	}
@@ -210,11 +210,11 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 				return err
 			},
 			Application: &types.Application{
-				Name:      OciCcmChart,
-				Namespace: OciCcmNamespace,
-				Release:   OciCcmRelease,
-				Version:   OciCcmVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      config.GenerateStringPointer(OciCcmChart),
+				Namespace: config.GenerateStringPointer(OciCcmNamespace),
+				Release:   config.GenerateStringPointer(OciCcmRelease),
+				Version:   config.GenerateStringPointer(OciCcmVersion),
+				Catalog:   config.GenerateStringPointer(catalog.InternalCatalog),
 			},
 		},
 	}
@@ -226,7 +226,7 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	// If the values are already set, don't try to set them.  This accounts
 	// for two cases: this fuction has already been called, or there are
 	// specific values set in the cluster configuration.
-	if cad.ClusterConfig.Providers.Oci.Vcn != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 != "" {
+	if *cad.ClusterConfig.Providers.Oci.Vcn != "" && *cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 != "" && *cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 != "" {
 		return nil
 	}
 
@@ -306,9 +306,9 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 		return fmt.Errorf("OCICluster %s/%s does not have a service-lb subnet", ociCluster.GetNamespace(), ociCluster.GetName())
 	}
 
-	cad.ClusterConfig.Providers.Oci.Vcn = vcnId
-	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 = serviceSubnets[0]
-	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 = serviceSubnets[len(serviceSubnets)-1]
+	*cad.ClusterConfig.Providers.Oci.Vcn = vcnId
+	*cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 = serviceSubnets[0]
+	*cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 = serviceSubnets[len(serviceSubnets)-1]
 
 	return nil
 }
@@ -471,11 +471,11 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	return ociClusterObj, err
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
-	cd := clusterConfig.ClusterDefinition
-	cdi := clusterConfig.ClusterDefinitionInline
+	cd := *clusterConfig.ClusterDefinition
+	cdi := *clusterConfig.ClusterDefinitionInline
 	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
 		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
@@ -489,7 +489,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		// absolute, then assume it is relative to the
 		// cluster config working directory.
 		if !filepath.IsAbs(cd) {
-			cd = filepath.Join(clusterConfig.WorkingDirectory, cd)
+			cd = filepath.Join(*clusterConfig.WorkingDirectory, cd)
 			cd, err = filepath.Abs(cd)
 			if err != nil {
 				return nil, err
@@ -509,36 +509,35 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	//
 	// If someone really wants to have no workers, then they are free
 	// to pass in a cluster definition.
-	if clusterConfig.WorkerNodes == 0 {
-		clusterConfig.WorkerNodes = 1
+	if *clusterConfig.WorkerNodes == 0 {
+		*clusterConfig.WorkerNodes = 1
 	}
 
 	// It's also not feasible to have zero control plane nodes.
-	if clusterConfig.ControlPlaneNodes == 0 {
-		clusterConfig.ControlPlaneNodes = 1
+	if *clusterConfig.ControlPlaneNodes == 0 {
+		*clusterConfig.ControlPlaneNodes = 1
 	}
 
 	// Validate the provider configuration.  For OCI-CCM several pieces of
 	// configuration are required.  Specifically, a compartment, a vcn and
 	// two subnets (which can be the same).  These values are fed into the
 	// OCI-CCM configuration.
-	if clusterConfig.Providers.Oci.Compartment == "" {
+	if *clusterConfig.Providers.Oci.Compartment == "" {
 		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
 	}
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
-	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
-		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
+	if strings.TrimPrefix(*clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], *clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
+		*clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
 
 	cad := &ClusterApiDriver{
-		Config:           config,
 		ClusterConfig:    clusterConfig,
 		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.Providers.Oci.KubeConfigPath, config, clusterConfig)
+	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(*clusterConfig.Providers.Oci.KubeConfigPath, clusterConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +551,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
-	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, config.Quiet)
+	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, *clusterConfig.Quiet)
 	if err != nil {
 		return nil, err
 	}
@@ -571,7 +570,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
-	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", cad.ClusterConfig.Name))
+	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", *cad.ClusterConfig.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -580,14 +579,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 }
 
 func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(*cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, found, err := oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
+	_, found, err := oci.GetImage(constants.OciImageName, *cad.ClusterConfig.KubeVersion, arch, compartmentId)
 	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
@@ -597,7 +596,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Check to see if a converted image already exists.  If so, don't bother
 	// making a new one.
-	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, cad.ClusterConfig.KubeVersion, arch)
+	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, *cad.ClusterConfig.KubeVersion, arch)
 	if err != nil {
 		return "", "", err
 	}
@@ -609,13 +608,13 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// No image exists.  Make one.  Save the existing KC value and substitute
 	// the ephemeral one.  Set it back when done.
-	oldKcfg := cad.Config.KubeConfig
-	cad.Config.KubeConfig = cad.BootstrapKubeConfig
-	err = create.Create(cad.Config, cad.ClusterConfig, create.CreateOptions{
+	oldKcfg := cad.ClusterConfig.KubeConfig
+	*cad.ClusterConfig.KubeConfig = cad.BootstrapKubeConfig
+	err = create.Create(cad.ClusterConfig, create.CreateOptions{
 		ProviderType: create.ProviderTypeOCI,
 		Architecture: arch,
 	})
-	cad.Config.KubeConfig = oldKcfg
+	cad.ClusterConfig.KubeConfig = oldKcfg
 	if err != nil {
 		return "", "", err
 	}
@@ -623,11 +622,11 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
 		ProviderType:      upload.ProviderTypeOCI,
-		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
+		BucketName:        *cad.ClusterConfig.Providers.Oci.ImageBucket,
 		CompartmentName:   compartmentId,
 		ImagePath:         imageName,
 		ImageName:         constants.OciImageName,
-		KubernetesVersion: cad.ClusterConfig.KubeVersion,
+		KubernetesVersion: *cad.ClusterConfig.KubeVersion,
 		ImageArchitecture: arch,
 	})
 	if err != nil {
@@ -638,10 +637,10 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 }
 
 func (cad *ClusterApiDriver) ensureImages() error {
-	controlPlaneArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
-	workerArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
+	controlPlaneArch := oci.ArchitectureFromShape(*cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
+	workerArch := oci.ArchitectureFromShape(*cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(*cad.ClusterConfig.Providers.Oci.Compartment)
 	if err != nil {
 		return err
 	}
@@ -654,7 +653,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	if controlPlaneArch == workerArch {
 		workRequest := ""
 		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
+		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, *cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -665,11 +664,11 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		controlPlaneWorkRequest := ""
 		workerWorkRequest := ""
 		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
+		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, *cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion, false)
+		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, *cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -771,7 +770,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 			return false, false, err
 		}
 
-		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.ClusterConfig)
 		if err != nil {
 			return false, false, err
 		}
@@ -860,7 +859,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	}
 
 	log.Info("Installing applications into workload cluster")
-	err = install.InstallApplications(workloadApps, cad.KubeConfig, cad.Config.Quiet)
+	err = install.InstallApplications(workloadApps, cad.KubeConfig, *cad.ClusterConfig.Quiet)
 	if err != nil {
 		return false, false, err
 	}
@@ -928,7 +927,7 @@ func (cad *ClusterApiDriver) moveCluster(fromBootstrap bool) error {
 func (cad *ClusterApiDriver) PostStart() error {
 	// If the cluster is not self managed, then the configuration is
 	// complete.
-	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+	if !*cad.ClusterConfig.Providers.Oci.SelfManaged {
 		return nil
 	}
 
@@ -938,7 +937,7 @@ func (cad *ClusterApiDriver) PostStart() error {
 		return err
 	}
 
-	err = install.InstallApplications(capiApplications, cad.KubeConfig, cad.Config.Quiet)
+	err = install.InstallApplications(capiApplications, cad.KubeConfig, *cad.ClusterConfig.Quiet)
 	if err != nil {
 		return err
 	}
@@ -1027,10 +1026,10 @@ func (cad *ClusterApiDriver) deleteCluster(clusterName string, clusterNs string)
 }
 
 func (cad *ClusterApiDriver) Delete() error {
-	log.Debugf("Entering Delete for CAPI cluster %s", cad.ClusterConfig.Name)
+	log.Debugf("Entering Delete for CAPI cluster %s", *cad.ClusterConfig.Name)
 	cad.Deleted = true
 	if cad.FromTemplate {
-		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.ClusterConfig)
 		if err != nil {
 			return err
 		}
@@ -1052,7 +1051,7 @@ func (cad *ClusterApiDriver) Delete() error {
 	// If this is a self-managed cluster, pivot back into the bootstrap cluster.
 	// This is in a for loop so there are break semantics available
 	for {
-		if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+		if !*cad.ClusterConfig.Providers.Oci.SelfManaged {
 			break
 		}
 
@@ -1103,8 +1102,8 @@ func (cad *ClusterApiDriver) Close() error {
 		return nil
 	}
 
-	if cad.Ephemeral && cad.ClusterConfig.Providers.Oci.SelfManaged {
-		err := start.StopEphemeralCluster(cad.Config, cad.ClusterConfig)
+	if cad.Ephemeral && *cad.ClusterConfig.Providers.Oci.SelfManaged {
+		err := start.StopEphemeralCluster(cad.ClusterConfig)
 		if err != nil {
 			return err
 		}

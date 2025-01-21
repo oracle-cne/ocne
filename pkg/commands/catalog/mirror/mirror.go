@@ -95,7 +95,7 @@ func Mirror(options Options) error {
 	if err != nil {
 		return err
 	}
-	allVersions, err := versions.GetKubernetesVersions(options.ClusterConfig.KubeVersion)
+	allVersions, err := versions.GetKubernetesVersions(*options.ClusterConfig.KubeVersion)
 	if err != nil {
 		return err
 	}
@@ -173,15 +173,15 @@ func addOverrides(toIterate map[string][]catalog.ChartMeta, apps []types.Applica
 	}
 	for _, app := range apps {
 		var val map[string]string = nil
-		if mapOfValues, found := appsWithRequiredValues[app.Name]; found {
+		if mapOfValues, found := appsWithRequiredValues[*app.Name]; found {
 			val = mapOfValues // can potentially overwrite user overrides, but should be a nonissue
 		}
-		for _, chart := range toIterate[app.Name] {
-			temp, err := buildOverride(chart, app.Config, app.ConfigFrom, val)
+		for _, chart := range toIterate[*app.Name] {
+			temp, err := buildOverride(chart, app.Config, *app.ConfigFrom, val)
 			if err != nil {
 				log.Errorf("Error adding overrides to chart %s, error: %s", app.Name, err.Error())
 			}
-			toReturn[app.Name] = append(toReturn[app.Name], temp)
+			toReturn[*app.Name] = append(toReturn[*app.Name], temp)
 		}
 	}
 	return toReturn, nil
@@ -245,21 +245,21 @@ func filter(toIterate map[string][]catalog.ChartMeta, search []types.Application
 		return toIterate
 	}
 	for _, app := range search {
-		if strings.TrimSpace(app.Catalog) != strings.TrimSpace(catalogName) {
+		if strings.TrimSpace(*app.Catalog) != strings.TrimSpace(catalogName) {
 			log.Debugf("Skipping helm Chart %s, it is in a different catalog: %s", app.Name, app.Catalog)
 			continue
 		}
-		if _, ok := toIterate[app.Name]; !ok {
+		if _, ok := toIterate[*app.Name]; !ok {
 			log.Debugf("Skipping helm Chart %s, not found in repo %s", app.Name, app.Catalog)
 			continue
 		}
 		var toAdd catalog.ChartMeta
-		if app.Version == "" {
+		if *app.Version == "" {
 			//grab the latest version
 			foundMax := false
 			var maxSemver *semver.Version
 			var maxChart catalog.ChartMeta
-			for _, chart := range toIterate[app.Name] {
+			for _, chart := range toIterate[*app.Name] {
 				chartSemver, err := semver.NewVersion(chart.Version)
 				if err != nil {
 					log.Debugf("Incorrect version number %s for chart %s. Not considering this version", app.Version, app.Name)
@@ -272,27 +272,27 @@ func filter(toIterate map[string][]catalog.ChartMeta, search []types.Application
 				}
 			}
 			if !foundMax {
-				log.Errorf("No correct semver format versions found for chart %s, defaulting to version %s for this chart", app.Name, toIterate[app.Name][0].Version)
-				toAdd = toIterate[app.Name][0]
+				log.Errorf("No correct semver format versions found for chart %s, defaulting to version %s for this chart", app.Name, toIterate[*app.Name][0].Version)
+				toAdd = toIterate[*app.Name][0]
 			} else {
 				log.Debugf("Grabbed the latest version %s of chart %s", maxChart.Version, maxChart.Name)
 				toAdd = maxChart
 			}
 		} else {
 			//grab app.Version
-			for _, chart := range toIterate[app.Name] {
-				if chart.Version == app.Version {
+			for _, chart := range toIterate[*app.Name] {
+				if chart.Version == *app.Version {
 					toAdd = chart
 					break
 				}
 			}
-			if toAdd.Version != app.Version {
-				log.Errorf("No chart of name %s with version %s found in the app catalog. To grab the latest version of the chart, remove the application version key from the cluster config. Defaulting to version %s for this chart", app.Name, app.Version, toIterate[app.Name][0].Version)
-				toAdd = toIterate[app.Name][0]
+			if toAdd.Version != *app.Version {
+				log.Errorf("No chart of name %s with version %s found in the app catalog. To grab the latest version of the chart, remove the application version key from the cluster config. Defaulting to version %s for this chart", app.Name, app.Version, toIterate[*app.Name][0].Version)
+				toAdd = toIterate[*app.Name][0]
 			}
 		}
 		//Accounts for the case where a user has multiple versions of the same app
-		toReturn[app.Name] = append(toReturn[app.Name], toAdd)
+		toReturn[*app.Name] = append(toReturn[*app.Name], toAdd)
 	}
 	return toReturn
 }

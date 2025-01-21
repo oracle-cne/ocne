@@ -43,8 +43,8 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 
 	catalog, err := search.Search(catalog.SearchOptions{
 		KubeConfigPath: app.kubeConfigPath,
-		CatalogName:    app.Application.Catalog,
-		Pattern:        app.Application.Name,
+		CatalogName:    *app.Application.Catalog,
+		Pattern:        *app.Application.Name,
 	})
 	if err != nil {
 		log.Debugf("Could not search catalog: %v", err)
@@ -59,14 +59,19 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 		}
 		config = string(yamlValues)
 	}
+	// This code block is designed to protect the case from when a config from is not specified, passing in the empty string instead
+	emptyConfigFrom := ""
+	if app.Application.ConfigFrom == nil {
+		app.Application.ConfigFrom = &emptyConfigFrom
+	}
 	opt := application.InstallOptions{
 		Catalog:        catalog,
 		KubeConfigPath: app.kubeConfigPath,
-		AppName:        app.Application.Name,
-		Namespace:      app.Application.Namespace,
-		ReleaseName:    app.Application.Release,
-		Version:        app.Application.Version,
-		Values:         app.Application.ConfigFrom,
+		AppName:        *app.Application.Name,
+		Namespace:      *app.Application.Namespace,
+		ReleaseName:    *app.Application.Release,
+		Version:        *app.Application.Version,
+		Values:         *app.Application.ConfigFrom,
 		Overrides: []helm.HelmOverrides{
 			{
 				LiteralOverride: config,
@@ -118,13 +123,13 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 func makeWaiter(a *ApplicationDescription) *logutils.Waiter {
 	// Release and Namespace are optional, so do our best to construct a reasonable message
 	msg := "Installing "
-	if len(a.Application.Release) > 0 {
-		msg = msg + a.Application.Release
+	if len(*a.Application.Release) > 0 {
+		msg = msg + *a.Application.Release
 	} else {
-		msg = msg + a.Application.Name
+		msg = msg + *a.Application.Name
 	}
-	if len(a.Application.Namespace) > 0 {
-		msg = msg + " into " + a.Application.Namespace
+	if len(*a.Application.Namespace) > 0 {
+		msg = msg + " into " + *a.Application.Namespace
 	}
 
 	return &logutils.Waiter{
@@ -137,13 +142,13 @@ func makeWaiter(a *ApplicationDescription) *logutils.Waiter {
 func makeUpdateWaiter(a *ApplicationDescription) *logutils.Waiter {
 	// Release and Namespace are optional, so do our best to construct a reasonable message
 	msg := "Updating "
-	if len(a.Application.Release) > 0 {
-		msg = msg + a.Application.Release
+	if len(*a.Application.Release) > 0 {
+		msg = msg + *a.Application.Release
 	} else {
-		msg = msg + a.Application.Name
+		msg = msg + *a.Application.Name
 	}
-	if len(a.Application.Namespace) > 0 {
-		msg = msg + " in " + a.Application.Namespace
+	if len(*a.Application.Namespace) > 0 {
+		msg = msg + " in " + *a.Application.Namespace
 	}
 
 	return &logutils.Waiter{
@@ -200,13 +205,18 @@ func installOrUpdateApplications(apps []ApplicationDescription, kubeConfigPath s
 
 // NewInternalCatalogApplication returns an ApplicationDescription for the internal catalog
 func NewInternalCatalogApplication(namespace string) ApplicationDescription {
+	catalogChart := constants.CatalogChart
+	namespaceforApp := namespace
+	release := constants.CatalogRelease
+	version := constants.CatalogVersion
+	catalog := catalog.InternalCatalog
 	return ApplicationDescription{
 		Application: &types.Application{
-			Name:      constants.CatalogChart,
-			Namespace: namespace,
-			Release:   constants.CatalogRelease,
-			Version:   constants.CatalogVersion,
-			Catalog:   catalog.InternalCatalog,
+			Name:      &catalogChart,
+			Namespace: &namespaceforApp,
+			Release:   &release,
+			Version:   &version,
+			Catalog:   &catalog,
 		},
 	}
 }

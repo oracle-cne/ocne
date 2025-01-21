@@ -34,9 +34,9 @@ type ByoDriver struct {
 	UploadCertificateKey string
 }
 
-func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *conftypes.ClusterConfig) (driver.ClusterDriver, error) {
 
-	kubeconfigPath, err := client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", clusterConfig.Name))
+	kubeconfigPath, err := client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", *clusterConfig.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}
 
 	return &ByoDriver{
-		Name:                 clusterConfig.Name,
+		Name:                 *clusterConfig.Name,
 		Config:               *clusterConfig,
 		KubeconfigPath:       kubeconfigPath,
 		UploadCertificateKey: uploadCertificateKey,
@@ -58,11 +58,11 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 	var ign *igntypes.Config
 	var err error
 
-	internalLB := bd.Config.VirtualIp != ""
+	internalLB := *bd.Config.VirtualIp != ""
 	kubeAPIServerIP := bd.getKubeAPIServerIP()
 
 	// Make sure there is a network interface
-	if bd.Config.Providers.Byo.NetworkInterface == "" {
+	if *bd.Config.Providers.Byo.NetworkInterface == "" {
 		return nil, fmt.Errorf("A network interface must be provided")
 	}
 
@@ -79,27 +79,27 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 			return nil, err
 		}
 
-		expectingWorkerNodes := bd.Config.WorkerNodes > 0
+		expectingWorkerNodes := *bd.Config.WorkerNodes > 0
 		ign, err = ignition.InitializeCluster(&ignition.ClusterInit{
-			OsTag:                bd.Config.OsTag,
-			OsRegistry:           bd.Config.OsRegistry,
+			OsTag:                *bd.Config.OsTag,
+			OsRegistry:           *bd.Config.OsRegistry,
 			KubeAPIServerIP:      kubeAPIServerIP,
-			KubeAPIBindPort:      bd.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   bd.Config.KubeAPIServerBindPortAlt,
+			KubeAPIBindPort:      *bd.Config.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:   *bd.Config.KubeAPIServerBindPortAlt,
 			InternalLB:           internalLB,
 			Proxy:                bd.Config.Proxy,
 			KubeAPIExtraSans:     []string{},
 			KubePKICert:          string(caCert),
 			KubePKIKey:           string(caKey),
-			ServiceSubnet:        bd.Config.ServiceSubnet,
-			PodSubnet:            bd.Config.PodSubnet,
+			ServiceSubnet:        *bd.Config.ServiceSubnet,
+			PodSubnet:            *bd.Config.PodSubnet,
 			ExpectingWorkerNodes: expectingWorkerNodes,
-			ProxyMode:            bd.Config.KubeProxyMode,
-			ImageRegistry:        bd.Config.Registry,
-			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
+			ProxyMode:            *bd.Config.KubeProxyMode,
+			ImageRegistry:        *bd.Config.Registry,
+			NetInterface:         *bd.Config.Providers.Byo.NetworkInterface,
 			UploadCertificateKey: bd.UploadCertificateKey,
-			KubeVersion:          bd.Config.KubeVersion,
-			TLSCipherSuites:      bd.Config.CipherSuites,
+			KubeVersion:          *bd.Config.KubeVersion,
+			TLSCipherSuites:      *bd.Config.CipherSuites,
 		})
 	} else {
 		// Worker nodes do not get two networks.  On remote clusters,
@@ -110,20 +110,20 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 		// the real default route is not deleted.
 		ign, err = ignition.JoinCluster(&ignition.ClusterJoin{
 			Role:                 role,
-			OsTag:                bd.Config.OsTag,
-			OsRegistry:           bd.Config.OsRegistry,
+			OsTag:                *bd.Config.OsTag,
+			OsRegistry:           *bd.Config.OsRegistry,
 			KubeAPIServerIP:      kubeAPIServerIP,
 			JoinToken:            joinToken,
 			KubePKICertHashes:    caCertHashes,
-			ImageRegistry:        bd.Config.Registry,
-			KubeAPIBindPort:      bd.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   bd.Config.KubeAPIServerBindPortAlt,
+			ImageRegistry:        *bd.Config.Registry,
+			KubeAPIBindPort:      *bd.Config.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:   *bd.Config.KubeAPIServerBindPortAlt,
 			InternalLB:           internalLB,
 			Proxy:                bd.Config.Proxy,
-			ProxyMode:            bd.Config.KubeProxyMode,
-			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
+			ProxyMode:            *bd.Config.KubeProxyMode,
+			NetInterface:         *bd.Config.Providers.Byo.NetworkInterface,
 			UploadCertificateKey: bd.UploadCertificateKey,
-			TLSCipherSuites:      bd.Config.CipherSuites,
+			TLSCipherSuites:      *bd.Config.CipherSuites,
 		})
 	}
 
@@ -132,24 +132,24 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 	}
 
 	// Respect any proxy configuration that may be defined
-	proxy, err := ignition.Proxy(&bd.Config.Proxy, kubeAPIServerIP, bd.Config.ServiceSubnet, bd.Config.PodSubnet)
+	proxy, err := ignition.Proxy(&bd.Config.Proxy, kubeAPIServerIP, *bd.Config.ServiceSubnet, *bd.Config.PodSubnet)
 	if err != nil {
 		return nil, err
 	}
 
 	ign = ignition.Merge(ign, proxy)
 
-	usrIgn, err := ignition.OcneUser(bd.Config.SshPublicKey, bd.Config.SshPublicKeyPath, bd.Config.Password)
+	usrIgn, err := ignition.OcneUser(*bd.Config.SshPublicKey, *bd.Config.SshPublicKeyPath, *bd.Config.Password)
 	if err != nil {
 		return nil, err
 	}
 	ign = ignition.Merge(ign, usrIgn)
 
 	// Add any additional configuration
-	if bd.Config.ExtraIgnition != "" {
-		ei := bd.Config.ExtraIgnition
+	if *bd.Config.ExtraIgnition != "" {
+		ei := *bd.Config.ExtraIgnition
 		if !filepath.IsAbs(ei) {
-			ei, err = filepath.Abs(filepath.Join(bd.Config.WorkingDirectory, ei))
+			ei, err = filepath.Abs(filepath.Join(*bd.Config.WorkingDirectory, ei))
 			if err != nil {
 				return nil, err
 			}
@@ -160,8 +160,8 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 		}
 		ign = ignition.Merge(ign, fromExtra)
 	}
-	if bd.Config.ExtraIgnitionInline != "" {
-		fromExtra, err := ignition.FromString(bd.Config.ExtraIgnitionInline)
+	if *bd.Config.ExtraIgnitionInline != "" {
+		fromExtra, err := ignition.FromString(*bd.Config.ExtraIgnitionInline)
 		if err != nil {
 			return nil, err
 		}
@@ -175,17 +175,17 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	// Generate the key material required for the cluster.  This includes
 	// a PKI for the Kubernetes components as well as the admin kubeconfig.
 	certOptions := certificate.CertOptions{
-		Country: bd.Config.CertificateInformation.Country,
-		Org:     bd.Config.CertificateInformation.Org,
-		OrgUnit: bd.Config.CertificateInformation.OrgUnit,
-		State:   bd.Config.CertificateInformation.State,
+		Country: *bd.Config.CertificateInformation.Country,
+		Org:     *bd.Config.CertificateInformation.Org,
+		OrgUnit: *bd.Config.CertificateInformation.OrgUnit,
+		State:   *bd.Config.CertificateInformation.State,
 	}
 	pkiInfo, err := kubepki.GeneratePKI(certOptions,
 		kubepki.KubeconfigRequest{
 			Path:          bd.KubeconfigPath,
 			Host:          bd.getKubeAPIServerIP(),
 			Port:          uint16(6443),
-			ServiceSubnet: bd.Config.ServiceSubnet,
+			ServiceSubnet: *bd.Config.ServiceSubnet,
 		},
 	)
 	if err != nil {
@@ -272,7 +272,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 	} else if controlPlaneNodes != 0 {
 		role = types.ControlPlaneRole
 	}
-	joinToken, err := k8s.CreateJoinToken(kubeconfigPath, !bd.Config.Providers.Byo.AutomaticTokenCreation)
+	joinToken, err := k8s.CreateJoinToken(kubeconfigPath, !*bd.Config.Providers.Byo.AutomaticTokenCreation)
 	if err != nil {
 		return err
 	}
@@ -296,7 +296,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 	// print instructions on how to add it to stderr.  Stderr is used
 	// so that any CLI calls can be safely redirected to a file while
 	// preserving the ability of the caller to see the help.
-	if !bd.Config.Providers.Byo.AutomaticTokenCreation {
+	if !*bd.Config.Providers.Byo.AutomaticTokenCreation {
 		// If a control plane node is being joined, print instructions
 		// for uploading the certificate key as well.
 		if role == types.ControlPlaneRole {
@@ -354,23 +354,23 @@ func (bd *ByoDriver) PostInstallHelpStanza() string {
 }
 
 func (bd *ByoDriver) DefaultCNIInterfaces() []string {
-	return []string{bd.Config.Providers.Byo.NetworkInterface}
+	return []string{*bd.Config.Providers.Byo.NetworkInterface}
 }
 
 func (bd *ByoDriver) getKubeAPIServerIP() string {
-	if bd.Config.VirtualIp != "" {
-		return bd.Config.VirtualIp
+	if *bd.Config.VirtualIp != "" {
+		return *bd.Config.VirtualIp
 	} else {
-		return bd.Config.LoadBalancer
+		return *bd.Config.LoadBalancer
 	}
 }
 
 func (bd *ByoDriver) validateClusterConfig() error {
-	if bd.Config.VirtualIp == "" && bd.Config.LoadBalancer == "" {
+	if *bd.Config.VirtualIp == "" && *bd.Config.LoadBalancer == "" {
 		return fmt.Errorf("A virtual IP or load balancer is required")
 	}
 
-	if bd.Config.VirtualIp != "" && bd.Config.LoadBalancer != "" {
+	if *bd.Config.VirtualIp != "" && *bd.Config.LoadBalancer != "" {
 		return fmt.Errorf("Can not specify both virtual IP and load balancer")
 	}
 

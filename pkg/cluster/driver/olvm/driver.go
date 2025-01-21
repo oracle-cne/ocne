@@ -47,11 +47,11 @@ type OlvmDriver struct {
 }
 
 // CreateDriver creates an OLVM CAPI driver.
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
 	var err error
 	doTemplate := false
-	cd := clusterConfig.ClusterDefinition
-	cdi := clusterConfig.ClusterDefinitionInline
+	cd := *clusterConfig.ClusterDefinition
+	cdi := *clusterConfig.ClusterDefinitionInline
 	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
 		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
@@ -65,7 +65,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		// absolute, then assume it is relative to the
 		// cluster config working directory.
 		if !filepath.IsAbs(cd) {
-			cd = filepath.Join(clusterConfig.WorkingDirectory, cd)
+			cd = filepath.Join(*clusterConfig.WorkingDirectory, cd)
 			cd, err = filepath.Abs(cd)
 			if err != nil {
 				return nil, err
@@ -85,23 +85,22 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	//
 	// If someone really wants to have no workers, then they are free
 	// to pass in a cluster definition.
-	if clusterConfig.WorkerNodes == 0 {
-		clusterConfig.WorkerNodes = 1
+	if *clusterConfig.WorkerNodes == 0 {
+		*clusterConfig.WorkerNodes = 1
 	}
 
 	// It's also not feasible to have zero control plane nodes.
-	if clusterConfig.ControlPlaneNodes == 0 {
-		clusterConfig.ControlPlaneNodes = 1
+	if *clusterConfig.ControlPlaneNodes == 0 {
+		*clusterConfig.ControlPlaneNodes = 1
 	}
 
 	cad := &OlvmDriver{
-		Config:           config,
 		ClusterConfig:    clusterConfig,
 		ClusterResources: cdi,
 		FromTemplate:     doTemplate,
 	}
 
-	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(config.KubeConfig, config, clusterConfig)
+	bootstrapKubeConfig, isEphemeral, err := start.EnsureCluster(*clusterConfig.KubeConfig, clusterConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +119,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
-	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, config.Quiet)
+	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, *clusterConfig.Quiet)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +133,7 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
-	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", cad.ClusterConfig.Name))
+	cad.KubeConfig, err = client.GetKubeconfigPath(fmt.Sprintf("kubeconfig.%s", *cad.ClusterConfig.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +228,7 @@ func (cad *OlvmDriver) GetKubeconfigPath() string {
 }
 
 func (cad *OlvmDriver) GetKubeAPIServerAddress() string {
-	return cad.ClusterConfig.VirtualIp
+	return *cad.ClusterConfig.VirtualIp
 }
 
 func (cad *OlvmDriver) PostInstallHelpStanza() string {

@@ -34,10 +34,14 @@ func WaitForInternalCatalogInstall(kubeClient kubernetes.Interface, logFn func(s
 
 // NewCommunityCatalog returns the definition for adding the community catalog
 func NewCommunityCatalog() types.Catalog {
+	protocol := ArtifacthubProtocol
+	uri := constants.CommunityCatalogURI
+	name := constants.CommunityCatalogName
+	namespace := constants.CommunityCatalogNamespace
 	return types.Catalog{
-		Protocol:  ArtifacthubProtocol,
-		URI:       constants.CommunityCatalogURI,
-		Name:      constants.CommunityCatalogName,
-		Namespace: constants.CommunityCatalogNamespace,
+		Protocol:  &protocol,
+		URI:       &uri,
+		Name:      &name,
+		Namespace: &namespace,
 	}
 }

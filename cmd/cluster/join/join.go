@@ -75,7 +75,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	cmd.Flags().StringVarP(&options.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&options.DestKubeConfigPath, flagDestination, flagDestinationShort, "", flagDestinationHelp)
-	cmd.Flags().StringVarP(&options.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&options.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "libvirt", constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&options.Node, flagNode, flagNodeShort, "", flagNodeHelp)
 	cmd.Flags().IntVarP(&options.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
 	cmd.Flags().IntVarP(&options.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
@@ -86,7 +86,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne cluster join" command
 func RunCmd(cmd *cobra.Command) error {
-	if err := validateOptions(&options, cmd); err != nil {
+	if err := validateOptions(&options); err != nil {
 		return err
 	}
 	clusterCache, err := cache.GetCache()
@@ -102,11 +102,11 @@ func RunCmd(cmd *cobra.Command) error {
 			return err
 		}
 		// Make sure the tag matches Kubeversion, unless it is overridden
-		if options.ClusterConfig.OsTag == "" {
+		if options.ClusterConfig.OsTag == nil {
 			options.ClusterConfig.OsTag = options.ClusterConfig.KubeVersion
 		}
 
-		clusterName = options.ClusterConfig.Name
+		clusterName = *options.ClusterConfig.Name
 	}
 
 	cached := clusterCache.Get(clusterName)
@@ -115,7 +115,7 @@ func RunCmd(cmd *cobra.Command) error {
 	// This is a bail-out to make sure all the needful can be done in
 	// case of some poorly timed error.
 	if cached == nil {
-		options.Config, options.ClusterConfig, err = cmdutil.GetFullConfig(options.Config, options.ClusterConfig, clusterConfigPath)
+		options.ClusterConfig, err = cmdutil.GetFullConfig(options.ClusterConfig, clusterConfigPath)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,12 @@ func RunCmd(cmd *cobra.Command) error {
 	return cmdjoin.Join(&options)
 }
 
-func validateOptions(options *cmdjoin.JoinOptions, cmd *cobra.Command) error {
+func validateOptions(options *cmdjoin.JoinOptions) error {
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
+	// This is a workaround for using the Cobra CLI to populate a structure that has fields that are pointers
+
 	if options.DestKubeConfigPath != "" || options.Node != "" {
 		// this is the case where we are joining an existing node to another cluster, both of these options must be specified
 		if options.DestKubeConfigPath == "" {

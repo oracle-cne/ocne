@@ -24,8 +24,10 @@ ocne cluster start --config ~/example-path/config-file --control-plane-nodes 2 -
 `
 )
 
-var config types.Config
-var clusterConfig types.ClusterConfig
+var options start.StartOptions = start.StartOptions{
+	Config:        &types.Config{},
+	ClusterConfig: &types.ClusterConfig{},
+}
 var clusterConfigPath string
 
 const (
@@ -58,19 +60,19 @@ func NewCmd() *cobra.Command {
 	cmd.Example = helpExample
 	cmdutil.SilenceUsage(cmd)
 
-	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(&options.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
-	cmd.Flags().Uint16VarP(&clusterConfig.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
-	cmd.Flags().Uint16VarP(&clusterConfig.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
-	cmd.Flags().StringVarP(&config.Providers.Libvirt.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
-	cmd.Flags().StringVarP(&config.Providers.Libvirt.SshKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
-	cmd.Flags().StringVarP(&config.BootVolumeContainerImage, constants.FlagBootVolumeContainerImage, constants.FlagBootVolumeContainerImageShort, "", constants.FlagBootVolumeContainerImageHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
-	cmd.Flags().StringVarP(&clusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
-	cmd.Flags().StringVarP(&config.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "", constants.FlagAutoStartUIHelp)
-	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
-	cmd.Flags().StringVar(&clusterConfig.VirtualIp, flagVirtualIP, "", flagVirtualIPHelp)
-	cmd.Flags().StringVar(&clusterConfig.LoadBalancer, flagLoadBalancer, "", flagLoadBalancerHelp)
+	cmd.Flags().Uint16VarP(&options.ControlPlaneNodes, flagControlPlaneNodes, flagControlPlaneNodesShort, 0, flagControlPlaneNodesHelp)
+	cmd.Flags().Uint16VarP(&options.WorkerNodes, flagWorkerNodes, flagWorkerNodesShort, 0, flagWorkerNodesHelp)
+	cmd.Flags().StringVarP(&options.SessionURI, constants.FlagSshURI, constants.FlagSshURIShort, "", constants.FlagSshURIHelp)
+	cmd.Flags().StringVarP(&options.SSHKey, constants.FlagSshKey, constants.FlagSshKeyShort, "", constants.FlagSshKeyHelp)
+	cmd.Flags().StringVarP(&options.BootVolumeContainerImage, constants.FlagBootVolumeContainerImage, constants.FlagBootVolumeContainerImageShort, "", constants.FlagBootVolumeContainerImageHelp)
+	cmd.Flags().StringVarP(&options.Name, constants.FlagClusterName, constants.FlagClusterNameShort, "", constants.FlagClusterNameHelp)
+	cmd.Flags().StringVarP(&options.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, "", constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&options.AutoStartUI, constants.FlagAutoStartUIName, constants.FlagAutoStartUINameShort, "", constants.FlagAutoStartUIHelp)
+	cmd.Flags().StringVarP(&options.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
+	cmd.Flags().StringVar(&options.VirtualIp, flagVirtualIP, "", flagVirtualIPHelp)
+	cmd.Flags().StringVar(&options.LoadBalancer, flagLoadBalancer, "", flagLoadBalancerHelp)
 	cmd.MarkFlagsMutuallyExclusive(flagVirtualIP, flagLoadBalancer)
 
 	return cmd
@@ -78,46 +80,79 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne cluster start" command
 func RunCmd(cmd *cobra.Command) error {
-	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	populateConfigurationFromCommandLine(&options)
+	cc, err := cmdutil.GetFullConfig(options.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
-	if cc.Name == "" {
-		cc.Name = "ocne"
+	if *cc.Name == "" {
+		*cc.Name = "ocne"
 	}
-	if cc.Provider == "" {
-		cc.Provider = pkgconst.ProviderTypeLibvirt
+	if *cc.Provider == "" {
+		*cc.Provider = pkgconst.ProviderTypeLibvirt
 	}
-	if cc.ControlPlaneNodes == 0 {
-		cc.ControlPlaneNodes = 1
+	if *cc.ControlPlaneNodes == 0 {
+		*cc.ControlPlaneNodes = 1
 	}
-	imageTransport := alltransports.TransportFromImageName(cc.BootVolumeContainerImage)
+	imageTransport := alltransports.TransportFromImageName(*cc.BootVolumeContainerImage)
 	if imageTransport == nil {
 		// No transport protocol detected. Adding docker transport protocol as default.
-		cc.BootVolumeContainerImage = "docker://" + cc.BootVolumeContainerImage
+		*cc.BootVolumeContainerImage = "docker://" + *cc.BootVolumeContainerImage
 	}
 
 	// Append the version to the boot volume container image registry path specified, if it does not already exist
-	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
+	*cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(*cc.KubeVersion, *cc.BootVolumeContainerImage)
 	if err != nil {
 		return err
 	}
 
 	// if the user has not overridden the osTag and the requested k8s version is not the default, make the osTag
 	// match the k8s version
-	if cc.OsTag == pkgconst.KubeVersion && cc.KubeVersion != pkgconst.KubeVersion {
+	if *cc.OsTag == pkgconst.KubeVersion && *cc.KubeVersion != pkgconst.KubeVersion {
 		cc.OsTag = cc.KubeVersion
 	}
 
-	// if the provider is libvirt, update fields in the config otherwise the changes to the clusterConfig fields
-	// will be overwritten
-	if cc.Provider == pkgconst.ProviderTypeLibvirt {
-		c.BootVolumeContainerImage = cc.BootVolumeContainerImage
-		c.KubeVersion = cc.KubeVersion
-		c.OsTag = cc.OsTag
-	}
-
-	_, err = start.Start(c, cc)
+	_, err = start.Start(cc)
 
 	return err
+}
+
+func populateConfigurationFromCommandLine(options *start.StartOptions) {
+	if options.Name != "" {
+		options.ClusterConfig.Name = &options.Name
+	}
+	if options.KubeConfigPath != "" {
+		options.ClusterConfig.KubeConfig = &options.KubeConfigPath
+	}
+	if options.SessionURI != "" {
+		options.ClusterConfig.Providers.Libvirt.SessionURI = &options.SessionURI
+	}
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
+	if options.SSHKey != "" {
+		options.ClusterConfig.Providers.Libvirt.SshKey = &options.SSHKey
+	}
+	if options.BootVolumeContainerImage != "" {
+		options.ClusterConfig.BootVolumeContainerImage = &options.BootVolumeContainerImage
+	}
+	if options.AutoStartUI != "" {
+		options.ClusterConfig.AutoStartUI = &options.AutoStartUI
+	}
+	if options.ControlPlaneNodes != uint16(0) {
+		options.ClusterConfig.ControlPlaneNodes = &options.ControlPlaneNodes
+	}
+	if options.WorkerNodes != uint16(0) {
+		options.ClusterConfig.WorkerNodes = &options.WorkerNodes
+	}
+	if options.KubeVersion != "" {
+		options.ClusterConfig.KubeVersion = &options.KubeVersion
+	}
+	if options.VirtualIp != "" {
+		options.ClusterConfig.VirtualIp = &options.VirtualIp
+	}
+	if options.LoadBalancer != "" {
+		options.ClusterConfig.LoadBalancer = &options.LoadBalancer
+	}
+
 }

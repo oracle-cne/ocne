@@ -11,9 +11,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -23,6 +20,9 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/script"
+	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -49,7 +49,6 @@ type StageOptions struct {
 
 	// ClusterConfig can be used to get configuration values from a cluster config
 	ClusterConfig *types.ClusterConfig
-	Config *types.Config
 }
 
 // Stage stages a cluster update
@@ -69,7 +68,7 @@ func Stage(o StageOptions) error {
 
 	// If a cluster config is given, do any provider-specific staging
 	if o.ClusterConfig != nil {
-		cd, err := driver.CreateDriver(o.Config, o.ClusterConfig)
+		cd, err := driver.CreateDriver(o.ClusterConfig)
 		if err != nil {
 			return err
 		}

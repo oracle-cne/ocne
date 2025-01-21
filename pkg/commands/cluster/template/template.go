@@ -10,13 +10,12 @@ import (
 
 // TemplateOptions are the options for the cluster template command
 type TemplateOptions struct {
-	// Config is the OCNE configuration
 	Config types.Config
-
 	// ClusterConfig is the cluster configuration
 	ClusterConfig types.ClusterConfig
+	Provider      string
 }
 
 func Template(opt TemplateOptions) (string, error) {
-	return common.GetTemplate(&opt.Config, &opt.ClusterConfig)
+	return common.GetTemplate(&opt.ClusterConfig)
 }

@@ -44,6 +44,12 @@ const (
 
 // CreateOptions are the options for the create image command
 type CreateOptions struct {
+	// Config is a pointer to the default configuration
+	Config *otypes.Config
+
+	// ClusterConfig is a pointer to the cluster configuration
+	ClusterConfig *otypes.ClusterConfig
+
 	// IgnitionProvider is the provider type for ignition
 	IgnitionProvider string
 
@@ -61,6 +67,12 @@ type CreateOptions struct {
 
 	// Destination
 	Destination string
+
+	// KubeConfig is the path to the KubeConfig file
+	KubeConfig string
+
+	// KubeConfig is the Kubernetes major.minor version
+	KubeVersion string
 }
 
 type providerFuncs struct {
@@ -70,17 +82,17 @@ type providerFuncs struct {
 }
 
 // Create creates a qcow2 image for the specified provider type
-func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
+func Create(clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
 	namespace := constants.OCNESystemNamespace
 
-	kubeConfig, isEphemeral, err := start.EnsureCluster(startConfig.KubeConfig, startConfig, clusterConfig)
+	kubeConfig, isEphemeral, err := start.EnsureCluster(*clusterConfig.KubeConfig, clusterConfig)
 	if err != nil {
 		return err
 	}
 
 	if isEphemeral {
 		defer func() {
-			err := start.StopEphemeralCluster(startConfig, clusterConfig)
+			err := start.StopEphemeralCluster(clusterConfig)
 			if err != nil {
 				log.Errorf("Error deleting ephemeral cluster: %v", err)
 			}
@@ -140,7 +152,7 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 	}
 
 	// get config needed to use kubctl
-	kcConfig, err := kubectl.NewKubectlConfig(restConfig, startConfig.KubeConfig, namespace, nil, true)
+	kcConfig, err := kubectl.NewKubectlConfig(restConfig, *clusterConfig.KubeConfig, namespace, nil, true)
 	if err != nil {
 		return err
 	}
@@ -149,15 +161,15 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 	cc := &copyConfig{
 		KubectlConfig:            kcConfig,
 		providerType:             options.ProviderType,
-		bootVolumeContainerImage: clusterConfig.BootVolumeContainerImage,
+		bootVolumeContainerImage: *clusterConfig.BootVolumeContainerImage,
 		ostreeContainerImage:     fmt.Sprintf("%s:%s", clusterConfig.OsRegistry, clusterConfig.OsTag),
 		remotePath:               remoteFilePath,
-		kubeVersion:              clusterConfig.KubeVersion,
+		kubeVersion:              *clusterConfig.KubeVersion,
 		imageArchitecture:        options.Architecture,
 		podName:                  podName,
-		httpsProxy:               startConfig.Proxy.HttpsProxy,
-		httpProxy:                startConfig.Proxy.HttpProxy,
-		noProxy:                  startConfig.Proxy.NoProxy,
+		httpsProxy:               *clusterConfig.Proxy.HttpsProxy,
+		httpProxy:                *clusterConfig.Proxy.HttpProxy,
+		noProxy:                  *clusterConfig.Proxy.NoProxy,
 		restConfig:               restConfig,
 	}
 

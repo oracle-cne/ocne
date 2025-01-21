@@ -4,14 +4,14 @@
 package create
 
 import (
+	otypes "github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"github.com/oracle-cne/ocne/pkg/util"
 	"io"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	otypes "github.com/oracle-cne/ocne/pkg/config/types"
-	"github.com/oracle-cne/ocne/pkg/k8s/client"
-	"github.com/oracle-cne/ocne/pkg/util"
 	"os"
 )
 
@@ -29,7 +29,7 @@ type kubectlConfig struct {
 // getKubectlConfig gets the configuration needed to use kubectl
 func getKubectlConfig(config *otypes.Config, restConfig *rest.Config, namespace string) (*kubectlConfig, error) {
 	// Create ConfigFlags so that kubectl cmd package can be used
-	kubeConfigPath, _, err := client.GetKubeConfigLocation(config.KubeConfig)
+	kubeConfigPath, _, err := client.GetKubeConfigLocation(*config.KubeConfig)
 	if err != nil {
 		return nil, err
 	}
