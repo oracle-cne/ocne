@@ -152,14 +152,26 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 }
 
 func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
-	// TODO check to see if this is already an application
+	// If kube-proxy is already installed as an application, don't try
+	// to install it again.
+	exists, err := install.DoesReleaseExist(constants.KubeProxyRelease, kubeConfigPath, constants.KubeProxyNamespace)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Debugf("kube-proxy application already exists")
+		return nil
+	}
 
-	// Get the existing kube-proxy configuration and use that for the overrides.
+	// Calculating the correct overrides based solely on the kubeconfig is
+	// hard, and is not tolerant to user customizations.  It's much easier
+	// to simply use the values that are already there.
 	cm, err := k8s.GetConfigmap(client, constants.KubeProxyNamespace, constants.KubeProxyConfigMap)
 	if err != nil {
 		return err
 	}
 
+	// Of course, that configuration may be corrupt.  Make sure it's not.
 	conf, ok := cm.Data[constants.KubeProxyConfigMapConfig]
 	if !ok {
 		return fmt.Errorf("ConfigMap %s in %s did not have a %s key", constants.KubeProxyConfigMap, constants.KubeProxyNamespace, constants.KubeProxyConfigMapConfig)
