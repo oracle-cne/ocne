@@ -70,6 +70,9 @@ func patchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) 
 
 	didUpdate := false
 	annots := kcp.GetAnnotations()
+	if annots == nil {
+		annots = map[string]string{}
+	}
 	_, ok := annots[capi.SkipKubeProxyAnnotation]
 	if !ok {
 		annots[capi.SkipKubeProxyAnnotation] = "true"
@@ -304,6 +307,14 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	} else if !found {
 		return "", "", false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
 	}
+
+	// Apply necessary control plane modifications whether there
+	// is an update or not.
+	err = patchControlPlane(restConfig, graph.ControlPlane.Object)
+	if err != nil {
+		return "", "", false, err
+	}
+
 	minorVersionCmp, err := versions.CompareKubernetesVersions(currentKubeVersion, version)
 	if err != nil {
 		return "", "", false, err

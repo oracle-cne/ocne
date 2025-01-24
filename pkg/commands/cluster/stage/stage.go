@@ -101,6 +101,9 @@ func Stage(o StageOptions) error {
 	}
 
 	err = update.Update(restConfig, KClient, o.KubeConfigPath, nodeList)
+	if err != nil {
+		return err
+	}
 
 	// ensure the Namespace exists
 	k8s.CreateNamespaceIfNotExists(KClient, namespace)

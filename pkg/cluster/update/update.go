@@ -14,13 +14,13 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
-	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
+	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/script"
 )
 
@@ -268,7 +268,7 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	// do this.
 	doIt := false
 	for _, n := range nodes.Items {
-		res, err := versions.CompareKubernetesVersions(n.Status.NodeInfo.KubeletVersion, "1.30")
+		res, err := util.CompareVersions(n.Status.NodeInfo.KubeletVersion, "1.30")
 		if err != nil {
 			return err
 		}
@@ -280,6 +280,7 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	}
 
 	if !doIt {
+		log.Debugf("Skipping updates that only apply to Kubernetes versions 1.30 and lower")
 		return nil
 	}
 
