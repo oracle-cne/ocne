@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -94,16 +95,18 @@ func Stage(o StageOptions) error {
 		return err
 	}
 
+	nodeList, err := k8s.GetNodeList(KClient)
+	if err != nil {
+		return err
+	}
+
+	err = update.Update(restConfig, KClient, o.KubeConfigPath, nodeList)
+
 	// ensure the Namespace exists
 	k8s.CreateNamespaceIfNotExists(KClient, namespace)
 
 	// get config needed to use kubectl
 	kcConfig, err := kubectl.NewKubectlConfig(restConfig, o.KubeConfigPath, namespace, nil, false)
-	if err != nil {
-		return err
-	}
-
-	nodeList, err := k8s.GetNodeList(KClient)
 	if err != nil {
 		return err
 	}

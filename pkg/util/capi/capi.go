@@ -24,6 +24,7 @@ var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "
 var MachineDeploymentVersion []string = []string{"spec", "template", "spec", "version"}
 
 var SkipKubeProxyAnnotation = "controlplane.cluster.x-k8s.io/skip-kube-proxy"
+var SkipCoreDNSAnnotation = "controlplane.cluster.x-k8s.io/skip-coredns"
 var ControlPlaneAPI = "controlplane.cluster.x-k8s.io/v1beta1"
 var KubeadmControlPlane = "KubeadmControlPlane"
 

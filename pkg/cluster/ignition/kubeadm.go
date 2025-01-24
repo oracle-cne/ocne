@@ -189,6 +189,7 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 		CertificateKey: ci.UploadCertificateKey,
 		SkipPhases: []string{
 			"addon/kube-proxy",
+			"addon/coredns",
 			"preflight",
 		},
 		Patches: &Patches{

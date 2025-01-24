@@ -394,6 +394,7 @@ metadata:
   namespace: "{{.ClusterConfig.Providers.Oci.Namespace}}"
   annotations:
     controlplane.cluster.x-k8s.io/skip-kube-proxy: "true"
+    controlplane.cluster.x-k8s.io/skip-coredns: "true"
 spec:
   version: "{{.KubeVersions.Kubernetes}}"
   replicas: {{.ClusterConfig.ControlPlaneNodes}}
@@ -418,9 +419,6 @@ spec:
         certSANs: [localhost, 127.0.0.1]
         extraArgs:
           tls-cipher-suites: {{.CipherSuite}}
-      dns:
-        imageRepository: container-registry.oracle.com/olcne
-        imageTag: {{.KubeVersions.CoreDNS}}
       etcd:
         local:
           imageRepository: container-registry.oracle.com/olcne
@@ -435,6 +433,9 @@ spec:
         extraArgs:
           tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
+      skipPhases:
+      - "addon/kube-proxy"
+      - "addon/coredns"
       patches:
         directory: /etc/ocne/ock/patches
       nodeRegistration:

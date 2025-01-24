@@ -68,15 +68,25 @@ func patchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) 
 		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), capi.ControlPlaneAPI, capi.KubeadmControlPlane)
 	}
 
+	didUpdate := false
 	annots := kcp.GetAnnotations()
 	_, ok := annots[capi.SkipKubeProxyAnnotation]
-	if ok {
-		// If the annotation is already set, no need to do so again.
+	if !ok {
+		annots[capi.SkipKubeProxyAnnotation] = "true"
+		didUpdate = true
+	}
+
+	_, ok = annots[capi.SkipCoreDNSAnnotation]
+	if !ok {
+		annots[capi.SkipCoreDNSAnnotation] = "true"
+		didUpdate = true
+	}
+
+	if !didUpdate {
 		return nil
 	}
-	annots[capi.SkipKubeProxyAnnotation] = "true"
-	kcp.SetAnnotations(annots)
 
+	kcp.SetAnnotations(annots)
 	err := k8s.UpdateResource(restConfig, kcp)
 	if err != nil {
 		return err

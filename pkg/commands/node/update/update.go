@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -75,7 +76,7 @@ func Update(o UpdateOptions) error {
 
 	// Do any pre-upgrade work
 	if o.PreUpdateMode != PreUpdateModeSkip {
-		err = preUpdate(restConfig, kubeClient, o.KubeConfigPath, nodeList)
+		err = update.Update(restConfig, kubeClient, o.KubeConfigPath, nodeList)
 		if err != nil {
 			return err
 		}

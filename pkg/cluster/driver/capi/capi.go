@@ -49,7 +49,11 @@ const (
 	OciCcmVersion       = "1.28.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
+
 )
+
+// Go does not allow slices or maps as constants.  Pretend they are.
+var OCIClusterControlPlaneEndpointHost = []string{"spec", "controlPlaneEndpoint", "host"}
 
 type ClusterApiDriver struct {
 	Ephemeral           bool
@@ -1121,7 +1125,26 @@ func (cad *ClusterApiDriver) GetKubeconfigPath() string {
 }
 
 func (cad *ClusterApiDriver) GetKubeAPIServerAddress() string {
-	return ""
+	cluster, err := cad.getOCIClusterObject()
+	if err != nil {
+		log.Errorf("Could not get Kubernetes API Server address: %+v", err)
+		return ""
+	}
+
+	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	err = k8s.GetResource(restConfig, &cluster)
+	if err != nil {
+		log.Errorf("Could not read OCICluster from management cluster: %+v", err)
+		return ""
+	}
+
+	ret, _, err := unstructured.NestedString(cluster.Object, OCIClusterControlPlaneEndpointHost...)
+	log.Infof("Found Control Plane Endpoint Host %s", ret)
+	if err != nil {
+		log.Errorf("Could not get Kubernetes API Server address: %+v", err)
+		return ""
+	}
+	return ret
 }
 
 func (cad *ClusterApiDriver) PostInstallHelpStanza() string {

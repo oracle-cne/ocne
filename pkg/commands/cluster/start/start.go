@@ -104,8 +104,19 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// the Oracle catalog.
 	//
 	// kube-proxy is forcibly installed to account for old cluster
-	// descriptions that use kubeadm to deploy kube-proxy. 
+	// descriptions that use kubeadm to deploy kube-proxy.  Same
+	// with coredns.
 	applications := []install.ApplicationDescription{
+		install.ApplicationDescription{
+			Force: true,
+			Application: &types.Application{
+				Name:      constants.CoreDNSChart,
+				Namespace: constants.CoreDNSNamespace,
+				Release:   constants.CoreDNSRelease,
+				Version:   constants.CoreDNSVersion,
+				Catalog:   catalog.InternalCatalog,
+			},
+		},
 		install.ApplicationDescription{
 			Force: true,
 			Application: &types.Application{

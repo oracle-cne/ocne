@@ -78,6 +78,14 @@ const (
 	UIInitContainer  = "ui-plugins"
 	UIPluginsVersion = "v2.0.0"
 
+
+	CoreDNSRelease    = "core-dns"
+	CoreDNSNamespace  = "kube-system"
+	CoreDNSChart      = "coredns"
+	CoreDNSVersion    = "2.0.0"
+	CoreDNSDeployment = "coredns"
+	CoreDNSImage      = "container-registry.oracle.com/olcne/coredns"
+
 	CertManagerRelease   = "cert-manager"
 	CertManagerNamespace = "cert-manager"
 	CertManagerChart     = "cert-manager"
@@ -126,7 +134,4 @@ const (
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
 
-	CoreDNSDeployment = "coredns"
-	CoreDNSNamespace = "kube-system"
-	CoreDNSImage     = "container-registry.oracle.com/olcne/coredns"
 )
