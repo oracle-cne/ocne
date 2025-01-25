@@ -401,56 +401,13 @@ curl -k -u verrazzano:${V8O_CONSOLE_SECRET} https://opensearch.vmi.system.defaul
 
 
 ## Update Helm Deployment
-Update the Helm deployment to contain all the patches that were applied during the rolling upgrade. This step should have no effect on the running system, the pods may not even restart.
+Update the Helm deployment to contain all the patches that were applied during the rolling upgrade. There is no need to re-apply the previous Helm overrides because they are automatically reused as the base set of overrides. This step should have no effect on the running system, the pods may not even restart.
 
 ```text
 ocne app install --name opensearch --release opensearch --namespace verrazzano-system --catalog embedded --version 2.15.0 --values - <<EOF
 image:
-  repository: ghcr.io/verrazzano/opensearch
-  tag: 2.3.0-20230914055551-b6247ad8ac8
-esMaster:
-  esMaster:
-    command:
-    - sh
-    - -c
-    - |-
-      #!/usr/bin/env bash -e
-      # Disable the jvm heap settings in jvm.options
-      echo Commenting out java heap settings in jvm.options...
-      sed -i -e /^-Xms/s/^/#/g -e /^-Xmx/s/^/#/g config/jvm.options
-      echo transport.publish_host: \${POD_IP} >> config/opensearch.yml
-      /usr/local/bin/docker-entrypoint.sh
-    env:
-      extraEnv:
-      - name: OBJECT_STORE_ACCESS_KEY_ID
-        valueFrom:
-          secretKeyRef:
-            key: object_store_access_key
-            name: verrazzano-backup
-            optional: true
-      - name: OBJECT_STORE_SECRET_KEY_ID
-        valueFrom:
-          secretKeyRef:
-            key: object_store_secret_key
-            name: verrazzano-backup
-            optional: true
-      - name: POD_IP
-        valueFrom:
-          fieldRef:
-            fieldPath: status.podIP
-esIngest:
-esData:
-EOF
-```
-
-
-
-
-## Later - need to update es-master to 2.15.0 settings
-
-
-
-```text
+  repository: olcne/opensearch:v2.15.0
+  tag: 2.15.0
 esMaster:
   esMaster:
     command:
@@ -469,9 +426,22 @@ esMaster:
       echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
       echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
       /usr/local/bin/docker-entrypoint.sh
-```
-
-```text
+    env:
+esIngest:
+  esIngest:
+    command:
+    - sh
+    - -c
+    - |-
+      #!/usr/bin/env bash -e
+      set -euo pipefail
+      echo network.publish_host: \${POD_IP} >> config/opensearch.yml
+      echo network.bind_host: 0.0.0.0 >> config/opensearch.yml
+      echo cluster.name: \$(printenv cluster.name) >> config/opensearch.yml
+      echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
+      echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
+      echo node.roles: \$(printenv node.roles) >> config/opensearch.yml
+      /usr/local/bin/docker-entrypoint.sh
 esData:
   esData:
     command:
@@ -490,22 +460,5 @@ esData:
       echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
       echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
       /usr/local/bin/docker-entrypoint.sh
-```
-
-```text
-esIngest:
-  esIngest:
-    command:
-    - sh
-    - -c
-    - |-
-      #!/usr/bin/env bash -e
-      set -euo pipefail
-      echo network.publish_host: \${POD_IP} >> config/opensearch.yml
-      echo network.bind_host: 0.0.0.0 >> config/opensearch.yml
-      echo cluster.name: \$(printenv cluster.name) >> config/opensearch.yml
-      echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
-      echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
-      echo node.roles: \$(printenv node.roles) >> config/opensearch.yml
-      /usr/local/bin/docker-entrypoint.sh
+EOF
 ```
