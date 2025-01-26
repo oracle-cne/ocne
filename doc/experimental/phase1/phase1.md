@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.17-draft
+### Version: v0.0.18-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -77,6 +77,10 @@ kubectl rollout status deployment --namespace cert-manager cert-manager -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-cainjector -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
 ```
+
+## Upgrade to OpenSearch Dashboards 2.15.0
+
+Follow these [instructions](../phase1/upgrade-opensearch-dashboards.md) to upgrade OpenSearch Dashboards.
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
