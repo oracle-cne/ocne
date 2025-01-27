@@ -26,14 +26,14 @@ kubectl -n verrazzano-system annotate service vmi-system-osd meta.helm.sh/releas
 Set some environment variables to be used in the upgrade steps.
 
  ```text
- export V8O_CONSOLE_SECRET=$(kubectl get secret --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo)
  export INGRESS_IP=$(kubectl get ingress -n verrazzano-system vmi-system-osd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
  ```
 
 ## Generate the values override file for the Helm deployment
  ```text
- envsubst > values.yaml - <<EOF
- deployment:
+envsubst > values.yaml - <<EOF
+fullnameOverride: vmi-system 
+deployment:
   osd:
     image:
       repository: olcne/opensearch-dashboards
