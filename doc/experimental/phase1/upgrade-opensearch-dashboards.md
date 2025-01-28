@@ -82,3 +82,8 @@ Install the Helm chart.
  ocne app install --name opensearch-dashboards --release opensearch-dashboards --namespace verrazzano-system --catalog embedded --version 2.15.0 --values values.yaml
  ```
 
+Wait for OpenSearch Dashboards
+```text
+kubectl rollout status -n verrazzano-system deployment vmi-system-osd -w
+```
+
