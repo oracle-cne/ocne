@@ -2,6 +2,8 @@
 
 ### Version: v0.0.1-draft
 
+**NOTE:** These instructions have been published in advance of OpenSearch 2.15.0 being available in the ocne-catalog.
+
 Upgrade from OpenSearch 2.3.0 to 2.15.0.
 
 ## Modify the OpenSearch objects to be annotated as being managed by Helm
