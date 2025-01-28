@@ -1,8 +1,8 @@
-# Update OpenSearch
+# Upgrade OpenSearch
 
 ### Version: v0.0.1-draft
 
-Update OpenSearch 2.3.0 to be managed by a Helm chart in the ocne-catalog.
+Upgrade from OpenSearch 2.3.0 to 2.15.0.
 
 ## Modify the OpenSearch objects to be annotated as being managed by Helm
 Verrazzano does not deploy OpenSearch using a Helm chart.
@@ -95,6 +95,9 @@ kubectl scale deployment -n verrazzano-system vmi-system-osd --replicas 0
 ## Generate the values override file for the Helm deployment
 ```text
 envsubst > values.yaml - <<EOF
+image:
+  repository: olcne/opensearch
+  tag: v2.15.0
 fullnameOverride: vmi-system
 ingress:
   host: opensearch.vmi.system.default.$INGRESS_IP.nip.io
@@ -128,18 +131,16 @@ esMaster:
     - -c
     - |-
       #!/usr/bin/env bash -e
-      # Updating opensearch keystore with keys required for the repository-s3 plugin
-      if [ \${OBJECT_STORE_ACCESS_KEY_ID:-} ]; then
-        echo Updating object store access key...
-        echo \$OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
-      fi
-      if [ \${OBJECT_STORE_SECRET_KEY_ID:-} ]; then
-        echo Updating object store secret key...
-        echo \$OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
-      fi
       # Disable the jvm heap settings in jvm.options
       echo Commenting out java heap settings in jvm.options...
-      sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
+      sed -i -e /^-Xms/s/^/#/g -e /^-Xmx/s/^/#/g config/jvm.options
+      echo network.publish_host: \${POD_IP} >> config/opensearch.yml
+      echo network.bind_host: 0.0.0.0 >> config/opensearch.yml
+      echo cluster.name: \$(printenv cluster.name) >> config/opensearch.yml
+      echo cluster.initial_master_nodes: \$(cluster.initial_master_nodes) >> config/opensearch.yml
+      echo node.roles: \$(printenv node.roles) >> config/opensearch.yml
+      echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
+      echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
       /usr/local/bin/docker-entrypoint.sh
     env:
       extraEnv:
@@ -155,6 +156,10 @@ esMaster:
             key: object_store_secret_key
             name: verrazzano-backup
             optional: true
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
   service:
     extraLabels:
       k8s-app: verrazzano.io
@@ -179,7 +184,19 @@ esIngest:
     - |-
       #!/usr/bin/env bash -e
       set -euo pipefail
+      echo network.publish_host: \${POD_IP} >> config/opensearch.yml
+      echo network.bind_host: 0.0.0.0 >> config/opensearch.yml
+      echo cluster.name: \$(printenv cluster.name) >> config/opensearch.yml
+      echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
+      echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
+      echo node.roles: \$(printenv node.roles) >> config/opensearch.yml
       /usr/local/bin/docker-entrypoint.sh
+    env:
+      extraEnv:
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
 esData:
   serviceAccount: verrazzano-monitoring-operator
   service:
@@ -203,18 +220,16 @@ esData:
     - -c
     - |-
       #!/usr/bin/env bash -e
-      # Updating opensearch keystore with keys required for the repository-s3 plugin
-      if [ \${OBJECT_STORE_ACCESS_KEY_ID:-} ]; then
-        echo Updating object store access key...
-        echo \$OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
-      fi
-      if [ \${OBJECT_STORE_SECRET_KEY_ID:-} ]; then
-        echo Updating object store secret key...
-        echo \$OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
-      fi
       # Disable the jvm heap settings in jvm.options
       echo Commenting out java heap settings in jvm.options...
-      sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
+      sed -i -e /^-Xms/s/^/#/g -e /^-Xmx/s/^/#/g config/jvm.options
+      echo network.publish_host: \${POD_IP} >> config/opensearch.yml
+      echo network.bind_host: 0.0.0.0 >> config/opensearch.yml
+      echo cluster.name: \$(printenv cluster.name) >> config/opensearch.yml
+      echo node.attr.availability_domain: \$(node.attr.availability_domain) >> config/opensearch.yml
+      echo node.roles: \$(printenv node.roles) >> config/opensearch.yml
+      echo discovery.seed_hosts: \$(printenv discovery.seed_hosts) >> config/opensearch.yml
+      echo logger.org.opensearch: \$(printenv logger.org.opensearch) >> config/opensearch.yml
       /usr/local/bin/docker-entrypoint.sh
     env:
       extraEnv:
@@ -230,6 +245,10 @@ esData:
             key: object_store_secret_key
             name: verrazzano-backup
             optional: true
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
 esMasterHttp:
   service:
     extraLabels:
@@ -251,7 +270,7 @@ EOF
 
 Install the Helm chart.
 ```text
-ocne app install --name opensearch --release opensearch --namespace verrazzano-system --catalog embedded --version 2.3.0 --values values.yaml
+ocne app install --name opensearch --release opensearch --namespace verrazzano-system --catalog embedded --version 2.15.0 --values values.yaml
 ```
 
 Wait for OpenSearch to Restart

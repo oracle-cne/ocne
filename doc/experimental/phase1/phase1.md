@@ -78,9 +78,9 @@ kubectl rollout status deployment --namespace cert-manager cert-manager-cainject
 kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
 ```
 
-## Update OpenSearch 2.3.0
+## Upgrade OpenSearch 2.3.0 to 2.15.0
 
-Follow these [instructions](../phase1/update-opensearch.md) to update OpenSearch to be managed by Helm.
+Follow these [instructions](../phase1/upgrade-opensearch.md) to upgrade OpenSearch.
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
