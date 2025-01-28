@@ -1,8 +1,10 @@
-# Update OpenSearch Dashboards
+# Upgrade OpenSearch Dashboards
 
 ### Version: v0.0.1-draft
 
-Update OpenSearch Dashboards 2.3.0 to be managed by a Helm chart from the ocne-catalog.
+**NOTE:** These instructions have been published in advance of OpenSearch Dashboards 2.15.0 being available in the ocne-catalog.
+
+Upgrade OpenSearch Dashboards 2.3.0 to 2.15.0.
 
 ## Modify the OpenSearch Dashboards objects to be annotated as being managed by Helm
 Verrazzano does not deploy OpenSearch Dashboards using a Helm chart.
@@ -77,6 +79,6 @@ EOF
 
 Install the Helm chart.
  ```text
- ocne app install --name opensearch-dashboards --release opensearch-dashboards --namespace verrazzano-system --catalog embedded --version 2.3.0 --values values.yaml
+ ocne app install --name opensearch-dashboards --release opensearch-dashboards --namespace verrazzano-system --catalog embedded --version 2.15.0 --values values.yaml
  ```
 

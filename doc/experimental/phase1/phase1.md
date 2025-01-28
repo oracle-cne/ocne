@@ -82,9 +82,9 @@ kubectl rollout status deployment --namespace cert-manager cert-manager-webhook 
 
 Follow these [instructions](../phase1/upgrade-opensearch.md) to upgrade OpenSearch.
 
-## Update OpenSearch Dashboards 2.3.0 to be managed by Helm
+## Upgrade OpenSearch Dashboards 2.3.0 to 2.15.0
 
-Follow these [instructions](../phase1/update-opensearch-dashboards.md) to update OpenSearch Dashboards.
+Follow these [instructions](../phase1/upgrade-opensearch-dashboards.md) to upgrade OpenSearch Dashboards.
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
