@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package console
@@ -22,17 +22,37 @@ type Overrides struct {
 	Image string
 }
 
+type Options struct {
+	// KubeConfigPath is the path of the kubeconfig file
+	KubeConfigPath string
+
+	// NodeName is the name of the node
+	NodeName string
+
+	// DefaultRegistry is the registry pull images from.
+	DefaultRegistry string
+
+	// Toolbox whether to use toolbox image or not
+	Toolbox bool
+
+	// Chroot whether to chroot or not
+	Chroot bool
+
+	// Commands is the specific commands to be run
+	Commands []string
+}
+
 const podPrefix = "console"
 
-func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds []string) error {
+func Console(options Options) error {
 	// Get a kubernetes client
-	_, kubeClient, err := client.GetKubeClient(kubeconfig)
+	_, kubeClient, err := client.GetKubeClient(options.KubeConfigPath)
 	if err != nil {
 		return err
 	}
 
 	// Get kubeConfigPath
-	kubeConfigPath, _, err := client.GetKubeConfigLocation(kubeconfig)
+	kubeConfigPath, _, err := client.GetKubeConfigLocation(options.KubeConfigPath)
 	if err != nil {
 		return err
 	}
@@ -43,7 +63,7 @@ func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds
 	}
 
 	// Check if the node is valid
-	if _, err = k8s.GetNode(kubeClient, nodeName); err != nil {
+	if _, err = k8s.GetNode(kubeClient, options.NodeName); err != nil {
 		return err
 	}
 
@@ -53,11 +73,11 @@ func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds
 	}
 
 	// Delete the pod, if it exists.
-	podName := fmt.Sprintf("%s-%s", podPrefix, nodeName)
+	podName := fmt.Sprintf("%s-%s", podPrefix, options.NodeName)
 	k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, podName)
 
 	// start the pod
-	pod, err := k8s.StartAdminPodOnNode(kubeClient, nodeName, constants.OCNESystemNamespace, podPrefix, toolbox)
+	pod, err := k8s.StartAdminPodOnNode(kubeClient, options.NodeName, constants.OCNESystemNamespace, podPrefix, options.Toolbox, options.DefaultRegistry)
 	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, podName)
 	if err != nil {
 		return err
@@ -86,12 +106,12 @@ func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds
 	cmd.Flags().Set("tty", tty)
 	cmd.Flags().Set("stdin", "true")
 	cmdArgs := []string{pod.ObjectMeta.Name, "--"}
-	if chroot {
+	if options.Chroot {
 		cmdArgs = append(cmdArgs, "/usr/sbin/chroot", "/hostroot")
-	} else if len(cmds) == 0 {
+	} else if len(options.Commands) == 0 {
 		cmdArgs = append(cmdArgs, "sh")
 	}
-	cmdArgs = append(cmdArgs, cmds...)
+	cmdArgs = append(cmdArgs, options.Commands...)
 	log.Debugf("Executing command on %s: %+v", pod.ObjectMeta.Name, cmdArgs)
 	cmd.SetArgs(cmdArgs)
 	if err := cmd.Execute(); err != nil {

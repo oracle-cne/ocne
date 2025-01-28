@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package console
@@ -8,6 +8,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/console"
+	constantspkg "github.com/oracle-cne/ocne/pkg/constants"
 )
 
 const (
@@ -24,6 +25,7 @@ var kubeConfig string
 var nodeName string
 var toolbox bool
 var chroot bool
+var defaultRegistry string
 
 const (
 	flagNodeName      = "node"
@@ -58,6 +60,7 @@ func NewCmd() *cobra.Command {
 	cmd.MarkFlagRequired(flagNodeName)
 	cmd.Flags().BoolVarP(&toolbox, flagToolbox, flagToolboxShort, false, flagToolboxHelp)
 	cmd.Flags().BoolVarP(&chroot, flagChrootName, flagChrootShort, false, flagChrootHelp)
+	cmd.Flags().StringVarP(&defaultRegistry, constants.FlagSource, constants.FlagSourceShort, constantspkg.ContainerRegistry, constants.FlagSourceHelp)
 
 	return cmd
 }
@@ -70,6 +73,15 @@ func RunCmd(cmd *cobra.Command) error {
 		cmds = cmd.Flags().Args()[cmd.ArgsLenAtDash():]
 	}
 
-	err := console.Console(kubeConfig, nodeName, toolbox, chroot, cmds)
+	options := console.Options{
+		KubeConfigPath:  kubeConfig,
+		NodeName:        nodeName,
+		DefaultRegistry: defaultRegistry,
+		Toolbox:         toolbox,
+		Chroot:          chroot,
+		Commands:        cmds,
+	}
+
+	err := console.Console(options)
 	return err
 }

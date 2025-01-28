@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package mirror
@@ -59,10 +59,6 @@ const (
 	flagQuietShort = "q"
 	flagQuietHelp  = "Output only image names and omit all other output"
 
-	flagSource      = "source"
-	flagSourceShort = "s"
-	flagSourceHelp  = "The source registry to use for images without a registry. By default, this value is container-registry.oracle.com. For example, olcne/headlamp becomes container-registry.oracle.com/olcne/headlamp"
-
 	flagDownload      = "download"
 	flagDownloadShort = "o"
 	flagDownloadHelp  = "Download images locally to a .tgz file on the system"
@@ -89,7 +85,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&catalogName, flagCatalogName, flagCatalogNameShort, catalog.InternalCatalog, flagCatalogNameHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, flagConfig, flagConfigShort, "", flagConfigHelp)
-	cmd.Flags().StringVarP(&defaultRegistry, flagSource, flagSourceShort, "container-registry.oracle.com", flagSourceHelp)
+	cmd.Flags().StringVarP(&defaultRegistry, constants.FlagSource, constants.FlagSourceShort, constants2.ContainerRegistry, constants.FlagSourceHelp)
 	cmd.Flags().StringVarP(&destination, flagDestination, flagDestinationShort, "", flagDestinationHelp)
 	cmd.Flags().BoolVarP(&push, flagPush, flagPushShort, false, flagPushHelp)
 	cmd.Flags().BoolVarP(&quiet, flagQuiet, flagQuietShort, false, flagQuietHelp)

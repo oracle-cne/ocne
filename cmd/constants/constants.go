@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -38,6 +38,10 @@ const (
 
 	FlagVersionName  = "version"
 	FlagVersionShort = "v"
+
+	FlagSource      = "source"
+	FlagSourceShort = "s"
+	FlagSourceHelp  = "The source registry to use for images without a registry. By default, this value is container-registry.oracle.com. For example, olcne/headlamp becomes container-registry.oracle.com/olcne/headlamp"
 
 	FlagKubernetesVersionHelp = "The version of Kubernetes"
 )

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package k8s
@@ -111,12 +111,12 @@ func WaitForPod(client kubernetes.Interface, namespace string, name string) erro
 
 // BasicAdminPod returns the skeleton of a pod specification that can be
 // used to create a privileged pod on a node.
-func BasicAdminPod(node string, namespace string, podNamePrefix string, toolbox bool) *v1.Pod {
+func BasicAdminPod(node string, namespace string, podNamePrefix string, toolbox bool, registry string) *v1.Pod {
 	var image string
 	if toolbox {
-		image = "olcne/ock:toolbox"
+		image = util.GetFullImage(registry, "olcne/ock:toolbox")
 	} else {
-		image = "container-registry.oracle.com/os/oraclelinux:8"
+		image = util.GetFullImage(registry, "os/oraclelinux:8")
 	}
 	privileged := true
 	hostPathType := v1.HostPathDirectory
@@ -288,8 +288,8 @@ func CreateScriptsPod(client kubernetes.Interface, p *PodOptions) error {
 
 // StartAdminPodOnNode creates a privileged pod on a node, executes a command,
 // and tears down the pod.
-func StartAdminPodOnNode(client kubernetes.Interface, node string, namespace string, podNamePrefix string, toolbox bool) (*v1.Pod, error) {
-	pod := BasicAdminPod(node, namespace, podNamePrefix, toolbox)
+func StartAdminPodOnNode(client kubernetes.Interface, node string, namespace string, podNamePrefix string, toolbox bool, registry string) (*v1.Pod, error) {
+	pod := BasicAdminPod(node, namespace, podNamePrefix, toolbox, registry)
 
 	// Ensure that the cluster is up
 	_, err := WaitUntilGetNodesSucceeds(client)

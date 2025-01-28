@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package join
@@ -110,7 +110,7 @@ func joinNodeToCluster(options *JoinOptions) error {
 
 	if options.RoleControlPlane {
 		// if the user wants the node to be a control plane in the destination cluster, there's more config to do
-		if err := configureControlPlane(destKubeClient, options.DestKubeConfigPath, cj); err != nil {
+		if err := configureControlPlane(destKubeClient, options.DestKubeConfigPath, cj, options.ClusterConfig.Registry); err != nil {
 			return err
 		}
 
@@ -185,7 +185,7 @@ func updateNode(restConfig *rest.Config, kubeClient kubernetes.Interface, kubeco
 // configureControlPlane pushes upload certificates and a new upload key to the destination cluster and adds
 // the right bits to the ClusterJoin struct so that the node will join the destination cluster as a
 // control plane
-func configureControlPlane(kubeClient kubernetes.Interface, kubeconfig string, cj *ignition.ClusterJoin) error {
+func configureControlPlane(kubeClient kubernetes.Interface, kubeconfig string, cj *ignition.ClusterJoin, registry string) error {
 	// get the API server pods from the destination cluster so we can determine the API server listen port
 	pods, err := k8s.GetPodsBySelector(kubeClient, metav1.NamespaceSystem, "component="+kubeadmconst.KubeAPIServer)
 	if err != nil {
@@ -224,7 +224,7 @@ func configureControlPlane(kubeClient kubernetes.Interface, kubeconfig string, c
 	}
 
 	log.Info("Uploading control plane certificates to destination cluster")
-	err = k8s.UploadCertificates(kubeconfig, uploadCertificateKey)
+	err = k8s.UploadCertificates(kubeconfig, uploadCertificateKey, registry)
 	if err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func getFilesFromDestCluster(options *JoinOptions, tmpDir string) (string, error
 		return "", fmt.Errorf("Could not get control plane nodes from destination cluster")
 	}
 
-	cc, err := startAdminPod(restConfig, kubeClient, options.DestKubeConfigPath, nodes.Items[0].Name)
+	cc, err := startAdminPod(restConfig, kubeClient, options.DestKubeConfigPath, nodes.Items[0].Name, options.ClusterConfig.Registry)
 	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+nodes.Items[0].Name)
 	if err != nil {
 		return "", err
@@ -342,7 +342,7 @@ func getFilesFromMigratingNode(options *JoinOptions, tmpDir string) (string, str
 		return "", "", err
 	}
 
-	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node)
+	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node, options.ClusterConfig.Registry)
 	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+options.Node)
 	if err != nil {
 		return "", "", err
@@ -436,11 +436,11 @@ func parseProxyConfig(file string) (*types.Proxy, error) {
 }
 
 // startAdminPod starts an admin pod on a node so we can copy files.
-func startAdminPod(restConfig *rest.Config, kubeClient kubernetes.Interface, kubeConfigPath string, nodeName string) (*kubectl.CopyConfig, error) {
+func startAdminPod(restConfig *rest.Config, kubeClient kubernetes.Interface, kubeConfigPath string, nodeName string, registry string) (*kubectl.CopyConfig, error) {
 	// first delete the pod in case there's an old one running
 	k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+nodeName)
 
-	pod, err := k8s.StartAdminPodOnNode(kubeClient, nodeName, constants.OCNESystemNamespace, copyPodPrefix, false)
+	pod, err := k8s.StartAdminPodOnNode(kubeClient, nodeName, constants.OCNESystemNamespace, copyPodPrefix, false, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func copyHAFilesToNode(options *JoinOptions, bindPort uint16, altPort uint16, vi
 		return nil, err
 	}
 
-	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node)
+	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node, options.ClusterConfig.Registry)
 	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+options.Node)
 	if err != nil {
 		return nil, err

@@ -314,7 +314,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 		// cluster automatically and a control plane node is being
 		// joined, then upload the certificates with the matching
 		// key.
-		err = k8s.UploadCertificates(bd.KubeconfigPath, bd.UploadCertificateKey)
+		err = k8s.UploadCertificates(bd.KubeconfigPath, bd.UploadCertificateKey, bd.Config.Registry)
 		if err != nil {
 			return err
 		}

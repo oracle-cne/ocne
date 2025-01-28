@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package k8s
@@ -137,7 +137,7 @@ func UploadCertificateStanza(kubeconfigPath string, key string) (string, error) 
 
 // UploadCertificates uploads the key material required for control
 // plane nodes to join clusters.
-func UploadCertificates(kubeconfigPath string, key string) error {
+func UploadCertificates(kubeconfigPath string, key string, registry string) error {
 	restConfig, client, err := client.GetKubeClient(kubeconfigPath)
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func UploadCertificates(kubeconfigPath string, key string) error {
 
 	nodeName := nodes.Items[0].ObjectMeta.Name
 
-	pod, err := StartAdminPodOnNode(client, nodeName, constants.OCNESystemNamespace, "exec", false)
+	pod, err := StartAdminPodOnNode(client, nodeName, constants.OCNESystemNamespace, "exec", false, registry)
 	defer DeletePod(client, pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 	if err != nil {
 		return err
