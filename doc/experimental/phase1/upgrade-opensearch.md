@@ -215,6 +215,10 @@ esData:
     opensearch.verrazzano.io/role-data: "true"
     verrazzano-component: opensearch
   esData:
+    deploymentSuffixes:
+    - 0
+    - 1
+    - 2
     command:
     - sh
     - -c
