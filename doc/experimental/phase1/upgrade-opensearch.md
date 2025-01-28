@@ -95,9 +95,6 @@ kubectl scale deployment -n verrazzano-system vmi-system-osd --replicas 0
 ## Generate the values override file for the Helm deployment
 ```text
 envsubst > values.yaml - <<EOF
-image:
-  repository: olcne/opensearch
-  tag: v2.15.0
 fullnameOverride: vmi-system
 ingress:
   host: opensearch.vmi.system.default.$INGRESS_IP.nip.io
@@ -198,6 +195,10 @@ esIngest:
           fieldRef:
             fieldPath: status.podIP
 esData:
+  deploymentSuffixes:
+  - "0"
+  - "1"
+  - "2"
   serviceAccount: verrazzano-monitoring-operator
   service:
     extraLabels:
@@ -215,10 +216,6 @@ esData:
     opensearch.verrazzano.io/role-data: "true"
     verrazzano-component: opensearch
   esData:
-    deploymentSuffixes:
-    - 0
-    - 1
-    - 2
     command:
     - sh
     - -c
