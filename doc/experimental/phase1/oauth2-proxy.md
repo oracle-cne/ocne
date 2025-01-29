@@ -47,11 +47,20 @@ The oauth2-proxy pod refers to a secret which contains the following fields:
 3. cookie-secret
 
 #### create the client id
-The client id, already exists in Keycloak so this will be used.  You can get if from 
+The client id, already exists in Keycloak so this will be used.  You can get the clear text client id as follows:
 ```
-echo -n  | base64
+ helm --kubeconfig paul-kubeconfig get values -n verrazzano-system verrazzano-authproxy | grep OIDCClientID
+ 
+ ---output
+  OIDCClientID: <client-id>
+```
+
+Next, base64 encode the client id.  Replace the <...> section with real value from the previous command:
+```
+echo -n  <client-id> | base64
 
 ---output
+<client-id-base64>
 ```
 
 #### create the client secret
@@ -61,7 +70,7 @@ The client secret is required by the OAuth2 Proxy even though it is not used in 
 echo -n fake-secret | base64
 
 ---output
-ZmFrZS1zZWNyZXQ=
+<client-secret-base64>
 ```
 
 #### create the cookie secret
@@ -71,7 +80,7 @@ The cookie secret is a binary 32 byte value that must be base64-URL encoded, the
 openssl rand  32  | base64 | tr '/+' '_-' | tr -d '=' | base64
 
 ---output
-NXBGUk11aU1vOXB5dV...
+<cookie-secret-base64>
 ```
 
 ### create and apply secret.yaml file
@@ -80,9 +89,9 @@ Create a secret YAML file with the values from the first 3 steps (replace the <.
 ```
 apiVersion: v1
 data:
-  cookie-secret: <cookie-secret>
-  client-id: <client-id>
-  client-secret: <client-secret>
+  cookie-secret: <cookie-secret-base64>
+  client-id: <client-id-base64>
+  client-secret: <client-secret-base64>
 kind: Secret
 metadata:
   name: oauth2-proxy
