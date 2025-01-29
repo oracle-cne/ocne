@@ -6,7 +6,7 @@ This document explains how to migrate from the Verrazzano Auth proxy to the [OAu
 ## Summary of steps
 1. Prepare for installation of OAuth2 Proxy
 2. Install OAuth2 Proxy
-3. Disable Verrazzano auth proxy and Verrazzano monitoring operator
+3. Shutdown Verrazzano auth proxy and Verrazzano monitoring operator
 4. NGINX ingress controller configuration changes
 5. Migrate each console to use OAuth2 Proxy
 6. Update Fluentd config 
@@ -191,4 +191,73 @@ kubectl get secret \
 3. Navigate to the keycloak URL in a browser, and log into Keycloak as user ***keycloakadmin**. Select **Clients** in the left navigation pane and the list of clients will be shown in the middle pane
 under the heading **Client ID**.  Select the correct client then update the email with a valid email and click the Save button.
 
-## Install OAuth2 Proxy
+## Install outh2-proxy from the Catalog
+Now you are ready to install the oauth2-proxy from the catalog.  Run the following command:
+```
+ocne app  install -c embedded -n verrazzano-system -N oauth2-proxy -f ./oauth2-values.yaml 
+```
+
+Wait for the oauth2 pods to be ready
+```
+kubectl rollout status -n verrazzano-system deployment oauth2-proxy -w
+```
+
+## Shutdown Verrazzano auth-proxy and Monitoring operator
+Shutdown the Verrazzano auth-proxy by scaling the replicas to 0 as follows:
+```
+kubeclt scale deployment -n verrazzano-system verrazzano-authproxy --replicas 0
+```
+Verify the pods have been stopped:
+```
+kubectl get deployment -n verrazzano-system  verrazzano-authproxy
+
+---output
+NAME                   READY   ...
+verrazzano-authproxy   0/0     ...
+```
+
+
+Shutdown the Verrazzano auth-proxy and monitoring operator by scaling the replicas to 0 as follows:
+**NOTE** If the monitoring operator has already been removed from the system then skip this step.
+```
+kubectl scale deployment -n verrazzano-system verrazzano-monitoring-operator --replicas 0
+```
+Verify the pods have been stopped:
+```
+kubectl get deployment -n verrazzano-system  verrazzano-monitoring-operator 
+
+---output
+NAME                   READY   ...
+verrazzano-monitoring-operator    0/0     ...
+```
+
+## NGINX Ingress Controller Changes
+There are two changes needed for NGINX. First, allow NGINX to communicate with oauth2-proxy which is outside the Istio mesh.
+Second, allow the NGINX Ingress controller to process snippets from the Ingress resrouce.
+
+Patch the NGINX Ingress Controller deployment as follows:
+```
+kubectl patch configmap -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller --type='merge'  --patch '{"data": {"allow-snippet-annotations": "true"}}'
+```
+output:
+```
+configmap/ingress-controller-ingress-nginx-controller patched
+```
+
+```text
+kubectl patch deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller --type='merge'  --patch '{"spec": {"template": {"metadata": {"labels": {"traffic.sidecar.istio.io/excludeOutboundPort": "49000"}}}}}'
+```
+output:
+```
+deployment.apps/ingress-controller-ingress-nginx-controller patched
+```
+
+Ensure that the pod restarted, check the last column, it should be a few minutes (2m is shown below).
+```
+kubectl get pod -A | grep ingress-controller-ingress-nginx-controller
+```
+output:
+```
+verrazzano-ingress-nginx     ingress-controller-ingress-nginx-controller-7f97dd685-gf5gv       2/2     Running   0               2m
+```
+
