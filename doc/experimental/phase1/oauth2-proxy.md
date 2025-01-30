@@ -44,6 +44,7 @@ sed -i '/resourceVersion/,+d' ./keycloak-oauth2-tls
 sed -i '/uid/,+d' ./keycloak-oauth2-tls
 sed -i '/creationTimestamp/,+d' ./keycloak-oauth2-tls
 sed -i 's/namespace: keycloak/namespace: verrazzano-system/' ./keycloak-oauth2-tls
+sed -i 's/name: keycloak-tls/name: keycloak-oauth2-tls/' ./keycloak-oauth2-tls
 ```
 
 Create the new secret:
@@ -130,7 +131,7 @@ NAME           TYPE     DATA   AGE
 oauth2-proxy   Opaque   3      11s
 ```
 
-### Add email to the Keycloak client
+### Add email to the Keycloak verrazzano user
 Log into the Keycloak admin console and add an email to the client using the following steps.
 
 1. Get the Keycloak URL:
@@ -155,8 +156,8 @@ kubectl get secret \
 ```
 
 3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
-by Verrazzano.  Then select **Clients** in the left navigation pane and the list of clients will be shown in the middle pane
-under the heading **Client ID**.  Select the correct client then update the email with a valid email and click the Save button.
+by Verrazzano.  Then select **Users** in the left navigation pane and the list of users will be shown in the middle pane.  
+Select the `verrazzano` user, then update the email with a valid email and click the Save button.
 
 
 ### Create OAuth2 Proxy overrides file
@@ -192,7 +193,7 @@ config:
     upstreams="file:///dev/null"
     provider = "oidc"
     code_challenge_method = "S256"
-    oidc_issuer_url = " https://keycloak.default.$INGRESS_HOST/auth/realms/$KEYCLOAK_REALM"
+    oidc_issuer_url = "https://keycloak.default.$INGRESS_HOST/auth/realms/$KEYCLOAK_REALM"
     skip_provider_button = true
     approval_prompt = "auto"
     reverse_proxy = true
@@ -206,7 +207,11 @@ EOF
 ## 2. Install outh2-proxy from the Catalog
 Now you are ready to install the oauth2-proxy from the catalog.  Run the following command:
 ```
-ocne app install -c embedded -n verrazzano-system -N oauth2-proxy -f ./oauth2-values.yaml 
+ocne app install --catalog embedded -n verrazzano-system --name oauth2-proxy --values ./oauth2-values.yaml
+```
+Output:
+```text
+INFO[2025-01-30T16:16:56-05:00] Application installed successfully   
 ```
 
 Wait for the oauth2 pods to be ready:
