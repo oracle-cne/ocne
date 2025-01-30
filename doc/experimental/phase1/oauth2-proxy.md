@@ -2,7 +2,7 @@
 
 ### Version: v0.0.1-draft
 This document explains how to migrate from the Verrazzano Auth Proxy to the [OAuth2 Proxy](https://github.com/oauth2-proxy/oauth2-proxy) in a
-system that was set up using Verrazzano. The OAuth2 Proxy implements the OAuth 2.0 PKCE protocol using Keycloak
+system that had Verrazzano installed. The OAuth2 Proxy implements the OAuth 2.0 PKCE protocol using Keycloak
 as the identity provider. After following all the steps outlined in this document, the Verrazzano Auth Proxy
 will no longer be used and will be removed from the system.
 
