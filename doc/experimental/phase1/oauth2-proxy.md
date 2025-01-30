@@ -743,7 +743,70 @@ Update the NetworkPolicy:
 
 ```text
 cat <<EOF > ./prometheus-netpol.yaml 
-
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: prometheus-operator
+    meta.helm.sh/release-namespace: verrazzano-monitoring
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: vmi-system-prometheus
+  namespace: verrazzano-monitoring
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-ingress-nginx
+    ports:
+    - port: 9090
+      protocol: TCP          
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-system
+      podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - verrazzano-authproxy
+          - system-grafana
+          - kiali
+    ports:
+    - port: 9090
+      protocol: TCP
+    - port: 10901
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-monitoring
+      podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - jaeger
+    ports:
+    - port: 9090
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: query
+    ports:
+    - port: 10901
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  policyTypes:
+  - Ingress 
 EOF
 ```
 Apply the YAML file
@@ -754,7 +817,49 @@ kubectl apply -f ./prometheus-netpol.yaml
 Update the Authorization Policy:
 ```text
 cat <<EOF > ./prometheus-authpol.yaml 
-
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: vmi-system-prometheus-authzpol
+  namespace: verrazzano-monitoring
+spec:
+  rules:
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-ingress-nginx
+        principals:
+        - cluster.local/ns/verrazzano-ingress-nginx/sa/ingress-controller-ingress-nginx
+    to:
+    - operation:
+        ports:
+        - "9090"          
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-authproxy
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-monitoring-operator
+        - cluster.local/ns/verrazzano-system/sa/vmi-system-kiali
+    to:
+    - operation:
+        ports:
+        - "9090"
+        - "10901"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-monitoring
+        principals:
+        - cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus
+    to:
+    - operation:
+        ports:
+        - "9090"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
 EOF
 ```
 Apply the YAML file
@@ -765,7 +870,64 @@ kubectl apply -f ./prometheus-authpol.yaml
 Create the new Ingress and update the existing one.
 ```text
 cat <<EOF > ./prometheus-ingress.yaml 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vmi-system-prometheus-external
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: prometheus.vmi.system.default.100.101.68.34.nip.io
+    http:
+      paths:
+      - path: /oauth2
+        pathType: Prefix
+        backend:
+          service:
+            name: oauth2-proxy
+            port:
+              number: 49000
+  tls:
+  - hosts:
+    - prometheus.vmi.system.default.100.101.68.34.nip.io
+    secretName: system-tls-prometheus
 
+
+---
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+    cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
+    cert-manager.io/common-name: prometheus.vmi.system.default.100.101.68.34.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.34.nip.io
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6M
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: ${service_name}.${namespace}.svc.cluster.local 
+  name: vmi-system-prometheus
+  namespace: verrazzano-monitoring
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: prometheus.vmi.system.default.100.101.68.34.nip.io
+    http:
+      paths:
+      - path: /()(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: prometheus-operator-kube-p-prometheus 
+            port:
+              number: 9090
 EOF
 ```
 
@@ -775,13 +937,55 @@ sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./prometheus-ingress.yaml
 kubectl apply -f ./prometheus-ingress.yaml
 ```
 
-
 ### Migrate Grafana
 Update the NetworkPolicy:
 
 ```text
 cat <<EOF > ./grafana-netpol.yaml 
-
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: verrazzano-network-policies
+    meta.helm.sh/release-namespace: verrazzano-system
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: vmi-system-grafana
+  namespace: verrazzano-system
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-ingress-nginx
+    ports:
+    - port: 3000
+      protocol: TCP          
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-system
+      podSelector:
+        matchLabels:
+          app: verrazzano-authproxy
+    ports:
+    - port: 3000
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - port: 15090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: system-grafana
+  policyTypes:
+  - Ingress
 EOF
 ```
 Apply the YAML file
@@ -792,7 +996,52 @@ kubectl apply -f ./grafana-netpol.yaml
 Update the Authorization Policy:
 ```text
 cat <<EOF > ./grafana-authpol.yaml 
-
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: verrazzano
+    meta.helm.sh/release-namespace: verrazzano-system
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: vmi-system-grafana-authzpol
+  namespace: verrazzano-system
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-ingress-nginx
+        principals:
+        - cluster.local/ns/verrazzano-ingress-nginx/sa/ingress-controller-ingress-nginx
+    to:
+    - operation:
+        ports:
+        - "3000"              
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-authproxy
+    to:
+    - operation:
+        ports:
+        - "3000"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-monitoring
+        principals:
+        - cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus
+    to:
+    - operation:
+        ports:
+        - "15090"
+  selector:
+    matchLabels:
+      app: system-grafana
 EOF
 ```
 Apply the YAML file
@@ -803,7 +1052,78 @@ kubectl apply -f ./grafana-authpol.yaml
 Create the new Ingress and update the existing one.
 ```text
 cat <<EOF > ./grafana-ingress.yaml 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vmi-system-grafana-external
+  namespace: verrazzano-system
+  annotations:
+    cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
+    cert-manager.io/common-name: grafana.vmi.system.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6M
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: grafana.vmi.system.default.100.101.68.61.nip.io
+    http:
+      paths:
+      - path: /oauth2
+        pathType: Prefix
+        backend:
+          service:
+            name: oauth2-proxy
+            port:
+              number: 49000
+  tls:
+  - hosts:
+    - grafana.vmi.system.default.100.101.68.61.nip.io
+    secretName: system-tls-grafana
 
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User, X-Auth_Request-Email"
+    cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
+    cert-manager.io/common-name: grafana.vmi.system.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6M
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: ${service_name}.${namespace}.svc.cluster.local 
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      auth_request_set $user   $upstream_http_x_auth_request_preferred_username;
+      auth_request_set $email  $upstream_http_x_auth_request_email;
+      auth_request_set $token  $upstream_http_x_auth_request_access_token;
+      proxy_set_header X-WEBAUTH-USER  $user;
+      proxy_set_header X-Email $email;
+      proxy_set_header X-Auth-Request-Access-Token $token;
+  name: vmi-system-grafana
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: grafana.vmi.system.default.100.101.68.61.nip.io
+    http:
+      paths:
+      - path: /()(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: vmi-system-grafana
+            port:
+              number: 3000
 EOF
 ```
 
@@ -813,13 +1133,57 @@ sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./grafana-ingress.yaml
 kubectl apply -f ./grafana-ingress.yaml
 ```
 
-
 ### Migrate Kiali
 Update the NetworkPolicy:
 
 ```text
 cat <<EOF > ./kiali-netpol.yaml 
-
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: verrazzano-network-policies
+    meta.helm.sh/release-namespace: verrazzano-system
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: kiali
+  namespace: verrazzano-system
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-ingress-nginx
+    ports:
+    - port: 20001
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-system
+      podSelector:
+        matchLabels:
+          app: verrazzano-authproxy
+    ports:
+    - port: 20001
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - port: 9090
+      protocol: TCP
+    - port: 15090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: kiali
+  policyTypes:
+  - Ingress
 EOF
 ```
 Apply the YAML file
@@ -830,7 +1194,46 @@ kubectl apply -f ./kiali-netpol.yaml
 Update the Authorization Policy:
 ```text
 cat <<EOF > ./kiali-authpol.yaml 
-
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: vmi-system-kiali-authzpol
+  namespace: verrazzano-system
+spec:
+  rules:
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-ingress-nginx
+        principals:
+        - cluster.local/ns/verrazzano-ingress-nginx/sa/ingress-controller-ingress-nginx
+    to:
+    - operation:
+        ports:
+        - "20001"           
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-authproxy
+    to:
+    - operation:
+        ports:
+        - "20001"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-monitoring-operator
+    to:
+    - operation:
+        ports:
+        - "9090"
+  selector:
+    matchLabels:
+      app: kiali
 EOF
 ```
 Apply the YAML file
@@ -841,7 +1244,62 @@ kubectl apply -f ./kiali-authpol.yaml
 Create the new Ingress and update the existing one.
 ```text
 cat <<EOF > ./kiali-ingress.yaml 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vmi-system-kiali-external
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: kiali.vmi.system.default.100.101.68.34.nip.io
+    http:
+      paths:
+      - path: /oauth2
+        pathType: Prefix
+        backend:
+          service:
+            name: oauth2-proxy
+            port:
+              number: 49000
+  tls:
+  - hosts:
+    - kiali.vmi.system.default.100.101.68.34.nip.io
+    secretName: system-tls-kiali
 
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+    cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
+    cert-manager.io/common-name: kiali.vmi.system.default.100.101.68.34.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.34.nip.io
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6M
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: ${service_name}.${namespace}.svc.cluster.local 
+  name: vmi-system-kiali
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: kiali.vmi.system.default.100.101.68.34.nip.io
+    http:
+      paths:
+      - path: /()(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: vmi-system-kiali
+            port:
+              number: 20001
 EOF
 ```
 
