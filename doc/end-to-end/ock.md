@@ -83,7 +83,7 @@ use this image with the `libvirt` or `oci` providers, set
 `bootVolumeContainerImage: myregistry.com/ocne/ock` in your defaults file or
 cluster configuration.
 
-### The Ostree Native Container Image - out/1.30/archive.tar and myregistry.com/ocne/ock-ostree:1.30
+### The OSTree Native Container Image - out/1.30/archive.tar and myregistry.com/ocne/ock-ostree:1.30
 
 This file is an Open Container Initiative container image archive that contains
 the ostree native container image with the same bits that are installed on the
@@ -129,7 +129,14 @@ a BYO cluster.  In this example, a single node cluster is started using a base
 boot media generated using `ock-forge` and Anaconda/Kickstart.  If you are
 familiar with the `byo` provider guide, many of these steps will be familiar.
 
-### Generate the Ostree Media
+The overall flow goes:
+- Build OCK
+- Push the ostree native container image to a registry
+- Use that image to generate an ostree archive server
+- Use the archive server to do a kickstart install
+- Use the kickstart install disk to make a cluster
+
+### Generate the OSTree Media
 
 Run `ock-forge` and build an OCK image
 ```
@@ -201,7 +208,7 @@ osRegistry: myregistry.com/ocne/ock-ostree
 ...
 ```
 
-### Create the Ostree Archive Server
+### Create the OSTree Archive Server
 
 Now that the CLI is configured to use the custom ostree native container image,
 `ocne image create --type ostree` will use that content when generating the
@@ -216,7 +223,7 @@ INFO[2025-01-30T16:41:10Z] Saving container image: ok
 INFO[2025-01-30T16:41:10Z] Saved image to /home/opc/.ocne/images/ock-1.30-amd64-ostree.tar
 ```
 
-### Load the Ostree Archive Server
+### Load the OSTree Archive Server
 
 Load the ostree archive server to the local container storage cache so it can
 be used to start containers.
