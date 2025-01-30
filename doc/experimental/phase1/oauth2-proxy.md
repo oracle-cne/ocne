@@ -12,6 +12,16 @@ This document explains how to migrate from the Verrazzano Auth proxy to the [OAu
 6. Update Fluentd config.
 7. Remove Verrazzano auth proxy from the cluster.
 
+## Prerequisites
+### Define the $INGRESS_HOST environment variable
+The section uses the INGRESS_HOST environment variable so you must define it.  For example:
+The INGRESS_HOST for `https://opensearch.vmi.system.default.11.22.33.44.nip.io` is `11.22.33.44.nip.io`.
+So you would run the following in this case:
+```text
+INGRESS_HOST=11.22.33.44.nip.io
+```
+**WARNING: Defining INGRESS_HOST is a critical step, which is required by this migration document.  Be sure to do this correctly.**
+
 ## 1. Prepare for installation of OAuth2 Proxy 
 Before installing the OAuth2 Proxy, you must do the following:
 
@@ -96,12 +106,13 @@ apiVersion: v1
 data:
   cookie-secret: $COOKIE_SECRET
   client-id: $CLIENT_ID
-  client-secret: $COOKIE_SECRET
+  client-secret: $CLIENT_SECRET
 kind: Secret
 metadata:
   name: oauth2-proxy
   namespace: verrazzano-system
 type: Opaque
+EOF
 ```
 
 Apply the secret file to create the secret:
@@ -116,7 +127,7 @@ kubectl get secret -n verrazzano-system oauth2-proxy
 output:
 ```
 NAME           TYPE     DATA   AGE
-oauth2-proxy   Opaque   3      3d20h
+oauth2-proxy   Opaque   3      11s
 ```
 
 ### Create OAuth2 Proxy overrides file
@@ -128,7 +139,7 @@ KEYCLOAK_URL=<keycloak_url>
 
 Execute the following command to generate the oauth2-proxy overrides file:
 ```text
-cat <<EOF > ./oauth2-values.yaml 
+envsubst > ./oauth2-values.yaml - <<EOF
 extraVolumes:
   - name: keycloak-ca-bundle-cert
     secret:
@@ -151,7 +162,7 @@ config:
     upstreams="file:///dev/null"
     provider = "oidc"
     code_challenge_method = "S256"
-    oidc_issuer_url = "$KEYCLOAK_URL/auth/realms/verrazzano-system"
+    oidc_issuer_url = " https://keycloak.default.$INGRESS_HOST/auth/realms/verrazzano-system"
     skip_provider_button = true
     approval_prompt = "auto"
     reverse_proxy = true
@@ -161,7 +172,6 @@ config:
     pass_access_token = true
 EOF    
 ```
-
 
 ### Add email to the Keycloak client
 Log into the Keycloak admin console and add an email to the client using the following steps.
@@ -217,7 +227,6 @@ NAME                   READY   ...
 verrazzano-authproxy   0/0     ...
 ```
 
-
 Shutdown the Verrazzano auth-proxy and monitoring operator by scaling the replicas to 0 as follows:
 **NOTE** If the monitoring operator has already been removed from the system then skip this step.
 ```
@@ -264,16 +273,7 @@ verrazzano-ingress-nginx     ingress-controller-ingress-nginx-controller-7f97dd6
 ```
 
 ## 6. Migrate each console to use OAuth2 Proxy
-
 **NOTE**The entire YAML needs to be applies since strategic patches do not work correctly for adding entries to arrays for certain resource.
-
-### Define the $INGRESS_HOST environment variable
-The section uses the INGRESS_HOST environment variable so you must define it.  For example:
-The INGRESS_HOST for `https://opensearch.vmi.system.default.11.22.33.44.nip.io` is `default.11.22.33.44.nip.io`.
-So you would run the following in this case:
-```text
-INGRESS_HOST=default.11.22.33.44.nip.io
-```
 
 ### Save existing ingress manifests
 kubectl get ingress -n verrazzano-system vmi-system-prometheus -o yaml > save-ingress-prometheus.yaml
