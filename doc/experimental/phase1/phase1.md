@@ -238,6 +238,23 @@ kubectl patch vz -n $VZCR_NS $VZCR -p '{"metadata":{"finalizers":[]}}' --type=me
 kubectl delete vz -n $VZCR_NS $VZCR
 ```
 
+## Delete the VerrazzanoMonitoringInstance
+This section describes how to delete the VerrazzanoMonitoringInstance, which is no longer needed.
+This must be done before CRDs are deleted in phase2.
+
+```text
+kubectl delete --all --all-namespaces verrazzanomonitoringinstances --cascade=orphan
+```
+Ensure that it was deleted:
+```
+kubectl get verrazzanomonitoringinstances -A
+```
+output:
+```
+No resources found
+
+```
+
 ## Perform another Cluster Dump
 
 Perform a cluster dump to take snapshot of the cluster state after phase-1 is done.
