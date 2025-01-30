@@ -808,6 +808,10 @@ spec:
   - Ingress 
 EOF
 ```
+Apply the YAML file:
+```
+kubectl apply -f ./prometheus-netpol.yaml
+```
 
 Update the Authorization Policy:
 ```text
