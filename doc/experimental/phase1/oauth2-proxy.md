@@ -78,7 +78,7 @@ output:
 The client secret is required by the OAuth2 Proxy even though it is not used in this case.  Generate a fake secret using any string, for example:
 
 ```
-echo -n <any short string> | base64
+cat /proc/sys/kernel/random/uuid | base64
 ```
 output:
 ```
