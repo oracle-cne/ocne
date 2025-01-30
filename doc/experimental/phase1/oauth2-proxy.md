@@ -1,7 +1,10 @@
 # Migration from Verrazzano Auth proxy to OAuth2 Proxy
 
 ### Version: v0.0.1-draft
-This document explains how to migrate from the Verrazzano Auth proxy to the [OAuth2 Proxy](https://github.com/oauth2-proxy/oauth2-proxy).
+This document explains how to migrate from the Verrazzano Auth Proxy to the [OAuth2 Proxy](https://github.com/oauth2-proxy/oauth2-proxy) in a
+system that was set up using Verrazzano. The OAuth2 Proxy implements the OAuth 2.0 PKCE protocol using Keycloak
+as the identity provider. After following all the steps outlined in this document, the Verrazzano Auth Proxy
+will no longer be used and will be removed from the system.
 
 ## Summary of steps
 1. Prepare for installation of OAuth2 Proxy.
@@ -1322,8 +1325,7 @@ sed -i 's/verrazzano-authproxy-opensearch:8775/vmi-system-os-ingest:9200/' ./flu
 
 Apply the YAML:
 ```text
-kubectl apply -f fluentd-daemonset.yaml
-cp fluentd-daemonset.yaml fluentd-daemonset-save.yaml
+kubectl apply -f ./fluentd-oauth2-daemonset.yaml
 ```
 
 Wait for the Fluentd pods to be ready:
@@ -1352,4 +1354,23 @@ Output:
 ```text
 secret "verrazzano-es-internal" deleted
 ```
+
+### Check OpenSearch DashBoard for Fluentd logs
+Log into the OpenSearch DashBoard and query for the last 5 minutes a few times to ensure that
+Fluentd is logging to OpenSearch.
+
+## Remove Verrazzano Auth Proxy from the system
+```text
+helm delete -n verrazzano-system verrazzano-authproxy 
+```
+Output:
+```text
+release "verrazzano-authproxy" uninstalled
+```
+
+## Summary
+At this point, traffic from NGINX Ingress Controller now uses the OAuth2 Proxy for OIDC instead of the
+Verrazzano Auth Proxy. The Verrazzano proxy has been removed from the system.  The OAuth2 Proxy is
+in the Oracle Cloud Native Environment catalog and its life cycle can be managed like any other
+application in the catalog.
 
