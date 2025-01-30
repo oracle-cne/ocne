@@ -1,6 +1,6 @@
 # Custom Oracle Container Host for Kubernetes Installations
 
-If the standard Oracle Continer Host for Kubernetes (OCK) images do not
+If the standard Oracle Container Host for Kubernetes (OCK) images do not
 fit the requirements, it is possible to create customized media using
 [ock-forge](https://github.com/oracle-cne/ock-forge).  The output of this tool
 can be fed into other components of the Oracle Cloud Native Environment and
