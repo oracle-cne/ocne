@@ -164,6 +164,9 @@ an example that can be used to familiarize yourself with the "Bring Your Own"
 provider.  Any instructions in the example must be adjusted to fit the
 environment where Oracle Cloud Native Environment is installed.
 
+> **_NOTE:_** Refer to the [ock-forge to byo end to end example](../end-to-end/ock.md)
+> for a completely customizable workflow.
+
 #### Gather the Installation Media
 
 Download The Oracle Linux 8 Release 10 Boot Media.  For convenience, locate
