@@ -41,7 +41,7 @@ First create a file containing the existing secret:
 kubectl get secret keycloak-tls -n keycloak -o yaml > ./keycloak-oauth2-tls
 ```
 
-Next edit ./keycloak-oauth2-tls and do the following:
+Update the ./keycloak-oauth2-tls file as follows:
 ```text
 sed -i '/resourceVersion/,+d' ./keycloak-oauth2-tls
 sed -i '/uid/,+d' ./keycloak-oauth2-tls
@@ -50,8 +50,8 @@ sed -i 's/namespace: keycloak/namespace: verrazzano-system/' ./keycloak-oauth2-t
 sed -i 's/name: keycloak-tls/name: keycloak-oauth2-tls/' ./keycloak-oauth2-tls
 ```
 
-Create the new secret:
-**NOTE** You may see a warning: `...is missing the kubectl.kubernetes.io/last-applied-configuration annotation`.  Ignore this.
+Create the new secret:  
+**NOTE** Ignore the warning: `...is missing the kubectl.kubernetes.io/last-applied-configuration annotation`.
 ```
 kubectl apply -f ./keycloak-oauth2-tls
 ```
@@ -60,7 +60,7 @@ Ensure that the secret has been created:
 ```
 kubectl get secret -n verrazzano-system | grep keycloak
 ```
-output:
+Output:
 ```
 keycloak-oauth2-tls                                     kubernetes.io/tls    3      5s
 ```
@@ -77,7 +77,7 @@ The client id, already exists in Keycloak so this will be used.  You can get the
 ```
 helm get values -n verrazzano-system verrazzano-authproxy | grep OIDCClientID
 ```
-output:
+Output:
 ```
 OIDCClientID: <client-id>
 ```
@@ -126,7 +126,7 @@ Ensure that the secret has been created:
 ```
 kubectl get secret -n verrazzano-system oauth2-proxy
 ```
-output:
+Output:
 ```
 NAME           TYPE     DATA   AGE
 oauth2-proxy   Opaque   3      11s
@@ -139,7 +139,7 @@ Log into the Keycloak admin console and add an email to the client using the fol
 ```
 vz status
 ```
-output:
+Output:
 ```
 Verrazzano Status
 ...
@@ -229,7 +229,7 @@ Verify the pods have been stopped:
 ```
 kubectl get deployment -n verrazzano-system  verrazzano-authproxy
 ```
-output:
+Output:
 ```
 NAME                   READY   ...
 verrazzano-authproxy   0/0     ...
@@ -244,7 +244,7 @@ Verify the pods have been stopped:
 ```
 kubectl get deployment -n verrazzano-system  verrazzano-monitoring-operator 
 ```
-output:
+Output:
 ```
 NAME                   READY   ...
 verrazzano-monitoring-operator    0/0     ...
@@ -254,19 +254,20 @@ verrazzano-monitoring-operator    0/0     ...
 There are two changes needed for NGINX. First, allow NGINX to communicate with oauth2-proxy which is outside the Istio mesh.
 Second, allow the NGINX Ingress controller to process snippets from the Ingress resource.
 
-Patch the NGINX Ingress Controller deployment as follows:
+Patch the NGINX Ingress Controller configmap as follows:
 ```
 kubectl patch configmap -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller --type='merge'  --patch '{"data": {"allow-snippet-annotations": "true"}}'
 ```
-output:
+Output:
 ```
 configmap/ingress-controller-ingress-nginx-controller patched
 ```
 
+Patch the NGINX Ingress Controller deployment as follows:
 ```text
 kubectl patch deployment -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-controller --type='merge'  --patch '{"spec": {"template": {"metadata": {"labels": {"traffic.sidecar.istio.io/excludeOutboundPort": "49000"}}}}}'
 ```
-output:
+Output:
 ```
 deployment.apps/ingress-controller-ingress-nginx-controller patched
 ```
@@ -276,7 +277,7 @@ Ensure that the new pod is ready:
 ```
 kubectl rollout status -n verrazzano-ingress-nginx deployment ingress-controller-ingress-nginx-controller  -w
 ```
-output:
+Output:
 ```
 deployment "ingress-controller-ingress-nginx-controller" successfully rolled out
 ```
