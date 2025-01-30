@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.17-draft
+### Version: v0.0.21-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -22,7 +22,6 @@ kubectl -n ocne-system rollout status deployment ocne-catalog
 Follow these [instructions](../../cluster-management/etcd-backup.md) to backup the ETCD database.
 
 ## Perform a Cluster Dump
-
 Perform a cluster dump to take snapshot of the cluster state before the migration begins.
 This may take several minutes, it varies depending on the size of your cluster and number of cluster objects.
 If you want to redact sensitive information, such as host names, or omit configmaps, then remove the
@@ -36,6 +35,7 @@ ocne cluster dump --kubeconfig $KUBECONFIG --skip-redaction --include-configmaps
 Follow these [instructions](../phase1/disable-verrazzano.md) to remove the Verrazzano controllers on the cluster.
 
 ## OAM Migration
+This section describes how to migrate from using OAM resources.
 
 ### Generate Kubernetes Manifests
 Because OAM will no longer be used, you need to generate Kubernetes manifest YAML files for
@@ -77,6 +77,14 @@ kubectl rollout status deployment --namespace cert-manager cert-manager -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-cainjector -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
 ```
+
+## Upgrade OpenSearch 2.3.0 to 2.15.0
+
+Follow these [instructions](../phase1/upgrade-opensearch.md) to upgrade OpenSearch.
+
+## Upgrade OpenSearch Dashboards 2.3.0 to 2.15.0
+
+Follow these [instructions](../phase1/upgrade-opensearch-dashboards.md) to upgrade OpenSearch Dashboards.
 
 ## Modify WebLogic Kubernetes Operator Helm overrides
 
@@ -229,6 +237,27 @@ VZCR_NS=<verrazzano-cr-namespace>
 kubectl patch vz -n $VZCR_NS $VZCR -p '{"metadata":{"finalizers":[]}}' --type=merge
 kubectl delete vz -n $VZCR_NS $VZCR
 ```
+
+## Delete the VerrazzanoMonitoringInstance
+This section describes how to delete the VerrazzanoMonitoringInstance, which is no longer needed.
+This must be done before CRDs are deleted in phase2.
+
+```text
+kubectl delete --all --all-namespaces verrazzanomonitoringinstances --cascade=orphan
+```
+Ensure that it was deleted:
+```
+kubectl get verrazzanomonitoringinstances -A
+```
+output:
+```
+No resources found
+
+```
+
+## Migrate to OAuth2 Proxy
+
+Follow these [instructions](../phase1/oauth2-proxy.md) to migrate from Verrazznao auth-proxy to OAuth2 Proxy
 
 ## Perform another Cluster Dump
 

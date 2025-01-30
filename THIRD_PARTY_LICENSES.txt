@@ -6686,8 +6686,3 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>
-
-
-=== ATTRIBUTION-HELPER-GENERATED:
-=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-116-g2a434e4d GitCommit:2a434e4d7eea22d4dfd2d1cf04909239d05562b1 GitTreeState:clean BuildDate:2024-12-16T20:09:06Z GoVersion:go1.23.4 Compiler:gc Platform:darwin/amd64}
-=== License file based on go.mod with md5 sum:  a582bda41c95c218b5960a91eedc1656
