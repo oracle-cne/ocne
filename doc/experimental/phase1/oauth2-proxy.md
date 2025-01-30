@@ -291,9 +291,22 @@ So you would run the following in this case:
 INGRESS_HOST=default.11.22.33.44.nip.io
 ```
 
+### Save existing ingress manifests
+kubectl get ingress -n verrazzano-system vmi-system-prometheus -o yaml > save-ingress-prometheus.yaml
+kubectl get ingress -n verrazzano-system vmi-system-grafana -o yaml > save-ingress-grafana.yaml
+kubectl get ingress -n verrazzano-system vmi-system-os-ingest -o yaml > save-ingress-os-ingest.yaml
+kubectl get ingress -n verrazzano-system vmi-system-osd -o yaml > save-ingress-osd.yaml
+kubectl get ingress -n verrazzano-system vmi-system-kiali -o yaml > save-ingress-kiali.yaml
+
+### Delete ingresses
+kubectl delete ingress -n verrazzano-system vmi-system-prometheus 
+kubectl delete ingress -n verrazzano-system vmi-system-grafana 
+kubectl delete ingress -n verrazzano-system vmi-system-os-ingest
+kubectl delete ingress -n verrazzano-system vmi-system-osd
+kubectl delete ingress -n verrazzano-system vmi-system-kiali
+
 ### Migrate Opensearch
 Update the NetworkPolicy:
-
 ```text
 cat <<EOF > ./opensearch-netpol.yaml 
 apiVersion: networking.k8s.io/v1
@@ -454,13 +467,8 @@ Apply the YAML file
 kubectl apply -f ./opensearch-authpol.yaml
 ```
 
-Save existing ingress:
-```
-kubectl --kubeconfig paul-kubeconfig get  ing -n verrazzano-system       vmi-system-os-ingest -o yaml >opensearch-ingress-save.yaml
-```
-
 Create the new Ingress and update the existing one.
-```
+```text
 cat <<EOF > ./opensearch-ingress.yaml 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -518,11 +526,327 @@ spec:
             name: vmi-system-os-ingest 
             port:
               number: 9200
-
+EOF
 ```
 
 Update the YAML file and apply it:
 ```
 sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./opensearch-ingress.yaml
 kubectl apply -f ./opensearch-ingress.yaml
+```
+
+### Migrate OpenSearch Dashboard
+Update the NetworkPolicy:
+
+```text
+cat <<EOF > ./osd-netpol.yaml 
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: verrazzano-network-policies
+    meta.helm.sh/release-namespace: verrazzano-system
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: vmi-system-osd
+  namespace: verrazzano-system
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-ingress-nginx
+    ports:
+    - port: 5601
+      protocol: TCP
+  - from:
+    - podSelector:
+        matchLabels:
+          k8s-app: verrazzano-monitoring-operator
+    ports:
+    - port: 5601
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-system
+      podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - verrazzano-authproxy
+          - system-osd
+    ports:
+    - port: 5601
+      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          verrazzano.io/namespace: verrazzano-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - port: 15090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: system-osd
+  policyTypes:
+  - Ingress
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./osd-netpol.yaml
+```
+
+Update the Authorization Policy:
+```text
+cat <<EOF > ./osd-authpol.yaml 
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: verrazzano
+    meta.helm.sh/release-namespace: verrazzano-system
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: vmi-system-osd-authzpol
+  namespace: verrazzano-system
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-ingress-nginx
+        principals:
+        - cluster.local/ns/verrazzano-ingress-nginx/sa/ingress-controller-ingress-nginx
+    to:
+    - operation:
+        ports:
+        - "5601"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-authproxy
+    to:
+    - operation:
+        ports:
+        - "5601"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-system
+        principals:
+        - cluster.local/ns/verrazzano-system/sa/verrazzano-monitoring-operator
+    to:
+    - operation:
+        ports:
+        - "15090"
+        - "5601"
+  - from:
+    - source:
+        namespaces:
+        - verrazzano-monitoring
+        principals:
+        - cluster.local/ns/verrazzano-monitoring/sa/prometheus-operator-kube-p-prometheus
+    to:
+    - operation:
+        ports:
+        - "15090"
+        - "5601"
+  selector:
+    matchLabels:
+      app: system-osd
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./osd-authpol.yaml
+```
+
+Create the new Ingress and update the existing one.
+```text
+cat <<EOF > ./osd-ingress.yaml 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vmi-system-osd-external
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: osd.vmi.system.default.100.101.68.61.nip.io
+    http:
+      paths:
+      - path: /oauth2
+        pathType: Prefix
+        backend:
+          service:
+            name: oauth2-proxy
+            port:
+              number: 49000
+  tls:
+  - hosts:
+    - osd.vmi.system.default.100.101.68.61.nip.io
+    secretName: system-tls-osd
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+    cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
+    cert-manager.io/common-name: osd.vmi.system.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6M
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: ${service_name}.${namespace}.svc.cluster.local 
+  name: vmi-system-osd
+  namespace: verrazzano-system
+spec:
+  ingressClassName: verrazzano-nginx
+  rules:
+  - host: osd.vmi.system.default.100.101.68.61.nip.io
+    http:
+      paths:
+      - path: /()(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: vmi-system-osd 
+            port:
+              number: 5601
+EOF
+```
+
+Update the YAML file and apply it:
+```
+sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./osd-ingress.yaml
+kubectl apply -f ./osd-ingress.yaml
+```
+
+### Migrate Prometheus
+Update the NetworkPolicy:
+
+```text
+cat <<EOF > ./prometheus-netpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./prometheus-netpol.yaml
+```
+
+Update the Authorization Policy:
+```text
+cat <<EOF > ./prometheus-authpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./prometheus-authpol.yaml
+```
+
+Create the new Ingress and update the existing one.
+```text
+cat <<EOF > ./prometheus-ingress.yaml 
+
+EOF
+```
+
+Update the YAML file and apply it:
+```
+sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./prometheus-ingress.yaml
+kubectl apply -f ./prometheus-ingress.yaml
+```
+
+
+### Migrate Grafana
+Update the NetworkPolicy:
+
+```text
+cat <<EOF > ./grafana-netpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./grafana-netpol.yaml
+```
+
+Update the Authorization Policy:
+```text
+cat <<EOF > ./grafana-authpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./grafana-authpol.yaml
+```
+
+Create the new Ingress and update the existing one.
+```text
+cat <<EOF > ./grafana-ingress.yaml 
+
+EOF
+```
+
+Update the YAML file and apply it:
+```
+sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./grafana-ingress.yaml
+kubectl apply -f ./grafana-ingress.yaml
+```
+
+
+### Migrate Kiali
+Update the NetworkPolicy:
+
+```text
+cat <<EOF > ./kiali-netpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./kiali-netpol.yaml
+```
+
+Update the Authorization Policy:
+```text
+cat <<EOF > ./kiali-authpol.yaml 
+
+EOF
+```
+Apply the YAML file
+```
+kubectl apply -f ./kiali-authpol.yaml
+```
+
+Create the new Ingress and update the existing one.
+```text
+cat <<EOF > ./kiali-ingress.yaml 
+
+EOF
+```
+
+Update the YAML file and apply it:
+```
+sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./kiali-ingress.yaml
+kubectl apply -f ./kiali-ingress.yaml
 ```
