@@ -454,7 +454,12 @@ Apply the YAML file
 kubectl apply -f ./opensearch-authpol.yaml
 ```
 
-Create the Ingresses
+Save existing ingress:
+```
+kubectl --kubeconfig paul-kubeconfig get  ing -n verrazzano-system       vmi-system-os-ingest -o yaml >opensearch-ingress-save.yaml
+```
+
+Create the new Ingress and update the existing one.
 ```
 cat <<EOF > ./opensearch-ingress.yaml 
 apiVersion: networking.k8s.io/v1
