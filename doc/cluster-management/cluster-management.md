@@ -10,6 +10,7 @@ pages for details on how to use each one.
 
 * [Libvirt](libvirt.md)
 * [OCI](oci.md)
+* [BYO](byo.md)
 
 ## Cluster Lifecyle
 
