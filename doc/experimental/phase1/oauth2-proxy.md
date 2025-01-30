@@ -1304,3 +1304,52 @@ Update the YAML file and apply it:
 sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./kiali-ingress.yaml
 kubectl apply -f ./kiali-ingress.yaml
 ```
+
+### Migrate Fluentd
+Get the Fluentd DaemonSet YAML
+```text
+kubectl get daemonset fluentd -n verrazzano-system -o yaml >  fluentd-oauth2-daemonset.yaml
+cp fluentd-oauth2-daemonset.yaml fluentd-daemonset-save.yaml
+```
+Update YAML:
+```text
+sed -i '/resourceVersion/,+d' fluentd-oauth2-daemonset.yaml
+sed -i '/uid/,+d' fluentd-oauth2-daemonset.yaml
+sed -i '/ELASTICSEARCH_USER/,+5d' fluentd-oauth2-daemonset.yaml
+sed -i '/ELASTICSEARCH_PASSWORD/,+5d' fluentd-oauth2-daemonset.yaml
+sed -i 's/verrazzano-authproxy-opensearch:8775/vmi-system-os-ingest:9200/' fluentd-oauth2-daemonset.yaml
+```
+
+Apply the YAML:
+```text
+kubectl apply -f fluentd-daemonset.yaml
+cp fluentd-daemonset.yaml fluentd-daemonset-save.yaml
+```
+
+Wait for the Fluentd pods to be ready:
+```
+kubectl rollout status -n verrazzano-system daemonset fluentd -w
+```
+Output:
+```text
+daemon set "fluentd" successfully rolled out
+```
+
+Delete the Fluentd OpenSearch configmap
+```text
+kubectl delete configmap -n verrazzano-system  fluentd-es-config 
+```
+Output:
+```text
+configmap "fluentd-es-config" deleted
+```
+
+Delete the Fluentd OpenSearch secret
+```text
+kubectl delete secret -n verrazzano-system verrazzano-es-internal
+```
+Output:
+```text
+secret "verrazzano-es-internal" deleted
+```
+

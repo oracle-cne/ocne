@@ -1,6 +1,6 @@
 # OAM to Kubernetes Mappings
 
-### Version: v0.0.3-draft
+### Version: v0.0.4-draft
 This document explains how to generate Kubernetes YAML files from OAM-related objects that are running in a Kubernetes cluster.
 
 ## Installing Verrazzano 1.6.11 CLI on a Linux AMD64 machine
