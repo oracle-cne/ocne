@@ -1,16 +1,16 @@
 # Migration from Verrazzano Auth proxy to OAuth2 Proxy
 
 ### Version: v0.0.1-draft
-This document explains how to migrate from the Verrazzano Auth proxy to the [OAuth2 proxy](https://github.com/oauth2-proxy/oauth2-proxy).
+This document explains how to migrate from the Verrazzano Auth proxy to the [OAuth2 Proxy](https://github.com/oauth2-proxy/oauth2-proxy).
 
 ## Summary of steps
-1. Prepare for installation of OAuth2 Proxy
-2. Install OAuth2 Proxy
-3. Shutdown Verrazzano auth proxy and Verrazzano monitoring operator
-4. NGINX ingress controller configuration changes
-5. Migrate each console to use OAuth2 Proxy
-6. Update Fluentd config 
-7. Remove Verrazzano auth proxy from the cluster
+1. Prepare for installation of OAuth2 Proxy.
+2. Install OAuth2 Proxy.
+3. Shutdown Verrazzano auth proxy and Verrazzano monitoring operator.
+4. NGINX ingress controller configuration changes.
+5. Migrate each console to use OAuth2 Proxy.
+6. Update Fluentd config.
+7. Remove Verrazzano auth proxy from the cluster.
 
 ## 1. Prepare for installation of OAuth2 Proxy 
 Before installing the OAuth2 Proxy, you must do the following:
@@ -18,7 +18,7 @@ Before installing the OAuth2 Proxy, you must do the following:
 1. Create a Keycloak TLS secret.
 2. Create a OAuth2 Proxy secret with OIDC credentials.
 3. Create a configuration file to be used for installation.
-4. Add an email address to tke Keycloak verrazzano-pkce client
+4. Add an email address to the Keycloak verrazzano-pkce client.
 
 ### Create the Keycloak TLS secret
 The existing Keycloak TLS secret needs to be copied from the keycloak namespace to verrazzano-system.  This is a simple procedure as described below.
@@ -67,7 +67,7 @@ output:
 
 Next, base64 encode the client id.  Replace the <...> section with real value from the previous command:
 ```
-echo -n  <client-id> | base64
+echo -n <client-id> | base64
 ```
 output:
 ```
@@ -96,7 +96,7 @@ output:
 <cookie-secret-base64>
 ```
 
-### create and apply secret.yaml file
+### create and apply the secret YAML file
 Create a secret YAML file, name oauth2-proxy.yaml, with the values from the first 3 steps (replace the <...> sections with real values).
 
 ```
@@ -134,7 +134,7 @@ Define the keycloak URL in an environment variable, replacing the <...> section 
 KEYCLOAK_URL=<keycloak_url>
 ```
 
-Execute the follwoing command to generate the oauth2-proxy overrides file:
+Execute the following command to generate the oauth2-proxy overrides file:
 ```text
 cat <<EOF > ./oauth2-values.yaml 
 extraVolumes:
@@ -172,7 +172,7 @@ EOF
 
 
 ### Add email to the Keycloak client
-Log into Keycloak admin console and add an email to the client using the following steps.
+Log into the Keycloak admin console and add an email to the client using the following steps.
 
 1. Get the Keycloak URL:
 ```
@@ -187,7 +187,7 @@ Verrazzano Status
     keyCloakUrl: <keycloak-url>
 ```
 
-2. Get the **keycloakadmin** password:
+2. Get the `keycloakadmin` password:
 ```
 kubectl get secret \
     --namespace keycloak keycloak-http \
@@ -195,13 +195,14 @@ kubectl get secret \
     --decode; echo
 ```
 
-3. Navigate to the keycloak URL in a browser, and log into Keycloak as user ***keycloakadmin**. Select **Clients** in the left navigation pane and the list of clients will be shown in the middle pane
+3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select **Clients** 
+in the left navigation pane and the list of clients will be shown in the middle pane
 under the heading **Client ID**.  Select the correct client then update the email with a valid email and click the Save button.
 
 ## 2. Install outh2-proxy from the Catalog
 Now you are ready to install the oauth2-proxy from the catalog.  Run the following command:
 ```
-ocne app  install -c embedded -n verrazzano-system -N oauth2-proxy -f ./oauth2-values.yaml 
+ocne app install -c embedded -n verrazzano-system -N oauth2-proxy -f ./oauth2-values.yaml 
 ```
 
 Wait for the oauth2 pods to be ready:
@@ -212,7 +213,7 @@ kubectl rollout status -n verrazzano-system deployment oauth2-proxy -w
 ## 3. Shutdown Verrazzano auth-proxy and Monitoring operator
 Shutdown the Verrazzano auth-proxy by scaling the replicas to 0 as follows:
 ```
-kubeclt scale deployment -n verrazzano-system verrazzano-authproxy --replicas 0
+kubectl scale deployment -n verrazzano-system verrazzano-authproxy --replicas 0
 ```
 Verify the pods have been stopped:
 ```
@@ -242,7 +243,7 @@ verrazzano-monitoring-operator    0/0     ...
 
 ## 4. NGINX Ingress Controller Configuration Changes
 There are two changes needed for NGINX. First, allow NGINX to communicate with oauth2-proxy which is outside the Istio mesh.
-Second, allow the NGINX Ingress controller to process snippets from the Ingress resrouce.
+Second, allow the NGINX Ingress controller to process snippets from the Ingress resource.
 
 Patch the NGINX Ingress Controller deployment as follows:
 ```
@@ -270,18 +271,9 @@ output:
 verrazzano-ingress-nginx     ingress-controller-ingress-nginx-controller-7f97dd685-gf5gv       2/2     Running   0               2m
 ```
 
-## 5. Delete ingresses that will be replaced
-Delete the following ingresses:
-
-```
-
-```
-
-
 ## 6. Migrate each console to use OAuth2 Proxy
 
-**NOTE**The entire YAML needs to be applies since strategic patches do not work correctly for adding entries to the network policy, for example.
-It is easier to just apply the entire YAML files.
+**NOTE**The entire YAML needs to be applies since strategic patches do not work correctly for adding entries to arrays for certain resource.
 
 ### Define the INGRESS_HOST environment variable
 The section uses the INGRESS_HOST environment variable so you must define it.  For example:
@@ -305,7 +297,10 @@ kubectl delete ingress -n verrazzano-system vmi-system-os-ingest
 kubectl delete ingress -n verrazzano-system vmi-system-osd
 kubectl delete ingress -n verrazzano-system vmi-system-kiali
 
-### Migrate Opensearch
+**WARNING** After migrating each component, you MUST test the component console using a browser to ensure that it is working.
+Use the command `vz status` to see the console URLS.
+
+### Migrate OpenSearch
 Update the NetworkPolicy:
 ```text
 cat <<EOF > ./opensearch-netpol.yaml 
