@@ -29,12 +29,15 @@ kubectl get secret keycloak-tls -n keycloak -o yaml > ./keycloak-oauth2-tls
 ```
 
 Next edit ./keycloak-oauth2-tls and do the following:
-1. change **namespace: keycloak** to **namespace: verrazzano-system**
-2. delete **creationTimestamp** line
-3. delete **resourceVersion** line
-4. delete **uid** line
+```text
+sed -i '/resourceVersion/,+d' ./keycloak-oauth2-tls
+sed -i '/uid/,+d' ./keycloak-oauth2-tls
+sed -i '/creationTimestamp/,+d' ./keycloak-oauth2-tls
+sed -i 's/namespace: keycloak:8775/namespace: verrazzano-system/' ./keycloak-oauth2-tls
+```
 
-Finally, create the new secret
+Create the new secret:
+**NOTE** You may see a warning: `...is missing the kubectl.kubernetes.io/last-applied-configuration annotation`.  Ignore this.
 ```
 kubectl apply -f ./keycloak-oauth2-tls
 ```
@@ -1297,16 +1300,16 @@ kubectl apply -f ./kiali-ingress.yaml
 ### Migrate Fluentd
 Get the Fluentd DaemonSet YAML
 ```text
-kubectl get daemonset fluentd -n verrazzano-system -o yaml >  fluentd-oauth2-daemonset.yaml
-cp fluentd-oauth2-daemonset.yaml fluentd-daemonset-save.yaml
+kubectl get daemonset fluentd -n verrazzano-system -o yaml >  ./fluentd-oauth2-daemonset.yaml
+cp ./fluentd-oauth2-daemonset.yaml ./fluentd-daemonset-save.yaml
 ```
 Update YAML:
 ```text
-sed -i '/resourceVersion/,+d' fluentd-oauth2-daemonset.yaml
-sed -i '/uid/,+d' fluentd-oauth2-daemonset.yaml
-sed -i '/ELASTICSEARCH_USER/,+5d' fluentd-oauth2-daemonset.yaml
-sed -i '/ELASTICSEARCH_PASSWORD/,+5d' fluentd-oauth2-daemonset.yaml
-sed -i 's/verrazzano-authproxy-opensearch:8775/vmi-system-os-ingest:9200/' fluentd-oauth2-daemonset.yaml
+sed -i '/resourceVersion/,+d' ./fluentd-oauth2-daemonset.yaml
+sed -i '/uid/,+d' ./fluentd-oauth2-daemonset.yaml
+sed -i '/ELASTICSEARCH_USER/,+5d' ./fluentd-oauth2-daemonset.yaml
+sed -i '/ELASTICSEARCH_PASSWORD/,+5d' ./fluentd-oauth2-daemonset.yaml
+sed -i 's/verrazzano-authproxy-opensearch:8775/vmi-system-os-ingest:9200/' ./fluentd-oauth2-daemonset.yaml
 ```
 
 Apply the YAML:
