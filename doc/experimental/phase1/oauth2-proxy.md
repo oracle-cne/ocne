@@ -78,7 +78,7 @@ output:
 The client secret is required by the OAuth2 Proxy even though it is not used in this case.  Generate a fake secret using any string, for example:
 
 ```
-echo -n fake-secret | base64
+echo -n <any short string> | base64
 ```
 output:
 ```
@@ -871,7 +871,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: prometheus.vmi.system.default.100.101.68.34.nip.io
+  - host: prometheus.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /oauth2
@@ -883,7 +883,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - prometheus.vmi.system.default.100.101.68.34.nip.io
+    - prometheus.vmi.system.default.11.22.33.44.nip.io
     secretName: system-tls-prometheus
 
 
@@ -898,8 +898,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: prometheus.vmi.system.default.100.101.68.34.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.34.nip.io
+    cert-manager.io/common-name: prometheus.vmi.system.default.11.22.33.44.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -911,7 +911,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: prometheus.vmi.system.default.100.101.68.34.nip.io
+  - host: prometheus.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /()(.*)
@@ -1243,7 +1243,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: kiali.vmi.system.default.100.101.68.34.nip.io
+  - host: kiali.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /oauth2
@@ -1255,7 +1255,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - kiali.vmi.system.default.100.101.68.34.nip.io
+    - kiali.vmi.system.default.11.22.33.44.nip.io
     secretName: system-tls-kiali
 
 ---
@@ -1268,8 +1268,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: kiali.vmi.system.default.100.101.68.34.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.34.nip.io
+    cert-manager.io/common-name: kiali.vmi.system.default.11.22.33.44.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1281,7 +1281,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: kiali.vmi.system.default.100.101.68.34.nip.io
+  - host: kiali.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /()(.*)
