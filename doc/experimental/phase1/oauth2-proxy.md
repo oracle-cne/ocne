@@ -130,11 +130,41 @@ NAME           TYPE     DATA   AGE
 oauth2-proxy   Opaque   3      11s
 ```
 
+### Add email to the Keycloak client
+Log into the Keycloak admin console and add an email to the client using the following steps.
+
+1. Get the Keycloak URL:
+```
+vz status
+```
+output:
+```
+Verrazzano Status
+...
+  Access Endpoints:
+...
+    keyCloakUrl: <keycloak-url>
+```
+
+2. Get the `keycloakadmin` password:
+```
+kubectl get secret \
+    --namespace keycloak keycloak-http \
+    -o jsonpath={.data.password} | base64 \
+    --decode; echo
+```
+
+3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
+by Verrazzano.  Then select **Clients** in the left navigation pane and the list of clients will be shown in the middle pane
+under the heading **Client ID**.  Select the correct client then update the email with a valid email and click the Save button.
+
+
 ### Create OAuth2 Proxy overrides file
 Create an overrides file to be used when installing oauth2-proxy from the catalog.
-Define the keycloak URL in an environment variable, replacing the <...> section with the real URL.:
+
+First, define the Keycloak realm used for Verrazzano. You can find that from the Keycloak console in the top left sidebar.
 ```
-KEYCLOAK_URL=<keycloak_url>
+KEYCLOAK_REALM=<keycloak_realm>
 ```
 
 Execute the following command to generate the oauth2-proxy overrides file:
@@ -162,7 +192,7 @@ config:
     upstreams="file:///dev/null"
     provider = "oidc"
     code_challenge_method = "S256"
-    oidc_issuer_url = " https://keycloak.default.$INGRESS_HOST/auth/realms/verrazzano-system"
+    oidc_issuer_url = " https://keycloak.default.$INGRESS_HOST/auth/realms/$KEYCLOAK_REALM"
     skip_provider_button = true
     approval_prompt = "auto"
     reverse_proxy = true
@@ -172,34 +202,6 @@ config:
     pass_access_token = true
 EOF    
 ```
-
-### Add email to the Keycloak client
-Log into the Keycloak admin console and add an email to the client using the following steps.
-
-1. Get the Keycloak URL:
-```
-vz status
-```
-output:
-```
-Verrazzano Status
-...
-  Access Endpoints:
-...
-    keyCloakUrl: <keycloak-url>
-```
-
-2. Get the `keycloakadmin` password:
-```
-kubectl get secret \
-    --namespace keycloak keycloak-http \
-    -o jsonpath={.data.password} | base64 \
-    --decode; echo
-```
-
-3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select **Clients** 
-in the left navigation pane and the list of clients will be shown in the middle pane
-under the heading **Client ID**.  Select the correct client then update the email with a valid email and click the Save button.
 
 ## 2. Install outh2-proxy from the Catalog
 Now you are ready to install the oauth2-proxy from the catalog.  Run the following command:
