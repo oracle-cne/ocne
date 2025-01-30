@@ -40,6 +40,7 @@ type JoinOptions struct {
 	Config             *types.Config
 	ClusterConfig      *types.ClusterConfig
 	KubeConfigPath     string
+	Provider           string
 	ControlPlaneNodes  int
 	WorkerNodes        int
 	Node               string
@@ -52,7 +53,7 @@ func Join(options *JoinOptions) error {
 		return joinNodeToCluster(options)
 	}
 
-	drv, err := driver.CreateDriver(options.Config, options.ClusterConfig)
+	drv, err := driver.CreateDriver(options.ClusterConfig)
 	if err != nil {
 		return err
 	}
@@ -250,9 +251,9 @@ func configureHA(options *JoinOptions, cj *ignition.ClusterJoin) ([]string, erro
 	}
 	defer os.RemoveAll(tmpDir)
 
-	vip := options.ClusterConfig.VirtualIp
-	bindPort := options.ClusterConfig.KubeAPIServerBindPort
-	bindPortAlt := options.ClusterConfig.KubeAPIServerBindPortAlt
+	vip := *options.ClusterConfig.VirtualIp
+	bindPort := *options.ClusterConfig.KubeAPIServerBindPort
+	bindPortAlt := *options.ClusterConfig.KubeAPIServerBindPortAlt
 
 	// if the user has specified the virtual IP, then we'll just use that, otherwise we have to get files from
 	// a control plane node on the destination cluster and parse the data
@@ -416,21 +417,21 @@ func parseProxyConfig(file string) (*types.Proxy, error) {
 	regex := regexp.MustCompile(`HTTPS_PROXY=(.*)\s*$`)
 	match := regex.FindStringSubmatch(string(b))
 	if len(match) > 1 {
-		proxy.HttpsProxy = match[1]
+		*proxy.HttpsProxy = match[1]
 	}
 
 	regex = regexp.MustCompile(`HTTP_PROXY=(.*)\s*$`)
 	match = regex.FindStringSubmatch(string(b))
 	if len(match) > 1 {
-		proxy.HttpProxy = match[1]
+		*proxy.HttpProxy = match[1]
 	}
 
 	regex = regexp.MustCompile(`no_proxy=(.*)\s*$`)
 	match = regex.FindStringSubmatch(string(b))
 	if len(match) > 1 {
-		proxy.NoProxy = match[1]
+		*proxy.NoProxy = match[1]
 	}
-	proxy.NoProxy = match[1]
+	*proxy.NoProxy = match[1]
 
 	return proxy, nil
 }

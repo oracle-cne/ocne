@@ -4,20 +4,29 @@
 package delete
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	log "github.com/sirupsen/logrus"
 )
 
-func Delete(config *types.Config, clusterConfig *types.ClusterConfig) error {
+type DeleteOptions struct {
+	Config         *types.Config
+	ClusterConfig  *types.ClusterConfig
+	KubeConfigPath string
+	Provider       string
+	Name           string
+	SessionURI     string
+}
 
-	drv, err := driver.CreateDriver(config, clusterConfig)
+func Delete(clusterConfig *types.ClusterConfig) error {
+
+	drv, err := driver.CreateDriver(clusterConfig)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Deleting cluster %s", clusterConfig.Name)
+	log.Debugf("Deleting cluster %s", *clusterConfig.Name)
 	err = drv.Delete()
 	if err != nil {
 		return err
@@ -28,7 +37,7 @@ func Delete(config *types.Config, clusterConfig *types.ClusterConfig) error {
 		return err
 	}
 
-	err = clusterCache.Delete(clusterConfig.Name)
+	err = clusterCache.Delete(*clusterConfig.Name)
 	if err != nil {
 		return err
 	}

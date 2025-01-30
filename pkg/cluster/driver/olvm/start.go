@@ -30,7 +30,7 @@ import (
 func (cad *OlvmDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
-		cdi, err := common.GetTemplate(cad.Config, cad.ClusterConfig)
+		cdi, err := common.GetTemplate(cad.ClusterConfig)
 		if err != nil {
 			return false, false, err
 		}
@@ -119,7 +119,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 	}
 
 	log.Info("Installing applications into workload cluster")
-	err = install.InstallApplications(workloadApps, cad.KubeConfig, cad.Config.Quiet)
+	err = install.InstallApplications(workloadApps, cad.KubeConfig, *cad.Config.Quiet)
 	if err != nil {
 		return false, false, err
 	}
@@ -131,7 +131,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 func (cad *OlvmDriver) PostStart() error {
 	// If the cluster is not self-managed, then the configuration is
 	// complete.
-	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+	if !*cad.ClusterConfig.Providers.Oci.SelfManaged {
 		return nil
 	}
 
@@ -146,7 +146,7 @@ func (cad *OlvmDriver) PostStart() error {
 		return err
 	}
 
-	err = install.InstallApplications(capiApplications, cad.KubeConfig, cad.Config.Quiet)
+	err = install.InstallApplications(capiApplications, cad.KubeConfig, *cad.Config.Quiet)
 	if err != nil {
 		return err
 	}
@@ -232,11 +232,11 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	secretName := cad.credSecretName()
-	k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
-	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
+	k8s.DeleteSecret(kubeClient, *cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	err = k8s.CreateSecret(kubeClient, *cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+			Namespace: *cad.ClusterConfig.Providers.Olvm.Namespace,
 		},
 		Data: credmap,
 		Type: "Opaque",
@@ -252,11 +252,11 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	cmName := cad.caConfigMapName()
-	k8s.DeleteConfigmap(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
+	k8s.DeleteConfigmap(kubeClient, *cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
 	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cmName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+			Namespace: *cad.ClusterConfig.Providers.Olvm.Namespace,
 		},
 		Data: map[string]string{
 			"ca.crt": ca,
@@ -271,15 +271,15 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 
 // GetCA gets the oVirt CA string from the config, either inline or from a file.
 func GetCA(prov *types.OlvmProvider) (string, error) {
-	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
+	if *prov.OlvmCluster.OVirtAPI.ServerCA != "" && *prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
-	if prov.OlvmCluster.OVirtAPI.ServerCA != "" {
-		return prov.OlvmCluster.OVirtAPI.ServerCA, nil
+	if *prov.OlvmCluster.OVirtAPI.ServerCA != "" {
+		return *prov.OlvmCluster.OVirtAPI.ServerCA, nil
 	}
 
-	if prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
-		f, err := file.AbsDir(prov.OlvmCluster.OVirtAPI.ServerCAPath)
+	if *prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
+		f, err := file.AbsDir(*prov.OlvmCluster.OVirtAPI.ServerCAPath)
 		if err != nil {
 			return "", err
 		}

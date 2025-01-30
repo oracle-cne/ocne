@@ -9,7 +9,6 @@ import (
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/template"
-	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/spf13/cobra"
 )
@@ -26,11 +25,7 @@ ocne cluster template
 var kubeConfig string
 var clusterConfigPath string
 
-var opts = template.TemplateOptions{
-	ClusterConfig: types.ClusterConfig{
-		WorkerNodes: pkgconst.WorkerNodes,
-	},
-}
+var opts = template.TemplateOptions{}
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -47,35 +42,34 @@ func NewCmd() *cobra.Command {
 	cmdutil.SilenceUsage(cmd)
 
 	cmd.Flags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
-	cmd.Flags().StringVarP(&opts.ClusterConfig.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, pkgconst.ProviderTypeOCI, constants.FlagProviderNameHelp)
+	cmd.Flags().StringVarP(&opts.Provider, constants.FlagProviderName, constants.FlagProviderNameShort, pkgconst.ProviderTypeOCI, constants.FlagProviderNameHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, constants.FlagConfigShort, "", constants.FlagConfigHelp)
 	return cmd
 }
 
 // RunCmd runs the "ocne cluster template" command
 func RunCmd(cmd *cobra.Command) error {
-	c, cc, err := cmdutil.GetFullConfig(&opts.Config, &opts.ClusterConfig, clusterConfigPath)
+	populateConfigurationFromCommandLine(&opts)
+	cc, err := cmdutil.GetFullConfig(&opts.ClusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
 
 	// if the user has not overridden the osTag and the requested k8s version is not the default, make the osTag
 	// match the k8s version
-	if cc.OsTag == pkgconst.KubeVersion && cc.KubeVersion != pkgconst.KubeVersion {
+	if *cc.OsTag == pkgconst.KubeVersion && *cc.KubeVersion != pkgconst.KubeVersion {
 		cc.OsTag = cc.KubeVersion
 	}
 
 	// if cluster name is empty, then default it to ocne
-	if cc.Name == "" {
-		cc.Name = "ocne"
+	if *cc.Name == "" {
+		*cc.Name = "ocne"
 	}
 
 	// if number of control plane nodes is 0, then default it to 1
-	if cc.ControlPlaneNodes == 0 {
-		cc.ControlPlaneNodes = pkgconst.ControlPlaneNodes
+	if *cc.ControlPlaneNodes == 0 {
+		*cc.ControlPlaneNodes = pkgconst.ControlPlaneNodes
 	}
-
-	opts.Config = *c
 	opts.ClusterConfig = *cc
 	tmpl, err := template.Template(opts)
 	if err != nil {
@@ -83,4 +77,10 @@ func RunCmd(cmd *cobra.Command) error {
 	}
 	fmt.Println(tmpl)
 	return nil
+}
+
+func populateConfigurationFromCommandLine(options *template.TemplateOptions) {
+	if options.Provider != "" {
+		options.ClusterConfig.Provider = &options.Provider
+	}
 }

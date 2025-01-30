@@ -11,33 +11,36 @@ import (
 	"github.com/oracle-cne/ocne/pkg/image"
 )
 
-func GetFullConfig(defaultConfig *types.Config, clusterConfig *types.ClusterConfig, clusterConfigPath string) (*types.Config, *types.ClusterConfig, error) {
+func GetFullConfig(clusterConfig *types.ClusterConfig, clusterConfigPath string) (*types.ClusterConfig, error) {
 	// Read the cluster config file, if it was specified
+	var cc types.ClusterConfig
 	var err error
+	// Merge the compiled config and the defaults.yaml
+	df, err := config.GetDefaultConfig()
+	if err != nil {
+		return nil, err
+	}
+	// Read the cluster config file, if it was specified
+	// Overlay it with the resulting defaulting configuration
 	if clusterConfigPath != "" {
 		ncc, err := config.ParseClusterConfigFile(clusterConfigPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		mcc := types.MergeClusterConfig(ncc, clusterConfig)
-		clusterConfig = &mcc
-	}
-	df, err := config.GetDefaultConfig()
-	if err != nil {
-		return nil, nil, err
+		cc = types.OverlayConfig(ncc, df)
+	} else {
+		cc = types.OverlayConfig(&cc, df)
 	}
 
-	ndf := types.MergeConfig(df, defaultConfig)
-	cc := types.OverlayConfig(clusterConfig, &ndf)
-
+	ncc := types.MergeClusterConfig(&cc, clusterConfig)
 	// Be as friendly as can be
-	img, err := image.MakeOstreeReference(cc.OsRegistry)
+	img, err := image.MakeOstreeReference(*ncc.OsRegistry)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	cc.OsRegistry = img
+	*ncc.OsRegistry = img
 
-	return &ndf, &cc, nil
+	return &ncc, nil
 }
 
 // EnsureBootImageVersion appends an image tag consisting of the Kubernetes version ,if the image string does not currently have a tag.

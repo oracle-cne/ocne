@@ -362,7 +362,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		Contents: util.StrPtr(nginxService),
 	}
 	// add a proxy dropin to ocne-nginx if proxy is configured
-	if proxy != nil && (len(proxy.HttpProxy) > 0 || len(proxy.HttpsProxy) > 0 || len(proxy.NoProxy) > 0) {
+	if proxy != nil && (len(*proxy.HttpProxy) > 0 || len(*proxy.HttpsProxy) > 0 || len(*proxy.NoProxy) > 0) {
 		proxyConf, err := util.TemplateToString(ProxyDropinPattern, proxy)
 		if err != nil {
 			return nil, err

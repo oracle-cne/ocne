@@ -93,13 +93,13 @@ func (cc *ClusterCache) GetAll() map[string]Cluster {
 	return cc.Clusters
 }
 
-func (cc *ClusterCache) Add(config *types.ClusterConfig, kubeconfig string) error {
-	_, ok := cc.Clusters[config.Name]
+func (cc *ClusterCache) Add(clusterConfig *types.ClusterConfig, kubeconfig string) error {
+	_, ok := cc.Clusters[*clusterConfig.Name]
 	if ok {
-		return fmt.Errorf("A cluster named %s already exists", config.Name)
+		return fmt.Errorf("A cluster named %s already exists", *clusterConfig.Name)
 	}
-	cc.Clusters[config.Name] = Cluster{
-		ClusterConfig:  *config,
+	cc.Clusters[*clusterConfig.Name] = Cluster{
+		ClusterConfig:  *clusterConfig,
 		KubeconfigPath: kubeconfig,
 	}
 	return cc.Save()

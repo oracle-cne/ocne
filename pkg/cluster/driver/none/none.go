@@ -18,12 +18,12 @@ type NoneDriver struct {
 	KubeConfig string
 }
 
-func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
-	if clusterConfig.Provider == constants.ProviderTypeNone && config.KubeConfig == "" {
+func CreateDriver(clusterConfig *types.ClusterConfig) (driver.ClusterDriver, error) {
+	if *clusterConfig.Provider == constants.ProviderTypeNone && *clusterConfig.KubeConfig == "" {
 		return nil, fmt.Errorf("When the none provider is used, an existing kubeconfig file must be specified")
 	}
 	ret := &NoneDriver{
-		KubeConfig: config.KubeConfig,
+		KubeConfig: *clusterConfig.KubeConfig,
 	}
 	return ret, nil
 

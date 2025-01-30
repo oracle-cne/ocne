@@ -16,28 +16,53 @@ import (
 // These applications will be installed in the bootstrap cluster
 func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, error) {
 	proxyValues := map[string]interface{}{
-		"httpsProxy": cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
-		"httpProxy":  cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
-		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
+		"httpsProxy": *cad.ClusterConfig.Providers.Olvm.Proxy.HttpsProxy,
+		"httpProxy":  *cad.ClusterConfig.Providers.Oci.Proxy.HttpProxy,
+		"noProxy":    *cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
+	certManagerChart := constants.CertManagerChart
+	certManagerNamespace := constants.CertManagerNamespace
+	certManagerRelease := constants.CertManagerRelease
+	certManagerVersion := constants.CertManagerVersion
+	internalCatalog := catalog.InternalCatalog
+
+	coreCAPIChart := constants.CoreCAPIChart
+	coreCAPINamespace := constants.CoreCAPINamespace
+	coreCAPIRelease := constants.CoreCAPIRelease
+	coreCAPIVersion := constants.CoreCAPIVersion
+
+	olvmChart := constants.OLVMCAPIChart
+	olvmOperatorNamesapce := constants.OLVMCAPIOperatorNamespace
+	olvmRelease := constants.OLVMCAPIRelease
+	olvmVersion := constants.OLVMCAPIVersion
+
+	kubeadmBootstrapChart := constants.KubeadmBootstrapCAPIChart
+	kubeadmBootstrapNamespace := constants.KubeadmBootstrapCAPINamespace
+	kubeadmBootstrapRelease := constants.KubeadmBootstrapCAPIRelease
+	kubeadmBootstrapVersion := constants.KubeadmBootstrapCAPIVersion
+
+	kubeadmControlPlaneChart := constants.KubeadmControlPlaneCAPIChart
+	kubeadmControlPlaneNamespace := constants.KubeadmControlPlaneCAPINamespace
+	kubeadmControlPlaneRelease := constants.KubeadmControlPlaneCAPIRelease
+	kubeadmControlPlaneVersion := constants.KubeadmBootstrapCAPIVersion
 
 	return []install.ApplicationDescription{
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CertManagerChart,
-				Namespace: constants.CertManagerNamespace,
-				Release:   constants.CertManagerRelease,
-				Version:   constants.CertManagerVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      &certManagerChart,
+				Namespace: &certManagerNamespace,
+				Release:   &certManagerRelease,
+				Version:   &certManagerVersion,
+				Catalog:   &internalCatalog,
 			},
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.CoreCAPIChart,
-				Namespace: constants.CoreCAPINamespace,
-				Release:   constants.CoreCAPIRelease,
-				Version:   constants.CoreCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      &coreCAPIChart,
+				Namespace: &coreCAPINamespace,
+				Release:   &coreCAPIRelease,
+				Version:   &coreCAPIVersion,
+				Catalog:   &internalCatalog,
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -45,11 +70,11 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.OLVMCAPIChart,
-				Namespace: constants.OLVMCAPIOperatorNamespace,
-				Release:   constants.OLVMCAPIRelease,
-				Version:   constants.OLVMCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      &olvmChart,
+				Namespace: &olvmOperatorNamesapce,
+				Release:   &olvmRelease,
+				Version:   &olvmVersion,
+				Catalog:   &internalCatalog,
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -57,11 +82,11 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmBootstrapCAPIChart,
-				Namespace: constants.KubeadmBootstrapCAPINamespace,
-				Release:   constants.KubeadmBootstrapCAPIRelease,
-				Version:   constants.KubeadmBootstrapCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      &kubeadmBootstrapChart,
+				Namespace: &kubeadmBootstrapNamespace,
+				Release:   &kubeadmBootstrapRelease,
+				Version:   &kubeadmBootstrapVersion,
+				Catalog:   &internalCatalog,
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},
@@ -69,11 +94,11 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 		},
 		install.ApplicationDescription{
 			Application: &types.Application{
-				Name:      constants.KubeadmControlPlaneCAPIChart,
-				Namespace: constants.KubeadmControlPlaneCAPINamespace,
-				Release:   constants.KubeadmControlPlaneCAPIRelease,
-				Version:   constants.KubeadmControlPlaneCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
+				Name:      &kubeadmControlPlaneChart,
+				Namespace: &kubeadmControlPlaneNamespace,
+				Release:   &kubeadmControlPlaneRelease,
+				Version:   &kubeadmControlPlaneVersion,
+				Catalog:   &internalCatalog,
 				Config: map[string]interface{}{
 					"proxy": proxyValues,
 				},

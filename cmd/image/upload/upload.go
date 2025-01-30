@@ -25,7 +25,6 @@ ocne image upload --compartment ocid1.compartment.example --bucket images --type
 `
 )
 
-var config types.Config
 var clusterConfig types.ClusterConfig
 var clusterConfigPath string
 
@@ -95,7 +94,7 @@ func NewCmd() *cobra.Command {
 
 // RunCmd runs the "ocne image upload" command
 func RunCmd(cmd *cobra.Command) error {
-	_, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	cc, err := cmdutil.GetFullConfig(&clusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
