@@ -675,7 +675,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: osd.vmi.system.default.100.101.68.61.nip.io
+  - host: osd.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /oauth2
@@ -687,7 +687,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - osd.vmi.system.default.100.101.68.61.nip.io
+    - osd.vmi.system.default.11.22.33.44.nip.io
     secretName: system-tls-osd
 
 ---
@@ -700,8 +700,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: osd.vmi.system.default.100.101.68.61.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    cert-manager.io/common-name: osd.vmi.system.default.11.22.33.44.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -713,7 +713,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: osd.vmi.system.default.100.101.68.61.nip.io
+  - host: osd.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /()(.*)
@@ -1051,8 +1051,8 @@ metadata:
   namespace: verrazzano-system
   annotations:
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: grafana.vmi.system.default.100.101.68.61.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    cert-manager.io/common-name: grafana.vmi.system.default.11.22.33.44.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1060,7 +1060,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: grafana.vmi.system.default.100.101.68.61.nip.io
+  - host: grafana.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /oauth2
@@ -1072,7 +1072,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - grafana.vmi.system.default.100.101.68.61.nip.io
+    - grafana.vmi.system.default.11.22.33.44.nip.io
     secretName: system-tls-grafana
 
 ---
@@ -1086,8 +1086,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User, X-Auth_Request-Email"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: grafana.vmi.system.default.100.101.68.61.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.100.101.68.61.nip.io
+    cert-manager.io/common-name: grafana.vmi.system.default.11.22.33.44.nip.io
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1106,7 +1106,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: grafana.vmi.system.default.100.101.68.61.nip.io
+  - host: grafana.vmi.system.default.11.22.33.44.nip.io
     http:
       paths:
       - path: /()(.*)
