@@ -275,7 +275,7 @@ verrazzano-ingress-nginx     ingress-controller-ingress-nginx-controller-7f97dd6
 
 **NOTE**The entire YAML needs to be applies since strategic patches do not work correctly for adding entries to arrays for certain resource.
 
-### Define the INGRESS_HOST environment variable
+### Define the $INGRESS_HOST environment variable
 The section uses the INGRESS_HOST environment variable so you must define it.  For example:
 The INGRESS_HOST for `https://opensearch.vmi.system.default.11.22.33.44.nip.io` is `default.11.22.33.44.nip.io`.
 So you would run the following in this case:
@@ -464,7 +464,7 @@ kubectl apply -f ./opensearch-authpol.yaml
 
 Create the new Ingress and update the existing one:
 ```text
-cat <<EOF > ./opensearch-ingress.yaml 
+envsubst > ./opensearch-ingress.yaml - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -473,7 +473,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: opensearch.vmi.system.default.INGRESS_HOST
+  - host: opensearch.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /oauth2
@@ -485,7 +485,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - opensearch.vmi.system.default.100.INGRESS_HOST
+    - opensearch.vmi.system.default.$INGRESS_HOST
     secretName: system-tls-os-ingest
 
 ---
@@ -498,8 +498,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: opensearch.vmi.system.default.INGRESS_HOST
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.INGRESS_HOST
+    cert-manager.io/common-name: opensearch.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -511,7 +511,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: opensearch.vmi.system.default.INGRESS_HOST
+  - host: opensearch.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /()(.*)
@@ -524,9 +524,8 @@ spec:
 EOF
 ```
 
-Update the YAML file and apply it:
+Apply the YAML file:
 ```
-sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./opensearch-ingress.yaml
 kubectl apply -f ./opensearch-ingress.yaml
 ```
 
@@ -666,7 +665,7 @@ kubectl apply -f ./osd-authpol.yaml
 
 Create the Ingresses:
 ```text
-cat <<EOF > ./osd-ingress.yaml 
+envsubst > ./osd-ingress.yaml - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -675,7 +674,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: osd.vmi.system.default.11.22.33.44.nip.io
+  - host: osd.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /oauth2
@@ -687,7 +686,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - osd.vmi.system.default.11.22.33.44.nip.io
+    - osd.vmi.system.default.$INGRESS_HOST
     secretName: system-tls-osd
 
 ---
@@ -700,8 +699,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: osd.vmi.system.default.11.22.33.44.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
+    cert-manager.io/common-name: osd.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -713,7 +712,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: osd.vmi.system.default.11.22.33.44.nip.io
+  - host: osd.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /()(.*)
@@ -726,9 +725,8 @@ spec:
 EOF
 ```
 
-Update the YAML file and apply it:
+Apply the YAML file:
 ```
-sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./osd-ingress.yaml
 kubectl apply -f ./osd-ingress.yaml
 ```
 
@@ -862,7 +860,7 @@ kubectl apply -f ./prometheus-authpol.yaml
 
 Create the Ingresses:
 ```text
-cat <<EOF > ./prometheus-ingress.yaml 
+envsubst > ./prometheus-ingress.yaml - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -871,7 +869,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: prometheus.vmi.system.default.11.22.33.44.nip.io
+  - host: prometheus.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /oauth2
@@ -883,7 +881,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - prometheus.vmi.system.default.11.22.33.44.nip.io
+    - prometheus.vmi.system.default.$INGRESS_HOST
     secretName: system-tls-prometheus
 
 
@@ -898,8 +896,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: prometheus.vmi.system.default.11.22.33.44.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
+    cert-manager.io/common-name: prometheus.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -911,7 +909,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: prometheus.vmi.system.default.11.22.33.44.nip.io
+  - host: prometheus.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /()(.*)
@@ -923,10 +921,8 @@ spec:
               number: 9090
 EOF
 ```
-
-Update the YAML file and apply it:
+Apply the YAML file:
 ```
-sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./prometheus-ingress.yaml
 kubectl apply -f ./prometheus-ingress.yaml
 ```
 
@@ -1043,7 +1039,7 @@ kubectl apply -f ./grafana-authpol.yaml
 
 Create the Ingresses:
 ```text
-cat <<EOF > ./grafana-ingress.yaml 
+envsubst > ./grafana-ingress.yaml - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -1051,8 +1047,8 @@ metadata:
   namespace: verrazzano-system
   annotations:
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: grafana.vmi.system.default.11.22.33.44.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
+    cert-manager.io/common-name: grafana.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1060,7 +1056,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: grafana.vmi.system.default.11.22.33.44.nip.io
+  - host: grafana.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /oauth2
@@ -1072,7 +1068,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - grafana.vmi.system.default.11.22.33.44.nip.io
+    - grafana.vmi.system.default.$INGRESS_HOST
     secretName: system-tls-grafana
 
 ---
@@ -1086,8 +1082,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User, X-Auth_Request-Email"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: grafana.vmi.system.default.11.22.33.44.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
+    cert-manager.io/common-name: grafana.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1106,7 +1102,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: grafana.vmi.system.default.11.22.33.44.nip.io
+  - host: grafana.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /()(.*)
@@ -1119,9 +1115,8 @@ spec:
 EOF
 ```
 
-Update the YAML file and apply it:
+Apply the YAML file:
 ```
-sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./grafana-ingress.yaml
 kubectl apply -f ./grafana-ingress.yaml
 ```
 
@@ -1234,7 +1229,7 @@ kubectl apply -f ./kiali-authpol.yaml
 
 Create the Ingresses:
 ```text
-cat <<EOF > ./kiali-ingress.yaml 
+envsubst > ./kiali-ingress.yaml - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -1243,7 +1238,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: kiali.vmi.system.default.11.22.33.44.nip.io
+  - host: kiali.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /oauth2
@@ -1255,7 +1250,7 @@ spec:
               number: 49000
   tls:
   - hosts:
-    - kiali.vmi.system.default.11.22.33.44.nip.io
+    - kiali.vmi.system.default.$INGRESS_HOST
     secretName: system-tls-kiali
 
 ---
@@ -1268,8 +1263,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
     cert-manager.io/cluster-issuer: verrazzano-cluster-issuer
-    cert-manager.io/common-name: kiali.vmi.system.default.11.22.33.44.nip.io
-    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.11.22.33.44.nip.io
+    cert-manager.io/common-name: kiali.vmi.system.default.$INGRESS_HOST
+    external-dns.alpha.kubernetes.io/target: verrazzano-ingress.default.$INGRESS_HOST
     external-dns.alpha.kubernetes.io/ttl: "60"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 6M
@@ -1281,7 +1276,7 @@ metadata:
 spec:
   ingressClassName: verrazzano-nginx
   rules:
-  - host: kiali.vmi.system.default.11.22.33.44.nip.io
+  - host: kiali.vmi.system.default.$INGRESS_HOST
     http:
       paths:
       - path: /()(.*)
@@ -1294,9 +1289,8 @@ spec:
 EOF
 ```
 
-Update the YAML file and apply it:
+Apply the YAML file:
 ```
-sed -i -e "s/INGRESS_HOST/$INGRESS_HOST/g"  ./kiali-ingress.yaml
 kubectl apply -f ./kiali-ingress.yaml
 ```
 
