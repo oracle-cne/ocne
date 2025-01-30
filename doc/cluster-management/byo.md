@@ -164,6 +164,9 @@ an example that can be used to familiarize yourself with the "Bring Your Own"
 provider.  Any instructions in the example must be adjusted to fit the
 environment where Oracle Cloud Native Environment is installed.
 
+> **_NOTE:_** Refer to the [ock-forge to byo end to end example](../end-to-end/ock.md)
+> for a completely customizable workflow.
+
 #### Gather the Installation Media
 
 Download The Oracle Linux 8 Release 10 Boot Media.  For convenience, locate
@@ -198,7 +201,7 @@ timezone UTC
 text
 reboot
 
-selinux --permissive
+selinux --enforcing
 firewall --use-system-defaults
 network --bootproto=dhcp
 
@@ -207,8 +210,6 @@ clearpart --all --initlabel
 part /boot --fstype=xfs --label=boot --size=1024
 part /boot/efi --fstype=efi --label=efi --size=512
 part / --fstype=xfs --label=root --grow
-
-user --name=ocne --groups=wheel --password=welcome
 
 services --enabled=ostree-remount
 
@@ -260,10 +261,8 @@ $ envsubst > domain.xml << EOF
   <resource>
     <partition>/machine</partition>
   </resource>
-  <os>
-    <type arch='x86_64' machine='pc-q35-7.2'>hvm</type>
-    <loader readonly='yes' type='pflash'>/usr/share/OVMF/OVMF_CODE.pure-efi.fd</loader>
-    <nvram template='/usr/share/OVMF/OVMF_VARS.pure-efi.fd'>/var/lib/libvirt/qemu/nvram/boot-vm_VARS.fd</nvram>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
     <kernel>/mnt/ol-boot/images/pxeboot/vmlinuz</kernel>
     <initrd>/mnt/ol-boot/images/pxeboot/initrd.img</initrd>
     <cmdline>inst.stage2=hd:LABEL=OL-8-10-0-BaseOS-x86_64 quiet console=ttyS0 inst.ks=http://${OSTREE_IP}:${OSTREE_PORT}/ks/ks.cfg</cmdline>
@@ -431,10 +430,8 @@ $ cat > controlplane.xml << EOF
   <resource>
     <partition>/machine</partition>
   </resource>
-  <os>
-    <type arch='x86_64' machine='pc-q35-7.2'>hvm</type>
-    <loader readonly='yes' type='pflash'>/usr/share/OVMF/OVMF_CODE.pure-efi.fd</loader>
-    <nvram template='/usr/share/OVMF/OVMF_VARS.pure-efi.fd'>/var/lib/libvirt/qemu/nvram/control-plane.fd</nvram>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>
@@ -545,10 +542,8 @@ $ cat > worker.xml << EOF
   <resource>
     <partition>/machine</partition>
   </resource>
-  <os>
-    <type arch='x86_64' machine='pc-q35-7.2'>hvm</type>
-    <loader readonly='yes' type='pflash'>/usr/share/OVMF/OVMF_CODE.pure-efi.fd</loader>
-    <nvram template='/usr/share/OVMF/OVMF_VARS.pure-efi.fd'>/var/lib/libvirt/qemu/nvram/worker-vm_VARS.fd</nvram>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>
@@ -666,10 +661,8 @@ $ cat > controlplane2.xml << EOF
   <resource>
     <partition>/machine</partition>
   </resource>
-  <os>
-    <type arch='x86_64' machine='pc-q35-7.2'>hvm</type>
-    <loader readonly='yes' type='pflash'>/usr/share/OVMF/OVMF_CODE.pure-efi.fd</loader>
-    <nvram template='/usr/share/OVMF/OVMF_VARS.pure-efi.fd'>/var/lib/libvirt/qemu/nvram/control-plane2.fd</nvram>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>
