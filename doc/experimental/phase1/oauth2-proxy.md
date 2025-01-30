@@ -18,7 +18,7 @@ Before installing the OAuth2 Proxy, you must do the following:
 1. Create a Keycloak TLS secret.
 2. Create a OAuth2 Proxy secret with OIDC credentials.
 3. Create a configuration file to be used for installation.
-4. Add an email address to the Keycloak verrazzano-pkce client.
+4. Add an email address to the Keycloak client.
 
 ### Create the Keycloak TLS secret
 The existing Keycloak TLS secret needs to be copied from the keycloak namespace to verrazzano-system.  This is a simple procedure as described below.
@@ -33,7 +33,7 @@ Next edit ./keycloak-oauth2-tls and do the following:
 sed -i '/resourceVersion/,+d' ./keycloak-oauth2-tls
 sed -i '/uid/,+d' ./keycloak-oauth2-tls
 sed -i '/creationTimestamp/,+d' ./keycloak-oauth2-tls
-sed -i 's/namespace: keycloak:8775/namespace: verrazzano-system/' ./keycloak-oauth2-tls
+sed -i 's/namespace: keycloak/namespace: verrazzano-system/' ./keycloak-oauth2-tls
 ```
 
 Create the new secret:
@@ -48,7 +48,7 @@ kubectl get secret -n verrazzano-system | grep keycloak
 ```
 output:
 ```
-keycloak-oauth2-tls                                     kubernetes.io/tls    3      41h
+keycloak-oauth2-tls                                     kubernetes.io/tls    3      5s
 ```
 
 ### Create the OAuth2 Proxy credentials secret
@@ -61,53 +61,42 @@ The oauth2-proxy pod refers to a secret which contains the following fields:
 #### create the client id
 The client id, already exists in Keycloak so this will be used.  You can get the clear text client id as follows:
 ```
-helm --kubeconfig paul-kubeconfig get values -n verrazzano-system verrazzano-authproxy | grep OIDCClientID
+helm get values -n verrazzano-system verrazzano-authproxy | grep OIDCClientID
 ```
 output:
 ```
-  OIDCClientID: <client-id>
+OIDCClientID: <client-id>
 ```
 
-Next, base64 encode the client id.  Replace the <...> section with real value from the previous command:
+Next, base64 encode the client id.  Replace the <...> section with real value from the previous command:  
+**WARNING: Be sure to replace <client-id> with the actual client ID.**
 ```
-echo -n <client-id> | base64
-```
-output:
-```
-<client-id-base64>
+CLIENT_ID=$(echo -n <client-id> | base64)
 ```
 
 #### create the client secret
 The client secret is required by the OAuth2 Proxy even though it is not used in this case.  Generate a fake secret using any string, for example:
-
 ```
-cat /proc/sys/kernel/random/uuid | base64
-```
-output:
-```
-<client-secret-base64>
+CLIENT_SECRET=$(cat /proc/sys/kernel/random/uuid | base64)
 ```
 
 #### create the cookie secret
 The cookie secret is a binary 32 byte value that must be base64-URL encoded, then that output needs to be base64 encoded again.
 
 ```
-openssl rand  32  | base64 | tr '/+' '_-' | tr -d '=' | base64
-```
-output:
-```
-<cookie-secret-base64>
+COOKIE_SECRET=$(openssl rand  32  | base64 | tr '/+' '_-' | tr -d '=' | base64)
 ```
 
 ### create and apply the secret YAML file
 Create a secret YAML file, name oauth2-proxy.yaml, with the values from the first 3 steps (replace the <...> sections with real values).
 
 ```
+envsubst > ./oauth2-secret.yaml - <<EOF
 apiVersion: v1
 data:
-  cookie-secret: <cookie-secret-base64>
-  client-id: <client-id-base64>
-  client-secret: <client-secret-base64>
+  cookie-secret: $COOKIE_SECRET
+  client-id: $CLIENT_ID
+  client-secret: $COOKIE_SECRET
 kind: Secret
 metadata:
   name: oauth2-proxy
@@ -117,7 +106,7 @@ type: Opaque
 
 Apply the secret file to create the secret:
 ```
-kubectl apply -f oauth2-proxy.yaml
+kubectl apply -f oauth2-secret.yaml
 ```
 
 Ensure that the secret has been created:
