@@ -39,7 +39,7 @@ Finally, create the new secret
 kubectl apply -f ./keycloak-oauth2-tls
 ```
 
-Ensure that the secret has been created
+Ensure that the secret has been created:
 ```
 kubectl get secret -n verrazzano-system | grep keycloak
 ```
@@ -112,12 +112,12 @@ metadata:
 type: Opaque
 ```
 
-Apply the secret file to create the secret
+Apply the secret file to create the secret:
 ```
 kubectl apply -f oauth2-proxy.yaml
 ```
 
-Ensure that the secret has been created
+Ensure that the secret has been created:
 ```
 kubectl get secret -n verrazzano-system oauth2-proxy
 ```
@@ -134,7 +134,7 @@ Define the keycloak URL in an environment variable, replacing the <...> section 
 KEYCLOAK_URL=<keycloak_url>
 ```
 
-Execute the follwoing command to generate the oauth2-proxy overrides file.
+Execute the follwoing command to generate the oauth2-proxy overrides file:
 ```text
 cat <<EOF > ./oauth2-values.yaml 
 extraVolumes:
@@ -204,7 +204,7 @@ Now you are ready to install the oauth2-proxy from the catalog.  Run the followi
 ocne app  install -c embedded -n verrazzano-system -N oauth2-proxy -f ./oauth2-values.yaml 
 ```
 
-Wait for the oauth2 pods to be ready
+Wait for the oauth2 pods to be ready:
 ```
 kubectl rollout status -n verrazzano-system deployment oauth2-proxy -w
 ```
@@ -384,7 +384,7 @@ spec:
   - Ingress
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./opensearch-netpol.yaml
 ```
@@ -462,12 +462,12 @@ spec:
       app: system-es-ingest
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./opensearch-authpol.yaml
 ```
 
-Create the new Ingress and update the existing one.
+Create the new Ingress and update the existing one:
 ```text
 cat <<EOF > ./opensearch-ingress.yaml 
 apiVersion: networking.k8s.io/v1
@@ -537,7 +537,6 @@ kubectl apply -f ./opensearch-ingress.yaml
 
 ### Migrate OpenSearch Dashboard
 Update the NetworkPolicy:
-
 ```text
 cat <<EOF > ./osd-netpol.yaml 
 apiVersion: networking.k8s.io/v1
@@ -597,7 +596,7 @@ spec:
   - Ingress
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./osd-netpol.yaml
 ```
@@ -665,12 +664,12 @@ spec:
       app: system-osd
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./osd-authpol.yaml
 ```
 
-Create the new Ingress and update the existing one.
+Create the Ingresses:
 ```text
 cat <<EOF > ./osd-ingress.yaml 
 apiVersion: networking.k8s.io/v1
@@ -740,7 +739,6 @@ kubectl apply -f ./osd-ingress.yaml
 
 ### Migrate Prometheus
 Update the NetworkPolicy:
-
 ```text
 cat <<EOF > ./prometheus-netpol.yaml 
 apiVersion: networking.k8s.io/v1
@@ -809,7 +807,7 @@ spec:
   - Ingress 
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./prometheus-netpol.yaml
 ```
@@ -862,12 +860,12 @@ spec:
       app.kubernetes.io/name: prometheus
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./prometheus-authpol.yaml
 ```
 
-Create the new Ingress and update the existing one.
+Create the Ingresses:
 ```text
 cat <<EOF > ./prometheus-ingress.yaml 
 apiVersion: networking.k8s.io/v1
@@ -939,7 +937,6 @@ kubectl apply -f ./prometheus-ingress.yaml
 
 ### Migrate Grafana
 Update the NetworkPolicy:
-
 ```text
 cat <<EOF > ./grafana-netpol.yaml 
 apiVersion: networking.k8s.io/v1
@@ -988,7 +985,7 @@ spec:
   - Ingress
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./grafana-netpol.yaml
 ```
@@ -1044,12 +1041,12 @@ spec:
       app: system-grafana
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./grafana-authpol.yaml
 ```
 
-Create the new Ingress and update the existing one.
+Create the Ingresses:
 ```text
 cat <<EOF > ./grafana-ingress.yaml 
 apiVersion: networking.k8s.io/v1
@@ -1135,7 +1132,6 @@ kubectl apply -f ./grafana-ingress.yaml
 
 ### Migrate Kiali
 Update the NetworkPolicy:
-
 ```text
 cat <<EOF > ./kiali-netpol.yaml 
 apiVersion: networking.k8s.io/v1
@@ -1186,7 +1182,7 @@ spec:
   - Ingress
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./kiali-netpol.yaml
 ```
@@ -1236,12 +1232,12 @@ spec:
       app: kiali
 EOF
 ```
-Apply the YAML file
+Apply the YAML file:
 ```
 kubectl apply -f ./kiali-authpol.yaml
 ```
 
-Create the new Ingress and update the existing one.
+Create the Ingresses:
 ```text
 cat <<EOF > ./kiali-ingress.yaml 
 apiVersion: networking.k8s.io/v1
