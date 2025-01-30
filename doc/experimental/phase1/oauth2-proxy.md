@@ -96,14 +96,12 @@ CLIENT_SECRET=$(cat /proc/sys/kernel/random/uuid | base64)
 
 #### create the cookie secret
 The cookie secret is a binary 32 byte value that must be base64-URL encoded, then that output needs to be base64 encoded again.
-
 ```
 COOKIE_SECRET=$(openssl rand  32  | base64 | tr '/+' '_-' | tr -d '=' | base64)
 ```
 
 ### create and apply the secret YAML file
-Create a secret YAML file, name oauth2-proxy.yaml, with the values from the first 3 steps (replace the <...> sections with real values).
-
+Create the secret YAML file.
 ```
 envsubst > ./oauth2-secret.yaml - <<EOF
 apiVersion: v1
