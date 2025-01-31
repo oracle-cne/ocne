@@ -280,6 +280,7 @@ require (
 replace (
 	github.com/coreos/butane => github.com/coreos/butane v0.20.0
 	github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
+	k8s.io/klog/v2 => k8s.io/klog/v2 v2.120.1
 )
 
 exclude (
