@@ -154,7 +154,7 @@ spec:
     spec:
       containers:
         - name: testdns
-          image: ${REGISTRY}/os/oraclelinux:7-slim
+          image: ${REGISTRY}/os/oraclelinux:8
           command: ["sh", "-c", "sleep 1000"]
       tolerations:
       - effect: NoSchedule

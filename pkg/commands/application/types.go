@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package application
@@ -81,6 +81,10 @@ type InstallOptions struct {
 
 	// ResetValues is used to reset the values to the ones built into the chart.
 	ResetValues bool
+
+	// Force causes the application to overwrite and take ownership
+	// of existing resources.
+	Force bool
 }
 type UpdateOptions struct {
 

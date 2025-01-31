@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -50,6 +50,17 @@ const (
 	CNIFlannelVersion   = "0.22.3"
 	CNIFlannelImageTag  = "v0.22.3-2"
 
+	KubeProxyRelease   = "kube-proxy"
+	KubeProxyNamespace = "kube-system"
+	KubeProxyChart     = "kube-proxy"
+	KubeProxyVersion   = "2.0.0"
+	KubeProxyDaemonSet = "kube-proxy"
+	KubeProxyConfigMap = "kube-proxy"
+	KubeProxyConfigMapConfig = "config.conf"
+	KubeProxyConfigMapKubeconfig = "kubeconfig.conf"
+	KubeProxyImage     = "container-registry.oracle.com/olcne/kube-proxy"
+	CurrentTag         = "current"
+
 	CatalogRelease   = "ocne-catalog"
 	CatalogNamespace = "ocne-system"
 	CatalogChart     = "ocne-catalog"
@@ -66,6 +77,14 @@ const (
 	UIVersion        = ""
 	UIInitContainer  = "ui-plugins"
 	UIPluginsVersion = "v2.0.0"
+
+
+	CoreDNSRelease    = "core-dns"
+	CoreDNSNamespace  = "kube-system"
+	CoreDNSChart      = "coredns"
+	CoreDNSVersion    = "2.0.0"
+	CoreDNSDeployment = "coredns"
+	CoreDNSImage      = "container-registry.oracle.com/olcne/coredns"
 
 	CertManagerRelease   = "cert-manager"
 	CertManagerNamespace = "cert-manager"
@@ -114,4 +133,5 @@ const (
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
+
 )

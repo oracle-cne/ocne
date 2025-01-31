@@ -143,3 +143,11 @@ func GrabContainer(objectsToSearch []v1.Container, name string) (v1.Container, i
 	tmp := fmt.Sprintf("container %s not found", name)
 	return v1.Container{}, 0, errors.New(tmp)
 }
+
+func UpdateResource(restConf *rest.Config, u *unstructured.Unstructured) error {
+	client, err := crtpkg.New(restConf, crtpkg.Options{})
+	if err != nil {
+		return err
+	}
+	return client.Update(context.TODO(), u)
+}

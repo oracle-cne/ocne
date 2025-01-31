@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package update
@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -25,6 +26,10 @@ import (
 const (
 	envNodeName        = "NODE_NAME"
 	envCoreDNSImageTag = "CORE_DNS_IMAGE_TAG"
+
+	PreUpdateModeDefault = "default"
+	PreUpdateModeOnly = "only"
+	PreUpdateModeSkip = "skip"
 )
 
 // UpdateOptions are the options for the update command
@@ -43,6 +48,9 @@ type UpdateOptions struct {
 
 	// Timeout to wait for the node to drain
 	Timeout string
+
+	// PreUpdateMode determines how to handle the preupdate process
+	PreUpdateMode string
 }
 
 // Update updates a cluster node with a new CrateOS image and restarts the node
@@ -64,6 +72,18 @@ func Update(o UpdateOptions) error {
 	nodeList, err := k8s.GetNodeList(kubeClient)
 	if err != nil {
 		return err
+	}
+
+	// Do any pre-upgrade work
+	if o.PreUpdateMode != PreUpdateModeSkip {
+		err = update.Update(restConfig, kubeClient, o.KubeConfigPath, nodeList)
+		if err != nil {
+			return err
+		}
+	}
+
+	if o.PreUpdateMode == PreUpdateModeOnly {
+		return nil
 	}
 
 	desiredVersion, err := getVersionsFromKubeadmConfigMap(kubeClient)

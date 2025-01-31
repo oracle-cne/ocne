@@ -11,13 +11,13 @@ import (
 type JsonPatch struct {
 	Op string `json:"op"`
 	Path string `json:"path"`
-	Value string `json:"value"`
+	Value interface{} `json:"value"`
 }
 type JsonPatches struct {
 	Patches []*JsonPatch
 }
 
-func (jp *JsonPatches) AddPatch(op string, path []string, value string) *JsonPatches {
+func (jp *JsonPatches) AddPatch(op string, path []string, value interface{}) *JsonPatches {
 	jp.Patches = append(jp.Patches, &JsonPatch{
 		Op: op,
 		Path: fmt.Sprintf("/%s", strings.Join(path, "/")),
@@ -26,8 +26,12 @@ func (jp *JsonPatches) AddPatch(op string, path []string, value string) *JsonPat
 	return jp
 }
 
-func (jp *JsonPatches) Replace(path []string, value string) *JsonPatches {
+func (jp *JsonPatches) Replace(path []string, value interface{}) *JsonPatches {
 	return jp.AddPatch("replace", path, value)
+}
+
+func (jp *JsonPatches) Add(path []string, value interface{}) *JsonPatches {
+	return jp.AddPatch("add", path, value)
 }
 
 func (jp *JsonPatches) String() string {

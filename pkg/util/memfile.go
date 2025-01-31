@@ -27,7 +27,7 @@ func InMemoryFile(name string) (string, error) {
 		return "", err
 	}
 
-	fname := fmt.Sprintf("/proc/self/fc/%s", fd)
+	fname := fmt.Sprintf("/proc/self/fd/%d", fd)
 	f := os.NewFile(uintptr(fd), name)
 	holds[fname] = f
 	return fname, nil

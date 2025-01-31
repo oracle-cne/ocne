@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package start
@@ -102,7 +102,43 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
-	var applications []install.ApplicationDescription
+	//
+	// kube-proxy is forcibly installed to account for old cluster
+	// descriptions that use kubeadm to deploy kube-proxy.  Same
+	// with coredns.
+	applications := []install.ApplicationDescription{
+		install.ApplicationDescription{
+			Force: true,
+			Application: &types.Application{
+				Name:      constants.CoreDNSChart,
+				Namespace: constants.CoreDNSNamespace,
+				Release:   constants.CoreDNSRelease,
+				Version:   constants.CoreDNSVersion,
+				Catalog:   catalog.InternalCatalog,
+			},
+		},
+		install.ApplicationDescription{
+			Force: true,
+			Application: &types.Application{
+				Name:      constants.KubeProxyChart,
+				Namespace: constants.KubeProxyNamespace,
+				Release:   constants.KubeProxyRelease,
+				Version:   constants.KubeProxyVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"apiServer": map[string]interface{}{
+						"host": drv.GetKubeAPIServerAddress(),
+						"port": clusterConfig.KubeAPIServerBindPort,
+					},
+					"config": map[string]interface{}{
+						"mode": clusterConfig.KubeProxyMode,
+						"clusterCIDR": clusterConfig.ServiceSubnet,
+					},
+				},
+			},
+		},
+	}
+
 	if clusterConfig.Provider != constants.ProviderTypeNone {
 		switch clusterConfig.CNI {
 		case "", constants.CNIFlannel:
