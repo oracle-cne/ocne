@@ -101,7 +101,7 @@ func patchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) 
 // getControlPlanePatches calculates the set of patches that need to be
 // applied to the KubeadmControlPlane after staging is complete to
 // apply the new configuration
-func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtName string) *util.JsonPatches {
+func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtName string) (*util.JsonPatches, error) {
 	ret := &util.JsonPatches{}
 
 	// These are mandatory changes to update control plane nodes
@@ -111,12 +111,11 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 	//  The joinConfiguration needs to apply the OCK patches
 	patches, found, err := unstructured.NestedStringMap(kcp.Object, capi.ControlPlaneJoinPatches...)
 	if err != nil {
-		log.Warnf("Error getting KubeadmControlPlane.%s: %v", strings.Join(capi.ControlPlaneJoinPatches, "."), err)
-		return ret
+		return nil, err
 	}
 
 	if found {
-		return ret
+		return ret, nil
 	}
 
 	patchDir, ok := patches[capi.PatchesDirectory]
@@ -128,7 +127,7 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 		ret.Add(capi.ControlPlaneJoinPatches, map[string]string{capi.PatchesDirectory: update.OckPatchDirectory})
 	}
 
-	return ret
+	return ret, nil
 }
 
 // doUpdate calculates if there is reason to upload a new OCI custom image
@@ -450,7 +449,10 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 				return err
 			}
 
-			patches := getControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			patches, err := getControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			if err != nil {
+				return err
+			}
 
 			helpMessages = append(helpMessages, fmt.Sprintf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		} else {
