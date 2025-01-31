@@ -12,8 +12,8 @@ const (
 	stageNodeScript = `#! /bin/bash
 	set -e
     OLD_K8S_VERSION=$(chroot /hostroot grep -o 'tag: .*' update.yaml | cut -d' ' -f2-)
-    OLD_REGISTRY=$(chroot /hostroot sudo grep -o '^registry: .*' update.yaml | cut -d' ' -f2-)
-    OLD_TRANSPORT=$(chroot /hostroot sudo grep -o '^transport: .*' update.yaml | cut -d' ' -f2-)
+    OLD_REGISTRY=$(chroot /hostroot grep -o '^registry: .*' update.yaml | cut -d' ' -f2-)
+    OLD_TRANSPORT=$(chroot /hostroot grep -o '^transport: .*' update.yaml | cut -d' ' -f2-)
     if [[ "$OLD_K8S_VERSION" == "$NEW_K8S_VERSION" ]] && [[ "$OLD_REGISTRY" == "$NEW_REGISTRY" || "$NEW_REGISTRY" == "" ]] && [[ "$OLD_TRANSPORT" == "$NEW_TRANSPORT" || "$NEW_TRANSPORT" == "" ]]
     then
        # if a previous run of this script failed before restarting the update service (or it is stopped for any reason), start it
@@ -23,14 +23,14 @@ const (
        fi
        exit 0
     fi 
-	chroot /hostroot sudo sed "s/tag:.*/tag: $NEW_K8S_VERSION/" /etc/ocne/update.yaml -i
+	chroot /hostroot sed "s/tag:.*/tag: $NEW_K8S_VERSION/" /etc/ocne/update.yaml -i
     if [[ "$NEW_REGISTRY" != "" ]]
     then 
-       chroot /hostroot sudo sed "s?registry:.*?registry: $NEW_REGISTRY?" /etc/ocne/update.yaml -i
+       chroot /hostroot sed "s?registry:.*?registry: $NEW_REGISTRY?" /etc/ocne/update.yaml -i
     fi 
     if [[ $NEW_TRANSPORT != "" ]] 
     then 
-       chroot /hostroot sudo sed "s?transport:.*?transport: $NEW_TRANSPORT?" /etc/ocne/update.yaml -i
+       chroot /hostroot sed "s?transport:.*?transport: $NEW_TRANSPORT?" /etc/ocne/update.yaml -i
     fi 
 	chroot /hostroot systemctl stop ocne-update.service
 	KUBECONFIG=/etc/kubernetes/kubelet.conf chroot /hostroot kubectl annotate node ${NODE_NAME} ocne.oracle.com/update-available-

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ignition
@@ -10,6 +10,7 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 )
 
 // Why all the structs?  Can't you just use the structs from the Kubernetes
@@ -27,6 +28,12 @@ type InitConfig struct {
 	LocalAPIEndpoint LocalAPIEndpoint `yaml:"localAPIEndpoint,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
+	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
+	Patches          *Patches          `yaml:"patches,omitempty"`
+}
+
+type Patches struct {
+	Directory string `yaml:"directory,omitempty"`
 }
 
 type LocalAPIEndpoint struct {
@@ -128,6 +135,7 @@ type JoinConfig struct {
 	ControlPlane     ControlPlane     `yaml:"controlPlane,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	Discovery        Discovery        `yaml:"discovery,omitempty"`
+	Patches          *Patches          `yaml:"patches,omitempty"`
 }
 
 type ControlPlane struct {
@@ -179,10 +187,17 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			},
 		},
 		CertificateKey: ci.UploadCertificateKey,
+		SkipPhases: []string{
+			"addon/kube-proxy",
+			"addon/coredns",
+			"preflight",
+		},
+		Patches: &Patches{
+			Directory: update.OckPatchDirectory,
+		},
 	}
 	if !ci.ExpectingWorkerNodes {
 		ret.NodeRegistration.Taints = &[]string{}
-
 	}
 	return ret
 }
@@ -215,6 +230,9 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 				Token:             cj.JoinToken,
 				CACertHashes:      cj.KubePKICertHashes,
 			},
+		},
+		Patches: &Patches{
+			Directory: update.OckPatchDirectory,
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {

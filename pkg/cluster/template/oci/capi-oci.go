@@ -150,6 +150,11 @@ func getExtraIgnition(confg *types.Config, clusterConfig *types.ClusterConfig) (
 		return "", err
 	}
 
+	patches, err := ignition.KubeadmPatches()
+	if err != nil {
+		return "", err
+	}
+
 	ign := ignition.NewIgnition()
 
 	// Cluster API has its own service to start
@@ -222,6 +227,7 @@ ExecStartPost=sh -c 'mv /etc/systemd/system/crio.service.d/ocid-populate.conf /t
 	ign = ignition.Merge(ign, container)
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
+	ign = ignition.Merge(ign, patches)
 
 	// Add any additional configuration
 	if clusterConfig.ExtraIgnition != "" {

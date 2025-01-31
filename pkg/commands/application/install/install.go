@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package install
@@ -22,6 +22,7 @@ import (
 // It downloads the helm chart for that entry locally and uploads it to a cluster
 func Install(opt application.InstallOptions) error {
 	// Download the helm chart that you want to install into the cluster
+	log.Debugf("Installing application with arguments: %+v", opt)
 	chartReader, err := DownloadApplication(opt.Catalog, opt.AppName, opt.Version)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func Install(opt application.InstallOptions) error {
 		})
 	}
 	// Upload the helm chart stored at the temporary directory
-	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues)
+	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues, opt.Force)
 	return err
 }
 

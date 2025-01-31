@@ -12,6 +12,7 @@ import (
 
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
 
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -102,6 +103,11 @@ elif [[ "$ACTION" == "init" ]]; then
 	mkdir -p $PKI
 
 	kubeadm init --config ${K8S}/kubeadm.conf --upload-certs
+
+	ENDPOINT=$(yq 'select(.kind == "ClusterConfiguration") | .controlPlaneEndpoint' < /etc/kubernetes/kubeadm.conf)
+	ENDPOINT_IP=$(echo $ENDPOINT | cut -d: -f1)
+	ENDPOINT_PORT=$(echo $ENDPOINT | cut -d: -f2)
+
 elif [[ "$ACTION" == "join" ]]; then
 	echo Joining existing Kubernetes cluster
 	kubeadm join --config ${K8S}/kubeadm.conf
@@ -284,6 +290,11 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 		return nil, err
 	}
 
+	patches, err := KubeadmPatches()
+	if err != nil {
+		return nil, err
+	}
+
 	// Take all of the resources that were made and stick them into the
 	// ignition structure.  Errors can be ignored because this is a fresh
 	// struct and it is guaranteed that no errors will happen so long as
@@ -293,6 +304,7 @@ func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, er
 	ret = AddUnit(ret, ocneUpdateUnit)
 	ret = AddUnit(ret, ocneUnit)
 	ret = Merge(ret, container)
+	ret = Merge(ret, patches)
 
 	return ret, nil
 }
@@ -351,8 +363,7 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	kpc, err := GenerateKubeProxyConfigurationYaml(ci.ProxyMode)
-	kubeadmConfigRaw := fmt.Sprintf("%s\n---\n%s---\n%s", ki, cc, kpc)
+	kubeadmConfigRaw := fmt.Sprintf("%s\n---\n%s", ki, cc)
 
 	kubeadmFile := &File{
 		Path: KubeadmFilePath,
@@ -563,6 +574,46 @@ func OcneUser(sshKey string, sshKeyPath string, password string) (*igntypes.Conf
 	if err != nil {
 		return nil, err
 	}
+
+	return ret, nil
+}
+
+// KubeadmPatches generates the set of files and links required to use the
+// kubeadm patch mechanism to allow for hybrid cluster component versions.
+func KubeadmPatches() (*igntypes.Config, error) {
+	ret := NewIgnition()
+
+	kubeadmUpgradeFile := &File{
+		Path: update.KubeadmUpgradePath,
+		Mode: 0555,
+		Contents: FileContents{
+			Source: update.Files[update.KubeadmUpgradePath],
+		},
+	}
+	imageCleanupFile := &File{
+		Path: update.ImageCleanupPostPath,
+		Mode: 0555,
+		Contents: FileContents{
+			Source: update.Files[update.ImageCleanupPostPath],
+		},
+	}
+	patchDir := &igntypes.Directory{
+		Node: igntypes.Node{
+			Path: update.OckPatchDirectory,
+		},
+	}
+
+	cnts := update.ImageCleanupPostService
+	imageCleanupUnit := &igntypes.Unit{
+		Name: update.ImageCleanupPostServiceName,
+		Enabled: util.BoolPtr(true),
+		Contents: &cnts,
+	}
+
+	AddFile(ret, kubeadmUpgradeFile)
+	AddFile(ret, imageCleanupFile)
+	AddDir(ret, patchDir)
+	ret = AddUnit(ret, imageCleanupUnit)
 
 	return ret, nil
 }
