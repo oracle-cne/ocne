@@ -18,12 +18,44 @@ in sequence.
 ### Staging an Update
 
 The `ocne cluster stage` command is used to stage a cluster upgrade.  The
-command sets various configuration options in the cluster and configures each
-cluster node to upgrade to the next Kubernetes version.
+command does different things depending on the target cluster and the provider.
+For providers implemented with Cluster API, staging an update involves creating
+new boot media, uploading that media, creating new machine templates, and
+suggesting patches that could be applied to Cluster API resources to perform
+the upgrade of the cluster nodes.  For providers that are not implemented with
+Cluster API, staging an update sets various configuraiton options in the cluster
+and configures each cluster node to upgrade to the next Kubernetes minor version.
 
 ```
 $ ocne cluster stage --version 1.30
 ```
+
+### Updating a Cluster Managed By Cluster API
+
+Clusters managed with Cluster API have different update behavior than other
+providers.  Nodes in a Cluster API managed cluster are never updated in place.
+All updates are perfomed by instantiating a new node and removing an existing
+one.  Updates are initiated from the management cluster rather than targetting
+the managed cluster directly.  To stage an update for a Cluster API managed
+cluster, use the kubeconfig for the management cluster and supply either the
+cluster configuration file or the name of the cluster.
+
+Unlike with other providers, staging an update for the same Kubernetes minor
+version is useful.  When staging without a version, a check is performed to
+determine if new boot media is available for the provider for that Kubernetes
+version.  If new media is available, it is uploaded, new templates are created,
+and update instructions are suggested.  That is, it behaves exactly like staging
+an update to the next minor version of Kubernetes.
+
+```
+$ export KUBECONFIG=$(ocne cluster show -C management)
+$ ocne cluster stage --version 1.30  -C managed
+```
+
+Note that there are cases where doing an in-place upgrade of nodes in a Cluster
+API cluster is useful.  Some cluster nodes must be long lived because the host
+resources that are difficult to migrate.  These can be updated in place if
+necessary.
 
 ### Updating a Cluster Node
 
@@ -39,11 +71,13 @@ to the next.
 $ ocne node update --node mynode
 ```
 
-## Example
+## Examples
 
 In this example, a Kubernetes cluster is updated from Kubernetes 1.29 to 1.30.
 
-### Creating a Cluster
+### In-Place Updates
+
+#### Creating a Cluster
 
 Create a small cluster with the libvirt provider.  The same process is used for
 most providers.  The oci provider is an exception because the the Cluster API
@@ -77,7 +111,7 @@ Run the following command to create an authentication token to access the UI:
 
 ```
 
-### Staging the Update
+#### Staging the Update
 
 The cluster is currently running Kubernetes 1.29
 
@@ -136,7 +170,7 @@ Aug 06 16:55:26 ocne111 ocne-update.sh[3804]: Update downloaded.
 Aug 06 16:55:27 ocne111 ocne-update.sh[4377]: node/ocne111 annotated
 ```
 
-### Updating Cluster Nodes
+#### Updating Cluster Nodes
 
 Once an update is available to a node, that node can be updated.  The
 `ocne cluster info` command show whether or not a node can be updated.
@@ -247,7 +281,7 @@ INFO[2024-08-06T17:07:08Z] Running node update
 ...
 ```
 
-### Inspecting the Cluster
+#### Inspecting the Cluster
 
 Once the cluster is complete, the status will report the new version for all the
 cluster nodes.
@@ -280,4 +314,151 @@ Nodes:
   ocne20042	worker		Ready	v1.30.3+1.el8	false
   ocne227	control plane	Ready	v1.30.3+1.el8	false
   ocne3244	control plane	Ready	v1.30.3+1.el8	false
+```
+
+### Upgrading Cluster API Clusters
+
+#### Create a Cluster
+
+Instantiate a small cluster with the oci provider using Kubernetes 1.29.  If a
+management cluster is available, it can be used.  This example uses an ephemeral
+cluster for simplicity.
+
+```
+$ ./out/linux_amd64/ocne cluster start -c mycapi.yaml
+INFO[2025-02-03T22:44:07Z] Installing cert-manager into cert-manager: ok 
+INFO[2025-02-03T22:44:08Z] Installing core-capi into capi-system: ok 
+INFO[2025-02-03T22:44:08Z] Installing capoci into cluster-api-provider-oci-system: ok 
+INFO[2025-02-03T22:44:09Z] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+```
+
+#### Stage an Update
+
+Set the kubeconfig to the ephemeral cluster and stage an update to
+Kubernetes 1.30.  A new OCI Custom Image is uploaded with the new Kubernetes
+version.  Next, any existing OCIMachineTemplates that are used by other
+resources are cloned and updated.  Finally, two commands are suggsted.  The
+first updates the cluster version and control plane nodes.  The second updates
+the worker nodes.
+
+```
+$ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
+$ ./out/linux_amd64/ocne cluster stage --version 1.30 -c ~/tools/capi-1.29.yaml 
+INFO[2025-02-03T22:52:41Z] Installing cert-manager into cert-manager: ok 
+INFO[2025-02-03T22:52:41Z] Installing core-capi into capi-system: ok 
+INFO[2025-02-03T22:52:42Z] Installing capoci into cluster-api-provider-oci-system: ok 
+INFO[2025-02-03T22:52:42Z] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+INFO[2025-02-03T22:52:43Z] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
+INFO[2025-02-03T22:52:43Z] Waiting for Core Cluster API Controllers: ok 
+INFO[2025-02-03T22:52:43Z] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2025-02-03T22:52:43Z] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2025-02-03T22:52:43Z] Waiting for OCI Cluster API Controllers: ok 
+INFO[2025-02-03T22:52:44Z] Preparing pod used to create image           
+INFO[2025-02-03T22:52:49Z] Waiting for pod ocne-system/ocne-image-builder to be ready: ok 
+INFO[2025-02-03T22:52:49Z] Getting local boot image for architecture: amd64 
+INFO[2025-02-03T22:53:25Z] Uploading boot image to pod ocne-system/ocne-image-builder: ok 
+INFO[2025-02-03T22:54:45Z] Downloading boot image from pod ocne-system/ocne-image-builder: ok 
+INFO[2025-02-03T22:54:45Z] New boot image was created successfully at /home/opc/.ocne/images/boot.qcow2-1.30-amd64.oci 
+INFO[2025-02-03T22:55:08Z] Uploading image to object storage: ok 
+INFO[2025-02-03T23:10:10Z] Importing updated image for ock: [##########]: ok 
+INFO[2025-02-03T23:10:11Z] Running node stage                           
+INFO[2025-02-03T23:10:16Z] Waiting for pod ocne-system/stage-node-ocne-control-plane-9xqmv-pod to be ready: ok 
+INFO[2025-02-03T23:10:16Z] Node ocne-control-plane-9xqmv successfully staged 
+INFO[2025-02-03T23:10:16Z] Running node stage                           
+INFO[2025-02-03T23:10:22Z] Waiting for pod ocne-system/stage-node-ocne-md-0-jt8hb-sswfq-pod to be ready: ok 
+INFO[2025-02-03T23:10:22Z] Node ocne-md-0-jt8hb-sswfq successfully staged 
+INFO[2025-02-03T23:10:22Z] Running node stage                           
+INFO[2025-02-03T23:10:28Z] Waiting for pod ocne-system/stage-node-ocne-md-0-jt8hb-vhndn-pod to be ready: ok 
+INFO[2025-02-03T23:10:28Z] Node ocne-md-0-jt8hb-vhndn successfully staged 
+To update KubeadmControlPlane ocne-control-plane in ocne, run:
+    kubectl patch -n ocne kubeadmcontrolplane ocne-control-plane --type=json -p='[{"op":"replace","path":"/spec/version","value":"1.30.3"},{"op":"replace","path":"/spec/machineTemplate/infrastructureRef/name","value":"ocne-control-plane-1"},{"op":"add","path":"/spec/kubeadmConfigSpec/joinConfiguration/patches","value":{"directory":"/etc/ocne/ock/patches"}}]'
+
+To update MachineDeployment ocne-md-0 in ocne, run:
+    kubectl patch -n ocne machinedeployment ocne-md-0 --type=json -p='[{"op":"replace","path":"/spec/template/spec/version","value":"1.30.3"},{"op":"replace","path":"/spec/template/spec/infrastructureRef/name","value":"ocne-md-1"}]'
+```
+
+#### Update the Control Plane
+
+Executing the first suggested command from the previous step will update the
+control plane.  The cluster version is updated and then a new set of control
+plane nodes are instantiated using that version.  It can take several minutes
+to update the control plane based on how many control plane nodes are in the
+cluster.
+
+```
+$ kubectl patch -n ocne kubeadmcontrolplane ocne-control-plane --type=json -p='[{"op":"replace","path":"/spec/version","value":"1.30.3"},{"op":"replace","path":"/spec/machineTemplate/infrastructureRef/name","value":"ocne-control-plane-1"},{"op":"add","path":"/spec/kubeadmConfigSpec/joinConfiguration/patches","value":{"directory":"/etc/ocne/ock/patches"}}]'
+kubeadmcontrolplane.controlplane.cluster.x-k8s.io/ocne-control-plane patched
+```
+
+#### Wait for the Update to Complete
+
+The control plane update will take some amount of time.  It is possible to
+watch the progress of the update by inspecting the Cluster API resources.
+
+```
+# A new node is being created.  Notice the version.
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                                                                  PHASE          AGE   VERSION
+ocne-control-plane-9xqmv   ocne      ocne-control-plane-9xqmv   oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running        29m   v1.29.3
+ocne-control-plane-p55sl   ocne                                                                                                                             Provisioning   23s   v1.30.3
+ocne-md-0-jt8hb-sswfq      ocne      ocne-md-0-jt8hb-sswfq      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running        29m   v1.29.3
+ocne-md-0-jt8hb-vhndn      ocne      ocne-md-0-jt8hb-vhndn      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running        29m   v1.29.3
+
+# The previous node has been deleted
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                                                                  PHASE     AGE    VERSION
+ocne-control-plane-p55sl   ocne      ocne-control-plane-p55sl   oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   5m3s   v1.30.3
+ocne-md-0-jt8hb-sswfq      ocne      ocne-md-0-jt8hb-sswfq      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   34m    v1.29.3
+ocne-md-0-jt8hb-vhndn      ocne      ocne-md-0-jt8hb-vhndn      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   34m    v1.29.3
+
+# The cluster nodes report the same information
+$ export KUBECONFIG=$(ocne cluster show -C capi)
+$ kubectl get node
+NAME                       STATUS   ROLES           AGE     VERSION
+ocne-control-plane-p55sl   Ready    control-plane   4m30s   v1.30.3+2.el8
+ocne-md-0-jt8hb-sswfq      Ready    <none>          31m     v1.29.3+3.el8
+ocne-md-0-jt8hb-vhndn      Ready    <none>          30m     v1.29.3+3.el8
+```
+
+#### Update the Worker Nodes
+
+Once all control plane nodes are updated, it is possible to update the worker
+nodes.  The overall behavior of updating worker nodes is identitical to the
+control plane nodes.
+
+```
+$ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
+$ kubectl patch -n ocne machinedeployment ocne-md-0 --type=json -p='[{"op":"replace","path":"/spec/template/spec/version","value":"1.30.3"},{"op":"replace","path":"/spec/template/spec/infrastructureRef/name","value":"ocne-md-1"}]'
+machinedeployment.cluster.x-k8s.io/ocne-md-0 patched
+```
+
+#### Watch the Worker Node Update Progress
+
+The worker node update can take a while, especially if there are a lot of
+nodes.  The time it takes to update nodes depends on many factors, such as
+cluster size, workloads, and more.
+
+```
+# A new node is rolling out
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                                                                  PHASE         AGE     VERSION
+ocne-control-plane-p55sl   ocne      ocne-control-plane-p55sl   oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running       8m50s   v1.30.3
+ocne-md-0-9xzrv-dphhk      ocne      ocne-md-0-9xzrv-dphhk      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running       2m51s   v1.30.3
+ocne-md-0-9xzrv-qsbbj      ocne                                 oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Provisioned   40s     v1.30.3
+ocne-md-0-jt8hb-vhndn      ocne      ocne-md-0-jt8hb-vhndn      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running       38m     v1.29.3
+
+# The nodes have been updated
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                                                                  PHASE     AGE     VERSION
+ocne-control-plane-p55sl   ocne      ocne-control-plane-p55sl   oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   11m     v1.30.3
+ocne-md-0-9xzrv-dphhk      ocne      ocne-md-0-9xzrv-dphhk      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   5m27s   v1.30.3
+ocne-md-0-9xzrv-qsbbj      ocne      ocne-md-0-9xzrv-qsbbj      oci://ocid1.instance.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa   Running   3m16s   v1.30.3
+
+# The managed cluster shows the same information
+$ export KUBECONFIG=$(ocne cluster show -C capi)
+$ kubectl get node
+NAME                       STATUS   ROLES           AGE     VERSION
+ocne-control-plane-p55sl   Ready    control-plane   10m     v1.30.3+2.el8
+ocne-md-0-9xzrv-dphhk      Ready    <none>          4m43s   v1.30.3+2.el8
+ocne-md-0-9xzrv-qsbbj      Ready    <none>          2m43s   v1.30.3+2.el8
 ```
