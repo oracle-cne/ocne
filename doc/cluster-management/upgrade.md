@@ -337,7 +337,7 @@ INFO[2025-02-03T22:44:09Z] Installing bootstrap-capi into capi-kubeadm-bootstrap
 Set the kubeconfig to the ephemeral cluster and stage an update to
 Kubernetes 1.30.  A new OCI Custom Image is uploaded with the new Kubernetes
 version.  Next, any existing OCIMachineTemplates that are used by other
-resources are cloned and updated.  Finally, two commands are suggsted.  The
+resources are cloned and updated.  Finally, two commands are suggested.  The
 first updates the cluster version and control plane nodes.  The second updates
 the worker nodes.
 
