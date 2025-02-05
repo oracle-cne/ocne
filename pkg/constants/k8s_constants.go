@@ -94,19 +94,19 @@ const (
 	CoreCAPIRelease    = "core-capi"
 	CoreCAPINamespace  = "capi-system"
 	CoreCAPIChart      = "core-capi"
-	CoreCAPIVersion    = "1.7.1"
+	CoreCAPIVersion    = "1.9.4"
 	CoreCAPIDeployment = "core-capi-controller-manager"
 
 	KubeadmBootstrapCAPIRelease    = "bootstrap-capi"
 	KubeadmBootstrapCAPINamespace  = "capi-kubeadm-bootstrap-system"
 	KubeadmBootstrapCAPIChart      = "bootstrap-capi"
-	KubeadmBootstrapCAPIVersion    = "1.7.1"
+	KubeadmBootstrapCAPIVersion    = "1.9.4"
 	KubeadmBootstrapCAPIDeployment = "bootstrap-capi-controller-manager"
 
 	KubeadmControlPlaneCAPIRelease    = "control-plane-capi"
 	KubeadmControlPlaneCAPINamespace  = "capi-kubeadm-control-plane-system"
 	KubeadmControlPlaneCAPIChart      = "control-plane-capi"
-	KubeadmControlPlaneCAPIVersion    = "1.7.1"
+	KubeadmControlPlaneCAPIVersion    = "1.9.4"
 	KubeadmControlPlaneCAPIDeployment = "control-plane-capi-controller-manager"
 
 	OCICAPIRelease    = "capoci"
