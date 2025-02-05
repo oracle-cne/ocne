@@ -46,7 +46,7 @@ const (
 	OciCcmChart         = "oci-ccm"
 	OciCcmNamespace     = "kube-system"
 	OciCcmRelease       = "oci-ccm"
-	OciCcmVersion       = "1.28.0"
+	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
 
