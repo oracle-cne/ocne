@@ -130,6 +130,16 @@ esMaster:
     - -c
     - |-
       #!/usr/bin/env bash -e
+      # Updating opensearch keystore with keys
+      # required for the repository-s3 plugin
+      if [ \${OBJECT_STORE_ACCESS_KEY_ID:-} ]; then
+        echo Updating object store access key...
+        echo \$OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+      fi
+      if [ \${OBJECT_STORE_SECRET_KEY_ID:-} ]; then
+        echo Updating objectstore secret key...
+        echo \$OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+      fi
       # Disable the jvm heap settings in jvm.options
       echo Commenting out java heap settings in jvm.options...
       sed -i -e /^-Xms/s/^/#/g -e /^-Xmx/s/^/#/g config/jvm.options
@@ -223,6 +233,16 @@ esData:
     - -c
     - |-
       #!/usr/bin/env bash -e
+      # Updating opensearch keystore with keys
+      # required for the repository-s3 plugin
+      if [ \${OBJECT_STORE_ACCESS_KEY_ID:-} ]; then
+        echo Updating object store access key...
+        echo \$OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+      fi
+      if [ \${OBJECT_STORE_SECRET_KEY_ID:-} ]; then
+        echo Updating objectstore secret key...
+        echo \$OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+      fi
       # Disable the jvm heap settings in jvm.options
       echo Commenting out java heap settings in jvm.options...
       sed -i -e /^-Xms/s/^/#/g -e /^-Xmx/s/^/#/g config/jvm.options
