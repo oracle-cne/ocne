@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.0.5
-Release: 5%{dist}
+Version: 2.1.0
+Release: 1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -71,6 +71,11 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Wed Feb 12 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.0-1
+- Introduce support for Kubernetes 1.31
+- Fix an issue where in-place updates in environments without internet access can disrupt cluster function
+- Add support for staging Cluster API resources with the oci provider
+
 * Tue Nov 19 2024 George Aeillo <george.f.aeillo@oracle.com> - 2.0.5-5
 - Allow YAML output from cluster dumps
 - Fix various issues in cluster dump and info commands
