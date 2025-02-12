@@ -71,7 +71,7 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Wed Feb 12 2024 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.0-1
+* Wed Feb 12 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.0-1
 - Introduce support for Kubernetes 1.31
 - Fix an issue where in-place updates in environments without internet access can disrupt cluster function
 - Add support for staging Cluster API resources with the oci provider
