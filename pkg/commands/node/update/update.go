@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -86,11 +85,6 @@ func Update(o UpdateOptions) error {
 		return nil
 	}
 
-	desiredVersion, err := getVersionsFromKubeadmConfigMap(kubeClient)
-	if err != nil {
-		return err
-	}
-
 	// Check whether the desired node to upgrade is a worker node and if the control plane nodes are up-to-date
 	// Make sure that current version of worker is less that the control planes
 	controlPlaneNodesAcceptable, err := areControlPlaneNodesAcceptable(nodeList, o.NodeName)
@@ -103,9 +97,31 @@ func Update(o UpdateOptions) error {
 	// ensure the Namespace exists
 	err = k8s.CreateNamespaceIfNotExists(kubeClient, namespace)
 
+	ignores := []string{}
+
+	// If a control plane node is being updated, there is a chance that
+	// it is the one servicing its own update.  There isn't a way to
+	// predict that in advance, so close our eyes and hope that any
+	// connections errors are for that reason.
+	//
+	// The error string is something like "next reader: websocket: close 1006 (abnormal closure): unexpected EOF"
+	for _, n := range nodeList.Items {
+		if n.Name != o.NodeName {
+			continue
+		}
+
+		if k8s.IsControlPlane(&n) {
+			ignores = append(ignores, "unexpected EOF")
+
+			log.Infof("When updating control plane nodes, it is possible to lose connection to the Kubernetes API Server temporarily.  Any upcoming log messages about connection errors can be ignored.")
+		}
+		break
+	}
+
+
 	// get config needed to use kubectl
-	ignore := "The --rebuild-if-modules-changed option is deprecated. Use --refresh instead."
-	kcConfig, err := kubectl.NewKubectlConfig(restConfig, o.KubeConfigPath, namespace, []string{ignore}, false)
+	ignores = append(ignores, "The --rebuild-if-modules-changed option is deprecated. Use --refresh instead.")
+	kcConfig, err := kubectl.NewKubectlConfig(restConfig, o.KubeConfigPath, namespace, ignores, false)
 	if err != nil {
 		return err
 	}
@@ -115,20 +131,13 @@ func Update(o UpdateOptions) error {
 		return err
 	}
 
-	// Get Kubernetes versions (just pass major.minor version - e.g. 1.27)
-	verMajorMinor := fmt.Sprintf("%d.%d", desiredVersion.Major(), desiredVersion.Minor())
-	k8sVer, err := versions.GetKubernetesVersions(verMajorMinor)
-	if err != nil {
-		return err
-	}
+	// Reset the error buffer in the kcConfig to avoid catching ignored
+	// errors from the previous command.
+	kcConfig.ErrBuf.Reset()
 
 	log.Info("Running node update")
-	//updateScript := fmt.Sprintf(updateNodeScript, k8sVer.CoreDNS)
-	log.Debugf("Updating node %s with script\n%s", o.NodeName, updateNodeScript)
-	log.Debugf("Setting CoreDNS image tag to %s", k8sVer.CoreDNS)
 	err = script.RunScript(kubeClient, kcConfig, o.NodeName, namespace, "update-node", updateNodeScript, []corev1.EnvVar{
 		{Name: envNodeName, Value: o.NodeName},
-		{Name: envCoreDNSImageTag, Value: k8sVer.CoreDNS},
 	})
 	if err != nil {
 		return err
