@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -187,4 +188,76 @@ func IsUpdateAvailable(node *v1.Node) bool {
 		update = true
 	}
 	return update
+}
+
+func processImage(registry string, best string, secondBest string, img *v1.ContainerImage) (string, bool, bool) {
+	haveBest := false
+	exactMatch := false
+	ret := ""
+
+	imgName := fmt.Sprintf("%s:%s", registry, secondBest)
+	imgPrefix := fmt.Sprintf("%s:", registry)
+	bestName := fmt.Sprintf("%s:%s", registry, best)
+	for _, name := range img.Names {
+		if name == bestName {
+			haveBest = true
+			continue
+		}
+		if name == imgName {
+			exactMatch = true
+			ret = name
+			continue
+		}
+
+		// If there is already an exact match, don't
+		// look at this image
+		if exactMatch {
+			continue
+		}
+		if strings.HasPrefix(name, imgPrefix) {
+			ret = name
+		}
+	}
+
+	return ret, haveBest, exactMatch
+}
+
+
+// GetImageCandidate returns a reasonable image:tag based on some criteria
+// - If the best match is found, the first return value is set to that image
+//   and the second return value is true
+// - If the second best match is found, the first return value is set to that
+//   image:tag and the third value is true
+// - If neither are found, an arbitrary image:tag is returned
+func GetImageCandidate(registry string, best string, secondBest string, node *v1.Node) (string, bool, bool) {
+	imgs := node.Status.Images
+
+	bestImg := ""
+	ret := ""
+	foundExact := false
+	foundBest := false
+	for _, img := range imgs {
+		imgName, haveBest, exactMatch := processImage(registry, best, secondBest, &img)
+
+		// If there is a current image, don't bother looking anymore
+		if haveBest {
+			log.Debugf("Have current image for %s", imgName)
+			bestImg = fmt.Sprintf("%s:%s", registry, best)
+			foundBest = true
+			return fmt.Sprintf("%s:%s", registry, best), true, exactMatch
+		}
+
+		if exactMatch {
+			ret = imgName
+			foundExact = true
+		} else if !foundExact {
+			ret = imgName
+		} else if ret == "" {
+			ret = imgName
+		}
+	}
+	if foundBest {
+		ret = bestImg
+	}
+	return ret, false, foundExact
 }

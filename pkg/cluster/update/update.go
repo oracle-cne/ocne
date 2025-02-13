@@ -5,7 +5,6 @@ package update
 
 import (
 	"fmt"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -24,87 +23,61 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/script"
 )
 
-func processImage(registry string, tag string, img *v1.ContainerImage) (string, bool, bool) {
-	haveCurrent := false
-	exactMatch := false
+func getDaemonSetTag(client kubernetes.Interface, dsNamespace string, dsName string, registry string) (string, error) {
 	ret := ""
 
-	imgName := fmt.Sprintf("%s:%s", registry, tag)
-	imgPrefix := fmt.Sprintf("%s:", registry)
-	currentName := fmt.Sprintf("%s:%s", registry, constants.CurrentTag)
-	for _, name := range img.Names {
-		if name == currentName {
-			haveCurrent = true
-			continue
-		}
-		if name == imgName {
-			exactMatch = true
-			ret = name
-			continue
-		}
-
-		// If there is already an exact match, don't
-		// look at this image
-		if exactMatch {
-			continue
-		}
-		if strings.HasPrefix(name, imgPrefix) {
-			ret = name
-		}
-	}
-
-	return ret, haveCurrent, exactMatch
-}
-
-func findTaggableImage(registry string, tag string, imgs []v1.ContainerImage) string {
-	ret := ""
-	foundExact := false
-	for _, img := range imgs {
-		imgName, haveCurrent, exactMatch := processImage(registry, tag, &img)
-
-		// If there is a current image, don't tag something new
-		if haveCurrent {
-			log.Debugf("Have current image for %s", imgName)
-			return ""
-		}
-
-		if exactMatch {
-			ret = imgName
-			foundExact = true
-		} else if !foundExact {
-			ret = imgName
-		} else if ret == "" {
-			ret = imgName
-		}
-	}
-	return ret
-}
-
-func getKubeProxyTag(client kubernetes.Interface) (string, error) {
-	ret := ""
-
-	proxyDep, err := k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
+	dsDep, err := k8s.GetDaemonSet(client, dsNamespace, dsName)
 	if err != nil {
 		return "", err
 	}
 
 	// If the kube-proxy image already makes sense, then do nothing.
-	for _, c := range proxyDep.Spec.Template.Spec.Containers {
+	for _, c := range dsDep.Spec.Template.Spec.Containers {
 		imgInfo, err := image.SplitImage(c.Image)
 		if err != nil {
 			return "", err
 		}
 
-		if imgInfo.BaseImage != constants.KubeProxyImage {
+		if imgInfo.BaseImage != registry {
 			continue
 		}
 
-		log.Debugf("Found kube-proxy tag %s", imgInfo.Tag)
+		log.Debugf("Found %s tag %s", registry, imgInfo.Tag)
 		ret = imgInfo.Tag
 		break
 	}
 
 	return ret, err
+}
+
+func getDeploymentTag(client kubernetes.Interface, depNamespace string, depName string, registry string) (string, error) {
+	ret := ""
+	dep, err := k8s.GetDeployment(client, depNamespace, depName)
+	if err != nil {
+		return "", err
+	}
+
+	// If the kube-proxy image already makes sense, then do nothing.
+	for _, c := range dep.Spec.Template.Spec.Containers {
+		imgInfo, err := image.SplitImage(c.Image)
+		if err != nil {
+			return "", err
+		}
+
+		if imgInfo.BaseImage != registry {
+			continue
+		}
+
+		log.Debugf("Found %s tag %s", registry, imgInfo.Tag)
+		ret = imgInfo.Tag
+		break
+	}
+
+	return ret, err
+}
+
+func getKubeProxyTag(client kubernetes.Interface) (string, error) {
+	return getDaemonSetTag(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet, constants.KubeProxyImage)
 }
 
 func tagCommand(imgName string, registry string) string {
@@ -122,14 +95,24 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 	}
 	corednsTag, err := getCoreDNSTag(client)
 	if err != nil {
-		return nil
+		return err
+	}
+	flannelTag, err := getDaemonSetTag(client, constants.CNIFlannelNamespace, constants.CNIFlannelDaemonSet, constants.CNIFlannelImage)
+	if err != nil {
+		return err
+	}
+	uiTag, err := getDeploymentTag(client, constants.UINamespace, constants.UIDeployment, constants.UIImage)
+	if err != nil {
+		return err
 	}
 
-	kubeProxyImg := findTaggableImage(constants.KubeProxyImage, kubeProxyTag, node.Status.Images)
-	corednsImg := findTaggableImage(constants.CoreDNSImage, corednsTag, node.Status.Images)
+	kubeProxyImg, kubeProxyCurrent, _ := k8s.GetImageCandidate(constants.KubeProxyImage, constants.CurrentTag, kubeProxyTag, node)
+	corednsImg, corednsCurrent, _ := k8s.GetImageCandidate(constants.CoreDNSImage, constants.CurrentTag, corednsTag, node)
+	flannelImg, flannelCurrent, _ := k8s.GetImageCandidate(constants.CNIFlannelImage, constants.CurrentTag, flannelTag, node)
+	uiImg, uiCurrent, _ := k8s.GetImageCandidate(constants.UIImage, constants.CurrentTag, uiTag, node)
 
 	// If there is nothing to tag, then don't try.
-	if kubeProxyImg  == "" && corednsImg == "" {
+	if kubeProxyCurrent && corednsCurrent && flannelCurrent && uiCurrent {
 		return nil
 	}
 
@@ -140,13 +123,21 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 
 	// Build the script to run on the node
 	tagScript := "#! /bin/bash"
-	if kubeProxyImg != "" {
+	if !kubeProxyCurrent {
 		log.Debugf("Tagging %s", kubeProxyImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(kubeProxyImg, constants.KubeProxyImage))
 	}
-	if corednsImg != "" {
+	if !corednsCurrent {
 		log.Debugf("Tagging %s", corednsImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(corednsImg, constants.CoreDNSImage))
+	}
+	if !flannelCurrent {
+		log.Debugf("Tagging %s", flannelImg)
+		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(flannelImg, constants.CNIFlannelImage))
+	}
+	if !uiCurrent {
+		log.Debugf("Tagging %s", uiImg)
+		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(uiImg, constants.UIImage))
 	}
 
 	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
@@ -238,29 +229,7 @@ func updateCoreDNS(kubeConfigPath string) error {
 }
 
 func getCoreDNSTag(client kubernetes.Interface) (string, error) {
-	ret := ""
-	dnsDep, err := k8s.GetDeployment(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment)
-	if err != nil {
-		return "", err
-	}
-
-	// If the kube-proxy image already makes sense, then do nothing.
-	for _, c := range dnsDep.Spec.Template.Spec.Containers {
-		imgInfo, err := image.SplitImage(c.Image)
-		if err != nil {
-			return "", err
-		}
-
-		if imgInfo.BaseImage != constants.CoreDNSImage {
-			continue
-		}
-
-		log.Debugf("Found CoreDNS tag %s", imgInfo.Tag)
-		ret = imgInfo.Tag
-		break
-	}
-
-	return ret, err
+	return getDeploymentTag(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment, constants.CoreDNSImage)
 }
 
 func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
