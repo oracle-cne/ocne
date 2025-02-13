@@ -434,6 +434,7 @@ spec:
           tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
       skipPhases:
+      - "preflight"
       - "addon/kube-proxy"
       - "addon/coredns"
       patches:
@@ -446,6 +447,10 @@ spec:
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
+      skipPhases:
+      - "preflight"
+      patches:
+        directory: /etc/ocne/ock/patches
       discovery: {}
       nodeRegistration:
         criSocket: /var/run/crio/crio.sock

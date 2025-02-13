@@ -182,6 +182,11 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 				return false, nil
 			}
 
+			imgXport := alltransports.TransportFromImageName(containerImg)
+			if imgXport == nil {
+				containerImg = fmt.Sprintf("docker://%s", containerImg)
+			}
+
 			ockImgSpec, err := image.GetImageSpec(containerImg, arch)
 			if err != nil {
 				return false, err

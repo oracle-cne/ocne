@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	kexec "k8s.io/kubectl/pkg/cmd/exec"
 	kutil "k8s.io/kubectl/pkg/cmd/util"
 
@@ -17,6 +18,7 @@ import (
 func filter(s string, ignoresIface interface{}) bool {
 	ignores, _ := ignoresIface.([]string)
 	for _, i := range ignores {
+		log.Debugf("Checking ignore list for: %s", s)
 		if strings.Contains(s, i) {
 			return false
 		}
@@ -36,6 +38,11 @@ func RunCommand(kc *KubectlConfig, podName string, cmdArgs ...string) error {
 	fatalErr := false
 	var fatalErrError error
 	kutil.BehaviorOnFatal(func(s string, c int) {
+		// Filter out any ignored errors
+		if !filter(s, kc.IgnoreErrors) {
+			log.Debugf("Ignoring fatal error: %s", s)
+			return
+		}
 		fatalErrError = fmt.Errorf("Error running script: %s", s)
 		fatalErr = true
 	})
