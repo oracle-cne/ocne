@@ -95,7 +95,6 @@ const (
 	CoreDNSTag        = "current"
 	CoreDNSDeployment = "coredns"
 	CoreDNSImage      = "container-registry.oracle.com/olcne/coredns"
-	CoreDNSLegacyTag  = "v1.12.0"
 
 	CertManagerRelease   = "cert-manager"
 	CertManagerNamespace = "cert-manager"

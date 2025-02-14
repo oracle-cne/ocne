@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -60,7 +61,7 @@ func getTagForApplication(img string, bestTag string, legacyTag string, node *v1
 			return "", err
 		}
 		tag = imgInfo.Tag
-		log.Warn("Control plane node %s has an unexpected image.  Using %s", node.Name, tag)
+		log.Warnf("Control plane node %s has an unexpected tag for %s.  Using tag %s", node.Name, img, tag)
 	}
 	return tag, nil
 }
@@ -178,7 +179,14 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// the version that was installed is known.  For kube-proxy, it
 	// can vary by Kubernetes version.  Derive the legacy kube-proxy
 	// image tag from another core Kubernets container image.
-	coreDnsTag, err := getTagForApplication(constants.CoreDNSImage, constants.CoreDNSTag, constants.CoreDNSLegacyTag, cpNode)
+
+	verInfo, err := versions.GetKubernetesVersions(clusterConfig.KubeVersion)
+	if err != nil {
+		return localKubeConfig, err
+	}
+	coreDnsExpectedTag := verInfo.CoreDNS
+
+	coreDnsTag, err := getTagForApplication(constants.CoreDNSImage, constants.CoreDNSTag, coreDnsExpectedTag, cpNode)
 	if err != nil {
 		return localKubeConfig, err
 	}

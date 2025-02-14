@@ -6,15 +6,19 @@ package update
 import (
 	"fmt"
 
+	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
+	"github.com/oracle-cne/ocne/pkg/commands/application/ls"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -143,17 +147,67 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 	return script.RunScript(client, kcConfig, node.ObjectMeta.Name, namespace, "tag-images", tagScript, []v1.EnvVar{})
 }
 
+func getRelease(release string, namespace string, kubeConfigPath string) (*release.Release, error) {
+	releases, err := ls.List(application.LsOptions{
+		KubeConfigPath: kubeConfigPath,
+		Namespace: namespace,
+		All: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rel := range releases {
+		if rel.Name == release {
+			if rel.Config == nil {
+				rel.Config = map[string]interface{}{}
+			}
+			return rel, nil
+		}
+	}
+
+	return nil, nil
+}
+
+
 func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 	// If kube-proxy is already installed as an application, don't try
 	// to install it again.
-	exists, err := install.DoesReleaseExist(constants.KubeProxyRelease, kubeConfigPath, constants.KubeProxyNamespace)
-	if err != nil {
-		return err
+	proxyRelease, err := getRelease(constants.KubeProxyRelease, constants.KubeProxyNamespace, kubeConfigPath)
+
+
+	// If the release was found, just update the tag.  That way the complex
+	// calculation of the configuration is avoided.
+	if proxyRelease != nil {
+		// If the tag is already 'current', assume this is already correctly
+		// configured and return.
+		tag, found, err := unstructured.NestedString(proxyRelease.Config, "image", "tag")
+		if err != nil {
+			return err
+		} else if !found || tag == constants.KubeProxyTag {
+			// If the 'current' tag is already assigned, don't do anything.
+			return nil
+		}
+
+		err = unstructured.SetNestedField(proxyRelease.Config, constants.KubeProxyTag, "image", "tag")
+		if err != nil {
+			return err
+		}
+		return install.UpdateApplications([]install.ApplicationDescription{
+			install.ApplicationDescription{
+				Force: false,
+				Application: &types.Application{
+					Name:      constants.KubeProxyChart,
+					Namespace: constants.KubeProxyNamespace,
+					Release:   constants.KubeProxyRelease,
+					Version:   constants.KubeProxyVersion,
+					Catalog:   catalog.InternalCatalog,
+					Config:    proxyRelease.Config,
+					},
+				},
+		}, kubeConfigPath, false)
 	}
-	if exists {
-		log.Debugf("kube-proxy application already exists")
-		return nil
-	}
+
 
 	// Calculating the correct overrides based solely on the kubeconfig is
 	// hard, and is not tolerant to user customizations.  It's much easier
@@ -195,34 +249,68 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 				Release:   constants.KubeProxyRelease,
 				Version:   constants.KubeProxyVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config: map[string]interface{}{
-					"kubeconfig": kcfgParsed,
-					"config": confParsed,
-				},
+				Config:    map[string]interface{}{
+						"image": map[string]interface{}{
+							"tag": constants.KubeProxyTag,
+						},
+						"kubeconfig": kcfgParsed,
+						"config": confParsed,
+					},
 			},
 		},
 	}, kubeConfigPath, false)
 }
 
 func updateCoreDNS(kubeConfigPath string) error {
-	exists, err := install.DoesReleaseExist(constants.CoreDNSRelease, kubeConfigPath, constants.CoreDNSNamespace)
+	corednsRelease, err := getRelease(constants.CoreDNSRelease, constants.CoreDNSNamespace, kubeConfigPath)
 	if err != nil {
 		return err
 	}
-	if exists {
-		log.Debugf("CoreDNS application already exists")
-		return nil
+
+
+	if corednsRelease != nil {
+		tag, found, err := unstructured.NestedString(corednsRelease.Config, "image", "tag")
+		if err != nil {
+			return err
+		} else if !found || tag == constants.CoreDNSTag {
+			// If the 'current' tag is already assigned, don't do anything.
+			return nil
+		}
+
+		err = unstructured.SetNestedField(corednsRelease.Config, constants.CoreDNSTag, "image", "tag")
+		if err != nil {
+			return err
+		}
+
+		return install.UpdateApplications([]install.ApplicationDescription{
+			install.ApplicationDescription{
+				Force: true,
+				Application: &types.Application{
+					Name:      constants.CoreDNSChart,
+					Namespace: constants.CoreDNSNamespace,
+					Release:   constants.CoreDNSRelease,
+					Version:   constants.CoreDNSVersion,
+					Catalog:   catalog.InternalCatalog,
+					Config:    corednsRelease.Config,
+				},
+			},
+		}, kubeConfigPath, false)
 	}
 
 	return install.InstallApplications([]install.ApplicationDescription{
 		install.ApplicationDescription{
 			Force: true,
 			Application: &types.Application{
-				Name: constants.CoreDNSChart,
+				Name:      constants.CoreDNSChart,
 				Namespace: constants.CoreDNSNamespace,
-				Release: constants.CoreDNSRelease,
-				Version: constants.CoreDNSVersion,
-				Catalog: catalog.InternalCatalog,
+				Release:   constants.CoreDNSRelease,
+				Version:   constants.CoreDNSVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config:    map[string]interface{}{
+					"image": map[string]interface{}{
+						"tag": constants.CoreDNSTag,
+					},
+				},
 			},
 		},
 	}, kubeConfigPath, false)
@@ -230,6 +318,84 @@ func updateCoreDNS(kubeConfigPath string) error {
 
 func getCoreDNSTag(client kubernetes.Interface) (string, error) {
 	return getDeploymentTag(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment, constants.CoreDNSImage)
+}
+
+func updateFlannel(kubeConfigPath string) error {
+	flannelRelease, err := getRelease(constants.CNIFlannelRelease, constants.CNIFlannelNamespace, kubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	// Don't force install of Flannel if it isn't installed.
+	if flannelRelease == nil {
+		log.Debugf("Flannel application is not installed")
+		return nil
+	}
+
+	// If the tag is already correct, leave it alone
+	tag, found, err := unstructured.NestedString(flannelRelease.Config, "flannel", "image", "tag")
+	if err != nil {
+		return err
+	} else if !found || tag == constants.CNIFlannelImageTag {
+		return nil
+	}
+
+	err = unstructured.SetNestedField(flannelRelease.Config, constants.CNIFlannelImageTag, "flannel", "image", "tag")
+	if err != nil {
+		return err
+	}
+
+	return install.UpdateApplications([]install.ApplicationDescription{
+		install.ApplicationDescription{
+			Application: &types.Application{
+				Name:      constants.CNIFlannelChart,
+				Namespace: constants.CNIFlannelNamespace,
+				Release:   constants.CNIFlannelRelease,
+				Version:   constants.CNIFlannelVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config:    flannelRelease.Config,
+			},
+		},
+	}, kubeConfigPath, false)
+}
+
+func updateUI(kubeConfigPath string) error {
+	uiRelease, err := getRelease(constants.UIRelease, constants.UINamespace, kubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	// Don't force install of the UI if it isn't installed
+	if uiRelease == nil {
+		log.Debugf("UI application is not installed")
+		return nil
+	}
+
+	// If the tag is already correct, leave it alone
+	tag, _, err := unstructured.NestedString(uiRelease.Config, "image", "tag")
+	if err != nil {
+		return err
+	} else if tag == constants.UIImageTag {
+		return nil
+	}
+
+	err = unstructured.SetNestedField(uiRelease.Config, constants.UIImageTag, "image", "tag")
+	if err != nil {
+		return err
+	}
+
+	return install.UpdateApplications([]install.ApplicationDescription{
+		install.ApplicationDescription{
+			Application: &types.Application{
+				Name:      constants.UIChart,
+				Namespace: constants.UINamespace,
+				Release:   constants.UIRelease,
+				Version:   constants.UIVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config:    uiRelease.Config,
+			},
+		},
+	}, kubeConfigPath, false)
 }
 
 func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
@@ -279,6 +445,16 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	}
 
 	err = updateCoreDNS(kubeConfigPath)
+	if err != nil {
+		return nil
+	}
+
+	err = updateFlannel(kubeConfigPath)
+	if err != nil {
+		return nil
+	}
+
+	err = updateUI(kubeConfigPath)
 	if err != nil {
 		return nil
 	}
