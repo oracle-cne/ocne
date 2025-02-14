@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 const (
@@ -42,7 +43,7 @@ func WaitUntilGetNodesSucceeds(client kubernetes.Interface) (*v1.NodeList, error
 
 	// Check once before  waiting to avoid log spew
 	nodeList, err := GetNodeList(client)
-	if err == nil {
+	if err == nil && len(nodeList.Items) > 0 {
 		return nodeList, nil
 	}
 
@@ -161,6 +162,33 @@ func GetControlPlaneNodes(cli kubernetes.Interface) (*v1.NodeList, error) {
 	return ret, nil
 }
 
+// WaitForControlPlaneNodes gets all ndoes that run control plane components.
+// Unlike GetControlPlaneNodes, it waits for a bit if it appears that no
+// control plane nodes are available.  This is useful early in cluster
+// creation when even static pods have not been created.
+func WaitForControlPlaneNodes(cli kubernetes.Interface) (*v1.NodeList, error) {
+	list, _, err := util.LinearRetry(func(arg interface{})(interface{}, bool, error) {
+		nodeList, err := GetControlPlaneNodes(cli)
+		if err != nil {
+			return nil, true, err
+		}
+
+		if len(nodeList.Items) == 0 {
+			return nil, false, fmt.Errorf("no control plane nodes")
+		}
+		return nodeList, false, nil
+	}, cli)
+	if err != nil {
+		return nil, err
+	}
+	ret, ok := list.(*v1.NodeList)
+	if !ok {
+		// This shouldn't happen.
+		return nil, fmt.Errorf("internal error: functor did not return a *v1.NodeList")
+	}
+	return ret, nil
+}
+
 // GetRole returns true if the node is a control-plane node, along with a string indicating the node's role
 func GetRole(node *v1.Node) (bool, string) {
 	cp := false
@@ -231,13 +259,18 @@ func processImage(registry string, best string, secondBest string, img *v1.Conta
 // - If neither are found, an arbitrary image:tag is returned
 func GetImageCandidate(registry string, best string, secondBest string, node *v1.Node) (string, bool, bool) {
 	imgs := node.Status.Images
+	log.Debugf("%s has these images: %+v", node.Name, imgs)
 
 	bestImg := ""
 	ret := ""
 	foundExact := false
 	foundBest := false
 	for _, img := range imgs {
+		log.Debugf("Checking %+v", img)
 		imgName, haveBest, exactMatch := processImage(registry, best, secondBest, &img)
+		if imgName == "" {
+			continue
+		}
 
 		// If there is a current image, don't bother looking anymore
 		if haveBest {

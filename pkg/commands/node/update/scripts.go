@@ -17,4 +17,6 @@ chroot /hostroot /bin/bash <<"EOF"
   (sleep 3 && shutdown -r now)&
 EOF
 `
+
+	getUpdateInfo = "cat /hostroot/etc/ocne/update.yaml"
 )

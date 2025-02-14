@@ -43,6 +43,7 @@ const (
 // revert to whatever is available.
 func getTagForApplication(img string, bestTag string, legacyTag string, node *v1.Node) (string, error) {
 	tag := ""
+	log.Debugf("Checking %s on %s", img, node.Name)
 	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag,  legacyTag, node)
 	if haveBest {
 		tag = bestTag
@@ -68,6 +69,7 @@ func getTagForApplication(img string, bestTag string, legacyTag string, node *v1
 func getImageTag(img string, node *v1.Node) (string, error) {
 	for _, cis := range node.Status.Images {
 		for _, name := range cis.Names {
+			log.Debugf("Checking %s against %s on %s", name, img, node.Name)
 			if !strings.HasPrefix(name, img) {
 				continue
 			}
@@ -156,7 +158,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// was installed in 2.0.x.  Pick something from
 	// a control plane node since there will always
 	// be one.
-	cpNodes, err := k8s.GetControlPlaneNodes(kubeClient)
+	cpNodes, err := k8s.WaitForControlPlaneNodes(kubeClient)
 	if err != nil {
 		return localKubeConfig, err
 	}

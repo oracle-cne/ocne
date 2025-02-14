@@ -4,6 +4,7 @@
 package update
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -87,7 +89,7 @@ func Update(o UpdateOptions) error {
 
 	// Check whether the desired node to upgrade is a worker node and if the control plane nodes are up-to-date
 	// Make sure that current version of worker is less that the control planes
-	controlPlaneNodesAcceptable, err := areControlPlaneNodesAcceptable(nodeList, o.NodeName)
+	controlPlaneNodesAcceptable, err := areControlPlaneNodesAcceptable(nodeList, o.NodeName, restConfig, kubeClient, o.KubeConfigPath)
 	if err != nil {
 		return err
 	}
@@ -208,7 +210,7 @@ func prepareNode(o *UpdateOptions, kubeClient kubernetes.Interface, kcConfig *ku
 
 // isWorkerLessThanControlPlane takes in the major.minor of the worker node that we are trying to update and of the control plane node that it is being compared against
 // If the worker node has a major.minor that is less than the control plane node, it returns true
-func isWorkerLessThanControlPlane(workerVersion string, controlPlaneVersion string) (bool, error) {
+func isWorkerLessOrEqualToControlPlane(workerVersion string, controlPlaneVersion string) (bool, error) {
 	controlPlaneSemver, err := semver.NewVersion(controlPlaneVersion)
 	if err != nil {
 		return false, err
@@ -223,7 +225,7 @@ func isWorkerLessThanControlPlane(workerVersion string, controlPlaneVersion stri
 	if err != nil {
 		return false, err
 	}
-	c, err := semver.NewConstraint("< " + controlPlaneSanitized)
+	c, err := semver.NewConstraint("<= " + controlPlaneSanitized)
 	if err != nil {
 		return false, err
 	}
@@ -234,7 +236,7 @@ func isWorkerLessThanControlPlane(workerVersion string, controlPlaneVersion stri
 // areControlPlaneNodesAcceptable returns false if the node to upgrade is a worker node and at least one control plane node is not actively running the desired version to upgrade to
 // For example, if a worker node was running 1.27, and the user wanted to upgrade this worker node to 1.28, all of the control plane nodes must be running 1.28
 // This command returns true otherwise, along with any potential errors along the way
-func areControlPlaneNodesAcceptable(nodeList *corev1.NodeList, nodeNameBeingUpgraded string) (bool, error) {
+func areControlPlaneNodesAcceptable(nodeList *corev1.NodeList, nodeNameBeingUpgraded string, restConfig *rest.Config, kubeClient kubernetes.Interface, kubeConfigPath string) (bool, error) {
 	var nodeToUpgrade *corev1.Node
 	for _, node := range nodeList.Items {
 		if node.Name == nodeNameBeingUpgraded {
@@ -252,6 +254,55 @@ func areControlPlaneNodesAcceptable(nodeList *corev1.NodeList, nodeNameBeingUpgr
 		return true, nil
 	}
 
+	// It's a worker node.  Get the staged update via the tag in the
+	// update configuration file.  Use that to decide if the update
+	// that is available is suitable.  If the tag is not a major.minor
+	// then assume that the user knows what they are doing and allow
+	// the ugprade to proceed
+	kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, []string{}, false)
+	if err != nil {
+		return false, err
+	}
+
+	kcConfig.Streams.Out = bytes.NewBuffer([]byte{})
+	log.Debugf("Getting update target for %s", nodeNameBeingUpgraded)
+	err = script.RunScript(kubeClient, kcConfig, nodeNameBeingUpgraded, constants.OCNESystemNamespace, "check-update", getUpdateInfo, []corev1.EnvVar{})
+	if err != nil {
+		return false, err
+	}
+	err = k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", nodeNameBeingUpgraded))
+	if err != nil {
+		return false, err
+	}
+
+	// Try really hard to get a reasonable tag, so tolerate some corruption.
+	// Rather than parse the document as yaml, treat it as text
+	updateInfo := kcConfig.Streams.Out.(*bytes.Buffer).String()
+	tag := ""
+	for _, line := range strings.Split(updateInfo, "\n") {
+		// Split into fields with as much goop removed as possible
+		ui := strings.TrimSpace(line)
+		fields := strings.Fields(ui)
+
+		// need "tag: val"
+		if len(fields) < 2 || fields[0] != "tag:" {
+			continue
+		}
+
+		// get rid of any quotes
+		tag = strings.Trim(fields[1], "\"'")
+	}
+
+	if tag == "" {
+		return false, fmt.Errorf("The target Kubernetes version is not set")
+	}
+
+	// If the tag is not a semantic version, allow the update
+	_, err = semver.NewVersion(tag)
+	if err != nil {
+		return true, nil
+	}
+
 	// Iterate through all the nodes,
 	// If a control plane node has an update available or a control plane node is running a major.minor.patch version greater than worker node being looked at, return false
 	for _, node := range nodeList.Items {
@@ -261,12 +312,12 @@ func areControlPlaneNodesAcceptable(nodeList *corev1.NodeList, nodeNameBeingUpgr
 					// In this scenario, a worker is attempting to be upgraded and a control plane node has an update available
 					return false, nil
 				}
-				workerLessThanControlPlane, err := isWorkerLessThanControlPlane(nodeToUpgrade.Status.NodeInfo.KubeletVersion, node.Status.NodeInfo.KubeletVersion)
+				workerLessOrEqualToControlPlane, err := isWorkerLessOrEqualToControlPlane(tag, node.Status.NodeInfo.KubeletVersion)
 				if err != nil {
 					return false, err
 				}
-				if !workerLessThanControlPlane {
-					// In this scenario, a worker is attempting to be upgraded and a control plane node has a major.minor version that is less than or equal to the major.minor version on the worker
+				if !workerLessOrEqualToControlPlane {
+					// In this scenario, a worker is attempting to be upgraded and a control plane node has a major.minor version that is less than the target worker node version.
 					return false, nil
 				}
 			}

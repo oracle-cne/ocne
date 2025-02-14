@@ -52,7 +52,7 @@ const (
 	CNIFlannelVersion   = "2.0.0"
 	CNIFlannelImageTag  = "current"
 	CNIFlannelLegacyTag = "v0.22.3-2"
-	CNIFlannelDaemonSet = "flannel"
+	CNIFlannelDaemonSet = "kube-flannel-ds"
 	CNIFlannelImage     = "container-registry.oracle.com/olcne/flannel"
 
 	KubeProxyRelease   = "kube-proxy"
