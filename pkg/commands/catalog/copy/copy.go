@@ -9,10 +9,10 @@ import (
 	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/image"
+	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"strings"
-	"time"
 )
 
 func Copy(opt catalog.CopyOptions) error {
@@ -90,27 +90,27 @@ func extractImageURLs(filePath string) ([]string, error) {
 
 // copyImagesToNewDomain parses the image list and copies the images to the new domain returning a list of images that were copied successfully
 func copyImagesToNewDomain(images []string, newImageURLs []string, arch string) ([]string, error) {
-	var err error
 	copied := make([]string, 0, len(images))
 	for i, theimage := range images {
 		newImageURL := newImageURLs[i]
-		for j := 0; j < 5; j++ {
-			err = image.Copy(theimage, newImageURL, arch, copy.CopyAllImages)
+		_, _, err := util.LinearRetry(func(i interface{}) (interface{}, bool, error) {
+			err := image.Copy(theimage, newImageURL, arch, copy.CopyAllImages)
 			if err != nil {
-				log.Errorf("Error copying image %s: %s", theimage, err.Error())
-			} else {
-				log.Infof("Successfully copied image %s", theimage)
-				copied = append(copied, theimage)
+				if !strings.Contains(err.Error(), "500 Internal Server Error") {
+					return nil, true, err
+				}
+				return nil, false, err
 			}
-			if strings.Contains(err.Error(), "500 Internal Server Error") {
-				log.Debugf("Backing off and retrying pulling %s from the registry", theimage)
-				time.Sleep(time.Second)
-				continue
-			}
-			break
+			return nil, false, nil
+		}, nil)
+		if err != nil {
+			log.Errorf("Error copying image %s: %s", theimage, err.Error())
+		} else {
+			log.Infof("Successfully copied image %s", theimage)
+			copied = append(copied, theimage)
 		}
 	}
-	return copied, err
+	return copied, nil
 }
 
 // writeUpdatedImageURLs writes the updated image URLs to the destination file
