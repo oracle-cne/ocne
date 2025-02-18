@@ -7,10 +7,10 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/containers/image/v5/copy"
+	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"strings"
 )
