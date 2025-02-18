@@ -208,7 +208,7 @@ func prepareNode(o *UpdateOptions, kubeClient kubernetes.Interface, kcConfig *ku
 	return nil
 }
 
-// isWorkerLessThanControlPlane takes in the major.minor of the worker node that we are trying to update and of the control plane node that it is being compared against
+// isWorkerLessOrEqualToControlPlane takes in the major.minor of the worker node that we are trying to update and of the control plane node that it is being compared against
 // If the worker node has a major.minor that is less than the control plane node, it returns true
 func isWorkerLessOrEqualToControlPlane(workerVersion string, controlPlaneVersion string) (bool, error) {
 	controlPlaneSemver, err := semver.NewVersion(controlPlaneVersion)
