@@ -403,12 +403,12 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	// do this.
 	doIt := false
 	for _, n := range nodes.Items {
-		res, err := util.CompareVersions(n.Status.NodeInfo.KubeletVersion, "1.30")
+		res, err := util.CompareVersions(n.Status.NodeInfo.KubeletVersion, "1.31")
 		if err != nil {
 			return err
 		}
 
-		if res < 1 {
+		if res == -1 {
 			doIt = true
 			break
 		}

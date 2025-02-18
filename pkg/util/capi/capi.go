@@ -20,6 +20,7 @@ var ClusterControlPlaneRef []string = []string{"spec", "controlPlaneRef"}
 var ControlPlaneVersion []string = []string{"spec", "version"}
 var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
 var ControlPlaneJoinPatches []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "patches"}
+var ControlPlaneJoinSkipPhases []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "skipPhases"}
 var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "spec", "infrastructureRef"}
 var MachineDeploymentVersion []string = []string{"spec", "template", "spec", "version"}
 
@@ -29,6 +30,7 @@ var ControlPlaneAPI = "controlplane.cluster.x-k8s.io/v1beta1"
 var KubeadmControlPlane = "KubeadmControlPlane"
 
 var PatchesDirectory = "directory"
+var PhasePreflight = "preflight"
 
 type GraphNode struct {
 	Object *unstructured.Unstructured
