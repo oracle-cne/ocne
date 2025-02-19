@@ -12,16 +12,6 @@ chroot /hostroot /bin/bash <<"EOF"
   ostree admin deploy ock:ock
   systemctl stop ocne-update.service
 
-  {{ range $dir := .Directories }}
-  mkdir -p '{{ $dir }}'
-  {{end}}
-  {{ range $name, $tgt := .Symlinks}}
-  ln -s '{{ $tgt }}' '{{ $name }}'
-  {{end}}
-  {{ range $path, $contents := .Files }}
-  echo '{{ $contents }}' > '{{ $path }}'
-  {{end}}
-
   rpm-ostree kargs --delete-if-present=ignition.firstboot=1
   KUBECONFIG=/etc/kubernetes/kubelet.conf kubectl annotate node ${NODE_NAME} ocne.oracle.com/update-available-
   (sleep 3 && shutdown -r now)&

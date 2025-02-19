@@ -135,7 +135,8 @@ type JoinConfig struct {
 	ControlPlane     ControlPlane     `yaml:"controlPlane,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	Discovery        Discovery        `yaml:"discovery,omitempty"`
-	Patches          *Patches          `yaml:"patches,omitempty"`
+	Patches          *Patches         `yaml:"patches,omitempty"`
+	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
 }
 
 type ControlPlane struct {
@@ -230,6 +231,9 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 				Token:             cj.JoinToken,
 				CACertHashes:      cj.KubePKICertHashes,
 			},
+		},
+		SkipPhases: []string{
+			"preflight",
 		},
 		Patches: &Patches{
 			Directory: update.OckPatchDirectory,

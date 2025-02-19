@@ -47,7 +47,7 @@ const (
 	OciCcmChart         = "oci-ccm"
 	OciCcmNamespace     = "kube-system"
 	OciCcmRelease       = "oci-ccm"
-	OciCcmVersion       = "1.28.0"
+	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
 
@@ -658,7 +658,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, found, err := oci.GetImage(constants.OciImageName, cad.ClusterConfig.KubeVersion, arch, compartmentId)
+	_, found, err := oci.GetImage(constants.OciImageName, version, arch, compartmentId)
 	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
@@ -681,7 +681,9 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// No image exists.  Make one.  Save the existing KC value and substitute
 	// the ephemeral one.  Set it back when done.
 	oldKcfg := cad.Config.KubeConfig
+	oldKver := cad.ClusterConfig.KubeVersion
 	cad.Config.KubeConfig = cad.BootstrapKubeConfig
+	cad.ClusterConfig.KubeVersion = version
 	if cad.ClusterConfig.OsTag == "" {
 		cad.ClusterConfig.OsTag = version
 	}
@@ -690,6 +692,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 		Architecture: arch,
 	})
 	cad.Config.KubeConfig = oldKcfg
+	cad.ClusterConfig.KubeVersion = oldKver
 	if err != nil {
 		return "", "", err
 	}
@@ -701,7 +704,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 		CompartmentName:   compartmentId,
 		ImagePath:         imageName,
 		ImageName:         constants.OciImageName,
-		KubernetesVersion: cad.ClusterConfig.KubeVersion,
+		KubernetesVersion: version,
 		ImageArchitecture: arch,
 	})
 	if err != nil {
