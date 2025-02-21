@@ -5,6 +5,7 @@ package update
 
 import (
 	"fmt"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
@@ -32,6 +33,9 @@ func getDaemonSetTag(client kubernetes.Interface, dsNamespace string, dsName str
 
 	dsDep, err := k8s.GetDaemonSet(client, dsNamespace, dsName)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return "", nil
+		}
 		return "", err
 	}
 
@@ -58,6 +62,9 @@ func getDeploymentTag(client kubernetes.Interface, depNamespace string, depName 
 	ret := ""
 	dep, err := k8s.GetDeployment(client, depNamespace, depName)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return "", nil
+		}
 		return "", err
 	}
 
@@ -88,27 +95,11 @@ func tagCommand(imgName string, registry string) string {
 	return fmt.Sprintf("chroot /hostroot podman tag %s %s:%s", imgName, registry, constants.CurrentTag)
 }
 
-func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string) error {
+func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, kubeProxyTag string, corednsTag string, flannelTag string, uiTag string) error {
 	namespace := constants.OCNESystemNamespace
 
 	log.Debugf("Finding images to tag on %s", node.ObjectMeta.Name)
 
-	kubeProxyTag, err := getKubeProxyTag(client)
-	if err != nil {
-		return err
-	}
-	corednsTag, err := getCoreDNSTag(client)
-	if err != nil {
-		return err
-	}
-	flannelTag, err := getDaemonSetTag(client, constants.CNIFlannelNamespace, constants.CNIFlannelDaemonSet, constants.CNIFlannelImage)
-	if err != nil {
-		return err
-	}
-	uiTag, err := getDeploymentTag(client, constants.UINamespace, constants.UIDeployment, constants.UIImage)
-	if err != nil {
-		return err
-	}
 
 	kubeProxyImg, kubeProxyCurrent, _ := k8s.GetImageCandidate(constants.KubeProxyImage, constants.CurrentTag, kubeProxyTag, node)
 	corednsImg, corednsCurrent, _ := k8s.GetImageCandidate(constants.CoreDNSImage, constants.CurrentTag, corednsTag, node)
@@ -127,19 +118,19 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 
 	// Build the script to run on the node
 	tagScript := "#! /bin/bash"
-	if !kubeProxyCurrent {
+	if !kubeProxyCurrent && kubeProxyTag != "" && kubeProxyImg != "" {
 		log.Debugf("Tagging %s", kubeProxyImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(kubeProxyImg, constants.KubeProxyImage))
 	}
-	if !corednsCurrent {
+	if !corednsCurrent && corednsTag != "" && corednsImg != "" {
 		log.Debugf("Tagging %s", corednsImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(corednsImg, constants.CoreDNSImage))
 	}
-	if !flannelCurrent {
+	if !flannelCurrent && flannelTag != "" && flannelImg != "" {
 		log.Debugf("Tagging %s", flannelImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(flannelImg, constants.CNIFlannelImage))
 	}
-	if !uiCurrent {
+	if !uiCurrent && uiTag != "" && uiImg != "" {
 		log.Debugf("Tagging %s", uiImg)
 		tagScript = fmt.Sprintf("%s\n%s", tagScript, tagCommand(uiImg, constants.UIImage))
 	}
@@ -174,6 +165,16 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 	// If kube-proxy is already installed as an application, don't try
 	// to install it again.
 	proxyRelease, err := getRelease(constants.KubeProxyRelease, constants.KubeProxyNamespace, kubeConfigPath)
+
+	// If kube-proxy is not installed at all, don't force it
+	_, err = k8s.GetDaemonSet(client, constants.KubeProxyNamespace, constants.KubeProxyDaemonSet)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil
+		}
+
+		return err
+	}
 
 
 	// If the release was found, just update the tag.  That way the complex
@@ -261,9 +262,20 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 	}, kubeConfigPath, false)
 }
 
-func updateCoreDNS(kubeConfigPath string) error {
+func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
+	// If CoreDNS is already installed, don't do it again
 	corednsRelease, err := getRelease(constants.CoreDNSRelease, constants.CoreDNSNamespace, kubeConfigPath)
 	if err != nil {
+		return err
+	}
+
+	// If CoreDNS is not installed at all, don't for it
+	_, err = k8s.GetDeployment(client, constants.CoreDNSNamespace, constants.CoreDNSDeployment)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil
+		}
+
 		return err
 	}
 
@@ -419,12 +431,30 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 		return nil
 	}
 
+	// Get tags for any images that may need to be updated.
+	kubeProxyTag, err := getKubeProxyTag(client)
+	if err != nil {
+		return err
+	}
+	corednsTag, err := getCoreDNSTag(client)
+	if err != nil {
+		return err
+	}
+	flannelTag, err := getDaemonSetTag(client, constants.CNIFlannelNamespace, constants.CNIFlannelDaemonSet, constants.CNIFlannelImage)
+	if err != nil {
+		return err
+	}
+	uiTag, err := getDeploymentTag(client, constants.UINamespace, constants.UIDeployment, constants.UIImage)
+	if err != nil {
+		return err
+	}
+
 	// Check for presence of "current" tags for kube-proxy
 	// and coredns.  Nodes that don't have them, need them.
 	haveError := false
 	haveSuccess := false
 	for _, node := range nodes.Items {
-		err := tagOnNode(&node, restConfig, client, kubeConfigPath)
+		err := tagOnNode(&node, restConfig, client, kubeConfigPath, kubeProxyTag, corednsTag, flannelTag, uiTag)
 		if err != nil {
 			haveError = true
 			log.Errorf("Could not set image tags on %s: %v", node.ObjectMeta.Name, err)
@@ -439,12 +469,12 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 
 	// Once at least some nodes have the current tags, update the
 	// kube-proxy daemonset and coredns deployment to use them.
-	err := updateKubeProxy(client, kubeConfigPath)
+	err = updateKubeProxy(client, kubeConfigPath)
 	if err != nil {
 		return err
 	}
 
-	err = updateCoreDNS(kubeConfigPath)
+	err = updateCoreDNS(client, kubeConfigPath)
 	if err != nil {
 		return nil
 	}
