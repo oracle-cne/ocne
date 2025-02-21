@@ -46,7 +46,10 @@ func getTagForApplication(img string, bestTag string, legacyTag string, node *v1
 	tag := ""
 	log.Debugf("Checking %s on %s", img, node.Name)
 	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag,  legacyTag, node)
-	if haveBest {
+	if bestImg == "" {
+		log.Infof("Control plane node %s does not have image %s.  Using tag %s", node.Name, img, legacyTag)
+		tag = legacyTag
+	} else if haveBest {
 		tag = bestTag
 	} else if haveLegacy {
 		tag = legacyTag

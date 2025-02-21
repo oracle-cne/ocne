@@ -257,6 +257,8 @@ func processImage(registry string, best string, secondBest string, img *v1.Conta
 // - If the second best match is found, the first return value is set to that
 //   image:tag and the third value is true
 // - If neither are found, an arbitrary image:tag is returned
+// - If the image does not exist on the node, the first value is the empty string
+//   and the other two are false.
 func GetImageCandidate(registry string, best string, secondBest string, node *v1.Node) (string, bool, bool) {
 	imgs := node.Status.Images
 	log.Debugf("%s has these images: %+v", node.Name, imgs)
