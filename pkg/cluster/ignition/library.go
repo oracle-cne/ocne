@@ -590,30 +590,14 @@ func KubeadmPatches() (*igntypes.Config, error) {
 			Source: update.Files[update.KubeadmUpgradePath],
 		},
 	}
-	imageCleanupFile := &File{
-		Path: update.ImageCleanupPostPath,
-		Mode: 0555,
-		Contents: FileContents{
-			Source: update.Files[update.ImageCleanupPostPath],
-		},
-	}
 	patchDir := &igntypes.Directory{
 		Node: igntypes.Node{
 			Path: update.OckPatchDirectory,
 		},
 	}
 
-	cnts := update.ImageCleanupPostService
-	imageCleanupUnit := &igntypes.Unit{
-		Name: update.ImageCleanupPostServiceName,
-		Enabled: util.BoolPtr(true),
-		Contents: &cnts,
-	}
-
 	AddFile(ret, kubeadmUpgradeFile)
-	AddFile(ret, imageCleanupFile)
 	AddDir(ret, patchDir)
-	ret = AddUnit(ret, imageCleanupUnit)
 
 	return ret, nil
 }

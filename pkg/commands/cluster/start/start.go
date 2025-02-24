@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -18,6 +19,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/unix"
@@ -26,6 +28,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -35,6 +38,58 @@ const (
 	createTokenFormatText       = "Run the following command to create an authentication token to access the UI:\n    %s"
 	createTokenStanzaFormatText = "%skubectl create token ui -n %s"
 )
+
+// getTagForApplication returns the "best" tag for an application.  In general,
+// the best tag is "current".  Older installs might not have this tag, so
+// revert to whatever is available.
+func getTagForApplication(img string, bestTag string, legacyTag string, node *v1.Node) (string, error) {
+	tag := ""
+	log.Debugf("Checking %s on %s", img, node.Name)
+	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag,  legacyTag, node)
+	if bestImg == "" {
+		log.Infof("Control plane node %s does not have image %s.  Using tag %s", node.Name, img, legacyTag)
+		tag = legacyTag
+	} else if haveBest {
+		tag = bestTag
+	} else if haveLegacy {
+		tag = legacyTag
+	} else {
+		imgInfo, err := image.SplitImage(bestImg)
+		if err != nil {
+			// In practice this is not possible,
+			// since the image was sourced from
+			// Kubernetes and has already been
+			// vetted.  Still, stranger things
+			// have happened.
+			return "", err
+		}
+		tag = imgInfo.Tag
+		log.Warnf("Control plane node %s has an unexpected tag for %s.  Using tag %s", node.Name, img, tag)
+	}
+	return tag, nil
+}
+
+// getImageTag gets an image from a node.  It will always return a tagged image.
+func getImageTag(img string, node *v1.Node) (string, error) {
+	for _, cis := range node.Status.Images {
+		for _, name := range cis.Names {
+			log.Debugf("Checking %s against %s on %s", name, img, node.Name)
+			if !strings.HasPrefix(name, img) {
+				continue
+			}
+
+			imgInfo, err := image.SplitImage(name)
+			if err != nil {
+				return "", err
+			}
+
+			if imgInfo.Tag != "" {
+				return imgInfo.Tag, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("did not have the %s image on node %s", img, node.Name)
+}
 
 // Start starts a cluster based on the given configuration and returns the
 // canonical kubeconfig
@@ -100,12 +155,53 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		return localKubeConfig, err
 	}
 
+	// There may be cases where an old version of OCK
+	// is being used.  In that case, Flannel might not
+	// have the floating "current" tag.  If so, just
+	// use whatever is available, preferring what
+	// was installed in 2.0.x.  Pick something from
+	// a control plane node since there will always
+	// be one.
+	cpNodes, err := k8s.WaitForControlPlaneNodes(kubeClient)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	// There has to be one control plane node to answer the query
+	// so this list will always have at least one element.
+	cpNode := &cpNodes.Items[0]
+
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
 	//
 	// kube-proxy is forcibly installed to account for old cluster
 	// descriptions that use kubeadm to deploy kube-proxy.  Same
-	// with coredns.
+	// with coredns.  Old versions of OCK may not have the new
+	// standard "current" tags.  It is necessary to install with
+	// old configurations and then update them later.  For CoreDNS,
+	// the version that was installed is known.  For kube-proxy, it
+	// can vary by Kubernetes version.  Derive the legacy kube-proxy
+	// image tag from another core Kubernets container image.
+
+	verInfo, err := versions.GetKubernetesVersions(clusterConfig.KubeVersion)
+	if err != nil {
+		return localKubeConfig, err
+	}
+	coreDnsExpectedTag := verInfo.CoreDNS
+
+	coreDnsTag, err := getTagForApplication(constants.CoreDNSImage, constants.CoreDNSTag, coreDnsExpectedTag, cpNode)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	kubeProxyLegacyTag, err := getImageTag(constants.KubeAPIServerImage, cpNode)
+	if err != nil {
+		return localKubeConfig, err
+	}
+	kubeProxyTag, err := getTagForApplication(constants.KubeProxyImage, constants.KubeProxyTag, kubeProxyLegacyTag, cpNode)
+	if err != nil {
+		return localKubeConfig, err
+	}
 	applications := []install.ApplicationDescription{
 		install.ApplicationDescription{
 			Force: true,
@@ -115,6 +211,11 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Release:   constants.CoreDNSRelease,
 				Version:   constants.CoreDNSVersion,
 				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"image": map[string]interface{}{
+						"tag": coreDnsTag,
+					},
+				},
 			},
 		},
 		install.ApplicationDescription{
@@ -126,6 +227,9 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Version:   constants.KubeProxyVersion,
 				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
+					"image": map[string]interface{}{
+						"tag": kubeProxyTag,
+					},
 					"apiServer": map[string]interface{}{
 						"host": drv.GetKubeAPIServerAddress(),
 						"port": clusterConfig.KubeAPIServerBindPort,
@@ -143,6 +247,17 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		switch clusterConfig.CNI {
 		case "", constants.CNIFlannel:
 			log.Debugf("Flannel will be installed as the CNI")
+
+
+			// If there are no control plane nodes, then it the
+			// query for them will fail because nobody can answer.
+			// In practice, it's not possible to have a zero length
+			// node list.
+			tag, err := getTagForApplication(constants.CNIFlannelImage, constants.CNIFlannelImageTag, constants.CNIFlannelLegacyTag, cpNode)
+			if err != nil {
+				return localKubeConfig, err
+			}
+
 			args := []string{
 				"--ip-masq",
 				"--kube-subnet-mgr",
@@ -163,7 +278,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 						"flannel": map[string]interface{}{
 							"args": args,
 							"image": map[string]interface{}{
-								"tag": constants.CNIFlannelImageTag,
+								"tag": tag,
 							},
 						},
 					},
@@ -179,6 +294,15 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	if !clusterConfig.Headless {
 		log.Debugf("Installing UI")
+
+		// If there are no control plane nodes, then it the
+		// query for them will fail because nobody can answer.
+		// In practice, it's not possible to have a zero length
+		// node list.
+		tag, err := getTagForApplication(constants.UIImage, constants.UIImageTag, constants.UILegacyTag, cpNode)
+		if err != nil {
+			return localKubeConfig, err
+		}
 
 		// Determine if the image registry needs to be overridden
 		helmOverride := map[string]interface{}{}
@@ -204,6 +328,22 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				},
 			}
 		}
+
+		// Add the tag.  There might be overrides set by the
+		// previous block, so make sure to precision insert
+		// the tag.
+		var imgOvr map[string]interface{}
+		imgOvrIface, ok := helmOverride["image"]
+		if !ok {
+			imgOvr = map[string]interface{}{}
+			helmOverride["image"] = imgOvr
+		} else {
+			imgOvr, ok = imgOvrIface.(map[string]interface{})
+			if !ok {
+				return localKubeConfig, fmt.Errorf("internal error: Helm overrides for the UI are corrupt")
+			}
+		}
+		imgOvr["tag"] = tag
 
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {

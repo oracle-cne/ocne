@@ -41,14 +41,19 @@ const (
 	// certificate and key used to sign the UI certificate
 	CASecretNameTLS = "certificate-authority-tls"
 
+	KubeAPIServerImage = "container-registry.oracle.com/olcne/kube-apiserver"
+
 	CNIFlannel = "flannel"
 	CNINone    = "none"
 
 	CNIFlannelRelease   = "flannel"
 	CNIFlannelNamespace = "kube-flannel"
 	CNIFlannelChart     = "flannel"
-	CNIFlannelVersion   = "0.22.3"
-	CNIFlannelImageTag  = "v0.22.3-2"
+	CNIFlannelVersion   = "2.0.0"
+	CNIFlannelImageTag  = "current"
+	CNIFlannelLegacyTag = "v0.22.3-2"
+	CNIFlannelDaemonSet = "kube-flannel-ds"
+	CNIFlannelImage     = "container-registry.oracle.com/olcne/flannel"
 
 	KubeProxyRelease   = "kube-proxy"
 	KubeProxyNamespace = "kube-system"
@@ -59,6 +64,7 @@ const (
 	KubeProxyConfigMapConfig = "config.conf"
 	KubeProxyConfigMapKubeconfig = "kubeconfig.conf"
 	KubeProxyImage     = "container-registry.oracle.com/olcne/kube-proxy"
+	KubeProxyTag       = "current"
 	CurrentTag         = "current"
 
 	CatalogRelease   = "ocne-catalog"
@@ -75,14 +81,18 @@ const (
 	UINamespace      = "ocne-system"
 	UIChart          = "ui"
 	UIVersion        = ""
+	UIImageTag       = "current"
+	UIDeployment     = "ui"
+	UIImage          = "container-registry.oracle.com/olcne/ui"
 	UIInitContainer  = "ui-plugins"
 	UIPluginsVersion = "v2.0.0"
-
+	UILegacyTag      = "v0.23.2"
 
 	CoreDNSRelease    = "core-dns"
 	CoreDNSNamespace  = "kube-system"
 	CoreDNSChart      = "coredns"
 	CoreDNSVersion    = "2.0.0"
+	CoreDNSTag        = "current"
 	CoreDNSDeployment = "coredns"
 	CoreDNSImage      = "container-registry.oracle.com/olcne/coredns"
 
