@@ -411,7 +411,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 
 	for _, img := range ociImages {
 		if img.WorkRequestId != "" {
-			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch, cad.ClusterConfig.Providers.Oci.Profile)
+			err = upload.EnsureImageDetails(*img.Image.CompartmentId, cad.ClusterConfig.Providers.Oci.Profile, img.NewId, img.Arch)
 
 			if err != nil {
 				return "", "", false, err

@@ -696,13 +696,13 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		return err
 	}
 	if controlPlaneImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, controlPlaneImageId, controlPlaneArch, cad.ClusterConfig.Providers.Oci.Profile)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, controlPlaneImageId, controlPlaneArch)
 		if err != nil {
 			return err
 		}
 	}
 	if workerImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, workerImageId, workerArch, cad.ClusterConfig.Providers.Oci.Profile)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, workerImageId, workerArch)
 		if err != nil {
 			return err
 		}

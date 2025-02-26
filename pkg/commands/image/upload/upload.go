@@ -84,7 +84,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 // EnsureImageDetails sets important configuration options for the custom image.
 // In particular, it sets the image schema to allow EFI and sets the image shapes
 // to match the architecture.
-func EnsureImageDetails(compartmentId string, imageId string, arch string, profile string) error {
+func EnsureImageDetails(compartmentId string, profile string, imageId string, arch string) error {
 	// Set schema.  compartmentId is set by UploadAsync
 	if err := oci.CreateEFIImageSchema(compartmentId, imageId, profile); err != nil {
 		return err
@@ -120,7 +120,7 @@ func UploadOci(options UploadOptions) error {
 	}
 
 	// Set schema.  compartmentId is set by UploadAsync
-	if err = EnsureImageDetails(options.compartmentId, imageId, options.ImageArchitecture, options.Profile); err != nil {
+	if err = EnsureImageDetails(options.compartmentId, options.Profile, imageId, options.ImageArchitecture); err != nil {
 		return err
 	}
 

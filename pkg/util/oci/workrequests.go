@@ -46,7 +46,7 @@ func GetWorkRequestStatus(workRequestId string, profile string) (workrequests.Wo
 // WaitForWorkRequest waits for a work request to complete, while pretty
 // printing the progress.  If the work request fails, then an error
 // is returned.
-func WaitForWorkRequest(workRequestId string, prefix string, profile string) error {
+func WaitForWorkRequest(workRequestId string, profile string, prefix string) error {
 	return WaitForWorkRequests(map[string]string{workRequestId: prefix}, profile)
 }
 
