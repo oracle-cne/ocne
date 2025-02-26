@@ -81,7 +81,8 @@ SUBCOMMANDS
     custom compute images.  Only applies to "oci" images.
 
 `-p`, `--profile` *profile*
-    The name of the OCI configuration profile to use when configuring OCI API clients.
+    The name of the OCI configuration profile to use when configuring OCI API
+    clients.  The default value is "DEFAULT".
 
 `-i`, `--image-name` *name*
     The name of the OCI custom compute image that is imported during upload.
