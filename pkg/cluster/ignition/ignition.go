@@ -198,7 +198,10 @@ func FromBytes(in []byte) (*igntypes.Config, error) {
 		in = inIgn
 	}
 
-	ret, _, err := ign34.ParseCompatibleVersion(in)
+	ret, report, err := ign34.ParseCompatibleVersion(in)
+	if len(report.String()) > 0 {
+		return nil, fmt.Errorf("could not parse extra ignition: %s", report.String())
+	}
 	if err != nil {
 		return nil, err
 	}
