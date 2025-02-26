@@ -27,7 +27,7 @@ func setCompartmentId(options *UploadOptions) error {
 		return nil
 	}
 
-	compartmentId, err := oci.GetCompartmentId(options.CompartmentName)
+	compartmentId, err := oci.GetCompartmentId(options.CompartmentName, options.Profile)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 			Message: "Uploading image to object storage",
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.BucketName, options.filename, uo.size, uo.file, nil)
+				return oci.UploadObject(uo.BucketName, options.filename, uo.Profile, uo.size, uo.file, nil)
 			},
 		},
 	})
@@ -78,19 +78,19 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", fmt.Errorf("Failed to upload image to object storage")
 	}
 
-	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.BucketName, options.filename)
+	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.BucketName, options.filename, options.Profile)
 }
 
 // EnsureImageDetails sets important configuration options for the custom image.
 // In particular, it sets the image schema to allow EFI and sets the image shapes
 // to match the architecture.
-func EnsureImageDetails(compartmentId string, imageId string, arch string) error {
+func EnsureImageDetails(compartmentId string, imageId string, arch string, profile string) error {
 	// Set schema.  compartmentId is set by UploadAsync
-	if err := oci.CreateEFIImageSchema(compartmentId, imageId); err != nil {
+	if err := oci.CreateEFIImageSchema(compartmentId, imageId, profile); err != nil {
 		return err
 	}
 
-	if err := oci.EnsureCompatibleImageShapes(imageId, arch); err != nil {
+	if err := oci.EnsureCompatibleImageShapes(imageId, arch, profile); err != nil {
 		return err
 	}
 	return nil
@@ -115,12 +115,12 @@ func UploadOci(options UploadOptions) error {
 	}
 
 	// Wait for the operation to complete
-	if err = oci.WaitForWorkRequest(workRequestId, "Importing compute image"); err != nil {
+	if err = oci.WaitForWorkRequest(workRequestId, options.Profile, "Importing compute image"); err != nil {
 		return err
 	}
 
 	// Set schema.  compartmentId is set by UploadAsync
-	if err = EnsureImageDetails(options.compartmentId, imageId, options.ImageArchitecture); err != nil {
+	if err = EnsureImageDetails(options.compartmentId, imageId, options.ImageArchitecture, options.Profile); err != nil {
 		return err
 	}
 

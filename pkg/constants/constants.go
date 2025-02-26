@@ -62,6 +62,9 @@ const (
 	OCIArchitectureTag      = "ocne/architecture"
 	OCIKubernetesVersionTag = "ocne/kubernetes"
 
+	// OCI Configuration Options
+	OciDefaultProfile   = "DEFAULT"
+
 	// OCNE annotations
 	OCNEAnnoUpdateAvailable = "ocne.oracle.com/update-available"
 
@@ -73,6 +76,7 @@ const (
 	ProviderTypeOCI     = "oci"
 	ProviderTypeOlvm    = "olvm"
 	ProviderTypeNone    = "none"
+
 )
 
 var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160, OciVmStandardA2Flex}

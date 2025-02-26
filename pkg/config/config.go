@@ -67,6 +67,7 @@ func GetDefaultConfig() (*types.Config, error) {
 			},
 			Oci: types.OciProvider{
 				Namespace:   "ocne",
+				Profile:     constants.OciDefaultProfile,
 				ImageBucket: constants.OciBucket,
 				ControlPlaneShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardA1Flex,

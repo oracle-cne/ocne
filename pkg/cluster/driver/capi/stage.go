@@ -44,7 +44,7 @@ var MachineTemplateShape []string = []string{"spec", "template", "spec", "shape"
 
 // imageFromMachineTemplate gets an OCI Image object from an OCIMachineTemplate
 // by gathering the Image ID from the template and then looking up the image.
-func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error) {
+func imageFromMachineTemplate(mt *unstructured.Unstructured, profile string) (*core.Image, error) {
 	imageId, found, err := unstructured.NestedString(mt.Object, MachineTemplateImageId...)
 	if !found {
 		err = fmt.Errorf("MachineTemplate %s in %s has no imageId", mt.GetName(), mt.GetNamespace())
@@ -54,7 +54,7 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured) (*core.Image, error
 	}
 	log.Debugf("MachineTemplate %s in %s has imageId %s", mt.GetName(), mt.GetNamespace(), imageId)
 
-	img, err := oci.GetImageById(imageId)
+	img, err := oci.GetImageById(imageId, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 
 // doUpdate calculates if there is reason to upload a new OCI custom image
 // for a given existing image.
-func doUpdate(img *core.Image, arch string, version string, bvImage string) (bool, error) {
+func doUpdate(img *core.Image, arch string, version string, bvImage string, profile string) (bool, error) {
 	// Update the image if:
 	// - An environment variable forces the update (typically for testing)
 	// - The minor version is changing and an image for that version
@@ -180,7 +180,7 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 	imgName := *img.DisplayName
 	compartmentId := *img.CompartmentId
 
-	existingImg, found, err := oci.GetImage(imgName, version, arch, compartmentId)
+	existingImg, found, err := oci.GetImage(imgName, version, arch, compartmentId, profile)
 	if err != nil {
 		return false, err
 	}
@@ -242,13 +242,13 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string) (boo
 // graphToImages scrapes the graph of CAPI resources and extracts the
 // OCI images from the OCIMachineTemplates.  The return value maps the OCID
 // of those images to a collection of data about them.
-func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
+func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
 	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
 		mt := mtNode.Object
 		retVal := arg.(map[string]*OciImageData)
-		img, err := imageFromMachineTemplate(mt)
+		img, err := imageFromMachineTemplate(mt, profile)
 		if err != nil {
 			return err
 		}
@@ -282,10 +282,10 @@ func graphToImages(graph *capi.ClusterGraph) (map[string]*OciImageData, error) {
 }
 
 // findUpdates checks to see if an update is available for a set of images.
-func findUpdates(imgs map[string]*OciImageData, version string, bvImage string) error {
+func findUpdates(imgs map[string]*OciImageData, version string, bvImage string, profile string) error {
 	for _, img := range imgs {
 		var err error
-		img.HasUpdate, err = doUpdate(img.Image, img.Arch, version, bvImage)
+		img.HasUpdate, err = doUpdate(img.Image, img.Arch, version, bvImage, profile)
 		if err != nil {
 			return err
 		}
@@ -351,12 +351,12 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	// Check the existing images for the machine templates and see if there
 	// are updates available.  If so, upload the new images and generate
 	// new machine templates that consume them.
-	ociImages, err := graphToImages(graph)
+	ociImages, err := graphToImages(graph, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return "", "", false, err
 	}
 
-	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage)
+	err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -369,7 +369,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 			log.Debugf("Updating image OCID due to Kubernetes minor version change")
 			// If the minor version has changed, go get the latest
 			// image for the new minor version.
-			existingImg, found, err := oci.GetImage(*img.Image.DisplayName, version, img.Arch, *img.Image.CompartmentId)
+			existingImg, found, err := oci.GetImage(*img.Image.DisplayName, version, img.Arch, *img.Image.CompartmentId, cad.ClusterConfig.Providers.Oci.Profile)
 			if !found {
 				// In theory this is impossible because the
 				// check to see if a new image must be uploaded
@@ -404,14 +404,14 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		imageImports[img.WorkRequestId] = fmt.Sprintf("Importing updated image for %s", *img.Image.DisplayName)
 	}
 
-	err = oci.WaitForWorkRequests(imageImports)
+	err = oci.WaitForWorkRequests(imageImports, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return "", "", false, err
 	}
 
 	for _, img := range ociImages {
 		if img.WorkRequestId != "" {
-			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch)
+			err = upload.EnsureImageDetails(*img.Image.CompartmentId, img.NewId, img.Arch, cad.ClusterConfig.Providers.Oci.Profile)
 
 			if err != nil {
 				return "", "", false, err

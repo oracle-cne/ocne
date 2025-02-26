@@ -17,6 +17,7 @@ import (
 
 type workRequestWait struct {
 	workRequestId   string
+	profile         string
 	percentComplete float32
 	status          workrequests.WorkRequestStatusEnum
 	prefix          string
@@ -25,9 +26,9 @@ type workRequestWait struct {
 
 // GetWorkRequestStatus gives a summary of a work request.  Specifically, it
 // returns the current status and completion percentage.
-func GetWorkRequestStatus(workRequestId string) (workrequests.WorkRequestStatusEnum, float32, error) {
+func GetWorkRequestStatus(workRequestId string, profile string) (workrequests.WorkRequestStatusEnum, float32, error) {
 	ctx := context.Background()
-	wrc, err := workrequests.NewWorkRequestClientWithConfigurationProvider(common.DefaultConfigProvider())
+	wrc, err := workrequests.NewWorkRequestClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return "", 0, err
 	}
@@ -45,14 +46,14 @@ func GetWorkRequestStatus(workRequestId string) (workrequests.WorkRequestStatusE
 // WaitForWorkRequest waits for a work request to complete, while pretty
 // printing the progress.  If the work request fails, then an error
 // is returned.
-func WaitForWorkRequest(workRequestId string, prefix string) error {
-	return WaitForWorkRequests(map[string]string{workRequestId: prefix})
+func WaitForWorkRequest(workRequestId string, prefix string, profile string) error {
+	return WaitForWorkRequests(map[string]string{workRequestId: prefix}, profile)
 }
 
 func waitForWorkRequest(wIface interface{}) error {
 	for {
 		w, _ := wIface.(*workRequestWait)
-		status, complete, err := GetWorkRequestStatus(w.workRequestId)
+		status, complete, err := GetWorkRequestStatus(w.workRequestId, w.profile)
 		if err != nil {
 			return err
 		}
@@ -83,12 +84,13 @@ func workRequestProgress(wIface interface{}) string {
 // WaitForWorkRequestswaits for a set of work requests, to complete,
 // while pretty printing the progress.  If any work requests fail, an
 // error is returned.
-func WaitForWorkRequests(requests map[string]string) error {
+func WaitForWorkRequests(requests map[string]string, profile string) error {
 	var waits []*logutils.Waiter
 	for id, msg := range requests {
 		w := workRequestWait{
 			workRequestId: id,
 			prefix:        msg,
+			profile:       profile,
 		}
 		waits = append(waits, &logutils.Waiter{
 			Args:            &w,

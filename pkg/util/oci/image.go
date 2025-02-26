@@ -19,19 +19,19 @@ import (
 // start the process of importing the image from the given object storage
 // description.  A work request OCID is returned to as well to allow the
 // caller to monitor pogress.
-func EnsureImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string) (string, string, error) {
-	img, found, err := GetImage(imageName, k8sVersion, arch, compartmentId)
+func EnsureImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string, profile string) (string, string, error) {
+	img, found, err := GetImage(imageName, k8sVersion, arch, compartmentId, profile)
 	if found {
 		return *img.Id, "", nil
 	} else if err != nil {
 		return "", "", err
 	}
-	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName)
+	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName, profile)
 }
 
-func GetImageById(ocid string) (*core.Image, error) {
+func GetImageById(ocid string, profile string) (*core.Image, error) {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return nil, err
 	}
@@ -47,9 +47,9 @@ func GetImageById(ocid string) (*core.Image, error) {
 }
 
 // GetImage fetches the OCID of the latest image by name, Kubernetes version, and architecture.
-func GetImage(imageName string, k8sVersion string, arch string, compartmentId string) (*core.Image, bool, error) {
+func GetImage(imageName string, k8sVersion string, arch string, compartmentId string, profile string) (*core.Image, bool, error) {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return nil, false, err
 	}
@@ -99,14 +99,14 @@ func GetImage(imageName string, k8sVersion string, arch string, compartmentId st
 
 // ImportImage creates a custom compute image from the contents of an
 // object storage bucket.
-func ImportImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string) (string, string, error) {
+func ImportImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string, profile string) (string, string, error) {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return "", "", err
 	}
 
-	namespace, err := GetNamespace()
+	namespace, err := GetNamespace(profile)
 	if err != nil {
 		return "", "", err
 	}
@@ -139,9 +139,9 @@ func ImportImage(imageName string, k8sVersion string, arch string, compartmentId
 	return *resp.Image.Id, *resp.OpcWorkRequestId, nil
 }
 
-func CreateEFIImageSchema(compartmentId string, imageId string) error {
+func CreateEFIImageSchema(compartmentId string, imageId string, profile string) error {
 	ctx := context.Background()
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return err
 	}
@@ -183,13 +183,13 @@ func CreateEFIImageSchema(compartmentId string, imageId string) error {
 
 // EnsureCompatibleImageShapes ensures that the image has the correct list of compatible image shapes,
 // based on the image architecture.
-func EnsureCompatibleImageShapes(imageId string, arch string) error {
+func EnsureCompatibleImageShapes(imageId string, arch string, profile string) error {
 	// amd-based images already have the correct shapes, so we only have work to do if this is arm
 	if arch != "arm64" {
 		return nil
 	}
 
-	c, err := core.NewComputeClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return err
 	}
