@@ -68,7 +68,7 @@ type ClusterApiDriver struct {
 }
 
 func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription, error) {
-	ociConfig, err := oci.GetConfig()
+	ociConfig, err := oci.GetConfig(cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +150,12 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 }
 
 func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
-	ociConfig, err := oci.GetConfig()
+	ociConfig, err := oci.GetConfig(cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -584,14 +584,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 }
 
 func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, found, err := oci.GetImage(constants.OciImageName, version, arch, compartmentId)
+	_, found, err := oci.GetImage(constants.OciImageName, version, arch, compartmentId, cad.ClusterConfig.Providers.Oci.Profile)
 	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
@@ -633,6 +633,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
 		ProviderType:      upload.ProviderTypeOCI,
+		Profile:           cad.ClusterConfig.Providers.Oci.Profile,
 		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
 		CompartmentName:   compartmentId,
 		ImagePath:         imageName,
@@ -651,7 +652,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	controlPlaneArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
 	workerArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
@@ -691,18 +692,18 @@ func (cad *ClusterApiDriver) ensureImages() error {
 			imageImports[workerWorkRequest] = "Importing worker image"
 		}
 	}
-	err = oci.WaitForWorkRequests(imageImports)
+	err = oci.WaitForWorkRequests(imageImports, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
 	if controlPlaneImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, controlPlaneImageId, controlPlaneArch)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, controlPlaneImageId, controlPlaneArch)
 		if err != nil {
 			return err
 		}
 	}
 	if workerImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, workerImageId, workerArch)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, workerImageId, workerArch)
 		if err != nil {
 			return err
 		}
