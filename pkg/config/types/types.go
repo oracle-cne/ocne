@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package types
@@ -32,6 +32,7 @@ type OciImageSet struct {
 type OciProvider struct {
 	KubeConfigPath    string           `yaml:"kubeconfig"`
 	Compartment       string           `yaml:"compartment"`
+	Profile           string           `yaml:"profile"`
 	Namespace         string           `yaml:"namespace"`
 	ControlPlaneShape OciInstanceShape `yaml:"controlPlaneShape"`
 	Images            OciImageSet      `yaml:"images"`
@@ -440,6 +441,7 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 	return OciProvider{
 		KubeConfigPath:    ies(def.KubeConfigPath, ovr.KubeConfigPath),
 		Compartment:       ies(def.Compartment, ovr.Compartment),
+		Profile:           ies(def.Profile, ovr.Profile),
 		Namespace:         ies(def.Namespace, ovr.Namespace),
 		Images:            MergeOciImageSet(&def.Images, &ovr.Images),
 		ImageBucket:       ies(def.ImageBucket, ovr.ImageBucket),

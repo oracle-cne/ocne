@@ -290,8 +290,9 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 	// If the compartment name is non-empty
 	// resolve it to an ID.
 	cid := clusterConfig.Providers.Oci.Compartment
+	profile := clusterConfig.Providers.Oci.Profile
 	if cid != "" {
-		newCid, err := oci.GetCompartmentId(cid)
+		newCid, err := oci.GetCompartmentId(cid, profile)
 		if err != nil {
 			return "", err
 		}
@@ -299,12 +300,12 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 		cid = newCid
 
 		// Try to resolve an Image ID.  Ignore errors.
-		img, _, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid)
+		img, _, err := oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "amd64", cid, profile)
 		if img != nil {
 			clusterConfig.Providers.Oci.Images.Amd64 = *img.Id
 		}
 
-		img, _, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid)
+		img, _, err = oci.GetImage(constants.OciImageName, clusterConfig.KubeVersion, "arm64", cid, profile)
 		if img != nil {
 			clusterConfig.Providers.Oci.Images.Arm64 = *img.Id
 		}

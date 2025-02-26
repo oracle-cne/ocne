@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
@@ -31,6 +31,9 @@ type UploadOptions struct {
 
 	// CompartmentName is the compartment where the image will get upload
 	CompartmentName string
+
+	// Profile is the OCI config profile
+	Profile string
 
 	// ImageName is the name of the custom image to create
 	ImageName string

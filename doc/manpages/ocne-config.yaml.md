@@ -205,6 +205,9 @@ providers:
     # be either the path to a compartment (e.g. mytenancy/mycompartment)
     # or the OCID of a compartment.
     compartment:
+    # The OCI configuration profile to use when opening
+    # OCI API connections.
+    profile: DEFAULT
     # The Kubernetes namespace where Cluster API resources
     # should be deploye.d
     namespace:
