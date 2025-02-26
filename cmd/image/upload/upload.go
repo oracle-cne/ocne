@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
@@ -61,6 +61,10 @@ const (
 	flagDestinationShort = "d"
 	flagDestinationHelp  = "The location to upload to"
 
+	flagProfile      = "profile"
+	flagProfileShort = "p"
+	flagProfileHelp  ="The name of the OCI configuration profile"
+
 	flagKubernetesVersionHelp = "The version of Kubernetes embedded in the image"
 )
 
@@ -89,6 +93,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uploadOptions.ImageArchitecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&uploadOptions.KubernetesVersion, constants.FlagVersionName, constants.FlagVersionShort, pkgconst.KubeVersion, flagKubernetesVersionHelp)
 	cmd.Flags().StringVarP(&uploadOptions.Destination, flagDestination, flagDestinationShort, "", flagDestinationHelp)
+	cmd.Flags().StringVarP(&uploadOptions.Profile, flagProfile, flagProfileShort, pkgconst.OciDefaultProfile, flagProfileHelp)
 
 	return cmd
 }

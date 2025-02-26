@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -16,7 +16,7 @@ import (
 // compartment1/compartment2/compartment3 and locates
 // the OCID of the indicated compartment by following
 // the path.
-func GetCompartmentId(compartmentName string) (string, error) {
+func GetCompartmentId(compartmentName string, profile string) (string, error) {
 	// If the name is already an OCID, just hand it back
 	if strings.HasPrefix(compartmentName, "ocid1.compartment") {
 		return compartmentName, nil
@@ -28,8 +28,7 @@ func GetCompartmentId(compartmentName string) (string, error) {
 		return "", fmt.Errorf("\"%s\" is not a valid compartment name", compartmentName)
 	}
 
-	dcp := common.DefaultConfigProvider()
-
+	dcp := common.CustomProfileConfigProvider("", profile)
 	idp, err := identity.NewIdentityClientWithConfigurationProvider(dcp)
 	if err != nil {
 		return "", err
