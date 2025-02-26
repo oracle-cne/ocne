@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.21-draft
+### Version: v0.0.22-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -77,6 +77,9 @@ kubectl rollout status deployment --namespace cert-manager cert-manager -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-cainjector -w
 kubectl rollout status deployment --namespace cert-manager cert-manager-webhook -w
 ```
+## Upgrade Keycloak 20.0.1 to 21.1.2
+
+Follow these [instructions](../phase1/upgrade-keycloak.md) to upgrade Keycloak.
 
 ## Upgrade OpenSearch 2.3.0 to 2.15.0
 
