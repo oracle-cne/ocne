@@ -7,7 +7,8 @@
 ```text
 helm get values -n keycloak keycloak > overrides.yaml
 sed -i '1d' overrides.yaml
-sed -i '/fullnameOverride/{n;N;N;d}' overrides.yaml
+sed -i '/extraInitContainers:/,+25d' overrides.yaml
+sed -i '/image:/,+2d' overrides.yaml
 ```
 
 ## Uninstall existing Keycloak deployment
