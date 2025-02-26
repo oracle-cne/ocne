@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/containers/image/v5/transports/alltransports"
@@ -125,6 +126,28 @@ func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 		}
 	} else {
 		ret.Add(capi.ControlPlaneJoinPatches, map[string]string{capi.PatchesDirectory: update.OckPatchDirectory})
+	}
+
+	joinSkips, found, err := unstructured.NestedStringSlice(kcp.Object, capi.ControlPlaneJoinSkipPhases...)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		joinSkips = []string{}
+	}
+	if !slices.Contains(joinSkips, capi.PhasePreflight) {
+		joinSkips = append(joinSkips, capi.PhasePreflight)
+		err = unstructured.SetNestedStringSlice(kcp.Object, joinSkips, capi.ControlPlaneJoinSkipPhases...)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the field was already there, replace it.  Otherwise add it.
+		if found {
+			ret.Replace(capi.ControlPlaneJoinSkipPhases, joinSkips)
+		} else {
+			ret.Add(capi.ControlPlaneJoinSkipPhases, joinSkips)
+		}
 	}
 
 	return ret, nil
