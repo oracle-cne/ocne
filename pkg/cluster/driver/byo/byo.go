@@ -358,11 +358,13 @@ func (bd *ByoDriver) DefaultCNIInterfaces() []string {
 }
 
 func (bd *ByoDriver) getKubeAPIServerIP() string {
+	addr := ""
 	if bd.Config.VirtualIp != "" {
-		return bd.Config.VirtualIp
+		addr = bd.Config.VirtualIp
 	} else {
-		return bd.Config.LoadBalancer
+		addr = bd.Config.LoadBalancer
 	}
+	return util.GetURIAddress(addr)
 }
 
 func (bd *ByoDriver) validateClusterConfig() error {
