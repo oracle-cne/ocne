@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025 Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package util
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+
+	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
 // ResolveURIToIP extracts a reasonable candidate for
@@ -51,4 +53,18 @@ func ResolveURIToIP(uri *url.URL) (string, bool, error) {
 	}
 
 	return addr, isLocal, nil
+}
+
+// GetURIAddress turns an IP address or hostname into the format
+// required to use in a URI.
+func GetURIAddress(addr string) string {
+	ip := ipaddr.NewIPAddressString(addr)
+	if ip.ValidateIPv4() == nil {
+		return addr
+	} else if ip.ValidateIPv6() == nil {
+		return fmt.Sprintf("[%s]", addr)
+	}
+
+	// If it's not an IP address, assume it's a hostname
+	return addr
 }

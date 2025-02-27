@@ -24,6 +24,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/unix"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/seancfoley/ipaddress-go/ipaddr"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/release"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -266,6 +267,22 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 			for _, i := range ifaces {
 				args = append(args, fmt.Sprintf("--iface=%s", i))
 			}
+
+			ipv4Cidr := ""
+			ipv6Cidr := ""
+			for _, subnet := range strings.Split(clusterConfig.PodSubnet, ",") {
+				ips := ipaddr.NewIPAddressString(subnet)
+				if ips.ValidateIPv4() == nil && ipv4Cidr == "" {
+					ipv4Cidr = subnet
+					continue
+				}
+				if ips.ValidateIPv6() == nil && ipv6Cidr == "" {
+					ipv6Cidr = subnet
+					continue
+				}
+
+				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR")
+			}
 			applications = append(applications, install.ApplicationDescription{
 				Application: &types.Application{
 					Name:      constants.CNIFlannelChart,
@@ -274,7 +291,8 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					Version:   constants.CNIFlannelVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config: map[string]interface{}{
-						"podCidr": clusterConfig.PodSubnet,
+						"podCidr": ipv4Cidr,
+						"podCidrv6": ipv6Cidr,
 						"flannel": map[string]interface{}{
 							"args": args,
 							"image": map[string]interface{}{

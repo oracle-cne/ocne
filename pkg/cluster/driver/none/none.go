@@ -26,7 +26,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		KubeConfig: config.KubeConfig,
 	}
 	return ret, nil
-
 }
 func (nd *NoneDriver) Start() (bool, bool, error) {
 	return true, false, nil

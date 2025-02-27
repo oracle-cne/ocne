@@ -11,6 +11,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/update"
+	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 // Why all the structs?  Can't you just use the structs from the Kubernetes
@@ -213,6 +214,7 @@ func GenerateKubeadmInitYaml(ci *ClusterInit) (string, error) {
 }
 
 func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
+	cpEndpoint := util.GetURIAddress(cj.KubeAPIServerIP)
 	ret := &JoinConfig{
 		ApiVersion: JoinConfigAPIVersion,
 		Kind:       JoinConfigKind,
@@ -227,7 +229,7 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 		},
 		Discovery: Discovery{
 			BootstrapToken: BootstrapTokenDiscovery{
-				ApiServerEndpoint: fmt.Sprintf("%s:%d", cj.KubeAPIServerIP, cj.KubeAPIBindPort),
+				ApiServerEndpoint: fmt.Sprintf("%s:%d", cpEndpoint, cj.KubeAPIBindPort),
 				Token:             cj.JoinToken,
 				CACertHashes:      cj.KubePKICertHashes,
 			},
@@ -264,12 +266,15 @@ func GenerateKubeadmJoinYaml(cj *ClusterJoin) (string, error) {
 func GenerateClusterConfiguration(ci *ClusterInit, kubeVersions versions.KubernetesVersions) *ClusterConfig {
 	cro := "container-registry.oracle.com/olcne"
 	tmv := "VersionTLS12"
+
+	cpEndpoint := util.GetURIAddress(ci.KubeAPIServerIP)
+
 	ret := &ClusterConfig{
 		ApiVersion:           "kubeadm.k8s.io/v1beta3",
 		Kind:                 "ClusterConfiguration",
 		ImageRepository:      cro,
 		KubernetesVersion:    kubeVersions.Kubernetes,
-		ControlPlaneEndpoint: fmt.Sprintf("%s:%d", ci.KubeAPIServerIP, ci.KubeAPIBindPort),
+		ControlPlaneEndpoint: fmt.Sprintf("%s:%d", cpEndpoint, ci.KubeAPIBindPort),
 		Networking: Networking{
 			ServiceCIDR: ci.ServiceSubnet,
 			PodCIDR:     ci.PodSubnet,

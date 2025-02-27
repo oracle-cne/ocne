@@ -101,6 +101,9 @@ refreshServices() {
 
     ESCAPED_SERVERS=""
     for node in $NODES; do
+      if echo "$node" | grep ':'; then
+        node="[$node]"
+      fi
       ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }};"
     done
 
@@ -129,6 +132,7 @@ SERVERS
   }
   server {
     listen {{ .BindPort }};
+    listen [::]:{{ .BindPort }};
     proxy_pass backend1;
   }
 }
