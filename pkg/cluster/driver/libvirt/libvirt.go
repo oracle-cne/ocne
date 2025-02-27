@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
@@ -656,27 +657,28 @@ func (ld *LibvirtDriver) initializeCluster() error {
 		State:   ld.Config.CertificateInformation.State,
 	}
 	var krLocal kubepki.KubeconfigRequest
+	svcSubnets := strings.Split(ld.Config.ServiceSubnet, ",")
 	if ld.Config.LoadBalancer == "" {
 		krLocal = kubepki.KubeconfigRequest{
-			Path:          ld.LocalKubeconfigPath,
-			Host:          ld.TargetIP,
-			Port:          port,
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			Path:           ld.LocalKubeconfigPath,
+			Host:           ld.TargetIP,
+			Port:           port,
+			ServiceSubnets: svcSubnets,
 		}
 	} else {
 		krLocal = kubepki.KubeconfigRequest{
-			Path:          ld.LocalKubeconfigPath,
-			Host:          ld.Config.LoadBalancer,
-			Port:          uint16(6443),
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			Path:           ld.LocalKubeconfigPath,
+			Host:           ld.Config.LoadBalancer,
+			Port:           uint16(6443),
+			ServiceSubnets: svcSubnets,
 		}
 	}
 	pkiInfo, err := kubepki.GeneratePKI(certOptions,
 		kubepki.KubeconfigRequest{
-			Path:          ld.VMKubeconfigPath,
-			Host:          ld.KubeAPIServerIP,
-			Port:          uint16(6443),
-			ServiceSubnet: ld.Config.ServiceSubnet,
+			Path:           ld.VMKubeconfigPath,
+			Host:           ld.KubeAPIServerIP,
+			Port:           uint16(6443),
+			ServiceSubnets: svcSubnets,
 		},
 		krLocal,
 	)
@@ -918,7 +920,7 @@ func (ld *LibvirtDriver) GetKubeconfigPath() string {
 }
 
 func (ld *LibvirtDriver) GetKubeAPIServerAddress() string {
-	return ld.KubeAPIServerIP
+	return util.GetURIAddress(ld.KubeAPIServerIP)
 }
 
 func (ld *LibvirtDriver) PostInstallHelpStanza() string {

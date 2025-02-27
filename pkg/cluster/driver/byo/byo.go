@@ -182,10 +182,10 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	}
 	pkiInfo, err := kubepki.GeneratePKI(certOptions,
 		kubepki.KubeconfigRequest{
-			Path:          bd.KubeconfigPath,
-			Host:          bd.getKubeAPIServerIP(),
-			Port:          uint16(6443),
-			ServiceSubnet: bd.Config.ServiceSubnet,
+			Path:           bd.KubeconfigPath,
+			Host:           bd.getKubeAPIServerIP(),
+			Port:           uint16(6443),
+			ServiceSubnets: strings.Split(bd.Config.ServiceSubnet, ","),
 		},
 	)
 	if err != nil {

@@ -129,6 +129,7 @@ SERVERS
   }
   server {
     listen {{ .BindPort }};
+    listen [::]:{{ .BindPort }};
     proxy_pass backend1;
   }
 }
