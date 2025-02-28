@@ -58,13 +58,17 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 	}
 
 	ostreeTransport := fields[0]
+	isArchive := false
 	switch ostreeTransport {
 	case "ostree-unverified-image", "ostree-image-signed":
 		fields = fields[1:]
 		ostreeTransport = fmt.Sprintf("%s:%s", ostreeTransport, fields[0])
 		switch fields[0] {
-		case "registry":
+		case "registry", "containers-storage":
 			fields = fields[1:]
+		case  "docker-archive", "oci", "oci-archive":
+			fields = fields[1:]
+			isArchive = true
 		case "docker":
 			// strip off the "//"
 			ostreeTransport = fmt.Sprintf("%s://", ostreeTransport)
@@ -99,6 +103,12 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 
 	// Parse the registry reference.
 	registry := fmt.Sprintf("%s", strings.Join(fields, ":"))
+
+	// Archives don't look like container images, so there's no reason
+	// to treat them like one.
+	if isArchive {
+		return ostreeTransport, registry, "", nil
+	}
 
 	imgInfo, err := SplitImage(registry)
 
