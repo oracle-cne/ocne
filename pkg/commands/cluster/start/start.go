@@ -175,6 +175,10 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
 	//
+	// CoreDNS needs to look at the cluster and find the correct
+	// serviceIP to use.  This is stuffed into the kubelet-config
+	// configmap in kube-system.
+	//
 	// kube-proxy is forcibly installed to account for old cluster
 	// descriptions that use kubeadm to deploy kube-proxy.  Same
 	// with coredns.  Old versions of OCK may not have the new
@@ -193,6 +197,15 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	coreDnsTag, err := getTagForApplication(constants.CoreDNSImage, constants.CoreDNSTag, coreDnsExpectedTag, cpNode)
 	if err != nil {
 		return localKubeConfig, err
+	}
+
+	kubeletConfig, err := k8s.GetKubeletConfig(kubeClient)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	if len(kubeletConfig.ClusterDNS) == 0 {
+		return localKubeConfig, fmt.Errorf("cluster does not have a DNS service ip")
 	}
 
 	kubeProxyLegacyTag, err := getImageTag(constants.KubeAPIServerImage, cpNode)
@@ -215,6 +228,10 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Config: map[string]interface{}{
 					"image": map[string]interface{}{
 						"tag": coreDnsTag,
+					},
+					"service": map[string]interface{}{
+						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
 			},

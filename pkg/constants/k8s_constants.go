@@ -143,5 +143,6 @@ const (
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
+	KubeletCMName   = "kubelet-config"
 
 )
