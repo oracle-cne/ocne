@@ -12,8 +12,8 @@ import (
 
 // CreateAndPersistKubernetesCerts creates and persists the cert used by Kubernetes in an OCNE cluster
 // The certs are written to the output directory and filenames specified in CertLocation
-func CreateAndPersistKubernetesCerts(kubeApiServerIP string, serviceSubnet string, outdir string, options CertOptions) (*CertPairWithPem, error) {
-	pair, err := createKubernetesCerts(kubeApiServerIP, serviceSubnet, options)
+func CreateAndPersistKubernetesCerts(kubeApiServerIP string, serviceSubnets []string, outdir string, options CertOptions) (*CertPairWithPem, error) {
+	pair, err := createKubernetesCerts(kubeApiServerIP, serviceSubnets, options)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func CreateAndPersistKubernetesCerts(kubeApiServerIP string, serviceSubnet strin
 }
 
 // createKubernetesCerts creates the cert used by OCNE when provisioning a cluster
-func createKubernetesCerts(kubeApiServerIP string, serviceSubnet string, options CertOptions) (*CertPairWithPem, error) {
+func createKubernetesCerts(kubeApiServerIP string, serviceSubnets []string, options CertOptions) (*CertPairWithPem, error) {
 	const (
 		local_IP = "127.0.0.1"
 	)
@@ -62,11 +62,13 @@ func createKubernetesCerts(kubeApiServerIP string, serviceSubnet string, options
 	}
 	leafConfig.Org = "system:masters"
 
-	serviceIP, err := getFirstIp(serviceSubnet)
-	if err != nil {
-		return nil, err
+	for _, sip := range serviceSubnets {
+		serviceIP, err := getFirstIp(sip)
+		if err != nil {
+			return nil, err
+		}
+		leafConfig.IPAddresses = append(leafConfig.IPAddresses, serviceIP)
 	}
-	leafConfig.IPAddresses = append(leafConfig.IPAddresses, serviceIP)
 
 	IPs := []string{kubeApiServerIP, local_IP}
 	for _, IP := range IPs {
@@ -83,7 +85,12 @@ func createKubernetesCerts(kubeApiServerIP string, serviceSubnet string, options
 
 // getFirstIp gets the first IP in a subnet
 func getFirstIp(subnet string) (net.IP, error) {
-	block := ipaddr.NewIPAddressString(subnet).GetAddress().ToPrefixBlock()
+	ips := ipaddr.NewIPAddressString(subnet)
+	ipAddr, err := ips.ToAddress()
+	if err != nil {
+		return net.IP{}, err
+	}
+	block := ipAddr.ToPrefixBlock()
 	addr := block.WithoutPrefixLen().GetLower().Increment(1)
 	return net.ParseIP(addr.String()), nil
 }

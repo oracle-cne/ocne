@@ -16,9 +16,11 @@ import (
 )
 
 type LibvirtNetwork struct {
-	IP struct {
+	IP []struct {
+		Family  string `xml:"family,attr"`
 		Address string `xml:"address,attr"`
 		Netmask string `xml:"netmask,attr"`
+		Prefix  int    `xml:"prefix,attr"`
 	} `xml:"ip"`
 }
 
@@ -173,6 +175,9 @@ func allocateIP(l *libvirt.Libvirt, hostname string, networkName string) (string
 		return "", err
 	}
 
+	// Pick the first network because reasons.
+	targetNetwork := decoded.IP[0]
+
 	// At this point, the subnet is known.  It is now
 	// possible to pick an address near the top of the range
 	// and use that.
@@ -184,34 +189,44 @@ func allocateIP(l *libvirt.Libvirt, hostname string, networkName string) (string
 	//
 	// TODO: look at the DHCP configuration and see if there
 	//       is an unused block.  If so, use that bit.
-	subnetIp := net.ParseIP(decoded.IP.Address)
-	subnetMaskIp := net.ParseIP(decoded.IP.Netmask)
-	subnetMask := net.IPMask(subnetMaskIp)
+	subnetIp := net.ParseIP(targetNetwork.Address)
 
-	// Libvirt hands back the gateway ip and a subnet mask
-	// This must be converted into a subnet.  Mask off
-	// individual bytes of the address.  It should not be
-	// possible to have the lengths of these two things be
-	// different, but it's a good idea to check anyway.
-	if len(subnetIp) != len(subnetMask) {
-		return "", fmt.Errorf("The gateway address %s is not the same length as the subnet mask %s", decoded.IP.Address, decoded.IP.Netmask)
-	}
-	for i := 0; i < len(subnetIp); i++ {
-		subnetIp[i] = subnetIp[i] & subnetMask[i]
+	// IPv4 networks are typically defined with netmasks while
+	// IPv6 network use prefixes.  If there is a prefix, use
+	// that to calculate the mask.  If not, use the netmask
+	var subnet *net.IPNet
+	if targetNetwork.Prefix != 0 {
+		_, subnet, err = net.ParseCIDR(fmt.Sprintf("%s/%d", targetNetwork.Address, targetNetwork.Prefix))
+		if err != nil {
+			return "", err
+		}
+	} else {
+		subnetMaskIp := net.ParseIP(targetNetwork.Netmask)
+		subnetMask := net.IPMask(subnetMaskIp)
+		// Libvirt hands back the gateway ip and a subnet mask
+		// This must be converted into a subnet.  Mask off
+		// individual bytes of the address.  It should not be
+		// possible to have the lengths of these two things be
+		// different, but it's a good idea to check anyway.
+		if len(subnetIp) != len(subnetMask) {
+			return "", fmt.Errorf("The gateway address %s is not the same length as the subnet mask %s", targetNetwork.Address, targetNetwork.Netmask)
+		}
+		for i := 0; i < len(subnetIp); i++ {
+			subnetIp[i] = subnetIp[i] & subnetMask[i]
+		}
+		subnet = &net.IPNet{
+			IP:   subnetIp,
+			Mask: subnetMask,
+		}
 	}
 
-	subnet := net.IPNet{
-		IP:   subnetIp,
-		Mask: subnetMask,
-	}
-
-	ip := net.ParseIP(decoded.IP.Address)
+	ip := net.ParseIP(targetNetwork.Address)
 
 	// Arbitrarily move 200 addresses into the subnet
 	for i := 0; i < 200; i++ {
 		ipnetgen.Increment(ip)
 		if !subnet.Contains(ip) {
-			return "", fmt.Errorf("Could not find unused IP within the subnet %s with subnet mask %s", subnetIp.String(), decoded.IP.Netmask)
+			return "", fmt.Errorf("Could not find unused IP within the subnet %s with subnet mask %s", subnetIp.String(), targetNetwork.Netmask)
 		}
 	}
 
@@ -240,7 +255,7 @@ func allocateIP(l *libvirt.Libvirt, hostname string, networkName string) (string
 	}
 
 	if ipAddr == "" {
-		return "", fmt.Errorf("Could not find unused IP within the subnet %s with subnet mask %s", decoded.IP.Address, decoded.IP.Netmask)
+		return "", fmt.Errorf("Could not find unused IP within the subnet %s with subnet mask %s", targetNetwork.Address, targetNetwork.Netmask)
 	}
 
 	return ipAddr, nil
