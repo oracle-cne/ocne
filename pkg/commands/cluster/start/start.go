@@ -24,6 +24,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/unix"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/seancfoley/ipaddress-go/ipaddr"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/release"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -174,6 +175,10 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	// Install charts that are baked in to this application and from
 	// the Oracle catalog.
 	//
+	// CoreDNS needs to look at the cluster and find the correct
+	// serviceIP to use.  This is stuffed into the kubelet-config
+	// configmap in kube-system.
+	//
 	// kube-proxy is forcibly installed to account for old cluster
 	// descriptions that use kubeadm to deploy kube-proxy.  Same
 	// with coredns.  Old versions of OCK may not have the new
@@ -192,6 +197,15 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	coreDnsTag, err := getTagForApplication(constants.CoreDNSImage, constants.CoreDNSTag, coreDnsExpectedTag, cpNode)
 	if err != nil {
 		return localKubeConfig, err
+	}
+
+	kubeletConfig, err := k8s.GetKubeletConfig(kubeClient)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	if len(kubeletConfig.ClusterDNS) == 0 {
+		return localKubeConfig, fmt.Errorf("cluster does not have a DNS service ip")
 	}
 
 	kubeProxyLegacyTag, err := getImageTag(constants.KubeAPIServerImage, cpNode)
@@ -214,6 +228,10 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				Config: map[string]interface{}{
 					"image": map[string]interface{}{
 						"tag": coreDnsTag,
+					},
+					"service": map[string]interface{}{
+						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
 			},
@@ -266,6 +284,22 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 			for _, i := range ifaces {
 				args = append(args, fmt.Sprintf("--iface=%s", i))
 			}
+
+			ipv4Cidr := ""
+			ipv6Cidr := ""
+			for _, subnet := range strings.Split(clusterConfig.PodSubnet, ",") {
+				ips := ipaddr.NewIPAddressString(subnet)
+				if ips.ValidateIPv4() == nil && ipv4Cidr == "" {
+					ipv4Cidr = subnet
+					continue
+				}
+				if ips.ValidateIPv6() == nil && ipv6Cidr == "" {
+					ipv6Cidr = subnet
+					continue
+				}
+
+				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR")
+			}
 			applications = append(applications, install.ApplicationDescription{
 				Application: &types.Application{
 					Name:      constants.CNIFlannelChart,
@@ -274,7 +308,8 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					Version:   constants.CNIFlannelVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config: map[string]interface{}{
-						"podCidr": clusterConfig.PodSubnet,
+						"podCidr": ipv4Cidr,
+						"podCidrv6": ipv6Cidr,
 						"flannel": map[string]interface{}{
 							"args": args,
 							"image": map[string]interface{}{

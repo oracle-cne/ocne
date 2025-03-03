@@ -78,7 +78,7 @@ if [[ -f "/etc/ocne/reset-kubeadm" ]]; then
 	kubeadm reset -f && rm /etc/ocne/reset-kubeadm
 fi
 
-NODE_IP=$(ip addr show $NET_INTERFACE | grep 'inet\b' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
+NODE_IP=$(ip addr show $NET_INTERFACE | grep 'inet6\?\b' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
 
 # If Kubernetes is already configured, don't bother doing anything
 if [[ -f "/etc/kubernetes/kubelet.conf" ]]; then

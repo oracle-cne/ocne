@@ -182,10 +182,10 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	}
 	pkiInfo, err := kubepki.GeneratePKI(certOptions,
 		kubepki.KubeconfigRequest{
-			Path:          bd.KubeconfigPath,
-			Host:          bd.getKubeAPIServerIP(),
-			Port:          uint16(6443),
-			ServiceSubnet: bd.Config.ServiceSubnet,
+			Path:           bd.KubeconfigPath,
+			Host:           bd.getKubeAPIServerIP(),
+			Port:           uint16(6443),
+			ServiceSubnets: strings.Split(bd.Config.ServiceSubnet, ","),
 		},
 	)
 	if err != nil {
@@ -358,11 +358,13 @@ func (bd *ByoDriver) DefaultCNIInterfaces() []string {
 }
 
 func (bd *ByoDriver) getKubeAPIServerIP() string {
+	addr := ""
 	if bd.Config.VirtualIp != "" {
-		return bd.Config.VirtualIp
+		addr = bd.Config.VirtualIp
 	} else {
-		return bd.Config.LoadBalancer
+		addr = bd.Config.LoadBalancer
 	}
+	return util.GetURIAddress(addr)
 }
 
 func (bd *ByoDriver) validateClusterConfig() error {

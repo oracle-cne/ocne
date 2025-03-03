@@ -309,6 +309,15 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 		}, kubeConfigPath, false)
 	}
 
+	kubeletConfig, err := k8s.GetKubeletConfig(client)
+	if err != nil {
+		return err
+	}
+
+	if len(kubeletConfig.ClusterDNS) == 0 {
+		return fmt.Errorf("cluster does not have a DNS service ip")
+	}
+
 	return install.InstallApplications([]install.ApplicationDescription{
 		install.ApplicationDescription{
 			Force: true,
@@ -321,6 +330,10 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 				Config:    map[string]interface{}{
 					"image": map[string]interface{}{
 						"tag": constants.CoreDNSTag,
+					},
+					"service": map[string]interface{}{
+						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
 			},
