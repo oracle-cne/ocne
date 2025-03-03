@@ -16,6 +16,7 @@ func TestParseOstreeReference(t *testing.T) {
 		[]string{"ostree-unverified-image:registry:container-registry.oracle.com/olcne/ock-ostree:1.30", "ostree-unverified-image:registry", "container-registry.oracle.com/olcne/ock-ostree", "1.30"},
 		[]string{"ostree-unverified-image:docker://container-registry.oracle.com/olcne/ock-ostree:1.30", "ostree-unverified-image:docker://", "container-registry.oracle.com/olcne/ock-ostree", "1.30"},
 		[]string{"ostree-unverified-image:containers-storage:container-registry.oracle.com/olcne/ock-ostree", "ostree-unverified-image:containers-storage", "container-registry.oracle.com/olcne/ock-ostree", ""},
+		[]string{"ostree-unverified-image:containers-storage:container-registry.oracle.com/olcne/ock-ostree:1.30", "ostree-unverified-image:containers-storage", "container-registry.oracle.com/olcne/ock-ostree", "1.30"},
 		[]string{"ostree-unverified-image:oci-archive:/var/archive.tar.gz", "ostree-unverified-image:oci-archive", "/var/archive.tar.gz", ""},
 		[]string{"ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree", "ostree-unverified-registry", "container-registry.oracle.com/olcne/ock-ostree", ""},
 		[]string{"ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree:1.30", "ostree-unverified-registry", "container-registry.oracle.com/olcne/ock-ostree", "1.30"},
