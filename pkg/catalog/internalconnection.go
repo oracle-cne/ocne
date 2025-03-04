@@ -12,11 +12,15 @@ import (
 // InternalConnection implements the CatalogConnection interface
 // for the compiled-in catalog.
 type InternalConnection struct {
+	KubeVersion string
 }
 
 // NewInternalConnection opens a connection to the internal catalog
 func NewInternalConnection(kubeconfig string, ci *CatalogInfo) (CatalogConnection, error) {
-	return &InternalConnection{}, nil
+	ver, _ := getKubeVersion(kubeconfig)
+	return &InternalConnection{
+		KubeVersion: ver,
+	}, nil
 }
 
 // GetCharts returns a Catalog populated with the contents of
@@ -28,7 +32,7 @@ func (ic *InternalConnection) GetCharts(query string) (*Catalog, error) {
 	}
 	buf := &bytes.Buffer{}
 	_, err = buf.ReadFrom(reader)
-	return fromHelmYAML(buf.Bytes())
+	return fromHelmYAML(buf.Bytes(), ic.KubeVersion)
 }
 
 // GetChart returns the bytes of the tarball for the desired chart/version pair
