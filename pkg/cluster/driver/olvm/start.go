@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package olvm
@@ -6,6 +6,10 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -20,10 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 // Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
@@ -71,7 +72,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 
 	// create all the CAPI resources
 	log.Info("Applying Cluster API resources")
-	err = cad.applyResources(restConfig)
+	err = k8s.ApplyResources(restConfig, cad.ClusterResources)
 	if err != nil {
 		return false, false, err
 	}

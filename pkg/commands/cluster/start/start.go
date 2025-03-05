@@ -13,6 +13,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/add"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/ls"
@@ -27,9 +28,9 @@ import (
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/release"
+	v1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -46,7 +47,7 @@ const (
 func getTagForApplication(img string, bestTag string, legacyTag string, node *v1.Node) (string, error) {
 	tag := ""
 	log.Debugf("Checking %s on %s", img, node.Name)
-	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag,  legacyTag, node)
+	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag, legacyTag, node)
 	if bestImg == "" {
 		log.Infof("Control plane node %s does not have image %s.  Using tag %s", node.Name, img, legacyTag)
 		tag = legacyTag
@@ -151,7 +152,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		return localKubeConfig, err
 	}
 
-	_, kubeClient, err := client.GetKubeClient(localKubeConfig)
+	restConfig, kubeClient, err := client.GetKubeClient(localKubeConfig)
 	if err != nil {
 		return localKubeConfig, err
 	}
@@ -204,6 +205,16 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		return localKubeConfig, err
 	}
 
+	// Apply Kubernetes Gateway API CRDs
+	gatewayResources, err := common.GetKubernetesGatewayApiTemplate()
+	if err != nil {
+		return localKubeConfig, err
+	}
+	err = k8s.ApplyResources(restConfig, gatewayResources)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
 	if len(kubeletConfig.ClusterDNS) == 0 {
 		return localKubeConfig, fmt.Errorf("cluster does not have a DNS service ip")
 	}
@@ -230,7 +241,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 						"tag": coreDnsTag,
 					},
 					"service": map[string]interface{}{
-						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIP":  kubeletConfig.ClusterDNS[0],
 						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
@@ -253,7 +264,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 						"port": clusterConfig.KubeAPIServerBindPort,
 					},
 					"config": map[string]interface{}{
-						"mode": clusterConfig.KubeProxyMode,
+						"mode":        clusterConfig.KubeProxyMode,
 						"clusterCIDR": clusterConfig.ServiceSubnet,
 					},
 				},
@@ -265,7 +276,6 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		switch clusterConfig.CNI {
 		case "", constants.CNIFlannel:
 			log.Debugf("Flannel will be installed as the CNI")
-
 
 			// If there are no control plane nodes, then it the
 			// query for them will fail because nobody can answer.
@@ -308,7 +318,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					Version:   constants.CNIFlannelVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config: map[string]interface{}{
-						"podCidr": ipv4Cidr,
+						"podCidr":   ipv4Cidr,
 						"podCidrv6": ipv6Cidr,
 						"flannel": map[string]interface{}{
 							"args": args,

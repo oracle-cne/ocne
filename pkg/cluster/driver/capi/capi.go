@@ -4,17 +4,16 @@
 package capi
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -49,7 +48,6 @@ const (
 	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
-
 )
 
 // Go does not allow slices or maps as constants.  Pretend they are.
@@ -754,24 +752,6 @@ func (cad *ClusterApiDriver) waitForKubeconfig(client kubernetes.Interface, clus
 	return kubeconfig, nil
 }
 
-// applyResources creates resources in a cluster if the resource does not
-// already exist.  If the resource already exists, it is not modified.
-func (cad *ClusterApiDriver) applyResources(restConfig *rest.Config) error {
-	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
-	if err != nil {
-		return err
-	}
-
-	for _, r := range resources {
-		err = k8s.CreateResourceIfNotExist(restConfig, &r)
-		if err != nil && !strings.Contains(err.Error(), "not found") {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
 	if cad.FromTemplate {
@@ -816,7 +796,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	}
 
 	log.Info("Applying Cluster API resources")
-	err = cad.applyResources(restConfig)
+	err = k8s.ApplyResources(restConfig, cad.ClusterResources)
 	if err != nil {
 		return false, false, err
 	}

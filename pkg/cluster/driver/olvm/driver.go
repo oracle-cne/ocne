@@ -4,9 +4,10 @@
 package olvm
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -18,10 +19,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -196,24 +193,6 @@ func (cad *OlvmDriver) getClusterObject() (unstructured.Unstructured, error) {
 		}
 	}
 	return clusterObj, err
-}
-
-// applyResources creates resources in a cluster if the resource does not
-// already exist.  If the resource already exists, it is not modified.
-func (cad *OlvmDriver) applyResources(restConfig *rest.Config) error {
-	resources, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBufferString(cad.ClusterResources)))
-	if err != nil {
-		return err
-	}
-
-	for _, r := range resources {
-		err = k8s.CreateResourceIfNotExist(restConfig, &r)
-		if err != nil && !strings.Contains(err.Error(), "not found") {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (cad *OlvmDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNodes int) error {
