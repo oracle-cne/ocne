@@ -84,7 +84,11 @@ func RunCmd(cmd *cobra.Command) error {
 		}
 	}
 
-	sort.Slice(charts, func(i, j int) bool {
+	// The entries that come back from search.Search() are sorted.
+	// It's hard to sort the random nonsense that can come from
+	// catalogs.  Use a stable sort to ensure that the versions
+	// remain sorted.
+	sort.SliceStable(charts, func(i, j int) bool {
 		return charts[i].Name < charts[j].Name
 	})
 

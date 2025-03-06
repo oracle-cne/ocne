@@ -49,6 +49,7 @@ type ArtifacthubQueryResults struct {
 // This protocol interacts with ArtifactHub style repositories.
 type ArtifacthubConnection struct {
 	Kubeconfig            string
+	KubeVersion           string
 	CatalogInfo           *CatalogInfo
 	Uri                   *url.URL
 	LastSearch            *Catalog
@@ -68,8 +69,14 @@ func NewArtifacthubConnection(kubeconfig string, ci *CatalogInfo) (CatalogConnec
 		return nil, err
 	}
 
+	ver, err := getKubeVersion(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ArtifacthubConnection{
 		Kubeconfig:  kubeconfig,
+		KubeVersion: ver,
 		CatalogInfo: ci,
 		Uri:         uri,
 	}, nil
@@ -191,7 +198,7 @@ func (ac *ArtifacthubConnection) GetChart(chart string, version string) ([]byte,
 		return nil, err
 	}
 
-	cat, err := fromHelmYAML(body)
+	cat, err := fromHelmYAML(body, ac.KubeVersion)
 	if err != nil {
 		return nil, err
 	}
