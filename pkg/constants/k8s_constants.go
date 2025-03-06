@@ -145,4 +145,9 @@ const (
 	KubeCMName      = "kubeadm-config"
 	KubeletCMName   = "kubelet-config"
 
+	// Kubernetes Gateway API Crds constants
+	KubernetesGatewayAPICrds = "kubernetes-gateway-api-crds"
+	KubernetesGatewayAPICrdsVersion = "1.2.1"
+
+	DefaultNamespace = "default"
 )

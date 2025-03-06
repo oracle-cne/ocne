@@ -259,6 +259,16 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				},
 			},
 		},
+		install.ApplicationDescription{
+			Force: true,
+			Application: &types.Application{
+				Name:      constants.KubernetesGatewayAPICrds,
+				Namespace: constants.DefaultNamespace,
+				Release:   constants.KubernetesGatewayAPICrds,
+				Version:   constants.KubernetesGatewayAPICrdsVersion,
+				Catalog:   catalog.InternalCatalog,
+			},
+		},
 	}
 
 	if clusterConfig.Provider != constants.ProviderTypeNone {
