@@ -147,4 +147,7 @@ const (
 	KubeCMEndpoint  = "controlPlaneEndpoint"
 	KubeletCMName   = "kubelet-config"
 
+	// Kubernetes Gateway API Crds constants
+	KubernetesGatewayAPICrds = "kubernetes-gateway-api-crds"
+	KubernetesGatewayAPICrdsVersion = "1.2.1"
 )
