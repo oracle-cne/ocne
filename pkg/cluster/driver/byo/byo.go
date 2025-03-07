@@ -346,7 +346,7 @@ func (bd *ByoDriver) GetKubeconfigPath() string {
 }
 
 func (bd *ByoDriver) GetKubeAPIServerAddress() string {
-	return ""
+	return util.GetURIAddress(bd.getKubeAPIServerIP())
 }
 
 func (bd *ByoDriver) PostInstallHelpStanza() string {
@@ -358,13 +358,10 @@ func (bd *ByoDriver) DefaultCNIInterfaces() []string {
 }
 
 func (bd *ByoDriver) getKubeAPIServerIP() string {
-	addr := ""
 	if bd.Config.VirtualIp != "" {
-		addr = bd.Config.VirtualIp
-	} else {
-		addr = bd.Config.LoadBalancer
+		return bd.Config.VirtualIp
 	}
-	return util.GetURIAddress(addr)
+	return bd.Config.LoadBalancer
 }
 
 func (bd *ByoDriver) validateClusterConfig() error {
