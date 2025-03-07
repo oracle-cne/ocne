@@ -263,7 +263,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 			Force: true,
 			Application: &types.Application{
 				Name:      constants.KubernetesGatewayAPICrds,
-				Namespace: constants.DefaultNamespace,
+				Namespace: constants.KubeNamespace,
 				Release:   constants.KubernetesGatewayAPICrds,
 				Version:   constants.KubernetesGatewayAPICrdsVersion,
 				Catalog:   catalog.InternalCatalog,
