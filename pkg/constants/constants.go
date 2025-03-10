@@ -77,6 +77,7 @@ const (
 	ProviderTypeOlvm    = "olvm"
 	ProviderTypeNone    = "none"
 
+	CatalogMirror = "ocne.oracle.com/mirror"
 )
 
 var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160, OciVmStandardA2Flex}
