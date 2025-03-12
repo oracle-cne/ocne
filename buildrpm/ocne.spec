@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.1.0
-Release: 1%{dist}
+Version: 2.1.1
+Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -71,6 +71,21 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+
+* Mon Mar 10 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.1-3
+- Introduce support for IPv6 single stack and dual stack configurations
+- Fix an issue where mirroring the embedded catalog would try to mirror invalid tags
+- Fix an issue where kube-proxy configuration was incomplete for the byo and none providers
+- Expand supported ostree transports
+- Allow configuring the OCI configuration profile in the oci provider
+- Treat Ignition and Butane warnings as errors
+
+* Thu Mar 06 2025 Prasad Shirodkar <prasad.shirodkar@oracle.com> - 2.1.1-2
+- Install Kubernetes Gateway CRDs during cluster start
+
+* Mon Mar 03 2025 Zaid Abdulrehman <zaid.a.abdulrehman@oracle.com> - 2.1.1-1
+- Enable retries when mirroring catalags to account for container registry errors
+
 * Wed Feb 12 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.0-1
 - Introduce support for Kubernetes 1.31
 - Fix an issue where in-place updates in environments without internet access can disrupt cluster function
