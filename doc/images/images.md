@@ -184,3 +184,160 @@ $ podman run -d -p 8080:80 localhost/ock-ostree:latest
 $ curl http://localhost:8080/ostree/refs/heads/ock
 789672394f9c0242ec602191cc6f2f808bf8476686256aa71556a11bdf6695db
 ```
+
+## Customizing Boot Media
+
+There are several options for generating boot media for platforms other than
+OCI.  In may cases it is possible to use either the existing boot media with
+slight modification or existing OSTree container images to generate boot media
+for many platforms.  In the case that none of these work, or major
+customziations to Oracle Container Host for Kubernetes (OCK) there are methods
+for creating that as well.
+
+### Extracting The Libvirt Image
+
+With some small modifications the standard boot media container image used by
+the `libvirt` provider can be used for most other virtualization platforms.
+Several tools exist that can modify boot media for popular virtualization
+platforms and convert between one format and another.
+
+```
+# Pull the boot media container image
+$ podman pull container-registry.oracle.com/olcne/ock:1.31
+
+# Create a container and copy out the qcow2 image
+$ podman create --name ock1.31 container-registry.oracle.com/olcne/ock:1.31
+$ podman cp ock1.31:/disk/boot.qcow2 boot-131.qcow2
+
+# Tidy up
+$ podman rm ock1.31
+```
+
+### Customizing the Libvirt Image
+
+Two easy ways to customize the `libvirt` boot media are to use `qemu-nbd` to
+attach the disk image as a network block device or to use `guestfish` to load
+the image in a VM and edit its contents.  Either approach works well.  Guestfish
+can be preferrable because it requires less privilege.
+
+#### Network Block Device
+
+The `qemu-nbd` utility can be used to attach the virtual disk image to a network
+block device on the local system.  Once the disk is attached, it can be used like
+any other disk.
+
+```
+# Load the kernel module
+$ sudo modprobe nbd
+
+# Attach the disk and mount the partitions
+$ sudo qemu-nbd --connect /dev/nbd0 boot-131.qcow2
+$ sudo mount /dev/nbd0p3 /mnt
+$ sudo mount /dev/nbd0p2 /mnt/boot
+$ sudo mount /dev/nbd0p3 /mnt/boot/efi
+```
+
+Once the disks are mounted, edits can be made to the filesystem.  It's best to
+make small edits to common configuration files like bootloader entries.  For
+complex changes, it's usually best to build a completely custom image.  Here is
+an example that changes the Ignition provider from `qemu` to `vmware`.
+
+```
+$ cat /mnt/boot/loader/entries/ostree-1-ock.conf
+title Oracle Linux Server 8.10 1.31 (ostree:0)
+version 1
+options rw ip=dhcp rd.neednet=1 ignition.platform.id=qemu ignition.firstboot=1 systemd.firstboot=off crashkernel=auto console=ttyS0 root=UUID=d51ed1e5-6b61-405f-abd7-265040b15203 rd.timeout=120 ostree=/ostree/boot.1/ock/4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/0
+linux /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/vmlinuz-5.15.0-305.176.4.el8uek.x86_64
+initrd /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/initramfs-5.15.0-305.176.4.el8uek.x86_64.img
+aboot /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.img
+abootcfg /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.cfg
+
+$ sudo sed -i 's/qemu/vmware/' /mnt/boot/loader/entries/ostree-1-ock.conf
+
+# Notice that 'ignition.platform.id' now says 'vmware'
+$ cat /mnt/boot/loader/entries/ostree-1-ock.conf
+title Oracle Linux Server 8.10 1.31 (ostree:0)
+version 1
+options rw ip=dhcp rd.neednet=1 ignition.platform.id=vmware ignition.firstboot=1 systemd.firstboot=off crashkernel=auto console=ttyS0 root=UUID=d51ed1e5-6b61-405f-abd7-265040b15203 rd.timeout=120 ostree=/ostree/boot.1/ock/4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/0
+linux /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/vmlinuz-5.15.0-305.176.4.el8uek.x86_64
+initrd /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/initramfs-5.15.0-305.176.4.el8uek.x86_64.img
+aboot /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.img
+abootcfg /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.cfg
+```
+
+Once the edits are complete, the disk can be unmounted and detached.  Experience
+shown that the syncing behavior when umounting a disk is not 100% reliable.
+It is a good idea to `sync` before unmounting and disconnecting.  Most of the
+time the sync is not necessary, but it's good practice.
+
+```
+$ sudo sync --file-system /mnt/boot/loader/entries/ostree-1-ock.conf
+$ sudo umount -R /mnt
+$ sudo qemu-nbd --disconnect /dev/nbd0
+/dev/nbd0 disconnected
+```
+
+
+#### Guestfish
+
+`guestfish` is a utility for manipulating virtual disk images.  It works by
+creating a small virtual machine with the disk attached and presenting the
+user with a limited shell.  The advantage of `guestfish` over `qemu-nbd` is
+that it can be used as a regular user.
+
+```
+$ LIBGUESTFS_BACKEND=direct guestfish -a boot-131.qcow2 
+
+Welcome to guestfish, the guest filesystem shell for
+editing virtual machine filesystems and disk images.
+
+Type: ‘help’ for help on commands
+      ‘man’ to read the manual
+      ‘quit’ to quit the shell
+
+><fs> run
+ 100% ⟦▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒⟧ 00:00
+><fs> mount /dev/sda2 /
+><fs> cat /loader/entries/ostree-1-ock.conf 
+title Oracle Linux Server 8.10 1.31 (ostree:0)
+version 1
+options rw ip=dhcp rd.neednet=1 ignition.platform.id=vmware ignition.firstboot=1 systemd.firstboot=off crashkernel=auto console=ttyS0 root=UUID=d51ed1e5-6b61-405f-abd7-265040b15203 rd.timeout=120 ostree=/ostree/boot.1/ock/4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/0
+linux /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/vmlinuz-5.15.0-305.176.4.el8uek.x86_64
+initrd /ostree/ock-4c6318d877eb486f973fc2d9ce0175e9371ed973cc67befc632e268e1417afa5/initramfs-5.15.0-305.176.4.el8uek.x86_64.img
+aboot /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.img
+abootcfg /ostree/deploy/ock/deploy/532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.0/usr/lib/ostree-boot/aboot.cfg
+
+><fs> edit /loader/entries/ostree-1-ock.conf 
+><fs> exit
+```
+
+
+#### Converting from Qcow2 to Other Formats
+
+Not all virtualization platforms support virtual images in the `qcow2` format.
+To use those platforms it is necessary to convert the disk to the appropriate
+type for the platform.  `qemu-img` is a useful tool for doing this.
+
+```
+$ qemu-img convert -f qcow2 -O vmdk boot-131.qcow2 boot-131.vmdk
+$ file boot-131.vmdk 
+boot-131.vmdk: VMware4 disk image
+```
+
+### Building Boot Media From Scratch
+
+Sometimes editing the standard boot media for the `libvirt` provider is not
+good enough.  In those cases, `ock-forge` can be used to install existing OSTree
+content directly to block devices.  This example uses `ock-forge` to install to
+a raw disk image with the OpenStack provider.
+
+```
+$ git clone https://github.com/oracle-cne/ock-forge && cd ock-forge
+$ ock-forge -d /dev/loop0 -D out/1.30/boot.iso -i container-registry.oracle.com/olcne/ock-ostree:1.30 -P -i openstack
+```
+
+### Heavily Customizing Images
+
+In cases where big changes are required, it is necessary to roll your own OStree
+media.  `ock-forge` is the tool for doing that.  For details on how to make
+completely custom content, refer to the [ock-forge project](https://github.com/oracle-cne/ock-forge) on GitHub.
