@@ -12,6 +12,7 @@ import (
 	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
@@ -232,17 +233,43 @@ func buildOverride(chart catalog.ChartMeta, confInterface interface{}, configFro
 	return toReturn, nil
 }
 
+
+// skip determines if an application should be mirrored
+func skip(cm *catalog.ChartMeta) bool {
+	annot, ok := cm.Annotations[constants.CatalogMirror]
+	if !ok {
+		return false
+	}
+
+	if annot == "false" {
+		return true
+	}
+	return false
+}
+
 // filter takes a map of chart entries found in a catalog and applications specified by the user in the cluster config.
 //  1. If no applications are specified in the cluster config
-//     a. Return all chart entries
+//     a. Return all chart entries that aren't to be skipped
 //  2. Else
-//     b. For each app
+//     b. For each app that is not to be skipped
 //     i. If the user specified a version for the app, add that to the return value
 //     ii. Else grab the highest version of the app in the catalog
 func filter(toIterate map[string][]catalog.ChartMeta, search []types.Application, catalogName string) map[string][]catalog.ChartMeta {
 	toReturn := make(map[string][]catalog.ChartMeta)
 	if len(search) == 0 {
-		return toIterate
+		for name, app := range toIterate {
+			charts := []catalog.ChartMeta{}
+			for _, chart := range app {
+				if skip(&chart) {
+					continue
+				}
+				charts = append(charts, chart)
+			}
+			if len(charts) > 0 {
+				toReturn[name] = charts
+			}
+		}
+		return toReturn
 	}
 	for _, app := range search {
 		if strings.TrimSpace(app.Catalog) != strings.TrimSpace(catalogName) {
@@ -290,6 +317,9 @@ func filter(toIterate map[string][]catalog.ChartMeta, search []types.Application
 				log.Errorf("No chart of name %s with version %s found in the app catalog. To grab the latest version of the chart, remove the application version key from the cluster config. Defaulting to version %s for this chart", app.Name, app.Version, toIterate[app.Name][0].Version)
 				toAdd = toIterate[app.Name][0]
 			}
+		}
+		if skip(&toAdd) {
+			continue
 		}
 		//Accounts for the case where a user has multiple versions of the same app
 		toReturn[app.Name] = append(toReturn[app.Name], toAdd)

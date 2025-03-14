@@ -25,16 +25,17 @@ type CatalogConnection interface {
 // ChartMeta represents a single helm chart
 // NOTE: This structure is derived from the JSON return from the catalog service /charts/ endpoint
 type ChartMeta struct {
-	Name        string    `yaml:"name"`
-	Version     string    `yaml:"version"`
-	Description string    `yaml:"description"`
-	ApiVersion  string    `yaml:"apiVersion"`
-	AppVersion  string    `yaml:"appVersion"`
-	KubeVersion string    `yaml:"kubeVersion"`
-	Type        string    `yaml:"type"`
-	Urls        []string  `yaml:"urls"`
-	Created     time.Time `yaml:"created"`
-	Digest      string    `yaml:"digest"`
+	Name        string             `yaml:"name"`
+	Version     string             `yaml:"version"`
+	Description string             `yaml:"description"`
+	ApiVersion  string             `yaml:"apiVersion"`
+	AppVersion  string             `yaml:"appVersion"`
+	KubeVersion string             `yaml:"kubeVersion"`
+	Type        string             `yaml:"type"`
+	Urls        []string           `yaml:"urls"`
+	Created     time.Time          `yaml:"created"`
+	Digest      string             `yaml:"digest"`
+	Annotations map[string]string  `yaml:"annotations"`
 }
 
 // Catalog contains the helm chart index of all the charts in the catalog

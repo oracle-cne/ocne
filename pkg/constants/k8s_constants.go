@@ -143,6 +143,11 @@ const (
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
 	KubeCMName      = "kubeadm-config"
+	KubeCMField     = "ClusterConfiguration"
+	KubeCMEndpoint  = "controlPlaneEndpoint"
 	KubeletCMName   = "kubelet-config"
 
+	// Kubernetes Gateway API Crds constants
+	KubernetesGatewayAPICrds = "kubernetes-gateway-api-crds"
+	KubernetesGatewayAPICrdsVersion = "1.2.1"
 )
