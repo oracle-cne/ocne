@@ -9,8 +9,6 @@ import (
 	"io"
 	"regexp"
 	"sync"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ScanCloser struct {
@@ -47,7 +45,6 @@ func Scan(reader io.Reader, sd ScanDispatcher) *ScanCloser {
 					break
 				}
 
-				log.Debugf("Read %d characters", len(lineBytes))
 				if !isPrefix {
 					break
 				}

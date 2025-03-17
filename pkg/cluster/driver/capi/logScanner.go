@@ -63,7 +63,7 @@ func (olh *OciLogHandler) Handle(lines []string) {
 	// - Endpoint
 	opName := ""
 	endpoint := ""
-	for idx, l := range lines[1:] {
+	for idx, l := range lines {
 		line := strings.TrimSpace(l)
 		lines[idx] = line
 		if strings.HasPrefix(line, "Operation Name:") {
