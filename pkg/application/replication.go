@@ -12,9 +12,10 @@ import (
 )
 
 // GetAnnotations returns a good set of Helm release annotations
-func GetAnnotations(name string) map[string]string {
+func GetAnnotations(name string, namespace string) map[string]string {
 	return map[string]string{
 		"meta.helm.sh/release-name": name,
+		"meta.helm.sh/release-namespace": namespace,
 	}
 }
 
@@ -32,7 +33,7 @@ func DeploymentsForApplication(name string, namespace string, kubeConfigPath str
 		return nil, err
 	}
 
-	ret, err := k8s.GetDeploymentsWithAnnotations(kubeInfo.Client, "", GetAnnotations(name))
+	ret, err := k8s.GetDeploymentsWithAnnotations(kubeInfo.Client, "", GetAnnotations(name, namespace))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func DaemonSetsForApplication(name string, namespace string, kubeConfigPath stri
 		return nil, err
 	}
 
-	ret, err := k8s.GetDaemonSetsWithAnnotations(kubeInfo.Client, "", GetAnnotations(name))
+	ret, err := k8s.GetDaemonSetsWithAnnotations(kubeInfo.Client, "", GetAnnotations(name, namespace))
 	if err != nil {
 		return nil, err
 	}
