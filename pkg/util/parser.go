@@ -11,17 +11,20 @@ import (
 	"sync"
 )
 
+// ScanCloser is a token object that is used to close a scanning routine
 type ScanCloser struct {
 	Closed bool
 	Mutex  sync.Mutex
 }
 
+// Close closes a scanner
 func (sc *ScanCloser) Close() {
 	sc.Mutex.Lock()
 	sc.Closed = true
 	sc.Mutex.Unlock()
 }
 
+// ScanDispatcher is used to process lines from a scanner
 type ScanDispatcher interface {
 	Dispatch(string)
 }
@@ -63,16 +66,21 @@ func Scan(reader io.Reader, sd ScanDispatcher) *ScanCloser {
 	return ret
 }
 
+// MessageHandler is used to handle multi-line messages
 type MessageHandler interface {
 	Handle([]string)
 }
 
+// MessageDispatcher is a simple object for taking lines from a
+// scanner and collecting them into multi-line messages based on
+// a regex that defines the start of a new message.
 type MessageDispatcher struct {
 	StartPattern   *regexp.Regexp
 	Handler        MessageHandler
 	CurrentMessage []string
 }
 
+// NewMessageDispatcher creates a MessageDispatcher
 func NewMessageDispatcher(startPattern string, handler MessageHandler) (*MessageDispatcher, error) {
 	re, err := regexp.Compile(startPattern)
 	if err != nil {
@@ -86,6 +94,7 @@ func NewMessageDispatcher(startPattern string, handler MessageHandler) (*Message
 	}, nil
 }
 
+// Dispatch implements the ScanDispatcher interface
 func (md *MessageDispatcher) Dispatch(in string) {
 	// Check to see if this line starts a new message.  If so, dispatch the
 	// current message and start over.

@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// LabelsToSelector creates a selector string from a map of labels.
 func LabelsToSelector(labelMap map[string]string) string {
 	ls := &metav1.LabelSelector{
 		MatchLabels: labelMap,
