@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
-
+	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
@@ -50,7 +50,6 @@ const (
 	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
-
 )
 
 // Go does not allow slices or maps as constants.  Pretend they are.
@@ -69,7 +68,7 @@ type ClusterApiDriver struct {
 }
 
 func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription, error) {
-	ociConfig, err := oci.GetConfig()
+	ociConfig, err := oci.GetConfig(cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -217,12 +216,12 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 }
 
 func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
-	ociConfig, err := oci.GetConfig()
+	ociConfig, err := oci.GetConfig(cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -651,14 +650,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 }
 
 func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Check for a local image.  First see if there is already an image
 	// available in OCI
-	_, found, err := oci.GetImage(constants.OciImageName, version, arch, compartmentId)
+	_, found, err := oci.GetImage(constants.OciImageName, version, arch, compartmentId, cad.ClusterConfig.Providers.Oci.Profile)
 	if found && !force {
 		// An image was found.  Perfect.
 		return "", "", nil
@@ -700,6 +699,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
 		ProviderType:      upload.ProviderTypeOCI,
+		Profile:           cad.ClusterConfig.Providers.Oci.Profile,
 		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
 		CompartmentName:   compartmentId,
 		ImagePath:         imageName,
@@ -718,7 +718,7 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	controlPlaneArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
 	workerArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment)
+	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
@@ -758,18 +758,18 @@ func (cad *ClusterApiDriver) ensureImages() error {
 			imageImports[workerWorkRequest] = "Importing worker image"
 		}
 	}
-	err = oci.WaitForWorkRequests(imageImports)
+	err = oci.WaitForWorkRequests(imageImports, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
 	if controlPlaneImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, controlPlaneImageId, controlPlaneArch)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, controlPlaneImageId, controlPlaneArch)
 		if err != nil {
 			return err
 		}
 	}
 	if workerImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, workerImageId, workerArch)
+		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, workerImageId, workerArch)
 		if err != nil {
 			return err
 		}
@@ -886,6 +886,32 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	if err != nil {
 		return false, false, err
 	}
+
+	// Get logs for the OCI controller
+	ociPods, err := application.PodsForApplication(constants.OCICAPIRelease, constants.OCICAPINamespace, cad.BootstrapKubeConfig)
+	log.Debugf("Have %d OCI CAPI pods", len(ociPods))
+	if err != nil {
+		return false, false, err
+	}
+	podLogs := []*util.ScanCloser{}
+	for _, op := range ociPods {
+		podLog, err := k8s.GetPodLogs(clientIface, op, "")
+		if err != nil {
+			return false, false, err
+		}
+		re := "^[A-Z][0-9]+"
+		md, err := util.NewMessageDispatcher(re, NewOciLogHandler())
+		if err != nil {
+			err = fmt.Errorf("Internal error: regex \"%s\" does not compile: %v", re, err)
+			return false, false, err
+		}
+		podLogs = append(podLogs, util.Scan(podLog, md))
+	}
+	defer func(toClose []*util.ScanCloser) {
+		for _, tc := range toClose {
+			tc.Close()
+		}
+	}(podLogs)
 
 	// Get the kubeconfig.  This is done by finding a secret
 	// that has the same label as the top level Cluster resource.

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -14,9 +14,9 @@ import (
 )
 
 // GetNamespace returns the object storage namespace for this tenancy
-func GetNamespace() (string, error) {
+func GetNamespace(profile string) (string, error) {
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return "", err
 	}
@@ -33,14 +33,14 @@ func GetNamespace() (string, error) {
 // object is the same as the one that is desired.  If the object exists and
 // is the same, then the function simply returns.  If not, it uploads the
 // object to the given bucket and object name.
-func EnsureObject(bucketName string, objectName string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
-	namespace, err := GetNamespace()
+func EnsureObject(bucketName string, objectName string, profile string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
+	namespace, err := GetNamespace(profile)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return err
 	}
@@ -63,18 +63,18 @@ func EnsureObject(bucketName string, objectName string, contentLen int64, conten
 		}
 	}
 
-	return UploadObject(bucketName, objectName, contentLen, content, metadata)
+	return UploadObject(bucketName, objectName, profile, contentLen, content, metadata)
 }
 
 // UploadObject uploads the contents of a stream to an object storage bucket
-func UploadObject(bucketName string, objectName string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
-	namespace, err := GetNamespace()
+func UploadObject(bucketName string, objectName string, profile string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
+	namespace, err := GetNamespace(profile)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.DefaultConfigProvider())
+	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {
 		return err
 	}

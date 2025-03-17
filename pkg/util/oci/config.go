@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -110,7 +110,7 @@ func parseOciConfig(filename string) ([]*OciConfig, error) {
 	return ret, nil
 }
 
-func GetConfig() (*OciConfig, error) {
+func GetConfig(profile string) (*OciConfig, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func GetConfig() (*OciConfig, error) {
 
 	var ret *OciConfig
 	for _, o := range sections {
-		if o.Name == "DEFAULT" {
+		if o.Name == profile {
 			ret = o
 			break
 		}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/file"
+	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 type PKIInfo struct {
@@ -22,10 +23,10 @@ type PKIInfo struct {
 }
 
 type KubeconfigRequest struct {
-	Path          string
-	Host          string
-	Port          uint16
-	ServiceSubnet string
+	Path           string
+	Host           string
+	Port           uint16
+	ServiceSubnets []string
 }
 
 // GeneratePKI creates the complete set of certificates required
@@ -41,7 +42,7 @@ func GeneratePKI(options certificate.CertOptions, canonKr KubeconfigRequest, krs
 		return nil, err
 	}
 
-	certPair, err := certificate.CreateAndPersistKubernetesCerts(canonKr.Host, canonKr.ServiceSubnet, bootstrapDirectory, options)
+	certPair, err := certificate.CreateAndPersistKubernetesCerts(canonKr.Host, canonKr.ServiceSubnets, bootstrapDirectory, options)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ users:
 		RootCACert: encoder.EncodeToString(pair.RootCertResult.CertPEM),
 		ClientCert: encoder.EncodeToString(pair.LeafCertResult.CertPEM),
 		ClientKey:  encoder.EncodeToString(pair.LeafCertResult.PrivateKeyPEM),
-		ServerURL:  fmt.Sprintf("https://%s:%d", kubeAPIServerIP, port),
+		ServerURL:  fmt.Sprintf("https://%s:%d", util.GetURIAddress(kubeAPIServerIP), port),
 	}
 
 	err = t.Execute(&buf, &tData)
