@@ -159,7 +159,7 @@ func setConfigQPSBurst(config *rest.Config) {
 
 // CreateKubeInfo returns a kubeInfo struct from a path to a kubeConfig
 func CreateKubeInfo(kubeConfigPath string) (*KubeInfo, error) {
-	restConfig, _, err := GetKubeClient(kubeConfigPath)
+	restConfig, client, err := GetKubeClient(kubeConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func CreateKubeInfo(kubeConfigPath string) (*KubeInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	kubeInfo := KubeInfo{KubeconfigPath: path, RestConfig: restConfig}
+	kubeInfo := KubeInfo{KubeconfigPath: path, RestConfig: restConfig, Client: client}
 	return &kubeInfo, nil
 }
 
