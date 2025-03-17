@@ -10,9 +10,38 @@ import (
 	"time"
 
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
+
+// GetDeployments returns a list of deployments subject to a given label selector
+func GetDeployments(client kubernetes.Interface, namespace string, selector string) ([]v1.Deployment, error) {
+	deployments, err := client.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return deployments.Items, nil
+}
+
+// GetDeploymentsWithAnnotations returns a list of deployments with annotations
+func GetDeploymentsWithAnnotations(client kubernetes.Interface, namespace string, annots map[string]string) ([]*v1.Deployment, error) {
+	deployments, err := client.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	ret := []*v1.Deployment{}
+	for _, dep := range deployments.Items {
+		if stringMapSubset(dep.Annotations, annots) {
+			ret = append(ret, &dep)
+		}
+	}
+	return ret, nil
+}
 
 // GetDeployment returns the specified deployment
 func GetDeployment(client kubernetes.Interface, namespace string, name string) (*v1.Deployment, error) {
@@ -46,4 +75,28 @@ func WaitForDeployment(client kubernetes.Interface, namespace string, name strin
 		}
 		time.Sleep(time.Second * 10)
 	}
+}
+
+// GetDeploymentReplicaSets returns a list of replica sets controlled by a deployment
+func GetDeploymentReplicaSets(client kubernetes.Interface, dep *v1.Deployment) ([]*v1.ReplicaSet, error) {
+	return GetReplicaSets(client, dep.Namespace, string(dep.UID))
+}
+
+// GetDeploymentPods returns a list of pods controlled by a deployment
+func GetDeploymentPods(client kubernetes.Interface, dep *v1.Deployment) ([]*corev1.Pod, error) {
+	replicaSets, err := GetDeploymentReplicaSets(client, dep)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := []*corev1.Pod{}
+	for _, rs := range replicaSets {
+		rsPods, err := GetReplicaSetPods(client, rs)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, rsPods...)
+	}
+
+	return ret, nil
 }
