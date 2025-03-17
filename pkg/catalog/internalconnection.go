@@ -17,6 +17,14 @@ type InternalConnection struct {
 
 // NewInternalConnection opens a connection to the internal catalog
 func NewInternalConnection(kubeconfig string, ci *CatalogInfo) (CatalogConnection, error) {
+	// Ignore any errors getting the Kubernetes version.  This catalog can
+	// be searched without the need for a working cluster.  Due to the fact
+	// that Kubernetes clients try very hard to connect to something, it's
+	// nearly impossible to determine if a connection error is legitimate
+	// or not.  Thankfully it either doesn't matter if it is possible to
+	// connect to the cluster or doing anything with the applications in the
+	// catalog will fail when the it is actually necessary to interact with
+	// said cluster.
 	ver, _ := getKubeVersion(kubeconfig)
 	return &InternalConnection{
 		KubeVersion: ver,
