@@ -91,6 +91,11 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		return "", err
 	}
 
+	patches, err := ignition.KubeadmPatches()
+	if err != nil {
+		return "", err
+	}
+
 	ign := ignition.NewIgnition()
 
 	// Cluster API has its own kubeadm service to start
@@ -164,6 +169,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, container)
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
+	ign = ignition.Merge(ign, patches)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
 	// needs to be copied to /etc/keepalived
