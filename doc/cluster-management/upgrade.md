@@ -319,7 +319,7 @@ Nodes:
 #### Using Alternate Transports
 
 The default tranport for upgrades is `ostree-unverified-registry`.  This value
-is a good choice whenver there is a container mage registry available.  If a
+is a good choice whenver there is a container image registry available.  If a
 container image registry is not available, other transports are available.
 Refer to [OSTree Native Conainers URL Format](https://coreos.github.io/rpm-ostree/container/#url-format-for-ostree-native-containers) for detailed documentation
 on what transports are available.  Note that `containers-storage` is not
