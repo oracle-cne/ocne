@@ -47,7 +47,6 @@ resources and terminology on the client.
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
 * You will need an IP for the Kubernetes control plane node and an IP for each cluster node.
 * The CA certificate used for the oVirt rest API must be downloaded to a local file, even if it is not self-signed.  See [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate)
-* All the OLVM hosts should use the same network, such as VLAN.
 * All the network interface devices should be the same, such as enp1s0.
 
 ## Restrictions
