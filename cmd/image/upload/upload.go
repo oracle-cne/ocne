@@ -98,12 +98,23 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
+func ovrIfSet(src string, dest *string) {
+	if src != "" {
+		*dest = src
+	}
+}
+
 // RunCmd runs the "ocne image upload" command
 func RunCmd(cmd *cobra.Command) error {
 	_, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
 	if err != nil {
 		return err
 	}
+
+	// If any command lines values are provided, they override the cluster config
+	ovrIfSet(uploadOptions.BucketName, &cc.Providers.Oci.ImageBucket)
+	ovrIfSet(uploadOptions.CompartmentName, &cc.Providers.Oci.Compartment)
+	ovrIfSet(uploadOptions.Profile, &cc.Providers.Oci.Profile)
 
 	uploadOptions.ClusterConfig = cc
 	if err := flags.ValidateArchitecture(uploadOptions.ImageArchitecture); err != nil {
