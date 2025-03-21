@@ -24,6 +24,7 @@ ocne application uninstall --release appRelease
 var kubeConfig string
 var namespace string
 var releaseName string
+var uninstallCRDs bool
 
 const (
 	flagRelease      = "release"
@@ -33,6 +34,11 @@ const (
 	flagNamespace      = "namespace"
 	flagNamespaceShort = "n"
 	flagNamespaceHelp  = "The Kubernetes namespace that the application is installed into. If this value is not provided, the namespace from the current context of the kubeconfig is used"
+
+
+	flagCRDs      = "uninstall-crds"
+	flagCRDsShort = "c"
+	flagCRDsHelp  = "Delete any CustomResourceDefinitions that were installed with the application"
 )
 
 func NewCmd() *cobra.Command {
@@ -52,6 +58,7 @@ func NewCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&namespace, flagNamespace, flagNamespaceShort, "", flagNamespaceHelp)
 	cmd.Flags().StringVarP(&releaseName, flagRelease, flagReleaseShort, "", flagReleaseHelp)
+	cmd.Flags().BoolVarP(&uninstallCRDs, flagCRDs, flagCRDsShort, false, flagCRDsHelp)
 	cmd.MarkFlagRequired(flagRelease)
 
 	return cmd
@@ -64,6 +71,7 @@ func RunCmd(cmd *cobra.Command) error {
 		KubeConfigPath: kubeConfig,
 		Namespace:      namespace,
 		ReleaseName:    releaseName,
+		UninstallCRDs:  uninstallCRDs,
 	})
 	if err != nil {
 		return err

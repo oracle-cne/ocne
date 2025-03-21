@@ -30,6 +30,12 @@ type UninstallOptions struct {
 
 	// ReleaseName is the release name that should be uninstalled
 	ReleaseName string
+
+	// UninstallCRDs determines whether or not to delete an CRDs
+	// associated with the application.  Setting this option to
+	// true will delete the CRDs and change the behavior of the
+	// command to succeed if the application is not installed.
+	UninstallCRDs bool
 }
 
 // ShowOptions are the options for the application show command
