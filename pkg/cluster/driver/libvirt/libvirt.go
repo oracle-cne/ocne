@@ -137,6 +137,12 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	clusterConfig = &cc
 	lp := clusterConfig.Providers.Libvirt
 
+	// Override the default ssh key path if specified in the provider configuration
+	if len(lp.SshKey) > 0 {
+		clusterConfig.SshPublicKeyPath = lp.SshKey
+		clusterConfig.SshPublicKey = ""
+	}
+
 	// Connect to the given libvirt URI.
 	//
 	// Note:  There is an issue in the libvirtd client on Mac when connecting
