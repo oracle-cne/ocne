@@ -8,8 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,6 +17,8 @@ import (
 	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
@@ -50,7 +50,6 @@ const (
 	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
-
 )
 
 // Go does not allow slices or maps as constants.  Pretend they are.
@@ -481,6 +480,8 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	doTemplate := false
 	cd := clusterConfig.ClusterDefinition
 	cdi := clusterConfig.ClusterDefinitionInline
+	ociProvider := clusterConfig.Providers.Oci
+
 	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
 		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
@@ -527,14 +528,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// configuration are required.  Specifically, a compartment, a vcn and
 	// two subnets (which can be the same).  These values are fed into the
 	// OCI-CCM configuration.
-	if clusterConfig.Providers.Oci.Compartment == "" {
+	if ociProvider.Compartment == "" {
 		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
 	}
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
 	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
-		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
+		ociProvider.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
 
 	cad := &ClusterApiDriver{
@@ -550,6 +551,12 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 
 	cad.Ephemeral = isEphemeral
 	cad.BootstrapKubeConfig = bootstrapKubeConfig
+
+	// Determine if the OCI provider configuration overrides the default SSH settings
+	if len(ociProvider.SshKey) > 0 {
+		clusterConfig.SshPublicKeyPath = ociProvider.SshKey
+		clusterConfig.SshPublicKey = ""
+	}
 
 	// Install any necessary components into the admin cluster
 	capiApplications, err := cad.getApplications()
@@ -842,7 +849,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 		}
 		podLogs = append(podLogs, util.Scan(podLog, md))
 	}
-	defer func(toClose []*util.ScanCloser){
+	defer func(toClose []*util.ScanCloser) {
 		for _, tc := range toClose {
 			tc.Close()
 		}

@@ -43,6 +43,7 @@ type OciProvider struct {
 	Vcn               string           `yaml:"vcn"`
 	ImageBucket       string           `yaml:"imageBucket"`
 	Proxy             Proxy            `yaml:"proxy"`
+	SshKey            string           `yaml:"sshKey"`
 }
 
 type OlvmProvider struct {
@@ -345,7 +346,7 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 	return append(append([]Application{}, def...), ovr...)
 }
 
-// MergeCertificationInformation takes two CertificateInformations and merges them into a third.
+// MergeCertificateInformation takes two CertificateInformations and merges them into a third.
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
