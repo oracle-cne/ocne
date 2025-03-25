@@ -640,6 +640,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
+		ClusterConfig:     cad.ClusterConfig,
 		ProviderType:      upload.ProviderTypeOCI,
 		Profile:           cad.ClusterConfig.Providers.Oci.Profile,
 		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
