@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.1.2
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -71,6 +71,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Mar 31 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-3
+- Improve the initial deployment of keepalived and nginx for virtual IP deployments
+
 * Tue Mar 25 2025 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.1.2-2
 - Fix a segmentation fault when automatically uploading custom images with the oci provider
 
