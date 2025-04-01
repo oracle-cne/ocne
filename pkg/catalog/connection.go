@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package catalog
@@ -12,6 +12,7 @@ import (
 	"k8s.io/api/core/v1"
 
 	"github.com/oracle-cne/ocne/pkg/k8s"
+	"github.com/oracle-cne/ocne/pkg/k8s/client"
 )
 
 const (
@@ -93,7 +94,6 @@ func findChartAtVersion(cat *Catalog, chart string, version string) (*ChartMeta,
 			}
 		}
 	} else {
-		// TODO - actually look at versions
 		cm = &cms[0]
 	}
 	if cm == nil {
@@ -101,4 +101,19 @@ func findChartAtVersion(cat *Catalog, chart string, version string) (*ChartMeta,
 	}
 
 	return cm, nil
+}
+
+// getKubeVersion gets the server version for a Kubernetes cluster
+func getKubeVersion(kubeconfig string) (string, error) {
+	rc, _, err := client.GetKubeClient(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	vi, err := k8s.GetServerVersion(rc)
+	if err != nil {
+		return "", err
+	}
+
+	return k8s.VersionInfoToString(vi), nil
 }

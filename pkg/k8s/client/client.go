@@ -24,6 +24,7 @@ type KubeInfo struct {
 	KubeApiServerIP string
 	KubeconfigPath  string
 	RestConfig      *rest.Config
+	Client          kubernetes.Interface
 }
 
 // GetKubeClient - return a Kubernetes clientset for use with the go-client

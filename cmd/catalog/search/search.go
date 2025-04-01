@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package search
@@ -84,7 +84,11 @@ func RunCmd(cmd *cobra.Command) error {
 		}
 	}
 
-	sort.Slice(charts, func(i, j int) bool {
+	// The entries that come back from search.Search() are sorted.
+	// It's hard to sort the random nonsense that can come from
+	// catalogs.  Use a stable sort to ensure that the versions
+	// remain sorted.
+	sort.SliceStable(charts, func(i, j int) bool {
 		return charts[i].Name < charts[j].Name
 	})
 

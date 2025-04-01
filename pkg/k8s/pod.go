@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -313,4 +314,37 @@ func StartAdminPodOnNode(client kubernetes.Interface, node string, namespace str
 		return nil, err
 	}
 	return pod, nil
+}
+
+// GetPodsByOwner gets the pods controlled by some replication controller
+func GetPodsByOwner(client kubernetes.Interface, namespace string, uid string) ([]*v1.Pod, error) {
+	pods, err := GetPodsBySelector(client, namespace, "")
+	if err != nil {
+		return nil, err
+	}
+
+	ret := []*v1.Pod{}
+	for _, p := range pods.Items {
+		for _, or := range p.OwnerReferences {
+			if string(or.UID) == uid {
+				ret = append(ret, &p)
+				break
+			}
+		}
+	}
+	return ret, nil
+}
+
+// GetPodLogs gets the log stream for a container in a pod.  Works like kubectl
+func GetPodLogs(client kubernetes.Interface, pod *v1.Pod, container string) (io.ReadCloser, error) {
+	now := metav1.Now()
+	logReq := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &v1.PodLogOptions{
+		Follow: true,
+		SinceTime: &now,
+	})
+	stream, err := logReq.Stream(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
 }
