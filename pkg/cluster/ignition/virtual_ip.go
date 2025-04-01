@@ -13,6 +13,9 @@ import (
 
 const (
 	keepAlivedServiceName = "keepalived.service"
+	keepAlivedUid = 991
+	keepAlivedUser = "keepalived_script"
+	keepAlivedGroup = "keepalived_script"
 
 	nginxServiceName = "ocne-nginx.service"
 
@@ -45,7 +48,7 @@ vrrp_instance VI_1 {
   virtual_router_id 51
   priority {{ .Priority }}
   unicast_peer {
-PEERS
+{{ .Peers }}
   }
   virtual_ipaddress {
     {{ .VirtualIP }}
@@ -80,6 +83,7 @@ refreshServices() {
     echo "$NODES" > /etc/keepalived/peers
 
     ADDRS=$(/usr/sbin/ip addr)
+    ADDRS="$ADDRS localhost"
     ESCAPED_PEERS=""
     for node in $NODES; do
       echo "$ADDRS" | grep -q "$node"
@@ -128,7 +132,7 @@ events {
 }
 stream {
   upstream backend1 {
-SERVERS
+{{ .Peer }}
   }
   server {
     listen {{ .BindPort }};
@@ -199,6 +203,7 @@ type keepalivedConfigArguments struct {
 	Iface     string
 	Priority  string
 	VirtualIP string
+	Peers     string
 }
 
 type keepalivedCheckScriptArguments struct {
@@ -208,23 +213,26 @@ type keepalivedCheckScriptArguments struct {
 
 type nginxConfigArguments struct {
 	BindPort string
+	Peer     string
 }
 
 // generateNginxConfig generates a configuration file for nginx to load balaance between
 // all the master nodes in a given cluster.
-func generateNginxConfig(bindPort uint16) (string, error) {
+func generateNginxConfig(bindPort uint16, peer string) (string, error) {
 	return util.TemplateToString(nginxConfig, &nginxConfigArguments{
 		BindPort: fmt.Sprintf("%d", bindPort),
+		Peer:     peer,
 	})
 }
 
 // generateKeepalivedConfig creates a config file that managed a virtual ip between all kubernetes
 // master nodes.
-func generateKeepalivedConfig(iface string, priority string, virtualIP string) (string, error) {
+func generateKeepalivedConfig(iface string, priority string, virtualIP string, peers string) (string, error) {
 	return util.TemplateToString(keepalivedConfigTemplate, &keepalivedConfigArguments{
 		Iface:     iface,
 		Priority:  priority,
 		VirtualIP: virtualIP,
+		Peers:     peers,
 	})
 }
 
@@ -250,23 +258,31 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		Units: []*igntypes.Unit{},
 	}
 
-	keepAlivedConfig, err := generateKeepalivedConfig(netInterface, "50", virtualIP)
+	keepAlivedConfig, err := generateKeepalivedConfig(netInterface, "50", virtualIP, "")
 	if err != nil {
 		return nil, err
 	}
+
+	keepAlivedConfigTemplate, err := generateKeepalivedConfig(netInterface, "50", virtualIP, "PEERS")
+	if err != nil {
+		return nil, err
+	}
+
 	data.Files = append(data.Files,
 		&File{
 			Path: keepAlivedConfigPath,
-			Mode: 0666,
+			Mode: 0644,
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 		},
 		&File{
 			Path: KeepAlivedConfigTemplatePath,
 			Mode: 0644,
 			Contents: FileContents{
-				Source: keepAlivedConfig,
+				Source: keepAlivedConfigTemplate,
 			},
 		})
 
@@ -278,6 +294,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: keepAlivedCheckScriptPath,
 			Mode: 0755,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
@@ -285,33 +303,47 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: keepAlivedStateScriptPath,
 			Mode: 0755,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
 		},
 		&File{
 			Path: "/etc/keepalived/peers",
-			Mode: 0666,
+			Mode: 0644,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		},
 		&File{
 			Path: "/etc/keepalived/log",
-			Mode: 0666,
+			Mode: 0644,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		})
 
-	nginxConfig, err := generateNginxConfig(bindPort)
+	nginxConfig, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
 	if err != nil {
 		return nil, err
 	}
+
+	nginxConfigTemplate, err := generateNginxConfig(bindPort, "SERVERS")
+	if err != nil {
+		return nil, err
+	}
+
 	data.Files = append(data.Files,
 		&File{
 			Path: nginxConfigPath,
-			Mode: 0666,
+			Mode: 0644,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: nginxConfig,
 			},
@@ -320,7 +352,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Path: nginxConfigTemplatePath,
 			Mode: 0644,
 			Contents: FileContents{
-				Source: nginxConfig,
+				Source: nginxConfigTemplate,
 			},
 		},
 		&File{
@@ -346,7 +378,9 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		},
 		&File{
 			Path: "/etc/ocne/nginx/servers",
-			Mode: 0666,
+			Mode: 0644,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
