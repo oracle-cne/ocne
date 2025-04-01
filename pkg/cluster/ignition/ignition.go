@@ -30,6 +30,8 @@ type File struct {
 	Path       string       `json:"path"`
 	Filesystem string       `json:"filesystem"`
 	Mode       int          `json:"mode"`
+	UserId     int       `json:"user"`
+	GroupId    int       `json:"group"`
 	Contents   FileContents `json:"contents"`
 	encoded    bool
 	Overwrite  bool ` json:"overwrite"`
@@ -116,6 +118,12 @@ func AddFile(ign *igntypes.Config, f *File) error {
 		Node: igntypes.Node{
 			Path:      f.Path,
 			Overwrite: util.BoolPtr(true),
+			User: igntypes.NodeUser{
+				ID: util.IntPtr(f.UserId),
+			},
+			Group: igntypes.NodeGroup{
+				ID: util.IntPtr(f.GroupId),
+			},
 		},
 		FileEmbedded1: igntypes.FileEmbedded1{
 			Mode: util.IntPtr(f.Mode),
