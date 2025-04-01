@@ -30,8 +30,10 @@ type File struct {
 	Path       string       `json:"path"`
 	Filesystem string       `json:"filesystem"`
 	Mode       int          `json:"mode"`
-	UserId     int       `json:"user"`
-	GroupId    int       `json:"group"`
+	UserId     int          `json:"user"`
+	User       string       `json:"username"`
+	GroupId    int          `json:"group"`
+	Group      string       `json:"groupname"`
 	Contents   FileContents `json:"contents"`
 	encoded    bool
 	Overwrite  bool ` json:"overwrite"`
@@ -114,15 +116,35 @@ func AddFile(ign *igntypes.Config, f *File) error {
 		return err
 	}
 
+	var uidPtr *int
+	var gidPtr *int
+	var unamePtr *string
+	var gnamePtr *string
+
+	if f.UserId != 0 {
+		uidPtr = util.IntPtr(f.UserId)
+	}
+	if f.User != "" {
+		unamePtr = util.StrPtr(f.User)
+	}
+	if f.GroupId != 0 {
+		gidPtr = util.IntPtr(f.GroupId)
+	}
+	if f.Group != "" {
+		gnamePtr = util.StrPtr(f.Group)
+	}
+
 	ign.Storage.Files = append(ign.Storage.Files, igntypes.File{
 		Node: igntypes.Node{
 			Path:      f.Path,
 			Overwrite: util.BoolPtr(true),
 			User: igntypes.NodeUser{
-				ID: util.IntPtr(f.UserId),
+				ID: uidPtr,
+				Name: unamePtr,
 			},
 			Group: igntypes.NodeGroup{
-				ID: util.IntPtr(f.GroupId),
+				ID: gidPtr,
+				Name: gnamePtr,
 			},
 		},
 		FileEmbedded1: igntypes.FileEmbedded1{

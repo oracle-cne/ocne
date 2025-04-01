@@ -13,6 +13,9 @@ import (
 
 const (
 	keepAlivedServiceName = "keepalived.service"
+	keepAlivedUid = 991
+	keepAlivedUser = "keepalived_script"
+	keepAlivedGroup = "keepalived_script"
 
 	nginxServiceName = "ocne-nginx.service"
 
@@ -272,8 +275,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 		},
 		&File{
 			Path: KeepAlivedConfigTemplatePath,
@@ -291,8 +294,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: keepAlivedCheckScriptPath,
 			Mode: 0755,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
@@ -300,8 +303,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: keepAlivedStateScriptPath,
 			Mode: 0755,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
@@ -309,8 +312,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: "/etc/keepalived/peers",
 			Mode: 0644,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -318,8 +321,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: "/etc/keepalived/log",
 			Mode: 0644,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -339,8 +342,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: nginxConfigPath,
 			Mode: 0644,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: nginxConfig,
 			},
@@ -376,8 +379,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path: "/etc/ocne/nginx/servers",
 			Mode: 0644,
-			UserId: 991,
-			GroupId: 991,
+			User: keepAlivedUser,
+			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
