@@ -5,6 +5,7 @@ package capi
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,14 @@ func NewOciLogHandler() *OciLogHandler {
 	}
 }
 
+var tolerations []*regexp.Regexp = []*regexp.Regexp{
+	// '\' is a special character in regex as well as strings, so we need
+	// some goop to match '\"'.
+	// \\\\\" -> \\ escapes the next backslash \\ literal backslash \" escapes the quote
+	// In each pair, the first backslash is for the string escaping.
+	regexp.MustCompile("OCICluster.infrastructure.cluster.x-k8s.io \\\\\".*\\\\\" not found"),
+}
+
 func (olh *OciLogHandler) Handle(lines []string) {
 	// If the message is not an error, ignore it
 	if lines[0][0] != 'E' {
@@ -27,8 +36,13 @@ func (olh *OciLogHandler) Handle(lines []string) {
 	}
 
 	// Error messages are usually split across a few lines.  If it's not
-	// then log an error.
+	// then log an error if the error is not tolerated.
 	if len(lines) == 1 {
+		for _, r := range tolerations {
+			if r.Match([]byte(lines[0])) {
+				return
+			}
+		}
 		log.Errorf("Saw unexpected error message in OCI Cluster API provider logs: %s", lines[0])
 		return
 	}
