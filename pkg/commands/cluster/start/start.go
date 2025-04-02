@@ -259,16 +259,6 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				},
 			},
 		},
-		install.ApplicationDescription{
-			Force: true,
-			Application: &types.Application{
-				Name:      constants.KubernetesGatewayAPICrds,
-				Namespace: constants.KubeNamespace,
-				Release:   constants.KubernetesGatewayAPICrds,
-				Version:   constants.KubernetesGatewayAPICrdsVersion,
-				Catalog:   catalog.InternalCatalog,
-			},
-		},
 	}
 
 	// If the Kubernetes Gateway APIs support the installed version,
