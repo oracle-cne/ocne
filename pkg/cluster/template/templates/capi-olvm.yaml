@@ -53,6 +53,9 @@ kind: KubeadmControlPlane
 metadata:
   name: "{{.ClusterConfig.Name}}-control-plane"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
+  annotations:
+    controlplane.cluster.x-k8s.io/skip-kube-proxy: "true"
+    controlplane.cluster.x-k8s.io/skip-coredns: "true"
 spec:
   version: "{{.KubeVersions.Kubernetes}}"
   replicas: {{.ClusterConfig.ControlPlaneNodes}}
@@ -94,6 +97,12 @@ spec:
         extraArgs:
           tls-cipher-suites: {{.CipherSuite}}
     initConfiguration:
+      skipPhases:
+        - "preflight"
+        - "addon/kube-proxy"
+        - "addon/coredns"
+      patches:
+        directory: /etc/ocne/ock/patches
       localAPIEndpoint:
         bindPort: {{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.BindPort}}
         advertiseAddress: "{{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.AdvertiseAddress}}"
@@ -103,6 +112,10 @@ spec:
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites: {{.CipherSuite}}
     joinConfiguration:
+      skipPhases:
+        - "preflight"
+      patches:
+        directory: /etc/ocne/ock/patches
       controlPlane:
         localAPIEndpoint:
           bindPort: {{.ClusterConfig.Providers.Olvm.LocalAPIEndpoint.BindPort}}

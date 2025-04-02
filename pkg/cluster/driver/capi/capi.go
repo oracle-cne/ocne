@@ -8,16 +8,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/commands/image/create"
@@ -49,7 +50,6 @@ const (
 	OciCcmVersion       = "1.30.0"
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
-
 )
 
 // Go does not allow slices or maps as constants.  Pretend they are.
@@ -632,6 +632,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
+		ClusterConfig:     cad.ClusterConfig,
 		ProviderType:      upload.ProviderTypeOCI,
 		Profile:           cad.ClusterConfig.Providers.Oci.Profile,
 		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
@@ -820,6 +821,32 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	if err != nil {
 		return false, false, err
 	}
+
+	// Get logs for the OCI controller
+	ociPods, err := application.PodsForApplication(constants.OCICAPIRelease, constants.OCICAPINamespace, cad.BootstrapKubeConfig)
+	log.Debugf("Have %d OCI CAPI pods", len(ociPods))
+	if err != nil {
+		return false, false, err
+	}
+	podLogs := []*util.ScanCloser{}
+	for _, op := range ociPods {
+		podLog, err := k8s.GetPodLogs(clientIface, op, "")
+		if err != nil {
+			return false, false, err
+		}
+		re := "^[A-Z][0-9]+"
+		md, err := util.NewMessageDispatcher(re, NewOciLogHandler())
+		if err != nil {
+			err = fmt.Errorf("Internal error: regex \"%s\" does not compile: %v", re, err)
+			return false, false, err
+		}
+		podLogs = append(podLogs, util.Scan(podLog, md))
+	}
+	defer func(toClose []*util.ScanCloser) {
+		for _, tc := range toClose {
+			tc.Close()
+		}
+	}(podLogs)
 
 	// Get the kubeconfig.  This is done by finding a secret
 	// that has the same label as the top level Cluster resource.

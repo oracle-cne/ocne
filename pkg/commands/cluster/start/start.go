@@ -271,6 +271,36 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		},
 	}
 
+	// If the Kubernetes Gateway APIs support the installed version,
+	// install them.  Otherwise, don't.
+	cc, err := catalog.NewConnection(localKubeConfig, &catalog.CatalogInfo{
+		CatalogName: catalog.InternalCatalog,
+	})
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	cat, err := cc.GetCharts(constants.KubernetesGatewayAPICrds)
+	if err != nil {
+		return localKubeConfig, err
+	}
+
+	crdEnts, ok := cat.ChartEntries[constants.KubernetesGatewayAPICrds]
+	if ok {
+		if len(crdEnts) > 0 {
+			applications = append(applications, install.ApplicationDescription{
+				Force: true,
+				Application: &types.Application{
+					Name:      constants.KubernetesGatewayAPICrds,
+					Namespace: constants.KubeNamespace,
+					Release:   constants.KubernetesGatewayAPICrds,
+					Version:   constants.KubernetesGatewayAPICrdsVersion,
+					Catalog:   catalog.InternalCatalog,
+				},
+			})
+		}
+	}
+
 	if clusterConfig.Provider != constants.ProviderTypeNone {
 		switch clusterConfig.CNI {
 		case "", constants.CNIFlannel:

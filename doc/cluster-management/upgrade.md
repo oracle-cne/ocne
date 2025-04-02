@@ -316,6 +316,111 @@ Nodes:
   ocne3244	control plane	Ready	v1.30.3+1.el8	false
 ```
 
+#### Using Alternate Transports
+
+The default tranport for upgrades is `ostree-unverified-registry`.  This value
+is a good choice whenver there is a container image registry available.  If a
+container image registry is not available, other transports are available.
+Refer to [OSTree Native Conainers URL Format](https://coreos.github.io/rpm-ostree/container/#url-format-for-ostree-native-containers) for detailed documentation
+on what transports are available.  Note that `containers-storage` is not
+supported.
+
+##### Archive File
+
+It is common to have some kind of read-only media that can easily be attached
+to compute resources.  Maybe this is optical media that is inserted into a
+reader.  Perhaps it's on a USB stick.  It may also be on a virtual disk that
+is attached to one or more hosts.  In these cases, the most convenient way to
+transport ostree images might be to leverage Open Container Initiative archive
+files.
+
+Start a cluster with an archive file configured as the ostree registry.
+```
+$ ocne cluster start -c <( cat << EOF
+osRegistry: ostree-unverified-image:oci-archive:/var/ocne/archive.tgz
+kubernetesVersion: 1.30
+EOF
+)
+```
+
+Stage an update
+```
+$ ocne cluster stage --version 1.31
+```
+
+Load the archive file onto the system.  In this case `podman save` is used for
+convenience.  Any file transport is workable, including things like automounts.
+```
+$ podman save --format oci-archive container-registry.oracle.com/olcne/ock-ostree:1.31 | ocne cluster console --direct --node ocne-control-plane-1 -- cp /dev/stdin /var/ocne/archive.tgz
+```
+
+The node will pick up the update
+```
+]$ ocne cluster console --direct --node ocne-control-plane-1 -- journalctl --no-pager -u ocne-update.service
+-- Logs begin at Mon 2025-03-17 19:54:34 UTC, end at Mon 2025-03-17 20:04:35 UTC. --
+Mar 17 19:54:54 ocne-control-plane-1 systemd[1]: Started Update service for OCNE.
+Mar 17 19:54:54 ocne-control-plane-1 ocne-update.sh[2652]: time="2025-03-17T19:54:54Z" level=fatal msg="Error parsing image name \"oci-archive:/var/ocne/archive.tgz\": creating temp directory: archive file not found: \"/var/ocne/archive.tgz\""
+Mar 17 19:54:54 ocne-control-plane-1 ocne-update.sh[2626]: Could not inspect image: /var/ocne/archive.tgz
+Mar 17 19:56:11 ocne-control-plane-1 systemd[1]: Stopping Update service for OCNE...
+Mar 17 19:56:11 ocne-control-plane-1 systemd[1]: ocne-update.service: Succeeded.
+Mar 17 19:56:11 ocne-control-plane-1 systemd[1]: Stopped Update service for OCNE.
+Mar 17 19:56:11 ocne-control-plane-1 systemd[1]: Started Update service for OCNE.
+Mar 17 19:56:11 ocne-control-plane-1 ocne-update.sh[4240]: time="2025-03-17T19:56:11Z" level=fatal msg="Error parsing image name \"oci-archive:/var/ocne/archive.tgz\": creating temp directory: archive file not found: \"/var/ocne/archive.tgz\""
+Mar 17 19:56:11 ocne-control-plane-1 ocne-update.sh[4199]: Could not inspect image: /var/ocne/archive.tgz
+Mar 17 19:58:25 ocne-control-plane-1 ocne-update.sh[4199]: Checking for new content
+Mar 17 19:58:25 ocne-control-plane-1 ocne-update.sh[4199]: Image has ostree commit label: 532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e
+Mar 17 19:58:25 ocne-control-plane-1 ocne-update.sh[5402]: error: No such metadata object 532e26918676fde4049050d8123d881c9a86b3fdb7092662c4e29dd6cf0d928e.commit
+Mar 17 19:58:25 ocne-control-plane-1 ocne-update.sh[4199]: Unencapsulating image
+Mar 17 19:58:25 ocne-control-plane-1 ocne-update.sh[5417]: Pulling manifest: ostree-unverified-image:oci-archive:/var/ocne/archive.tgz
+Mar 17 19:58:38 ocne-control-plane-1 ocne-update.sh[5417]: Importing: ostree-unverified-image:oci-archive:/var/ocne/archive.tgz (digest: sha256:4c4910d5bb0f6b3b314ccb83ba44fc3b6e49e1e5db732ca33108e96dee29091d)
+...
+Mar 17 19:59:23 ocne-control-plane-1 ocne-update.sh[5417]: Fetching ostree chunk sha256:69c8d90632bf (3.8 MB)
+Mar 17 19:59:23 ocne-control-plane-1 ocne-update.sh[5417]: Fetched ostree chunk sha256:69c8d90632bf
+Mar 17 19:59:34 ocne-control-plane-1 ocne-update.sh[5417]: Update downloaded.
+Mar 17 19:59:34 ocne-control-plane-1 ocne-update.sh[5921]: node/ocne-control-plane-1 annotated
+
+$ ocne cluster info
+INFO[2025-03-17T20:05:35Z] Collecting node data                         
+Cluster Summary:
+  control plane nodes: 1
+  worker nodes: 0
+  nodes with available updates: 1
+
+Nodes:
+  Name			Role		State	Version		Update Available
+  ----			----		-----	-------		----------------
+  ocne-control-plane-1	control plane	Ready	v1.30.10+1.el8	true
+
+
+Node: ocne-control-plane-1
+  Registry and tag for ostree patch images:
+    registry: /var/ocne/archive.tgz
+    tag: 1.31
+    transport: ostree-unverified-image:oci-archive
+  Ostree deployments:
+      ock e55046b74b1c525c74415f67f53d64700ab67d8b7ff63555fa82f96ea64cba68.1 (staged)
+    * ock e55046b74b1c525c74415f67f53d64700ab67d8b7ff63555fa82f96ea64cba68.0
+```
+
+Update the node
+
+```
+$ ocne node update --node ocne-control-plane-1
+INFO[2025-03-17T20:06:07Z] When updating control plane nodes, it is possible to lose connection to the Kubernetes API Server temporarily.  Any upcoming log messages about connection errors can be ignored. 
+INFO[2025-03-17T20:06:07Z] Running node update                          
+INFO[2025-03-17T20:06:13Z] Waiting for pod ocne-system/update-node-ocne-control-plane-1-pod to be ready: ok 
+INFO[2025-03-17T20:06:46Z] Node ocne-control-plane-1 has been updated and rebooted 
+INFO[2025-03-17T20:07:39Z] Waiting for the Kubernetes cluster to be ready: ok 
+INFO[2025-03-17T20:07:41Z] Waiting for the node ocne-control-plane-1 to be ready: ok 
+INFO[2025-03-17T20:07:41Z] Un-cordoning node ocne-control-plane-1: ok 
+INFO[2025-03-17T20:07:42Z] Node ocne-control-plane-1 successfully updated 
+
+$ kubectl get node
+NAME                   STATUS   ROLES           AGE   VERSION
+ocne-control-plane-1   Ready    control-plane   15m   v1.31.6+1.el8
+```
+
+
 ### Upgrading Cluster API Clusters
 
 #### Create a Cluster
@@ -325,7 +430,7 @@ management cluster is available, it can be used.  This example uses an ephemeral
 cluster for simplicity.
 
 ```
-$ ./out/linux_amd64/ocne cluster start -c mycapi.yaml
+$ ocne cluster start -c mycapi.yaml
 INFO[2025-02-03T22:44:07Z] Installing cert-manager into cert-manager: ok 
 INFO[2025-02-03T22:44:08Z] Installing core-capi into capi-system: ok 
 INFO[2025-02-03T22:44:08Z] Installing capoci into cluster-api-provider-oci-system: ok 
@@ -343,7 +448,7 @@ the worker nodes.
 
 ```
 $ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
-$ ./out/linux_amd64/ocne cluster stage --version 1.30 -c ~/tools/capi-1.29.yaml 
+$ ocne cluster stage --version 1.30 -c ~/tools/capi-1.29.yaml 
 INFO[2025-02-03T22:52:41Z] Installing cert-manager into cert-manager: ok 
 INFO[2025-02-03T22:52:41Z] Installing core-capi into capi-system: ok 
 INFO[2025-02-03T22:52:42Z] Installing capoci into cluster-api-provider-oci-system: ok 

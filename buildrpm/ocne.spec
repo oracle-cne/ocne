@@ -5,7 +5,7 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.1.1
+Version: 2.1.2
 Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
@@ -71,6 +71,15 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Mon Mar 31 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-3
+- Improve the initial deployment of keepalived and nginx for virtual IP deployments
+
+* Tue Mar 25 2025 Michael Gianatassio <michael.gianatassio@oracle.com> - 2.1.2-2
+- Fix a segmentation fault when automatically uploading custom images with the oci provider
+
+* Fri Mar 21 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-1
+- Log errors from the OCI CAPI provider that occur during cluster start
+- Image upload for oci images takes cluster configuration and defaults file into account
 
 * Mon Mar 10 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.1-3
 - Introduce support for IPv6 single stack and dual stack configurations
