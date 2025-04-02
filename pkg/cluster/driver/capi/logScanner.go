@@ -26,7 +26,7 @@ var tolerations []*regexp.Regexp = []*regexp.Regexp{
 	// some goop to match '\"'.
 	// \\\\\" -> \\ escapes the next backslash \\ literal backslash \" escapes the quote
 	// In each pair, the first backslash is for the string escaping.
-	regexp.MustCompile("OCICluster.infrastructure.cluster.x-k8s.io \\\\\".*\\\\\" not found"),
+	regexp.MustCompile("OCICluster\\.infrastructure\\.cluster\\.x-k8s\\.io \\\\\".*\\\\\" not found"),
 }
 
 func (olh *OciLogHandler) Handle(lines []string) {
