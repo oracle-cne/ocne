@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.1.2
-Release: 4%{dist}
+Release: 5%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -71,6 +71,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Wed Apr 02 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-5
+- Add a retry for fetching the kubelet-config during cluster start to account for slow controllers
+
 * Wed Apr 02 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-4
 - Tolerate errors from the OCI CAPI controllers that are very short lived
 
