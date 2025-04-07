@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.22-draft
+### Version: v0.0.23-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -157,6 +157,18 @@ helm get values -n verrazzano-ingress-nginx ingress-controller > overrides.yaml
 sed -i '1d' overrides.yaml
 sed -i '/digest:/d' overrides.yaml
 sed -i '/image:/,+2d' overrides.yaml
+cat > extra-configmap.yaml <<EOF
+  extraConfigMaps:
+  - name: ingress-controller-ingress-nginx-defaultbackend-custom-error-pages
+    data:
+EOF
+kubectl get ConfigMap -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend-custom-error-pages  -o jsonpath={.data} | yq -P > data.yaml
+while IFS= read -r line; do
+  printf "      %s\n" "$line" >> extra-configmap.yaml
+done < data.yaml
+sed -i '/defaultBackend/r extra-configmap.yaml' overrides.yaml
+rm extra-configmap.yaml
+rm data.yaml
 ```
 
 Upgrade to ingress-nginx 1.9.6 using the overrides extracted above:
