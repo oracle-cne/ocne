@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.22-draft
+### Version: v0.0.23-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
