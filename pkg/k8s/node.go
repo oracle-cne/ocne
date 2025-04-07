@@ -15,8 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
 )
 
 const (
@@ -53,7 +53,7 @@ func WaitUntilGetNodesSucceeds(client kubernetes.Interface) (*v1.NodeList, error
 			Message: "Waiting for the Kubernetes cluster to be ready",
 			WaitFunction: func(ignored interface{}) error {
 				// wait for 10 min
-				maxTime := time.Now().Add(10 * time.Minute)
+				maxTime := time.Now().Add(15 * time.Minute)
 				for {
 					var err error
 					nodeList, err = GetNodeList(client)
@@ -167,7 +167,7 @@ func GetControlPlaneNodes(cli kubernetes.Interface) (*v1.NodeList, error) {
 // control plane nodes are available.  This is useful early in cluster
 // creation when even static pods have not been created.
 func WaitForControlPlaneNodes(cli kubernetes.Interface) (*v1.NodeList, error) {
-	list, _, err := util.LinearRetry(func(arg interface{})(interface{}, bool, error) {
+	list, _, err := util.LinearRetry(func(arg interface{}) (interface{}, bool, error) {
 		nodeList, err := GetControlPlaneNodes(cli)
 		if err != nil {
 			return nil, true, err
@@ -250,15 +250,14 @@ func processImage(registry string, best string, secondBest string, img *v1.Conta
 	return ret, haveBest, exactMatch
 }
 
-
 // GetImageCandidate returns a reasonable image:tag based on some criteria
-// - If the best match is found, the first return value is set to that image
-//   and the second return value is true
-// - If the second best match is found, the first return value is set to that
-//   image:tag and the third value is true
-// - If neither are found, an arbitrary image:tag is returned
-// - If the image does not exist on the node, the first value is the empty string
-//   and the other two are false.
+//   - If the best match is found, the first return value is set to that image
+//     and the second return value is true
+//   - If the second best match is found, the first return value is set to that
+//     image:tag and the third value is true
+//   - If neither are found, an arbitrary image:tag is returned
+//   - If the image does not exist on the node, the first value is the empty string
+//     and the other two are false.
 func GetImageCandidate(registry string, best string, secondBest string, node *v1.Node) (string, bool, bool) {
 	imgs := node.Status.Images
 	log.Debugf("%s has these images: %+v", node.Name, imgs)

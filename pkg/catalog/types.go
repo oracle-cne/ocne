@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package catalog
@@ -30,6 +30,7 @@ type ChartMeta struct {
 	Description string             `yaml:"description"`
 	ApiVersion  string             `yaml:"apiVersion"`
 	AppVersion  string             `yaml:"appVersion"`
+	KubeVersion string             `yaml:"kubeVersion"`
 	Type        string             `yaml:"type"`
 	Urls        []string           `yaml:"urls"`
 	Created     time.Time          `yaml:"created"`

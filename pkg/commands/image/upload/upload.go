@@ -27,7 +27,7 @@ func setCompartmentId(options *UploadOptions) error {
 		return nil
 	}
 
-	compartmentId, err := oci.GetCompartmentId(options.CompartmentName, options.Profile)
+	compartmentId, err := oci.GetCompartmentId(options.ClusterConfig.Providers.Oci.Compartment, options.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 			Message: "Uploading image to object storage",
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.BucketName, options.filename, uo.Profile, uo.size, uo.file, nil)
+				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
 			},
 		},
 	})
@@ -78,7 +78,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", fmt.Errorf("Failed to upload image to object storage")
 	}
 
-	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.BucketName, options.filename, options.Profile)
+	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
 // EnsureImageDetails sets important configuration options for the custom image.

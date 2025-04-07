@@ -34,12 +34,12 @@ The oVirt instance is the same as the oVirt installation.  It is where the oVirt
 
 ## OLVM vs oVirt
 There is some overlap in the terminology used for OLVM vs oVirt.  The term OLVM really has two meanings
-in this context.  First it represents the backend OLVM oVirt instance, which is an oVirt implementation.  So, the
+in this context.  First, it represents the backend OLVM oVirt instance, which is an oVirt implementation.  So, the
 term oVirt **always** means the backend OLVM oVirt instance.  Any resource or entity described as oVirt can
 be viewed from the OLVM management console, or accessed via the oVirt REST API.
 
 There is also the client side, where you create Cluster API resources.  The OLVM Cluster API has an OLVMCluster 
-resource which is not to be confused with either a Kubernetes cluster, or an oVirt cluster. 
+resource which is not to be confused with either a Kubernetes cluster or an oVirt cluster. 
 So, when you see OLVM* field names or resource names described in this  document, it is **always** referring to OLVM Cluster API 
 resources and terminology on the client.
 
@@ -47,6 +47,7 @@ resources and terminology on the client.
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
 * You will need an IP for the Kubernetes control plane node and an IP for each cluster node.
 * The CA certificate used for the oVirt rest API must be downloaded to a local file, even if it is not self-signed.  See [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate)
+* All the network interface devices should be the same, such as enp1s0.
 
 ## Restrictions
 * This is a developer release feature so you must be using the developer RPM for the Oracle Cloud Native Environment CLI.
@@ -380,12 +381,14 @@ INFO[2024-12-20T13:52:11-05:00] Successfully uploaded OCK image
 ### Creating a VM template
 Now you need to use the OLVM oVirt console to create a template that uses the image you just uploaded.
 
-1. Navigate to Compute->Virtual Machines
-2. Click the New button to create a virtual machine
-3. Fill in the form, only change the following fields:
-   Template: Blank
-   Operating System: Red Hat Enterprise Linux CoreOS
-   Instance Images > Attach and select the boot.qcow2 disk/image on the list, select the OS (boot) checkbox, which is the last checkbox on the right.
+1. Navigate to Compute->Virtual Machines  
+2. Click the New button to create a virtual machine  
+3. Fill in the form, only change the following fields:  
+   
+   Name: enter a VM name (this is temporary, it will be deleted after the template is created).  
+   Template: leave blank  
+   Operating System: Red Hat Enterprise Linux CoreOS  
+   Instance Images: click Attach and select the boot.qcow2 disk/image that you created, select the OS (boot) checkbox, which is the last checkbox on the right, then save.
 
 4. After the VM creation is finished, select but do NOT run it, rather click the "Make Template" menu selection.
 Make sure the template name matches the vmTemplateName in your Oracle Cloud Native Environment CLI cluster configuration.
