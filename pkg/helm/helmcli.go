@@ -215,10 +215,7 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		// Reuse the original set of input values as the base set of helm overrides
 		helmValues := map[string]interface{}{}
 		if !resetValues {
-			helmValues, err = GetValuesMap(kubeInfo, releaseName, namespace)
-			if err != nil {
-				return nil, err
-			}
+			client.ReuseValues = true
 		}
 
 		// Append the new override values
