@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"os"
 	"regexp"
@@ -215,15 +216,16 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		// Reuse the original set of input values as the base set of helm overrides
 		helmValues := map[string]interface{}{}
 		if !resetValues {
-			client.ReuseValues = true
+			helmValues, err = GetValuesMap(kubeInfo, releaseName, namespace)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		// Append the new override values
-		for k, v := range vals {
-			helmValues[k] = v
-		}
+		// Merge the overrides
+		mergedValues := mergeOverrides(helmValues, vals)
 
-		rel, err = client.Run(releaseName, theChart, helmValues)
+		rel, err = client.Run(releaseName, theChart, mergedValues)
 		if err != nil {
 			fmt.Errorf("Failed running Helm command for release %s: %v",
 				releaseName, err)
@@ -248,6 +250,31 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 	}
 
 	return rel, nil
+}
+
+// mergeOverrides - recursively merge the new set of overrides into the existing set of overrides
+func mergeOverrides(currentOverrides map[string]interface{}, newOverrides map[string]interface{}) map[string]interface{} {
+	// Initialize the return value with the current set of overrides
+	mergedOverrides := make(map[string]interface{}, len(currentOverrides))
+	maps.Copy(mergedOverrides, currentOverrides)
+
+	// Merge the new overrides
+	for k, v := range newOverrides {
+		if v, ok := v.(map[string]interface{}); ok {
+			// The value is a map, check if a map entry with the same key already exists in the destination map
+			if bv, ok := mergedOverrides[k]; ok {
+				if bv, ok := bv.(map[string]interface{}); ok {
+					// Recursively merge the sub-map
+					mergedOverrides[k] = mergeOverrides(bv, v)
+					continue
+				}
+			}
+		}
+		// Add the merged override
+		mergedOverrides[k] = v
+	}
+
+	return mergedOverrides
 }
 
 // Template templates a chart using the provided overrides and returns the generated yamls as a string
