@@ -480,8 +480,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	doTemplate := false
 	cd := clusterConfig.ClusterDefinition
 	cdi := clusterConfig.ClusterDefinitionInline
-	ociProvider := clusterConfig.Providers.Oci
-
 	if cd != "" && cdi != "" {
 		// Can't mix inline and file-based resources
 		return nil, fmt.Errorf("cluster configuration has file-based and inline resources")
@@ -528,14 +526,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 	// configuration are required.  Specifically, a compartment, a vcn and
 	// two subnets (which can be the same).  These values are fed into the
 	// OCI-CCM configuration.
-	if ociProvider.Compartment == "" {
+	if clusterConfig.Providers.Oci.Compartment == "" {
 		return nil, fmt.Errorf("the oci provider requires a compartment in the provider with configuration")
 	}
 
 	// If the user has asked for a 1.26 cluster and has not overridden the control plane shape, force the shape to
 	// be an amd-compatible shape since 1.26 does not support arm
 	if strings.TrimPrefix(clusterConfig.KubeVersion, "v") == "1.26" && slices.Contains(constants.OciArmCompatibleShapes[:], clusterConfig.Providers.Oci.ControlPlaneShape.Shape) {
-		ociProvider.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
+		clusterConfig.Providers.Oci.ControlPlaneShape.Shape = constants.OciVmStandardE4Flex
 	}
 
 	cad := &ClusterApiDriver{
@@ -551,12 +549,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 
 	cad.Ephemeral = isEphemeral
 	cad.BootstrapKubeConfig = bootstrapKubeConfig
-
-	// Determine if the OCI provider configuration overrides the default SSH settings
-	if len(ociProvider.SshKey) > 0 {
-		clusterConfig.SshPublicKeyPath = ociProvider.SshKey
-		clusterConfig.SshPublicKey = ""
-	}
 
 	// Install any necessary components into the admin cluster
 	capiApplications, err := cad.getApplications()

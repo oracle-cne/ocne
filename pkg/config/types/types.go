@@ -43,7 +43,6 @@ type OciProvider struct {
 	Vcn               string           `yaml:"vcn"`
 	ImageBucket       string           `yaml:"imageBucket"`
 	Proxy             Proxy            `yaml:"proxy"`
-	SshKey            string           `yaml:"sshKey"`
 }
 
 type OlvmProvider struct {
