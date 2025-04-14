@@ -1178,7 +1178,7 @@ func (cad *ClusterApiDriver) GetKubeAPIServerAddress() string {
 	}
 
 	ret, _, err := unstructured.NestedString(cluster.Object, OCIClusterControlPlaneEndpointHost...)
-	log.Infof("Found Control Plane Endpoint Host %s", ret)
+	log.Debugf("Found Control Plane Endpoint Host %s", ret)
 	if err != nil {
 		log.Errorf("Could not get Kubernetes API Server address: %+v", err)
 		return ""

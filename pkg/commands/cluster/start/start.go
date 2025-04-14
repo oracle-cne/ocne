@@ -199,7 +199,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		return localKubeConfig, err
 	}
 
-	kubeletConfig, err := k8s.GetKubeletConfig(kubeClient)
+	kubeletConfig, err := k8s.WaitForKubeletConfig(kubeClient)
 	if err != nil {
 		return localKubeConfig, err
 	}
