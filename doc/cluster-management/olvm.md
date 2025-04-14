@@ -32,6 +32,11 @@ Machine and OLVMMachines are CAPI resources. There is an OLVM VM created for eac
 
 The oVirt instance is the same as the oVirt installation.  It is where the oVirt console runs, the oVirt engine, etc.
 
+The term `external IPs` describes a range of static IPs within the subnet of the network that the VMs are attached to.  These IPs
+much be reachable from each node in the cluster, and from the Cluster API boostrap cluster.  The `virtual IP` is the
+IP used to access the Kubernetes API server.  This must be also be reachable from each node in the cluster, 
+from the Cluster API boostrap cluster, and from the OCNE client.
+
 ## OLVM vs oVirt
 There is some overlap in the terminology used for OLVM vs oVirt.  The term OLVM really has two meanings
 in this context.  First, it represents the backend OLVM oVirt instance, which is an oVirt implementation.  So, the
@@ -50,8 +55,8 @@ resources and terminology on the client.
 * All the network interface devices should be the same, such as enp1s0.
 
 ## Restrictions
-* This is a developer release feature so you must be using the developer RPM for the Oracle Cloud Native Environment CLI.
-* The OLVM Cluster API Provider does not support DHCP, you must allocate a range of external IPs.
+* The OLVM Cluster API Provider does not support DHCP, you must allocate a contiguous range of IPs for
+the cluster nodes and for the Kubernetes API server (the virtual IP).
 
 #  Oracle Cloud Native Environment CLI cluster configuration for OLVM
 Before running any `ocne` command related to OLVM, you must create the configuration file.
@@ -114,7 +119,7 @@ kubernetesVersion: 1.30
 proxy:
   httpsProxy: http://www-proxy-example.com:80
   noProxy: .mycorp.com,localhost,127.0.0.1,1.2.3.0/14,nip.io
-extraIgnitionInline:
+extraIgnitionInline: |
   variant: fcos
   version: 1.5.0
   storage:
@@ -303,9 +308,9 @@ exists and has the correct values as described in previous sections.
 Before using the OLVM Cluster API provider, you need to define the following environment variables on
 the machine where you are running `ocne`.
 
-OCNE_OLVM_USERNAME
-OCNE_OLVM_PASSWORD
-OCNE_OLVM_SCOPE
+OCNE_OLVM_USERNAME  
+OCNE_OLVM_PASSWORD  
+OCNE_OLVM_SCOPE  
 
 Use "ovirt-app-api" as the scope, unless you have created a user with a different scope.
 The username must have @internal suffix.  So if you log into the OLVM console with "admin", then
