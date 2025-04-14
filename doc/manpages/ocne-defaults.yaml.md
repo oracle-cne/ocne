@@ -111,7 +111,7 @@ providers:
     # Default value for the libvirt connection URI
     uri: qemu:///system
     # SSH keyfile to use for ssh-based connections
-    sshKey: /home/myuser/.ssh/id_rsa.ocne
+    sshKey: /home/myuser/.ssh/id_rsa.pub
     # The storage pool to use for images
     storagePool: mypool
     # The virtual network to use for domains
@@ -138,6 +138,8 @@ providers:
   oci:
     # The kubeconfig file for the target management cluster
     kubeconfig: /home/myuser/.kube/kubeconfig.mgmt
+    # SSH keyfile to use for ssh-based connections
+    sshKey: /home/myuser/.ssh/id_rsa.pub
     # The compartment to deploy OCI resources in to.  It can
     # be either the path to a compartment (e.g. mytenancy/mycompartment)
     # or the OCID of a compartment.
