@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -22,9 +23,22 @@ const (
 	csiDriverPasswordKey = "ovirt_password"
 	csiDriverURLKey      = "ovirt_url"
 
-	// key for csi driver ca.crt
+	// keys for csi driver ca.crt
 	csiDriverCaKey = "ca.crt"
+
+	// keys for chart overrides
+
 )
+
+// this is used to marshal only the config that was overridden in the config file
+type csiChartOverrides struct {
+	CaProvided           bool   `yaml:"caProvided,omitempty"`
+	ConfigMapName        string `yaml:"caConfigmapName,omitempty"`
+	ControllerPluginName string `yaml:"controllerPluginName,omitempty"`
+	CsiDriverName        string `yaml:"csiDriverName,omitempty"`
+	NodePluginName       string `yaml:"nodePluginName,omitempty"`
+	SecretName           string `yaml:"credsSecretName,omitempty"`
+}
 
 // getApplications gets the applications that are needed for the OLVM provider.
 // These applications will be installed in the bootstrap cluster
@@ -105,6 +119,8 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 
 	olvm := &cad.ClusterConfig.Providers.Olvm
 
+	// load user overriders
+
 	// get the creds
 	ovirtCreds, err := getCreds()
 	if err != nil {
@@ -112,17 +128,25 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	}
 
 	// set the creds needed by the ovirt csi driver
-	creds := map[string][]byte{
+	credmap := map[string][]byte{
 		csiDriverUsernameKey: []byte(ovirtCreds[credsUsernameKey]),
 		csiDriverPasswordKey: []byte(ovirtCreds[credsPasswordKey]),
 		csiDriverURLKey:      []byte(olvm.OlvmCluster.OVirtAPI.ServerURL),
 	}
 
-	namespace := olvm.CSIDriver.Namespace
+	// create chart overrides
+	chartOverrides, err := getOverrides(olvm)
+	if err != nil {
+		return nil, err
+	}
 
+	// Specify pre-install function to create secret and configmap, then
+	// Also specify function to install the csi driver chart
+	namespace := olvm.CSIDriver.Namespace
 	ret := []install.ApplicationDescription{
 		install.ApplicationDescription{
 			PreInstall: func() error {
+				// Create the oVirt creds secret
 				k8s.DeleteSecret(kubeClient, namespace, olvm.CSIDriver.SecretName)
 				err = k8s.CreateSecret(kubeClient, namespace, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -136,7 +160,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 					return err
 				}
 
-				// get the CA
+				// create the CA.CRT configmap
 				ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
 				if err != nil {
 					return err
@@ -153,17 +177,46 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				})
 				return err
 			},
+			// install ovirt-csi-driver chart
 			Application: &types.Application{
 				Name:      constants.OvirtCsiChart,
 				Namespace: namespace,
 				Release:   constants.OvirtCsiRelease,
 				Version:   constants.OvirtCsiVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config: map[string]interface{}{
-					"foo": "bar"},
+				Config:    chartOverrides,
 			},
 		},
 	}
 
 	return ret, nil
+}
+
+// return the user overrides as a map
+func getOverrides(olvm *types.OlvmProvider) (map[string]interface{}, error) {
+	ov := csiChartOverrides{}
+	ov.CaProvided = olvm.CSIDriver.CaProvided
+	if olvm.CSIDriver.ConfigMapName != "" {
+		ov.ConfigMapName = olvm.CSIDriver.ConfigMapName
+	}
+	if olvm.CSIDriver.ControllerPluginName != "" {
+		ov.ControllerPluginName = olvm.CSIDriver.ControllerPluginName
+	}
+	if olvm.CSIDriver.CsiDriverName != "" {
+		ov.SecretName = olvm.CSIDriver.CsiDriverName
+	}
+	if olvm.CSIDriver.NodePluginName != "" {
+		ov.NodePluginName = olvm.CSIDriver.NodePluginName
+	}
+	if olvm.CSIDriver.SecretName != "" {
+		ov.SecretName = olvm.CSIDriver.SecretName
+	}
+
+	yamlValues, err := yaml.Marshal(ov)
+	if err != nil {
+		return nil, err
+	}
+	overrides := make(map[string]interface{})
+	err = yaml.Unmarshal([]byte(yamlValues), overrides)
+	return overrides, err
 }
