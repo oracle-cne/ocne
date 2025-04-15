@@ -59,13 +59,15 @@ type OlvmProvider struct {
 }
 
 type OvirtCsiDriver struct {
-	CsiDriverName        string `yaml:"csiDriverName"`
 	CaProvided           bool   `yaml:"caProvidedFake"`
 	CaProvidedPtr        *bool  `yaml:"caProvided,omitempty"`
-	SecretName           string `yaml:"credsSecretName"`
 	ConfigMapName        string `yaml:"caConfigmapName"`
-	NodePluginName       string `yaml:"nodePluginName"`
 	ControllerPluginName string `yaml:"controllerPluginName"`
+	CsiDriverName        string `yaml:"csiDriverName"`
+	Install              bool   `yaml:"installFake"`
+	InstallPtr           *bool  `yaml:"install,omitempty"`
+	NodePluginName       string `yaml:"nodePluginName"`
+	SecretName           string `yaml:"credsSecretName"`
 }
 
 type OlvmCluster struct {
@@ -491,13 +493,15 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 // takes precedence.
 func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver {
 	return OvirtCsiDriver{
-		CsiDriverName:        ies(def.CsiDriverName, ovr.CsiDriverName),
 		CaProvided:           iebp(def.CaProvidedPtr, ovr.CaProvidedPtr, true),
 		CaProvidedPtr:        iebpp(def.CaProvidedPtr, ovr.CaProvidedPtr),
-		SecretName:           ies(def.SecretName, ovr.SecretName),
 		ConfigMapName:        ies(def.ConfigMapName, ovr.ConfigMapName),
-		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
 		ControllerPluginName: ies(def.ControllerPluginName, ovr.ControllerPluginName),
+		CsiDriverName:        ies(def.CsiDriverName, ovr.CsiDriverName),
+		Install:              iebp(def.InstallPtr, ovr.InstallPtr, true),
+		InstallPtr:           iebpp(def.InstallPtr, ovr.InstallPtr),
+		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
+		SecretName:           ies(def.SecretName, ovr.SecretName),
 	}
 }
 
