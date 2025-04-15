@@ -9,12 +9,21 @@ import (
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
-	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+)
+
+const (
+	// keys for csi driver secret
+	csiDriverUsernameKey = "ovirt_username"
+	csiDriverPasswordKey = "ovirt_password"
+	csiDriverURLKey      = "ovirt_url"
+
+	// key for csi driver ca.crt
+	csiDriverCaKey = "ca.crt"
 )
 
 // getApplications gets the applications that are needed for the OLVM provider.
@@ -89,22 +98,36 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 
 // getWorkloadClusterApplications gets the applications that need to be installed into the new CAPI cluster
 func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
-	if !cad.ClusterConfig.Providers.Olvm.CSIDriver != nil {
+	if !cad.ClusterConfig.Providers.Olvm.CSIDriver.Install {
+		log.Debugf("OLVM installCsiDriver flag is false, skipping driver installation")
 		return nil, nil
 	}
 
 	olvm := &cad.ClusterConfig.Providers.Olvm
 
+	// get the creds
+	ovirtCreds, err := getCreds()
+	if err != nil {
+		return nil, err
+	}
+
+	// set the creds needed by the ovirt csi driver
+	creds := map[string][]byte{
+		csiDriverUsernameKey: []byte(ovirtCreds[credsUsernameKey]),
+		csiDriverPasswordKey: []byte(ovirtCreds[credsPasswordKey]),
+		csiDriverURLKey:      []byte(olvm.OlvmCluster.OVirtAPI.ServerURL),
+	}
+
+	namespace := olvm.CSIDriver.Namespace
+
 	ret := []install.ApplicationDescription{
 		install.ApplicationDescription{
 			PreInstall: func() error {
-
-				secretName := olvm.CSIDriver.SecretName
-				k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
-				err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &corev1.Secret{
+				k8s.DeleteSecret(kubeClient, namespace, olvm.CSIDriver.SecretName)
+				err = k8s.CreateSecret(kubeClient, namespace, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretName,
-						Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+						Name:      olvm.CSIDriver.SecretName,
+						Namespace: namespace,
 					},
 					Data: credmap,
 					Type: "Opaque",
@@ -118,43 +141,26 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				if err != nil {
 					return err
 				}
-
-				err := k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
+				k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
+				err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: OciCcmSecretName,
+						Name:      olvm.CSIDriver.ConfigMapName,
+						Namespace: namespace,
 					},
-					Data: ociCcmCreds,
-					Type: "Opaque",
-				})
-				if err != nil {
-					return err
-				}
-
-				err = k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: OciCcmCsiSecretName,
+					Data: map[string]string{
+						csiDriverCaKey: ca,
 					},
-					Data: ociCsiCreds,
-					Type: "Opaque",
 				})
 				return err
 			},
-
-			//type OvirtCsiDriver struct {
-			//	CsiDriverName        string `yaml:"csiDriverName"`
-			//	CaProvided           bool   `yaml:"caProvidedFake"`
-			//	CaProvidedPtr        *bool  `yaml:"caProvided,omitempty"`
-			//	SecretName           string `yaml:"credsSecretName"`
-			//	ConfigMapName        string `yaml:"caConfigmapName"`
-			//	NodePluginName       string `yaml:"nodePluginName"`
-			//	ControllerPluginName string `yaml:"controllerPluginName"`
-			//}
 			Application: &types.Application{
-				Name:      OciCcmChart,
-				Namespace: OciCcmNamespace,
-				Release:   OciCcmRelease,
-				Version:   OciCcmVersion,
+				Name:      constants.OvirtCsiChart,
+				Namespace: namespace,
+				Release:   constants.OvirtCsiRelease,
+				Version:   constants.OvirtCsiVersion,
 				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"foo": "bar"},
 			},
 		},
 	}

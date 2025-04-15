@@ -90,8 +90,9 @@ func GetDefaultConfig() (*types.Config, error) {
 					BindPort: 6444,
 				},
 				CSIDriver: types.OvirtCsiDriver{
-					SecretName:    "ovirt-csi-creds",
-					ConfigMapName: "ovirt-csi-ca.crt",
+					Namespace:     constants.OvirtCsiNamespace,
+					SecretName:    constants.OvirtCsiSecretName,
+					ConfigMapName: constants.OvirtCsiConfigMapName,
 				},
 			},
 		},

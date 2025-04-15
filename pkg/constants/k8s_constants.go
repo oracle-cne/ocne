@@ -55,17 +55,17 @@ const (
 	CNIFlannelDaemonSet = "kube-flannel-ds"
 	CNIFlannelImage     = "container-registry.oracle.com/olcne/flannel"
 
-	KubeProxyRelease   = "kube-proxy"
-	KubeProxyNamespace = "kube-system"
-	KubeProxyChart     = "kube-proxy"
-	KubeProxyVersion   = "2.0.0"
-	KubeProxyDaemonSet = "kube-proxy"
-	KubeProxyConfigMap = "kube-proxy"
-	KubeProxyConfigMapConfig = "config.conf"
+	KubeProxyRelease             = "kube-proxy"
+	KubeProxyNamespace           = "kube-system"
+	KubeProxyChart               = "kube-proxy"
+	KubeProxyVersion             = "2.0.0"
+	KubeProxyDaemonSet           = "kube-proxy"
+	KubeProxyConfigMap           = "kube-proxy"
+	KubeProxyConfigMapConfig     = "config.conf"
 	KubeProxyConfigMapKubeconfig = "kubeconfig.conf"
-	KubeProxyImage     = "container-registry.oracle.com/olcne/kube-proxy"
-	KubeProxyTag       = "current"
-	CurrentTag         = "current"
+	KubeProxyImage               = "container-registry.oracle.com/olcne/kube-proxy"
+	KubeProxyTag                 = "current"
+	CurrentTag                   = "current"
 
 	CatalogRelease   = "ocne-catalog"
 	CatalogNamespace = "ocne-system"
@@ -139,6 +139,15 @@ const (
 	OLVMCAPIControlPlaneMemory = "7GB"
 	OLVMCAPIWorkerMemory       = "16GB"
 
+	// oVirt CSI Driver constants
+	OvirtCsiSecretName    = "ovirt-csi-creds"
+	OvirtCsiConfigMapName = "ovirt-csi-ca.crt"
+	OvirtCsiChart         = "ovirt-csi-driver"
+	OvirtCsiRelease       = "ovirt-csi-driver"
+	OvirtCsiNamespace     = "ovirt-csi"
+	OvirtCsiVersion       = ""
+
+	// Misc
 	DefaultPodImage = "container-registry.oracle.com/os/oraclelinux:8"
 	ScriptMountPath = "/ocne-scripts"
 	KubeNamespace   = "kube-system"
@@ -148,6 +157,6 @@ const (
 	KubeletCMName   = "kubelet-config"
 
 	// Kubernetes Gateway API Crds constants
-	KubernetesGatewayAPICrds = "kubernetes-gateway-api-crds"
+	KubernetesGatewayAPICrds        = "kubernetes-gateway-api-crds"
 	KubernetesGatewayAPICrdsVersion = ""
 )

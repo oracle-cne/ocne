@@ -66,6 +66,7 @@ type OvirtCsiDriver struct {
 	CsiDriverName        string `yaml:"csiDriverName"`
 	Install              bool   `yaml:"installFake"`
 	InstallPtr           *bool  `yaml:"install,omitempty"`
+	Namespace            string `yaml:"namespace"`
 	NodePluginName       string `yaml:"nodePluginName"`
 	SecretName           string `yaml:"credsSecretName"`
 }
@@ -501,6 +502,7 @@ func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver
 		Install:              iebp(def.InstallPtr, ovr.InstallPtr, true),
 		InstallPtr:           iebpp(def.InstallPtr, ovr.InstallPtr),
 		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
+		Namespace:            ies(def.Namespace, ovr.Namespace),
 		SecretName:           ies(def.SecretName, ovr.SecretName),
 	}
 }

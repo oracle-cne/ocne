@@ -26,6 +26,12 @@ import (
 	"time"
 )
 
+const (
+	credsUsernameKey = "username"
+	credsPasswordKey = "password"
+	credsScopeKey    = "scope"
+)
+
 // Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
 func (cad *OlvmDriver) Start() (bool, bool, error) {
 	// If there is a need to generate a template, do so.
@@ -308,9 +314,9 @@ func getCreds() (map[string][]byte, error) {
 	}
 
 	return map[string][]byte{
-		"username": []byte(username),
-		"password": []byte(password),
-		"scope":    []byte(scope),
+		credsUsernameKey: []byte(username),
+		credsPasswordKey: []byte(password),
+		credsScopeKey:    []byte(scope),
 	}, nil
 
 }
