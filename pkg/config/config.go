@@ -89,6 +89,10 @@ func GetDefaultConfig() (*types.Config, error) {
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
 					BindPort: 6444,
 				},
+				CSIDriver: types.OvirtCsiDriver{
+					SecretName:    "ovirt-csi-creds",
+					ConfigMapName: "ovirt-csi-ca.crt",
+				},
 			},
 		},
 		PodSubnet:                constants.PodSubnet,

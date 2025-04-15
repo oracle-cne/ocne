@@ -55,6 +55,17 @@ type OlvmProvider struct {
 	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
 	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
+	CSIDriver           OvirtCsiDriver       `yaml:"csiDriver"`
+}
+
+type OvirtCsiDriver struct {
+	CsiDriverName        string `yaml:"csiDriverName"`
+	CaProvided           bool   `yaml:"caProvidedFake"`
+	CaProvidedPtr        *bool  `yaml:"caProvided,omitempty"`
+	SecretName           string `yaml:"credsSecretName"`
+	ConfigMapName        string `yaml:"caConfigmapName"`
+	NodePluginName       string `yaml:"nodePluginName"`
+	ControllerPluginName string `yaml:"controllerPluginName"`
 }
 
 type OlvmCluster struct {
@@ -470,6 +481,23 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
 		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
+		CSIDriver:           MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
+	}
+}
+
+// MergeOlvmCsiDriver takes two OlvmCsiDrivers and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver {
+	return OvirtCsiDriver{
+		CsiDriverName:        ies(def.CsiDriverName, ovr.CsiDriverName),
+		CaProvided:           iebp(def.CaProvidedPtr, ovr.CaProvidedPtr, true),
+		CaProvidedPtr:        iebpp(def.CaProvidedPtr, ovr.CaProvidedPtr),
+		SecretName:           ies(def.SecretName, ovr.SecretName),
+		ConfigMapName:        ies(def.ConfigMapName, ovr.ConfigMapName),
+		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
+		ControllerPluginName: ies(def.ControllerPluginName, ovr.ControllerPluginName),
 	}
 }
 
