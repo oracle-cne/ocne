@@ -9,10 +9,11 @@ import "strings"
 //		"a": map[string]interface{}{
 //		   "b": map[string]interface{}{
 //		       "c": map[string]interface{}
-func EnsureNestedMap(m map[string]interface{}, dotPath string) map[string]interface{} {
+func EnsureNestedMap(mapRoot map[string]interface{}, dotPath string) map[string]interface{} {
 	segs := strings.Split(dotPath, ".")
 	var inner map[string]interface{}
 
+	m := mapRoot
 	for _, seg := range segs {
 		entry := m[seg]
 		if entry == nil {
@@ -21,6 +22,7 @@ func EnsureNestedMap(m map[string]interface{}, dotPath string) map[string]interf
 		} else {
 			inner = entry.(map[string]interface{})
 		}
+		m = inner
 	}
 	return inner
 }
