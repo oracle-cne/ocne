@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025 Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package olvm
@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"net/url"
 	"sigs.k8s.io/yaml"
 )
 
@@ -127,11 +128,18 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 		return nil, err
 	}
 
+	// Append /api to ovirt URL
+	parsedURL, err := url.Parse(olvm.OlvmCluster.OVirtAPI.ServerURL)
+	if err != nil {
+		return nil, err
+	}
+	ovirtURL := parsedURL.JoinPath("/api")
+
 	// set the creds needed by the ovirt csi driver
 	credmap := map[string][]byte{
 		csiDriverUsernameKey: []byte(ovirtCreds[credsUsernameKey]),
 		csiDriverPasswordKey: []byte(ovirtCreds[credsPasswordKey]),
-		csiDriverURLKey:      []byte(olvm.OlvmCluster.OVirtAPI.ServerURL),
+		csiDriverURLKey:      []byte(ovirtURL.String()),
 	}
 
 	// create chart overrides
