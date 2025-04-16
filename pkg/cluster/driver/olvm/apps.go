@@ -26,9 +26,6 @@ const (
 
 	// keys for csi driver ca.crt
 	csiDriverCaKey = "ca.crt"
-
-	// keys for chart overrides
-
 )
 
 // getApplications gets the applications that are needed for the OLVM provider.
@@ -104,19 +101,17 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 // getWorkloadClusterApplications gets the applications that need to be installed into the new CAPI cluster
 func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, kubeClient kubernetes.Interface) ([]install.ApplicationDescription, error) {
 	if !cad.ClusterConfig.Providers.Olvm.CSIDriver.Install {
-		log.Debugf("OLVM installCsiDriver flag is false, skipping driver installation")
+		log.Debugf("OLVM ovirtCsiDriver.install flag is false, skipping driver installation")
 		return nil, nil
 	}
-
-	olvm := &cad.ClusterConfig.Providers.Olvm
-
-	// load user overriders
 
 	// get the creds
 	ovirtCreds, err := getCreds()
 	if err != nil {
 		return nil, err
 	}
+
+	olvm := &cad.ClusterConfig.Providers.Olvm
 
 	// Append /api to ovirt URL
 	parsedURL, err := url.Parse(olvm.OlvmCluster.OVirtAPI.ServerURL)
@@ -187,26 +182,25 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	return ret, nil
 }
 
-// return the user overrides as a map
+// Return the user overrides as a map.
 // The map has to match the structure of the ovirt-csi-driver chart values.yaml as shown below:
 //
-// ovirt:
+//		ovirt:
+//			caProvided: true
+//				 insecure: false
+//				 secretName: ovirt-csi-creds
+//				 caConfigMapName: ovirt-csi-ca.crt
 //
-//	 caProvided: true
-//	 insecure: false
-//	 secretName: ovirt-csi-creds
-//	 caConfigMapName: ovirt-csi-ca.crt
+//		driver:
+//		   name: csi.ovirt.org
 //
-//	driver:
-//	  name: csi.ovirt.org
+//		csiController:
+//	 		ovirtController:
+//			    name: ovirt-csi-controller-plugin
 //
-//	csiController:
-//	  ovirtController:
-//	    name: ovirt-csi-controller-plugin
-//
-//	csiNode:
-//	  ovirtNode:
-//	    name: ovirt-csi-node-plugin
+//		csiNode:
+//			ovirtNode:
+//				name: ovirt-csi-node-plugin
 func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	const (
 		caProvidedKey = "caProvided"
@@ -220,7 +214,7 @@ func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 		ovirtControllerPath = "csiController.ovirtController"
 	)
 
-	// Create override structure required by the ovirt-csi-driver he
+	// Create override structure required by the ovirt-csi-driver Helm chart.
 	ov := make(map[string]interface{})
 
 	if olvm.CSIDriver.CaProvidedPtr != nil {
