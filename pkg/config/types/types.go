@@ -55,7 +55,7 @@ type OlvmProvider struct {
 	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
 	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
-	CSIDriver           OvirtCsiDriver       `yaml:"csiDriver"`
+	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
 }
 
 type OvirtCsiDriver struct {

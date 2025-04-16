@@ -9,13 +9,13 @@ import (
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
+	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/url"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -30,16 +30,6 @@ const (
 	// keys for chart overrides
 
 )
-
-// this is used to marshal only the config that was overridden in the config file
-type csiChartOverrides struct {
-	CaProvided           bool   `yaml:"caProvided,omitempty"`
-	ConfigMapName        string `yaml:"caConfigmapName,omitempty"`
-	ControllerPluginName string `yaml:"controllerPluginName,omitempty"`
-	CsiDriverName        string `yaml:"csiDriverName,omitempty"`
-	NodePluginName       string `yaml:"nodePluginName,omitempty"`
-	SecretName           string `yaml:"credsSecretName,omitempty"`
-}
 
 // getApplications gets the applications that are needed for the OLVM provider.
 // These applications will be installed in the bootstrap cluster
@@ -143,10 +133,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	}
 
 	// create chart overrides
-	chartOverrides, err := getOverrides(olvm)
-	if err != nil {
-		return nil, err
-	}
+	chartOverrides := getOverrides(olvm)
 
 	// Specify pre-install function to create secret and configmap, then
 	// Also specify function to install the csi driver chart
@@ -201,30 +188,59 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 }
 
 // return the user overrides as a map
-func getOverrides(olvm *types.OlvmProvider) (map[string]interface{}, error) {
-	ov := csiChartOverrides{}
-	ov.CaProvided = olvm.CSIDriver.CaProvided
+// The map has to match the structure of the ovirt-csi-driver chart values.yaml as shown below:
+//
+// ovirt:
+//
+//	 caProvided: true
+//	 insecure: false
+//	 secretName: ovirt-csi-creds
+//	 caConfigMapName: ovirt-csi-ca.crt
+//
+//	driver:
+//	  name: csi.ovirt.org
+//
+//	csiController:
+//	  ovirtController:
+//	    name: ovirt-csi-controller-plugin
+//
+//	csiNode:
+//	  ovirtNode:
+//	    name: ovirt-csi-node-plugin
+func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
+	const (
+		caProvidedKey = "caProvided"
+		cmNameKey     = "caConfigMapName"
+		nameKey       = "name"
+		secretNameKey = "secretName"
+
+		driverPath          = "driver"
+		ovirtPath           = "ovirt"
+		ovirtNodePath       = "csiNode.ovirtNode"
+		ovirtControllerPath = "csiController.ovirtController"
+	)
+
+	// Create override structure required by the ovirt-csi-driver he
+	ov := make(map[string]interface{})
+
+	if olvm.CSIDriver.CaProvidedPtr != nil {
+		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = olvm.CSIDriver.CaProvided
+	}
 	if olvm.CSIDriver.ConfigMapName != "" {
-		ov.ConfigMapName = olvm.CSIDriver.ConfigMapName
+		util.EnsureNestedMap(ov, ovirtPath)[cmNameKey] = olvm.CSIDriver.ConfigMapName
 	}
 	if olvm.CSIDriver.ControllerPluginName != "" {
-		ov.ControllerPluginName = olvm.CSIDriver.ControllerPluginName
+		util.EnsureNestedMap(ov, ovirtControllerPath)[nameKey] = olvm.CSIDriver.ControllerPluginName
 	}
 	if olvm.CSIDriver.CsiDriverName != "" {
-		ov.SecretName = olvm.CSIDriver.CsiDriverName
+		util.EnsureNestedMap(ov, driverPath)[nameKey] = olvm.CSIDriver.CsiDriverName
 	}
 	if olvm.CSIDriver.NodePluginName != "" {
-		ov.NodePluginName = olvm.CSIDriver.NodePluginName
+		util.EnsureNestedMap(ov, ovirtNodePath)[nameKey] = olvm.CSIDriver.NodePluginName
 	}
 	if olvm.CSIDriver.SecretName != "" {
-		ov.SecretName = olvm.CSIDriver.SecretName
+		util.EnsureNestedMap(ov, ovirtPath)[secretNameKey] = olvm.CSIDriver.SecretName
 	}
 
-	yamlValues, err := yaml.Marshal(ov)
-	if err != nil {
-		return nil, err
-	}
-	overrides := make(map[string]interface{})
-	err = yaml.Unmarshal([]byte(yamlValues), overrides)
-	return overrides, err
+	return ov
 }
