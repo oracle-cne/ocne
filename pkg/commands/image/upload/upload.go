@@ -29,7 +29,6 @@ func setCompartmentId(options *UploadOptions) error {
 
 	compartmentId, err := oci.GetCompartmentId(options.ClusterConfig.Providers.Oci.Compartment, options.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
-		log.Debugf("oci.GetCompartmentId failed for compartment: %s", options.ClusterConfig.Providers.Oci.Compartment)
 		return err
 	}
 
