@@ -221,9 +221,9 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 			}
 		}
 
-		// Append the new override values
-		for k, v := range vals {
-			helmValues[k] = v
+		// Merge the overrides
+		if err = MergeMaps(helmValues, vals); err != nil {
+			return nil, err
 		}
 
 		rel, err = client.Run(releaseName, theChart, helmValues)

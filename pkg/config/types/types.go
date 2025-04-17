@@ -55,6 +55,20 @@ type OlvmProvider struct {
 	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
 	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
+	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
+}
+
+type OvirtCsiDriver struct {
+	CaProvided           bool   `yaml:"caProvidedFake"`
+	CaProvidedPtr        *bool  `yaml:"caProvided,omitempty"`
+	ConfigMapName        string `yaml:"caConfigmapName"`
+	ControllerPluginName string `yaml:"controllerPluginName"`
+	CsiDriverName        string `yaml:"csiDriverName"`
+	Install              bool   `yaml:"installFake"`
+	InstallPtr           *bool  `yaml:"install,omitempty"`
+	Namespace            string `yaml:"namespace"`
+	NodePluginName       string `yaml:"nodePluginName"`
+	SecretName           string `yaml:"credsSecretName"`
 }
 
 type OlvmCluster struct {
@@ -470,6 +484,26 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
 		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
+		CSIDriver:           MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
+	}
+}
+
+// MergeOlvmCsiDriver takes two OlvmCsiDrivers and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver {
+	return OvirtCsiDriver{
+		CaProvided:           iebp(def.CaProvidedPtr, ovr.CaProvidedPtr, true),
+		CaProvidedPtr:        iebpp(def.CaProvidedPtr, ovr.CaProvidedPtr),
+		ConfigMapName:        ies(def.ConfigMapName, ovr.ConfigMapName),
+		ControllerPluginName: ies(def.ControllerPluginName, ovr.ControllerPluginName),
+		CsiDriverName:        ies(def.CsiDriverName, ovr.CsiDriverName),
+		Install:              iebp(def.InstallPtr, ovr.InstallPtr, true),
+		InstallPtr:           iebpp(def.InstallPtr, ovr.InstallPtr),
+		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
+		Namespace:            ies(def.Namespace, ovr.Namespace),
+		SecretName:           ies(def.SecretName, ovr.SecretName),
 	}
 }
 

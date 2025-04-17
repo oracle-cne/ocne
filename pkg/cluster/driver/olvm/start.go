@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package olvm
@@ -24,6 +24,12 @@ import (
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	"strings"
 	"time"
+)
+
+const (
+	credsUsernameKey = "username"
+	credsPasswordKey = "password"
+	credsScopeKey    = "scope"
 )
 
 // Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
@@ -308,9 +314,9 @@ func getCreds() (map[string][]byte, error) {
 	}
 
 	return map[string][]byte{
-		"username": []byte(username),
-		"password": []byte(password),
-		"scope":    []byte(scope),
+		credsUsernameKey: []byte(username),
+		credsPasswordKey: []byte(password),
+		credsScopeKey:    []byte(scope),
 	}, nil
 
 }

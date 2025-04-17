@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.23-draft
+### Version: v0.0.24-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -161,12 +161,11 @@ cat > extra-configmap.yaml <<EOF
   extraConfigMaps:
   - name: ingress-controller-ingress-nginx-defaultbackend-custom-error-pages
     data:
+      data: data.yaml
 EOF
-kubectl get ConfigMap -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend-custom-error-pages  -o jsonpath={.data} | yq -P > data.yaml
-while IFS= read -r line; do
-  printf "      %s\n" "$line" >> extra-configmap.yaml
-done < data.yaml
 sed -i '/defaultBackend/r extra-configmap.yaml' overrides.yaml
+kubectl get ConfigMap -n verrazzano-ingress-nginx ingress-controller-ingress-nginx-defaultbackend-custom-error-pages  -o jsonpath={.data} | yq -P > data.yaml
+yq -i -e '.defaultBackend.extraConfigMaps[0].data |= load("" + .data)' overrides.yaml
 rm extra-configmap.yaml
 rm data.yaml
 ```
