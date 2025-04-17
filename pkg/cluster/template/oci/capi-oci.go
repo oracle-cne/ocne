@@ -6,9 +6,11 @@ package oci
 import (
 	"errors"
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/template"
 	"regexp"
 	"strings"
+
+	"github.com/oracle-cne/ocne/pkg/cluster/template"
+	log "github.com/sirupsen/logrus"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
@@ -294,6 +296,7 @@ func GetOciTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (s
 	if cid != "" {
 		newCid, err := oci.GetCompartmentId(cid, profile)
 		if err != nil {
+			log.Debugf("oci.GetCompartmentId failed for compartment: %s", cid)
 			return "", err
 		}
 		clusterConfig.Providers.Oci.Compartment = newCid
