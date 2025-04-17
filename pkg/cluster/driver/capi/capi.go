@@ -223,7 +223,6 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
-		log.Debugf("oci.GetCompartmentId failed for compartment: %s", cad.ClusterConfig.Providers.Oci.Compartment)
 		return nil, err
 	}
 
@@ -653,7 +652,6 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 func (cad *ClusterApiDriver) ensureImage(name string, arch string, version string, force bool) (string, string, error) {
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
-		log.Debugf("oci.GetCompartmentId failed for compartment: %s", cad.ClusterConfig.Providers.Oci.Compartment)
 		return "", "", err
 	}
 
@@ -723,7 +721,6 @@ func (cad *ClusterApiDriver) ensureImages() error {
 
 	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
-		log.Debugf("oci.GetCompartmentId failed for compartment: %s", cad.ClusterConfig.Providers.Oci.Compartment)
 		return err
 	}
 
