@@ -9,6 +9,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"strings"
 )
@@ -128,11 +129,18 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ignition.AddFile(ign, presetFileLib)
 
 	// Update service configuration file
+	ostreeTransport, registry, tag, err := image.ParseOstreeReference(clusterConfig.OsRegistry)
+	if err != nil {
+		return "", err
+	}
+	if tag != "" {
+		return "", fmt.Errorf("osRegistry field cannot have a tag")
+	}
 	updateFile := &ignition.File{
 		Path: ignition.OcneUpdateConfigPath,
 		Mode: 0400,
 		Contents: ignition.FileContents{
-			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, clusterConfig.OsRegistry, clusterConfig.OsTag),
+			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, registry, clusterConfig.OsTag, ostreeTransport),
 		},
 	}
 	ignition.AddFile(ign, updateFile)
