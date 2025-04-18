@@ -300,7 +300,7 @@ The oVirt vmTemplate name.  This must exist in the oVirt instance
 (Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document.)
 
 ## Ovirt CSI Driver configuration (optional)
-The ovirt-csi-driver configuration is completely optional, there is no need to configure anything. The driver is
+The ovirt-csi-driver configuration is optional, there is no need to explicitly configure anything. The driver is
 automatically installed and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.
 
 Following is the structure of the config showing the default values:
