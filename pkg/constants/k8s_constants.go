@@ -130,7 +130,7 @@ const (
 	OLVMCAPIOperatorNamespace  = "cluster-api-provider-olvm"
 	OLVMCAPIChart              = "olvm-capi"
 	OLVMCAPIVersion            = ""
-	OLVMCAPIDeployment         = "olvm-capi-operator"
+	OLVMCAPIDeployment         = "olvm-capi-controller-manager"
 	OLVMOVirtCredSecretSuffix  = "ovirt-credentials"
 	OLVMOVirtCAConfigMapSuffix = "ovirt-ca"
 
