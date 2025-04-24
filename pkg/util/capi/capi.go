@@ -5,13 +5,17 @@ package capi
 
 import (
 	"fmt"
-
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
+	"github.com/oracle-cne/ocne/pkg/k8s"
+	"github.com/oracle-cne/ocne/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"slices"
+)
 
-	"github.com/oracle-cne/ocne/pkg/k8s"
-
+const (
+	ClusterNameLabel = "cluster.x-k8s.io/cluster-name"
 )
 
 // These should be treated as constants
@@ -33,19 +37,19 @@ var PatchesDirectory = "directory"
 var PhasePreflight = "preflight"
 
 type GraphNode struct {
-	Object *unstructured.Unstructured
+	Object   *unstructured.Unstructured
 	Children map[string]map[string]*GraphNode
 }
 
 type ClusterGraph struct {
-	Cluster *GraphNode
+	Cluster               *GraphNode
 	InfrastructureCluster *GraphNode
-	ControlPlane *GraphNode
-	MachineTemplates map[string]map[string]*GraphNode
-	MachineDeployments map[string]*GraphNode
-	MachineSets map[string]*GraphNode
-	Machines map[string]*GraphNode
-	All map[string]map[string]*GraphNode
+	ControlPlane          *GraphNode
+	MachineTemplates      map[string]map[string]*GraphNode
+	MachineDeployments    map[string]*GraphNode
+	MachineSets           map[string]*GraphNode
+	Machines              map[string]*GraphNode
+	All                   map[string]map[string]*GraphNode
 }
 
 type Named interface {
@@ -87,14 +91,14 @@ func (gn *GraphNode) GetName() string {
 
 func newClusterGraph() *ClusterGraph {
 	return &ClusterGraph{
-		Cluster: newGraphNode(),
+		Cluster:               newGraphNode(),
 		InfrastructureCluster: newGraphNode(),
-		ControlPlane: newGraphNode(),
-		MachineTemplates: map[string]map[string]*GraphNode{},
-		MachineDeployments: map[string]*GraphNode{},
-		MachineSets: map[string]*GraphNode{},
-		Machines: map[string]*GraphNode{},
-		All: map[string]map[string]*GraphNode{},
+		ControlPlane:          newGraphNode(),
+		MachineTemplates:      map[string]map[string]*GraphNode{},
+		MachineDeployments:    map[string]*GraphNode{},
+		MachineSets:           map[string]*GraphNode{},
+		Machines:              map[string]*GraphNode{},
+		All:                   map[string]map[string]*GraphNode{},
 	}
 }
 
@@ -215,6 +219,28 @@ func populateMachineDeployments(restConf *rest.Config, graph *ClusterGraph, clus
 	return nil
 }
 
+// GetClusterObject returns the CAPI cluster object
+func GetClusterObject(clusterResources string) (unstructured.Unstructured, error) {
+	clusterObj, err := k8s.FindIn(clusterResources, func(u unstructured.Unstructured) bool {
+		if u.GetKind() != "Cluster" {
+			return false
+		}
+		if u.GetAPIVersion() != "cluster.x-k8s.io/v1beta1" {
+			return false
+		}
+		_, ok := u.GetLabels()[ClusterNameLabel]
+		return ok
+	})
+	if err != nil {
+		if k8s.IsNotExist(err) {
+			return unstructured.Unstructured{}, fmt.Errorf("Cluster resources do not include a valid cluster.x-k8s.io/v1beta1/Cluster")
+		} else {
+			return unstructured.Unstructured{}, err
+		}
+	}
+	return clusterObj, err
+}
+
 func GetClusterGraph(restConf *rest.Config, namespace string, name string) (*ClusterGraph, error) {
 	ret := newClusterGraph()
 
@@ -267,7 +293,7 @@ func (cg *ClusterGraph) AddToAll(gn *GraphNode) *GraphNode {
 	return gn
 }
 
-type WalkResourceCb func(*GraphNode, *GraphNode, interface{})error
+type WalkResourceCb func(*GraphNode, *GraphNode, interface{}) error
 
 func (cg *ClusterGraph) walkGraphNodeForMachineTemplates(gn *GraphNode, cb WalkResourceCb, arg interface{}) error {
 	for gvk, children := range gn.Children {
@@ -305,4 +331,94 @@ func (cg *ClusterGraph) WalkMachineTemplates(cb WalkResourceCb, arg interface{})
 		}
 	}
 	return nil
+}
+
+// PatchControlPlane adds any changes required to a KubeadmControlPlane
+func PatchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) error {
+	// Ensure this is a KubeadmControlPlane
+	if kcp.GetAPIVersion() != ControlPlaneAPI || kcp.GetKind() != KubeadmControlPlane {
+		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), ControlPlaneAPI, KubeadmControlPlane)
+	}
+
+	didUpdate := false
+	annots := kcp.GetAnnotations()
+	if annots == nil {
+		annots = map[string]string{}
+	}
+	_, ok := annots[SkipKubeProxyAnnotation]
+	if !ok {
+		annots[SkipKubeProxyAnnotation] = "true"
+		didUpdate = true
+	}
+
+	_, ok = annots[SkipCoreDNSAnnotation]
+	if !ok {
+		annots[SkipCoreDNSAnnotation] = "true"
+		didUpdate = true
+	}
+
+	if !didUpdate {
+		return nil
+	}
+
+	kcp.SetAnnotations(annots)
+	err := k8s.UpdateResource(restConfig, kcp)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetControlPlanePatches calculates the set of patches that need to be applied to the KubeadmControlPlane after staging is complete to
+// apply the new configuration
+func GetControlPlanePatches(kcp *unstructured.Unstructured, version string, mtName string) (*util.JsonPatches, error) {
+	ret := &util.JsonPatches{}
+
+	// These are mandatory changes to update control plane nodes
+	ret.Replace(ControlPlaneVersion, version)
+	ret.Replace(append(ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
+
+	//  The joinConfiguration needs to apply the OCK patches
+	patches, found, err := unstructured.NestedStringMap(kcp.Object, ControlPlaneJoinPatches...)
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
+		return ret, nil
+	}
+
+	patchDir, ok := patches[PatchesDirectory]
+	if ok {
+		if patchDir != update.OckPatchDirectory {
+			ret.Replace(append(ControlPlaneJoinPatches, PatchesDirectory), update.OckPatchDirectory)
+		}
+	} else {
+		ret.Add(ControlPlaneJoinPatches, map[string]string{PatchesDirectory: update.OckPatchDirectory})
+	}
+
+	joinSkips, found, err := unstructured.NestedStringSlice(kcp.Object, ControlPlaneJoinSkipPhases...)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		joinSkips = []string{}
+	}
+	if !slices.Contains(joinSkips, PhasePreflight) {
+		joinSkips = append(joinSkips, PhasePreflight)
+		err = unstructured.SetNestedStringSlice(kcp.Object, joinSkips, ControlPlaneJoinSkipPhases...)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the field was already there, replace it.  Otherwise, add it.
+		if found {
+			ret.Replace(ControlPlaneJoinSkipPhases, joinSkips)
+		} else {
+			ret.Add(ControlPlaneJoinSkipPhases, joinSkips)
+		}
+	}
+
+	return ret, nil
 }
