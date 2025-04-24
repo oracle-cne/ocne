@@ -110,6 +110,14 @@ func WaitForPod(client kubernetes.Interface, namespace string, name string) erro
 	}
 }
 
+func AdminPodName(node string, prefix string) string {
+	return strings.ReplaceAll(fmt.Sprintf("%s-%s", prefix, node), ".", "-")
+}
+
+func DeleteAdminPod(client kubernetes.Interface, node string, namespace string, prefix string) error {
+	return DeletePod(client, namespace, AdminPodName(node, prefix))
+}
+
 // BasicAdminPod returns the skeleton of a pod specification that can be
 // used to create a privileged pod on a node.
 func BasicAdminPod(node string, namespace string, podNamePrefix string, toolbox bool) *v1.Pod {
@@ -122,7 +130,7 @@ func BasicAdminPod(node string, namespace string, podNamePrefix string, toolbox 
 	privileged := true
 	hostPathType := v1.HostPathDirectory
 	volumeName := "host-root"
-	podName := strings.ReplaceAll(fmt.Sprintf("%s-%s", podNamePrefix, node), ".", "-")
+	podName := AdminPodName(node, podNamePrefix)
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,

@@ -4,7 +4,6 @@
 package console
 
 import (
-	"fmt"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	kexec "k8s.io/kubectl/pkg/cmd/exec"
@@ -53,12 +52,11 @@ func Console(kubeconfig string, nodeName string, toolbox bool, chroot bool, cmds
 	}
 
 	// Delete the pod, if it exists.
-	podName := fmt.Sprintf("%s-%s", podPrefix, nodeName)
-	k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, podName)
+	k8s.DeleteAdminPod(kubeClient, nodeName, constants.OCNESystemNamespace, podPrefix)
 
 	// start the pod
 	pod, err := k8s.StartAdminPodOnNode(kubeClient, nodeName, constants.OCNESystemNamespace, podPrefix, toolbox)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, podName)
+	defer k8s.DeleteAdminPod(kubeClient, nodeName, constants.OCNESystemNamespace, podPrefix)
 	if err != nil {
 		return err
 	}
