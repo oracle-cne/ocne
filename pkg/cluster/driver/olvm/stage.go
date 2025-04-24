@@ -22,20 +22,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type OLVMImageData struct {
-	Image            *core.Image
+type TemplateData struct {
+	Template         string
 	HasUpdate        bool
-	Arch             string
 	NewId            string
 	WorkRequestId    string
 	MachineTemplates []*capi.GraphNode
 }
 
-// MachineTemplateImageId should be treated as a constant
-var MachineTemplateImageId []string = []string{"spec", "template", "spec", "imageId"}
-
-// MachineTemplateShape should be treated as a constant
-var MachineTemplateShape []string = []string{"spec", "template", "spec", "shape"}
+// vmTemplateName should be treated as a constant
+var vmTemplateName = []string{"spec", "template", "spec", "ovirt", "vmTemplateName"}
 
 // Stage looks at the resources for an OLVM CAPI cluster and generates as
 // much of the material necessary to update a cluster from one version to
@@ -95,11 +91,12 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	// Check the existing images for the machine templates and see if there
 	// are updates available.  If so, upload the new images and generate
 	// new machine templates that consume them.
+	ociImages, err := graphToImages(graph)
+	if err != nil {
+		return "", "", false, err
+	}
+	log.Debugf("%v", ociImages)
 	/*
-			ociImages, err := graphToImages(graph, cad.ClusterConfig.Providers.Oci.Profile)
-			if err != nil {
-				return "", "", false, err
-			}
 
 			err = findUpdates(ociImages, version, cad.ClusterConfig.BootVolumeContainerImage, cad.ClusterConfig.Providers.Oci.Profile)
 			if err != nil {
@@ -264,24 +261,18 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	return "", "", minorVersionChanged, nil
 }
 
-// imageFromMachineTemplate gets an OCI Image object from an OCIMachineTemplate
-// by gathering the Image ID from the template and then looking up the image.
-func imageFromMachineTemplate(mt *unstructured.Unstructured, profile string) (*core.Image, error) {
-	imageId, found, err := unstructured.NestedString(mt.Object, MachineTemplateImageId...)
+// imageFromMachineTemplate gets a vmTemplateName from an OLVMMachineTemplate
+func imageFromMachineTemplate(mt *unstructured.Unstructured) (string, error) {
+	templateName, found, err := unstructured.NestedString(mt.Object, vmTemplateName...)
 	if !found {
-		err = fmt.Errorf("MachineTemplate %s in %s has no imageId", mt.GetName(), mt.GetNamespace())
+		err = fmt.Errorf("OLVMMachineTemplate %s in %s has no vmTemplateName", mt.GetName(), mt.GetNamespace())
 	}
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	log.Debugf("MachineTemplate %s in %s has imageId %s", mt.GetName(), mt.GetNamespace(), imageId)
+	log.Debugf("OLVMMachineTemplate %s in %s has vmTemplateName %s", mt.GetName(), mt.GetNamespace(), templateName)
 
-	img, err := oci.GetImageById(imageId, profile)
-	if err != nil {
-		return nil, err
-	}
-
-	return img, nil
+	return templateName, nil
 }
 
 // doUpdate calculates if there is reason to upload a new OCI custom image
@@ -371,36 +362,24 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string, prof
 }
 
 // graphToImages scrapes the graph of CAPI resources and extracts the
-// OCI images from the OCIMachineTemplates.  The return value maps the OCID
+// template names from the OLVMMachineTemplates. The return value maps the OCID
 // of those images to a collection of data about them.
-func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OLVMImageData, error) {
-	ret := map[string]*OLVMImageData{}
+func graphToImages(graph *capi.ClusterGraph) (map[string]*TemplateData, error) {
+	ret := map[string]*TemplateData{}
 
 	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
-		retVal := arg.(map[string]*OLVMImageData)
-		img, err := imageFromMachineTemplate(mt, profile)
+		retVal := arg.(map[string]*TemplateData)
+		img, err := imageFromMachineTemplate(mt)
 		if err != nil {
 			return err
 		}
 
-		shape, found, err := unstructured.NestedString(mt.Object, MachineTemplateShape...)
-		if !found {
-			err = fmt.Errorf("MachineTemplate %s in %s has no shape", mt.GetName(), mt.GetNamespace())
-		}
-		if err != nil {
-			return err
-		}
-
-		arch := oci.ArchitectureFromShape(shape)
-		log.Debugf("MachineTemplate %s in %s has shape %s of architecture %s", mt.GetName(), mt.GetNamespace(), shape, arch)
-
-		imgData, ok := retVal[*img.Id]
+		imgData, ok := retVal[img]
 		if !ok {
-			retVal[*img.Id] = &OLVMImageData{
-				Image:            img,
+			retVal[img] = &TemplateData{
+				Template:         img,
 				HasUpdate:        false,
-				Arch:             arch,
 				MachineTemplates: []*capi.GraphNode{mtNode},
 			}
 		} else {
@@ -412,7 +391,8 @@ func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OLVMIm
 }
 
 // findUpdates checks to see if an update is available for a set of images.
-func findUpdates(imgs map[string]*OLVMImageData, version string, bvImage string, profile string) error {
+/*
+func findUpdates(imgs map[string]*TemplateData, version string, bvImage string, profile string) error {
 	for _, img := range imgs {
 		var err error
 		img.HasUpdate, err = doUpdate(img.Image, img.Arch, version, bvImage, profile)
@@ -422,3 +402,4 @@ func findUpdates(imgs map[string]*OLVMImageData, version string, bvImage string,
 	}
 	return nil
 }
+*/
