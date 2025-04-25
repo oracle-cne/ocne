@@ -59,18 +59,18 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				},
 			},
 		},
-		install.ApplicationDescription{
-			Application: &types.Application{
-				Name:      constants.OLVMCAPIChart,
-				Namespace: constants.OLVMCAPIOperatorNamespace,
-				Release:   constants.OLVMCAPIRelease,
-				Version:   constants.OLVMCAPIVersion,
-				Catalog:   catalog.InternalCatalog,
-				Config: map[string]interface{}{
-					"proxy": proxyValues,
-				},
-			},
-		},
+		//install.ApplicationDescription{
+		//	Application: &types.Application{
+		//		Name:      constants.OLVMCAPIChart,
+		//		Namespace: constants.OLVMCAPIOperatorNamespace,
+		//		Release:   constants.OLVMCAPIRelease,
+		//		Version:   constants.OLVMCAPIVersion,
+		//		Catalog:   catalog.InternalCatalog,
+		//		Config: map[string]interface{}{
+		//			"proxy": proxyValues,
+		//		},
+		//	},
+		//},
 		install.ApplicationDescription{
 			Application: &types.Application{
 				Name:      constants.KubeadmBootstrapCAPIChart,
@@ -114,7 +114,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	olvm := &cad.ClusterConfig.Providers.Olvm
 
 	// Append /api to ovirt URL
-	parsedURL, err := url.Parse(olvm.OlvmCluster.OVirtAPI.ServerURL)
+	parsedURL, err := url.Parse(olvm.OLVMCluster.OlvmAPI.ServerURL)
 	if err != nil {
 		return nil, err
 	}

@@ -33,14 +33,14 @@ metadata:
   name: "{{.ClusterConfig.Name}}"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 spec:
-  ovirtDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
+  olvmDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
   controlPlaneEndpoint:
     host: "{{.ClusterConfig.VirtualIp}}"
     port: {{.Config.KubeAPIServerBindPort}}
-  ovirtAPI:
-    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OVirtAPI.ServerURL}}"
-    caConfigMapName: "{{.ClusterConfig.Name}}-ovirt-ca"
-    credentialsSecretName: "{{.ClusterConfig.Name}}-ovirt-credentials"
+  olvmAPI:
+    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmAPI.ServerURL}}"
+    caConfigMapName: "{{.ClusterConfig.Name}}-olvm-ca"
+    credentialsSecretName: "{{.ClusterConfig.Name}}-olvm-credentials"
   vmIpProfiles:
     - name: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Name}}"
       startingIpAddress: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.StartingIpAddress}}"
@@ -136,11 +136,12 @@ spec:
     spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
       olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
-      ovirt:
+      olvm:
         memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
-        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OVirtClusterName}}"
+        olvmClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmClusterName}}"
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
         network:
+          interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.InterfaceType}}"
           networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
           vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicName}}"
@@ -183,9 +184,9 @@ spec:
     spec:
       olvmClusterName: "{{.ClusterConfig.Name}}"
       olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
-      ovirt:
+      olvm:
         memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
-        ovirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OVirtClusterName}}"
+        olvmClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmClusterName}}"
         vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
         network:
           interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.InterfaceType}}"
