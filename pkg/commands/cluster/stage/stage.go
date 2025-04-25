@@ -22,6 +22,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
+	"github.com/oracle-cne/ocne/pkg/kubepug"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/script"
 )
@@ -55,13 +56,9 @@ type StageOptions struct {
 
 // Stage stages a cluster update
 func Stage(o StageOptions) error {
-	//check that the user is supplying a major.minor version
-	match, err := regexp.MatchString("^[1-9]\\.[0-9][0-9]$", o.KubeVersion)
-	if !match {
-		return errors.New("version in major.minor format is not provided. Please choose a version of Kubernetes in the form of major.minor, such as 1.30")
-	}
 	// check that it is a major/minor version that we support
-	if _, err := versions.GetKubernetesVersions(o.KubeVersion); err != nil {
+	tgtVersion, err := versions.GetKubernetesVersions(o.KubeVersion)
+	if err != nil {
 		return errors.New("the kubernetes version is unsupported. Please choose a supported version of Kubernetes to update to")
 	}
 
@@ -85,14 +82,31 @@ func Stage(o StageOptions) error {
 		o.KubeConfigPath = kcfgPath
 	}
 
-	if !doNodes {
-		fmt.Println(helpStanza)
-		return nil
-	}
-
 	restConfig, KClient, err := client.GetKubeClient(o.KubeConfigPath)
 	if err != nil {
 		return err
+	}
+
+	// Check deprecations
+	depRes, err := kubepug.GetDeprecations(restConfig, tgtVersion.Kubernetes)
+	if err != nil {
+		return err
+	}
+
+	deprec, removed := kubepug.FormatItems(depRes)
+	for _, d := range deprec {
+		log.Warnf(d)
+	}
+	for _, r := range removed {
+		log.Errorf(r)
+	}
+	if len(removed) != 0 {
+		return fmt.Errorf("resources exist in the cluster that are removed in the target version")
+	}
+
+	if !doNodes {
+		fmt.Println(helpStanza)
+		return nil
 	}
 
 	nodeList, err := k8s.GetNodeList(KClient)
