@@ -46,7 +46,7 @@ var vmTemplateName = []string{"spec", "template", "spec", "ovirt", "vmTemplateNa
 // creating new OCIMachineTemplates that use them.  Finally, some instructions
 // are printed that tell a user how to apply the staged update to their cluster.
 func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
-	restConfig, _, err := client.GetKubeClient(cad.BootstrapKubeConfig)
+	restConfig, kubeClient, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -93,6 +93,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		return "", "", false, err
 	}
 	minorVersionChanged := minorVersionCmp != 0
+	log.Debugf("kubernetes minor version changes = %t", minorVersionChanged)
 
 	// Get the collection of vmTemplateNames in use
 	ociImages, err := graphToVMTemplates(graph)
@@ -165,10 +166,9 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 			}
 		}
 
-		// Make new machine templates.  This is done by creating a new
-		// OCIMachineTemplate for each existing one that uses an existing
-		// OCI custom image.
 	*/
+	// Make the new machine templates by creating a new OLVMMachineTemplate
+	// for each existing one that uses an existing OLVM Template.
 	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
 
 	for _, img := range ociImages {
@@ -246,25 +246,22 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	if err != nil {
 		return "", "", false, err
 	}
-	/*
-			// Hand back the kubeconfig for the managed cluster.
-			clusterName, _ := clusterObj.GetLabels()[ClusterNameLabel]
-			kcfg, err := cad.waitForKubeconfig(client, clusterName)
-			kcfgPath, err := util.InMemoryFile(fmt.Sprintf("kcfg.%s", clusterName))
 
-			f, err := os.OpenFile(kcfgPath, os.O_RDWR, 0)
-			if err != nil {
-				return "", "", false, err
-			}
-			_, err = f.Write([]byte(kcfg))
-			f.Close()
-			if err != nil {
-				return "", "", false, err
-			}
-		return kcfgPath, strings.Join(helpMessages, "\n"), true, nil
+	// Hand back the kubeconfig for the managed cluster.
+	clusterName, _ := clusterObj.GetLabels()[ClusterNameLabel]
+	kcfg, err := cad.waitForKubeconfig(kubeClient, clusterName)
+	kcfgPath, err := util.InMemoryFile(fmt.Sprintf("kcfg.%s", clusterName))
 
-	*/
-	return "", strings.Join(helpMessages, "\n"), minorVersionChanged, nil
+	f, err := os.OpenFile(kcfgPath, os.O_RDWR, 0)
+	if err != nil {
+		return "", "", false, err
+	}
+	_, err = f.Write([]byte(kcfg))
+	f.Close()
+	if err != nil {
+		return "", "", false, err
+	}
+	return kcfgPath, strings.Join(helpMessages, "\n"), true, nil
 }
 
 // imageFromMachineTemplate gets a vmTemplateName from an OLVMMachineTemplate
