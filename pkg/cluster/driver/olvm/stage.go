@@ -7,6 +7,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/oracle-cne/ocne/pkg/k8s"
 
 	"github.com/oracle-cne/ocne/pkg/util"
 
@@ -29,6 +32,7 @@ import (
 type TemplateData struct {
 	Template         string
 	HasUpdate        bool
+	NewTemplate      string
 	MachineTemplates []*capi.GraphNode
 }
 
@@ -166,42 +170,42 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		// OCI custom image.
 	*/
 	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
-	/*
-		for _, img := range ociImages {
-			log.Debugf("Creating template for %s", *img.Image.Id)
-			newId := img.NewId
 
-			// Template updates can be forced for testing purposes.
-			// This is useful because the templates are generated only
-			// if there a reasonable update to perform.  This calculation
-			// is made by looking at resources, timestamps, and other
-			// durable data that is difficult to set up within the
-			// context of a test harness.
-			if os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
-				newId = *img.Image.Id
-			} else if !img.HasUpdate {
-				continue
-			}
+	for _, img := range ociImages {
+		log.Debugf("Creating template for %s", img.NewTemplate)
+		newId := img.NewTemplate
 
-			for _, mtNode := range img.MachineTemplates {
-				mt := mtNode.Object.DeepCopy()
-				name := util.IncrementCount(mt.GetName(), "-")
-				mt.SetName(name)
-
-				err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "imageId")
-				if err != nil {
-					return "", "", false, err
-				}
-
-				err = k8s.CreateResource(restConfig, mt)
-				if err != nil {
-					return "", "", false, err
-				}
-
-				updatedMts[mtNode] = mt
-			}
+		// Template updates can be forced for testing purposes.
+		// This is useful because the templates are generated only
+		// if there is a reasonable update to perform.
+		// This calculation is made by looking at resources, timestamps, and other
+		// durable data challenging to set up within the
+		// context of a test harness.
+		if os.Getenv("OCNE_OLVM_STAGE_FORCE_TEMPLATES") != "" {
+			newId = img.NewTemplate
+		} else if !img.HasUpdate {
+			continue
 		}
-	*/
+
+		for _, mtNode := range img.MachineTemplates {
+			mt := mtNode.Object.DeepCopy()
+			name := util.IncrementCount(mt.GetName(), "-")
+			mt.SetName(name)
+
+			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "ovirt", "vmTemplateName")
+			if err != nil {
+				return "", "", false, err
+			}
+
+			err = k8s.CreateResource(restConfig, mt)
+			if err != nil {
+				return "", "", false, err
+			}
+
+			updatedMts[mtNode] = mt
+		}
+	}
+
 	// Display some state information and instructions.  The new machine
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
@@ -260,7 +264,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		return kcfgPath, strings.Join(helpMessages, "\n"), true, nil
 
 	*/
-	return "", "", minorVersionChanged, nil
+	return "", strings.Join(helpMessages, "\n"), minorVersionChanged, nil
 }
 
 // imageFromMachineTemplate gets a vmTemplateName from an OLVMMachineTemplate
@@ -381,6 +385,7 @@ func graphToVMTemplates(graph *capi.ClusterGraph) (map[string]*TemplateData, err
 			retVal[template] = &TemplateData{
 				Template:         template,
 				HasUpdate:        true,
+				NewTemplate:      "mgianata-1-31",
 				MachineTemplates: []*capi.GraphNode{mtNode},
 			}
 		} else {
