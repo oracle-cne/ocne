@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/oracle-cne/ocne/pkg/config/types"
+
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -21,7 +23,6 @@ import (
 // TemplateData - for each vmTemplateName maintain a list of OLVMMachineTemplates that
 // reference it.
 type TemplateData struct {
-	Template         string
 	HasUpdate        bool
 	NewTemplate      string
 	MachineTemplates []*capi.GraphNode
@@ -87,7 +88,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	log.Debugf("kubernetes minor version changes = %t", minorVersionChanged)
 
 	// Get the collection of vmTemplateNames in use
-	vmTemplates, err := graphToVMTemplates(graph)
+	vmTemplates, err := cad.graphToVMTemplates(graph)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -190,8 +191,8 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	return kcfgPath, strings.Join(helpMessages, "\n"), true, nil
 }
 
-// imageFromMachineTemplate gets a vmTemplateName from an OLVMMachineTemplate
-func imageFromMachineTemplate(mt *unstructured.Unstructured) (string, error) {
+// templateNameFromMachineTemplate gets a vmTemplateName from an OLVMMachineTemplate
+func templateNameFromMachineTemplate(mt *unstructured.Unstructured) (string, error) {
 	templateName, found, err := unstructured.NestedString(mt.Object, vmTemplateName...)
 	if !found {
 		err = fmt.Errorf("OLVMMachineTemplate %s in %s has no vmTemplateName", mt.GetName(), mt.GetNamespace())
@@ -206,23 +207,26 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured) (string, error) {
 
 // graphToVMTemplates scrapes the graph of CAPI resources and extracts the
 // template names from the OLVMMachineTemplates.
-func graphToVMTemplates(graph *capi.ClusterGraph) (map[string]*TemplateData, error) {
+func (cad *OlvmDriver) graphToVMTemplates(graph *capi.ClusterGraph) (map[string]*TemplateData, error) {
 	ret := map[string]*TemplateData{}
 
 	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
 		retVal := arg.(map[string]*TemplateData)
-		template, err := imageFromMachineTemplate(mt)
+		template, err := templateNameFromMachineTemplate(mt)
 		if err != nil {
 			return err
 		}
 
-		imgData, ok := retVal[template]
+		// Determine if the vmTemplateName has changed
+		update, newTemplate, cpNode := hasUpdate(mt, template, cad.ClusterConfig.Providers.Olvm)
+
+		key := fmt.Sprintf("%s-%t", template, cpNode)
+		imgData, ok := retVal[key]
 		if !ok {
-			retVal[template] = &TemplateData{
-				Template:         template,
-				HasUpdate:        true,
-				NewTemplate:      "mgianata-1-31",
+			retVal[key] = &TemplateData{
+				HasUpdate:        update,
+				NewTemplate:      newTemplate,
 				MachineTemplates: []*capi.GraphNode{mtNode},
 			}
 		} else {
@@ -231,4 +235,25 @@ func graphToVMTemplates(graph *capi.ClusterGraph) (map[string]*TemplateData, err
 		return nil
 	}, ret)
 	return ret, err
+}
+
+func hasUpdate(node *unstructured.Unstructured, templateName string, provider types.OlvmProvider) (bool, string, bool) {
+	newTemplateName := ""
+	controlPlaneNode := false
+
+	// Determine the new template name based on if the current node is
+	// for a control-plane or worker node.
+	if strings.Contains(node.GetName(), "control-plane") {
+		controlPlaneNode = true
+		if len(provider.ControlPlaneMachine.VMTemplateName) > 0 {
+			newTemplateName = provider.ControlPlaneMachine.VMTemplateName
+		}
+	} else if len(provider.WorkerMachine.VMTemplateName) > 0 {
+		newTemplateName = provider.WorkerMachine.VMTemplateName
+	}
+
+	if len(newTemplateName) > 0 {
+		return newTemplateName != templateName, newTemplateName, controlPlaneNode
+	}
+	return false, "", controlPlaneNode
 }
