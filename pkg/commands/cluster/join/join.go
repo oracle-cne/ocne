@@ -320,7 +320,7 @@ func getFilesFromDestCluster(options *JoinOptions, tmpDir string) (string, error
 	}
 
 	cc, err := startAdminPod(restConfig, kubeClient, options.DestKubeConfigPath, nodes.Items[0].Name)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+nodes.Items[0].Name)
+	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 	if err != nil {
 		return "", err
 	}
@@ -343,7 +343,7 @@ func getFilesFromMigratingNode(options *JoinOptions, tmpDir string) (string, str
 	}
 
 	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+options.Node)
+	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 	if err != nil {
 		return "", "", err
 	}
@@ -461,7 +461,7 @@ func copyHAFilesToNode(options *JoinOptions, bindPort uint16, altPort uint16, vi
 	}
 
 	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+options.Node)
+	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 	if err != nil {
 		return nil, err
 	}
