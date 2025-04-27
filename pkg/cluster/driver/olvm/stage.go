@@ -8,10 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oracle-cne/ocne/pkg/config/types"
-
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -33,10 +32,8 @@ var vmTemplateName = []string{"spec", "template", "spec", "ovirt", "vmTemplateNa
 
 // Stage looks at the resources for an OLVM CAPI cluster and generates as
 // much of the material necessary to update a cluster from one version to
-// another.  This typically includes uploading new custom images if
-// necessary, getting the OCIDs of the latest OCI custom images, and then
-// creating new OCIMachineTemplates that use them.  Finally, some instructions
-// are printed that tell a user how to apply the staged update to their cluster.
+// another. Some instructions are printed that tell a user how to apply the
+// staged update to their cluster.
 func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	restConfig, kubeClient, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {
@@ -48,7 +45,6 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		if err != nil {
 			return "", "", false, err
 		}
-
 		cad.ClusterResources = cdi
 	}
 
@@ -57,7 +53,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		return "", "", false, err
 	}
 
-	// Update OLVMMachineDeployments to use the new images.
+	// Update OLVMMachineDeployments to use the new VM templates.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
 	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
@@ -92,7 +88,6 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	if err != nil {
 		return "", "", false, err
 	}
-	log.Debugf("%v", vmTemplates)
 
 	// Make the new machine templates by creating a new OLVMMachineTemplate
 	// for each existing one that uses an existing OLVM Template.
@@ -100,7 +95,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 
 	for _, img := range vmTemplates {
 		log.Debugf("Creating template for %s", img.NewTemplate)
-		newId := img.NewTemplate
+		newTemplate := img.NewTemplate
 
 		// Template updates can be forced for testing purposes.
 		// This is useful because the templates are generated only
@@ -108,9 +103,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		// This calculation is made by looking at resources, timestamps, and other
 		// durable data challenging to set up within the
 		// context of a test harness.
-		if os.Getenv("OCNE_OLVM_STAGE_FORCE_TEMPLATES") != "" {
-			newId = img.NewTemplate
-		} else if !img.HasUpdate {
+		if os.Getenv("OCNE_OLVM_STAGE_FORCE_TEMPLATES") == "" && !img.HasUpdate {
 			continue
 		}
 
@@ -119,7 +112,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 			name := util.IncrementCount(mt.GetName(), "-")
 			mt.SetName(name)
 
-			err = unstructured.SetNestedField(mt.Object, newId, "spec", "template", "spec", "ovirt", "vmTemplateName")
+			err = unstructured.SetNestedField(mt.Object, newTemplate, "spec", "template", "spec", "ovirt", "vmTemplateName")
 			if err != nil {
 				return "", "", false, err
 			}
@@ -221,6 +214,8 @@ func (cad *OlvmDriver) graphToVMTemplates(graph *capi.ClusterGraph) (map[string]
 		// Determine if the vmTemplateName has changed
 		update, newTemplate, cpNode := hasUpdate(mt, template, cad.ClusterConfig.Providers.Olvm)
 
+		// Create separate map entries for control-plane and machine nodes,
+		// they can be configured to use different template names.
 		key := fmt.Sprintf("%s-%t", template, cpNode)
 		imgData, ok := retVal[key]
 		if !ok {
