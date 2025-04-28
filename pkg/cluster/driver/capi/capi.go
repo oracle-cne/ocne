@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle-cne/ocne/pkg/util/capi"
-
 	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -30,6 +28,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
