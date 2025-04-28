@@ -85,7 +85,7 @@ type OlvmOck struct {
 }
 
 type OlvmOvirtAPIServer struct {
-	CAConfigMap              *NamespacedName `yaml:"caConfigMap,omitempty"`
+	CAConfigMap              *NamespacedName `yaml:"caConfigMap"`
 	CredentialsSecret        *NamespacedName `yaml:"credentialsSecret"`
 	InsecureSkipTLSVerify    bool            `yaml:"insecureSkipTLSVerifyFake"`
 	InsecureSkipTLSVerifyPtr *bool           `yaml:"insecureSkipTLSVerify,omitempty"`
