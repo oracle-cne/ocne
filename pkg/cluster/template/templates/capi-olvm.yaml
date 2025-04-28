@@ -15,7 +15,7 @@ spec:
       cidrBlocks:
         - {{.ClusterConfig.ServiceSubnet}}
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1
     kind: OLVMCluster
     name: "{{.ClusterConfig.Name}}"
     namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
@@ -25,7 +25,7 @@ spec:
     name: "{{.ClusterConfig.Name}}-control-plane"
     namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1
 kind: OLVMCluster
 metadata:
   labels:
@@ -62,7 +62,7 @@ spec:
   machineTemplate:
     infrastructureRef:
       kind: OLVMMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1
       name: "{{.ClusterConfig.Name}}-control-plane"
       namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
   kubeadmConfigSpec:
@@ -126,7 +126,7 @@ spec:
           volume-plugin-dir: "{{.VolumePluginDir}}"
           tls-cipher-suites: {{.CipherSuite}}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1
 kind: OLVMMachineTemplate
 metadata:
   name: "{{.ClusterConfig.Name}}-control-plane"
@@ -174,7 +174,7 @@ joinConfiguration:
       volume-plugin-dir: "/var/lib/kubelet/volumeplugins"
       tls-cipher-suites: {{.CipherSuite}}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1
 kind: OLVMMachineTemplate
 metadata:
   name: "{{.ClusterConfig.Name}}-md-0"
@@ -221,5 +221,5 @@ spec:
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "{{.ClusterConfig.Name}}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1
         kind: OLVMMachineTemplate

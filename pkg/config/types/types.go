@@ -46,16 +46,18 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	Namespace           string               `yaml:"namespace"`
-	SelfManaged         bool                 `yaml:"selfmanagedfake"`
-	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
-	Proxy               Proxy                `yaml:"proxy"`
-	NetworkInterface    string               `yaml:"networkInterface"`
-	OlvmOvirtCluster    OlvmOvirtCluster     `yaml:"olvmOvirtCluster"`
-	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
-	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
-	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
-	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
+	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
+	ControlPlaneMachine  OlvmMachine              `yaml:"controlPlaneMachine"`
+	CSIDriver            OvirtCsiDriver           `yaml:"ovirtCsiDriver"`
+	DatacenterName       string                   `yaml:"olvmDatacenterName"`
+	LocalAPIEndpoint     OlvmLocalAPIEndpoint     `yaml:"localAPIEndpoint"`
+	Namespace            string                   `yaml:"namespace"`
+	OlvmAPIServer        OlvmOvirtAPIServer       `yaml:"olvmOvirtAPIServer"`
+	OlvmOck              OlvmOck                  `yaml:"olvmOCK"`
+	Proxy                Proxy                    `yaml:"proxy"`
+	SelfManaged          bool                     `yaml:"selfmanagedfake"`
+	SelfManagedPtr       *bool                    `yaml:"selfManaged,omitempty"`
+	WorkerMachine        OlvmMachine              `yaml:"workerMachine"`
 }
 
 type OvirtCsiDriver struct {
@@ -71,12 +73,9 @@ type OvirtCsiDriver struct {
 	SecretName           string `yaml:"credsSecretName"`
 }
 
-type OlvmOvirtCluster struct {
-	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
-	DatacenterName       string                   `yaml:"olvmDatacenterName"`
-	OlvmAPI              OlvmOvirtAPI             `yaml:"olvmOvirtAPI"`
-	OlvmOck              OlvmOck                  `yaml:"olvmOCK"`
-	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
+type NamespacedName struct {
+	Name      string `yaml:"name"`
+	Namespace string `yaml:"namespace"`
 }
 
 type OlvmOck struct {
@@ -85,10 +84,14 @@ type OlvmOck struct {
 	StorageDomainName string `yaml:"storageDomainName"`
 }
 
-type OlvmOvirtAPI struct {
-	ServerURL    string `yaml:"serverURL"`
-	ServerCA     string `yaml:"serverCA"`
-	ServerCAPath string `yaml:"serverCAPath"`
+type OlvmOvirtAPIServer struct {
+	CAConfigMap              *NamespacedName `yaml:"caConfigMap,omitempty"`
+	CredentialsSecret        *NamespacedName `yaml:"credentialsSecret"`
+	InsecureSkipTLSVerify    bool            `yaml:"insecureSkipTLSVerifyFake"`
+	InsecureSkipTLSVerifyPtr *bool           `yaml:"insecureSkipTLSVerify,omitempty"`
+	ServerCA                 string          `yaml:"serverCA"`
+	ServerCAPath             string          `yaml:"serverCAPath"`
+	ServerURL                string          `yaml:"serverURL"`
 }
 
 type OlvmControlPlaneEndpoint struct {
@@ -96,38 +99,46 @@ type OlvmControlPlaneEndpoint struct {
 	Port string `yaml:"port"`
 }
 
-type OlvmVmIpProfile struct {
-	Name              string `yaml:"name"`
-	StartingIpAddress string `yaml:"startingIpAddress"`
-	Device            string `yaml:"device"`
-	Gateway           string `yaml:"gateway"`
-	Netmask           string `yaml:"netmask"`
-}
-
 type OlvmMachine struct {
-	Memory              string             `yaml:"memory"`
-	Network             OlvmMachineNetwork `yaml:"network"`
-	Cpu                 OlvmMachineCpu     `yaml:"cpu"`
-	OlvmVmIpProfileName string             `yaml:"olvmVmIpProfileName"`
-	VMTemplateName      string             `yaml:"vmTemplateName"`
+	OlvmVirtualMachine   OlvmVirtualMachine `yaml:"virtualMachine"`
+	OlvmOvirtClusterName string             `yaml:"olvmOvirtClusterName"`
+	VMTemplateName       string             `yaml:"vmTemplateName"`
 }
 
-type OlvmMachineCpu struct {
-	Architecture string                `yaml:"architecture"`
-	Topology     OlvmMachineCpuToplogy `yaml:"topology"`
+type OlvmMachineNetwork struct {
+	NetworkName     string `yaml:"networkName"`
+	VnicName        string `yaml:"vnicName"`
+	VnicProfileName string `yaml:"vnicProfileName"`
 }
 
-type OlvmMachineCpuToplogy struct {
+type OlvmVirtualMachine struct {
+	Memory  string                    `yaml:"memory"`
+	Network OLVMVirtualMachineNetwork `yaml:"network"`
+	Cpu     OlvmVirtualMachineCpu     `yaml:"cpu"`
+}
+
+type OlvmVirtualMachineCpu struct {
+	Architecture string         `yaml:"architecture"`
+	Topology     OlvmCpuToplogy `yaml:"topology"`
+}
+
+type OlvmCpuToplogy struct {
 	Cores   int `yaml:"cores"`
 	Sockets int `yaml:"sockets"`
 	Threads int `yaml:"threads"`
 }
 
-type OlvmMachineNetwork struct {
-	NetworkName     string `yaml:"networkName"`
-	InterfaceType   string `yaml:"interfaceType"`
-	VnicName        string `yaml:"vnicName"`
-	VnicProfileName string `yaml:"vnicProfileName"`
+type OLVMVirtualMachineNetwork struct {
+	Gateway       string `yaml:"gateway"`
+	Interface     string `yaml:"interface"`
+	InterfaceType string `yaml:"interfaceType"`
+	IPV4          *IP    `yaml:"ipv4"`
+	IPV6          *IP    `yaml:"ipv6"`
+}
+
+type IP struct {
+	Subnet     string   `yaml:"subnet"`
+	CIDRBlocks []string `yaml:"cidrBlocks"`
 }
 
 type OlvmLocalAPIEndpoint struct {
@@ -549,9 +560,9 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
-	return OlvmOvirtAPI{
-		ServerURL:    ies(def.ServerURL, ovr.ServerURL),
+func MergeOlvmAPI(def *OlvmOvirtAPIServer, ovr *OlvmOvirtAPIServer) OlvmOvirtAPIServer {
+	return OlvmOvirtAPIServer{
+		ApiServerURL: ies(def.ApiServerURL, ovr.ApiServerURL),
 		ServerCA:     ies(def.ServerCA, ovr.ServerCA),
 		ServerCAPath: ies(def.ServerCAPath, ovr.ServerCAPath),
 	}

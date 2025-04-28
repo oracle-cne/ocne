@@ -16,6 +16,16 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
+Note these must be converted from comma list to yaml (see template)
+pods:
+cidrBlocks:
+- {{.ClusterConfig.PodSubnet}}
+serviceDomain: "cluster.local"
+services:
+cidrBlocks:
+- {{.ClusterConfig.ServiceSubnet}}
+
+
 type olvmData struct {
 	Config                  *types.Config
 	ClusterConfig           *types.ClusterConfig
