@@ -28,6 +28,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
@@ -80,7 +81,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 	}
 
 	return []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CertManagerChart,
 				Namespace: constants.CertManagerNamespace,
@@ -89,7 +90,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				Catalog:   catalog.InternalCatalog,
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CoreCAPIChart,
 				Namespace: constants.CoreCAPINamespace,
@@ -101,7 +102,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.OCICAPIChart,
 				Namespace: constants.OCICAPINamespace,
@@ -122,7 +123,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmBootstrapCAPIChart,
 				Namespace: constants.KubeadmBootstrapCAPINamespace,
@@ -134,7 +135,7 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmControlPlaneCAPIChart,
 				Namespace: constants.KubeadmControlPlaneCAPINamespace,
@@ -191,7 +192,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 	}
 
 	ret := []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			PreInstall: func() error {
 				err := k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -228,7 +229,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 
 func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 	// If the values are already set, don't try to set them.  This accounts
-	// for two cases: this fuction has already been called, or there are
+	// for two cases: this function has already been called, or there are
 	// specific values set in the cluster configuration.
 	if cad.ClusterConfig.Providers.Oci.Vcn != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 != "" && cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 != "" {
 		return nil
@@ -350,27 +351,6 @@ func (cad *ClusterApiDriver) waitForControllers(kubeClient kubernetes.Interface)
 	return nil
 }
 
-func (cad *ClusterApiDriver) getClusterObject() (unstructured.Unstructured, error) {
-	clusterObj, err := k8s.FindIn(cad.ClusterResources, func(u unstructured.Unstructured) bool {
-		if u.GetKind() != "Cluster" {
-			return false
-		}
-		if u.GetAPIVersion() != "cluster.x-k8s.io/v1beta1" {
-			return false
-		}
-		_, ok := u.GetLabels()[ClusterNameLabel]
-		return ok
-	})
-	if err != nil {
-		if k8s.IsNotExist(err) {
-			return unstructured.Unstructured{}, fmt.Errorf("Cluster resources do not include a valid cluster.x-k8s.io/v1beta1/Cluster")
-		} else {
-			return unstructured.Unstructured{}, err
-		}
-	}
-	return clusterObj, err
-}
-
 func getMapVal(source map[string]interface{}, val string, ns string, name string) (map[string]interface{}, error) {
 	valRef, ok := source[val]
 	if !ok {
@@ -414,7 +394,7 @@ func getStringVal(source map[string]interface{}, val string, ns string, name str
 }
 
 func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, error) {
-	clusterObj, err := cad.getClusterObject()
+	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
 	}
@@ -798,7 +778,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	// A fair bit of metadata is anchored by the Cluster
 	// object in the bundle of Cluster API resources.  Fetch it
 	// to a) make sure it exists and b) fetch useful information
-	clusterObj, err := cad.getClusterObject()
+	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return false, false, err
 	}
@@ -1077,7 +1057,7 @@ func (cad *ClusterApiDriver) Delete() error {
 
 	// Get the namespace.  This is done by finding the metadata
 	// for the Cluster resource.
-	clusterObj, err := cad.getClusterObject()
+	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return err
 	}
@@ -1182,6 +1162,6 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 	return fmt.Sprintf("To access the cluster:\n    use %s", cad.KubeConfig)
 }
 
-func (Cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
+func (cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
 }
