@@ -78,6 +78,12 @@ type NamespacedName struct {
 	Namespace string `yaml:"namespace"`
 }
 
+type OlvmOck struct {
+	DiskName          string `yaml:"diskName"`
+	DiskSize          string `yaml:"diskSize"`
+	StorageDomainName string `yaml:"storageDomainName"`
+}
+
 type OlvmControlPlaneEndpoint struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`
@@ -91,12 +97,6 @@ type OlvmAPIServer struct {
 	ServerCA                 string          `yaml:"serverCA"`
 	ServerCAPath             string          `yaml:"serverCAPath"`
 	ServerURL                string          `yaml:"serverURL"`
-}
-
-type OlvmOck struct {
-	DiskName          string `yaml:"diskName"`
-	DiskSize          string `yaml:"diskSize"`
-	StorageDomainName string `yaml:"storageDomainName"`
 }
 
 type OlvmMachine struct {
@@ -531,6 +531,45 @@ func MergeNamespacedName(def *NamespacedName, ovr *NamespacedName) *NamespacedNa
 	}
 }
 
+// MergeOlvmOck takes two OlvmOcks and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmOck(def *OlvmOck, ovr *OlvmOck) OlvmOck {
+	return OlvmOck{
+		DiskName:          ies(def.DiskName, ovr.DiskName),
+		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
+		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
+	}
+}
+
+// MergeOlvmControlPlaneEndpoint takes two OlvmControlPlaneEndpoints and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
+	return OlvmControlPlaneEndpoint{
+		Host: ies(def.Host, ovr.Host),
+		Port: ies(def.Port, ovr.Port),
+	}
+}
+
+// MergeOlvmAPIServer takes two OlvmAPIServer and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmAPIServer(def *OlvmAPIServer, ovr *OlvmAPIServer) OlvmAPIServer {
+	return OlvmAPIServer{
+		CAConfigMap:              MergeNamespacedName(def.CAConfigMap, ovr.CAConfigMap),
+		CredentialsSecret:        MergeNamespacedName(def.CredentialsSecret, ovr.CredentialsSecret),
+		InsecureSkipTLSVerify:    iebp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr, false),
+		InsecureSkipTLSVerifyPtr: iebpp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr),
+		ServerURL:                ies(def.ServerURL, ovr.ServerURL),
+		ServerCA:                 ies(def.ServerCA, ovr.ServerCA),
+		ServerCAPath:             ies(def.ServerCAPath, ovr.ServerCAPath),
+	}
+}
+
 // MergeOlvmMachine takes two OlvmMachines and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
@@ -538,8 +577,8 @@ func MergeNamespacedName(def *NamespacedName, ovr *NamespacedName) *NamespacedNa
 func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	return OlvmMachine{
 		OlvmMachineNetwork:   MergeOlvmMachineNetwork(&def.OlvmMachineNetwork, &ovr.OlvmMachineNetwork),
-		OlvmVirtualMachine:   MergeOlvmVirtualMachine(&def.OlvmVirtualMachine, &ovr.OlvmVirtualMachine),
 		OlvmOvirtClusterName: ies(def.OlvmOvirtClusterName, ovr.OlvmOvirtClusterName),
+		OlvmVirtualMachine:   MergeOlvmVirtualMachine(&def.OlvmVirtualMachine, &ovr.OlvmVirtualMachine),
 		VMTemplateName:       ies(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
@@ -613,45 +652,6 @@ func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) *OlvmIP {
 	return &OlvmIP{
 		Subnet:     ies(def.Subnet, ovr.Subnet),
 		CIDRBlocks: ies(def.CIDRBlocks, ovr.CIDRBlocks),
-	}
-}
-
-// MergeOlvmControlPlaneEndpoint takes two OlvmControlPlaneEndpoints and merges them into
-// a third.  The default value for the result comes from the first
-// argument.  If a value is set in the second argument, that value
-// takes precedence.
-func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
-	return OlvmControlPlaneEndpoint{
-		Host: ies(def.Host, ovr.Host),
-		Port: ies(def.Port, ovr.Port),
-	}
-}
-
-// MergeOlvmAPIServer takes two OlvmAPIServer and merges them into
-// a third.  The default value for the result comes from the first
-// argument.  If a value is set in the second argument, that value
-// takes precedence.
-func MergeOlvmAPIServer(def *OlvmAPIServer, ovr *OlvmAPIServer) OlvmAPIServer {
-	return OlvmAPIServer{
-		CAConfigMap:              MergeNamespacedName(def.CAConfigMap, ovr.CAConfigMap),
-		CredentialsSecret:        MergeNamespacedName(def.CredentialsSecret, ovr.CredentialsSecret),
-		InsecureSkipTLSVerify:    iebp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr, false),
-		InsecureSkipTLSVerifyPtr: iebpp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr),
-		ServerURL:                ies(def.ServerURL, ovr.ServerURL),
-		ServerCA:                 ies(def.ServerCA, ovr.ServerCA),
-		ServerCAPath:             ies(def.ServerCAPath, ovr.ServerCAPath),
-	}
-}
-
-// MergeOlvmOck takes two OlvmOcks and merges them into
-// a third.  The default value for the result comes from the first
-// argument.  If a value is set in the second argument, that value
-// takes precedence.
-func MergeOlvmOck(def *OlvmOck, ovr *OlvmOck) OlvmOck {
-	return OlvmOck{
-		DiskName:          ies(def.DiskName, ovr.DiskName),
-		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
-		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
 	}
 }
 
