@@ -33,20 +33,20 @@ metadata:
   name: "{{.ClusterConfig.Name}}"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 spec:
-  olvmDatacenterName: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.DatacenterName}}"
+  olvmDatacenterName: "{{.ClusterConfig.Providers.Olvm.DatacenterName}}"
   controlPlaneEndpoint:
     host: "{{.ClusterConfig.VirtualIp}}"
     port: {{.Config.KubeAPIServerBindPort}}
-  olvmAPI:
-    apiServerURL: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmAPI.ServerURL}}"
-    caConfigMapName: "{{.ClusterConfig.Name}}-olvm-ca"
-    credentialsSecretName: "{{.ClusterConfig.Name}}-olvm-credentials"
-  vmIpProfiles:
-    - name: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Name}}"
-      startingIpAddress: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.StartingIpAddress}}"
-      gateway: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Gateway}}"
-      netmask: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Netmask}}"
-      device: "{{.ClusterConfig.Providers.Olvm.OlvmCluster.OlvmVmIpProfile.Device}}"
+  olvmOvirtAPIServer:
+    caConfigMapName:
+      name: ".ClusterConfig.Providers.Olvm.OlvmAPIServer.CAConfigMap.Name}}"
+      namespace: ".ClusterConfig.Providers.Olvm.OlvmAPIServer.CAConfigMap.Namespace}}"
+    credentialsSecretName:
+      name: ".ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Name}}"
+      namespace: ".ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Namespace}}"
+    insecureSkipTlsVerify: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify}}"
+    serverURL: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.ServerURL}}"
+
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
@@ -134,24 +134,27 @@ metadata:
 spec:
   template:
     spec:
-      olvmClusterName: "{{.ClusterConfig.Name}}"
-      olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
-      olvm:
-        memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Memory}}"
-        olvmClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmClusterName}}"
-        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
+      olvmOvirtClusterName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmOvirtClusterName}}"
+      vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VMTemplateName}}"
+      olvmNetwork:
+        networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmMachineNetwork.NetworkName}}"
+        vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmMachineNetwork.VnicName}}"
+        vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmMachineNetwork.VnicProfileName}}"
+      virtualMachine:
+        memory: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Memory}}"
         network:
-          interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.Interface}}"
-          interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.InterfaceType}}"
-          networkName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.NetworkName}}"
-          vnicName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicName}}"
-          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Network.VnicProfileName}}"
+          gateway: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.Gateway}}"
+          interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.Interface}}"
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.InterfaceType}}"
+          ipv4:
+            cidrBlocks: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.CIDRBlocks}}"
+            cidrBlocks: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.CIDRBlocks}}"
         cpu:
-          architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Architecture}}"
+          architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Cpu.Architecture}}"
           topology:
-            cores: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Cores}}
-            sockets: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Sockets}}
-            threads: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.Cpu.Topology.Threads}}
+            cores: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Cpu.Topology.Cores}}
+            sockets: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Cpu.Topology.Sockets}}
+            threads: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Cpu.Topology.Threads}}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate

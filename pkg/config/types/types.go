@@ -46,18 +46,17 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
-	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
-	ControlPlaneMachine  OlvmMachine              `yaml:"controlPlaneMachine"`
-	CSIDriver            OvirtCsiDriver           `yaml:"ovirtCsiDriver"`
-	DatacenterName       string                   `yaml:"olvmDatacenterName"`
-	LocalAPIEndpoint     OlvmLocalAPIEndpoint     `yaml:"localAPIEndpoint"`
-	Namespace            string                   `yaml:"namespace"`
-	OlvmAPIServer        OlvmAPIServer            `yaml:"olvmOvirtAPIServer"`
-	OlvmOck              OlvmOck                  `yaml:"olvmOCK"`
-	Proxy                Proxy                    `yaml:"proxy"`
-	SelfManaged          bool                     `yaml:"selfmanagedfake"`
-	SelfManagedPtr       *bool                    `yaml:"selfManaged,omitempty"`
-	WorkerMachine        OlvmMachine              `yaml:"workerMachine"`
+	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
+	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
+	DatacenterName      string               `yaml:"olvmDatacenterName"`
+	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
+	Namespace           string               `yaml:"namespace"`
+	OlvmAPIServer       OlvmAPIServer        `yaml:"olvmOvirtAPIServer"`
+	OlvmOck             OlvmOck              `yaml:"olvmOCK"`
+	Proxy               Proxy                `yaml:"proxy"`
+	SelfManaged         bool                 `yaml:"selfmanagedfake"`
+	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
+	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
 }
 
 type OvirtCsiDriver struct {
@@ -130,11 +129,11 @@ type OlvmMachineCpuToplogy struct {
 }
 
 type OlvmVirtualMachineNetwork struct {
-	Gateway       string  `yaml:"gateway"`
-	Interface     string  `yaml:"interface"`
-	InterfaceType string  `yaml:"interfaceType"`
-	IPV4          *OlvmIP `yaml:"ipv4"`
-	IPV6          *OlvmIP `yaml:"ipv6"`
+	Gateway       string `yaml:"gateway"`
+	Interface     string `yaml:"interface"`
+	InterfaceType string `yaml:"interfaceType"`
+	IPV4          OlvmIP `yaml:"ipv4"`
+	IPV6          OlvmIP `yaml:"ipv6"`
 }
 
 type OlvmIP struct {
@@ -486,18 +485,17 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 // values takes precedence.
 func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 	return OlvmProvider{
-		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
-		ControlPlaneMachine:  MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
-		CSIDriver:            MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
-		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
-		LocalAPIEndpoint:     MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
-		Namespace:            ies(def.Namespace, ovr.Namespace),
-		OlvmAPIServer:        MergeOlvmAPIServer(&def.OlvmAPIServer, &ovr.OlvmAPIServer),
-		OlvmOck:              MergeOlvmOck(&def.OlvmOck, &ovr.OlvmOck),
-		Proxy:                MergeProxy(&def.Proxy, &ovr.Proxy),
-		SelfManaged:          iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
-		SelfManagedPtr:       iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
-		WorkerMachine:        MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
+		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
+		CSIDriver:           MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
+		DatacenterName:      ies(def.DatacenterName, ovr.DatacenterName),
+		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
+		Namespace:           ies(def.Namespace, ovr.Namespace),
+		OlvmAPIServer:       MergeOlvmAPIServer(&def.OlvmAPIServer, &ovr.OlvmAPIServer),
+		OlvmOck:             MergeOlvmOck(&def.OlvmOck, &ovr.OlvmOck),
+		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
+		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
+		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
+		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
 	}
 }
 
@@ -639,8 +637,8 @@ func MergeOlvmVirtualMachineNetwork(def *OlvmVirtualMachineNetwork, ovr *OlvmVir
 		Gateway:       ies(def.Gateway, ovr.Gateway),
 		Interface:     ies(def.Interface, ovr.Interface),
 		InterfaceType: ies(def.InterfaceType, ovr.InterfaceType),
-		IPV4:          MergeOlvmIP(def.IPV4, ovr.IPV4),
-		IPV6:          MergeOlvmIP(def.IPV6, ovr.IPV6),
+		IPV4:          MergeOlvmIP(&def.IPV4, &ovr.IPV4),
+		IPV6:          MergeOlvmIP(&def.IPV6, &ovr.IPV6),
 	}
 }
 
@@ -648,8 +646,8 @@ func MergeOlvmVirtualMachineNetwork(def *OlvmVirtualMachineNetwork, ovr *OlvmVir
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) *OlvmIP {
-	return &OlvmIP{
+func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) OlvmIP {
+	return OlvmIP{
 		Subnet:     ies(def.Subnet, ovr.Subnet),
 		CIDRBlocks: ies(def.CIDRBlocks, ovr.CIDRBlocks),
 	}
