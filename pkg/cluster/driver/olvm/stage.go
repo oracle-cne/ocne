@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	capicommon "github.com/oracle-cne/ocne/pkg/cluster/driver/capi-common"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -24,7 +24,7 @@ import (
 type TemplateData struct {
 	HasUpdate        bool
 	NewTemplate      string
-	MachineTemplates []*capi.GraphNode
+	MachineTemplates []*capicommon.GraphNode
 }
 
 // vmTemplateName should be treated as a constant
@@ -48,21 +48,21 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 		cad.ClusterResources = cdi
 	}
 
-	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
+	clusterObj, err := capicommon.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return "", "", false, err
 	}
 
 	// Update OLVMMachineDeployments to use the new VM templates.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
-	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
+	graph, err := capicommon.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
 		return "", "", false, err
 	}
 
 	// Make sure that there is a control plane defined.  Also check to see
 	// if the minor version changed.
-	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
+	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capicommon.ControlPlaneVersion...)
 	if err != nil {
 		return "", "", false, err
 	} else if !found {
@@ -71,7 +71,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 
 	// Apply necessary control plane modifications whether there
 	// is an update or not.
-	err = capi.PatchControlPlane(restConfig, graph.ControlPlane.Object)
+	err = capicommon.PatchControlPlane(restConfig, graph.ControlPlane.Object)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -91,7 +91,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 
 	// Make the new machine templates by creating a new OLVMMachineTemplate
 	// for each existing one that uses an existing OLVM Template.
-	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
+	updatedMts := map[*capicommon.GraphNode]*unstructured.Unstructured{}
 
 	for _, img := range vmTemplates {
 		log.Debugf("Creating template for %s", img.NewTemplate)
@@ -130,8 +130,8 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
 	var helpMessages []string
-	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
-		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
+	err = graph.WalkMachineTemplates(func(parent *capicommon.GraphNode, mtNode *capicommon.GraphNode, arg interface{}) error {
+		updatedMts := arg.(map[*capicommon.GraphNode]*unstructured.Unstructured)
 
 		var umt *unstructured.Unstructured
 		umt, ok := updatedMts[mtNode]
@@ -145,7 +145,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 				return err
 			}
 
-			patches, err := capi.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			patches, err := capicommon.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
 			if err != nil {
 				return err
 			}
@@ -157,7 +157,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 				return err
 			}
 
-			patches := (&util.JsonPatches{}).Replace(capi.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
+			patches := (&util.JsonPatches{}).Replace(capicommon.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capicommon.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
 			helpMessages = append(helpMessages, fmt.Sprintf("To update MachineDeployment %s in %s, run:\n    kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		}
 
@@ -200,10 +200,10 @@ func templateNameFromMachineTemplate(mt *unstructured.Unstructured) (string, err
 
 // graphToVMTemplates scrapes the graph of CAPI resources and extracts the
 // template names from the OLVMMachineTemplates.
-func (cad *OlvmDriver) graphToVMTemplates(graph *capi.ClusterGraph) (map[string]*TemplateData, error) {
+func (cad *OlvmDriver) graphToVMTemplates(graph *capicommon.ClusterGraph) (map[string]*TemplateData, error) {
 	ret := map[string]*TemplateData{}
 
-	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
+	err := graph.WalkMachineTemplates(func(parent *capicommon.GraphNode, mtNode *capicommon.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
 		retVal := arg.(map[string]*TemplateData)
 		template, err := templateNameFromMachineTemplate(mt)
@@ -222,7 +222,7 @@ func (cad *OlvmDriver) graphToVMTemplates(graph *capi.ClusterGraph) (map[string]
 			retVal[key] = &TemplateData{
 				HasUpdate:        update,
 				NewTemplate:      newTemplate,
-				MachineTemplates: []*capi.GraphNode{mtNode},
+				MachineTemplates: []*capicommon.GraphNode{mtNode},
 			}
 		} else {
 			imgData.MachineTemplates = append(imgData.MachineTemplates, mtNode)

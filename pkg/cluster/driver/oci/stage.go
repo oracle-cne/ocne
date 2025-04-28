@@ -11,6 +11,7 @@ import (
 
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	capicommon "github.com/oracle-cne/ocne/pkg/cluster/driver/capi-common"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
@@ -19,7 +20,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
@@ -32,7 +32,7 @@ type OciImageData struct {
 	Arch             string
 	NewId            string
 	WorkRequestId    string
-	MachineTemplates []*capi.GraphNode
+	MachineTemplates []*capicommon.GraphNode
 }
 
 // These should be treated as constants
@@ -148,10 +148,10 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string, prof
 // graphToImages scrapes the graph of CAPI resources and extracts the
 // OCI images from the OCIMachineTemplates.  The return value maps the OCID
 // of those images to a collection of data about them.
-func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OciImageData, error) {
+func graphToImages(graph *capicommon.ClusterGraph, profile string) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
-	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
+	err := graph.WalkMachineTemplates(func(parent *capicommon.GraphNode, mtNode *capicommon.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
 		retVal := arg.(map[string]*OciImageData)
 		img, err := imageFromMachineTemplate(mt, profile)
@@ -176,7 +176,7 @@ func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OciIma
 				Image:            img,
 				HasUpdate:        false,
 				Arch:             arch,
-				MachineTemplates: []*capi.GraphNode{mtNode},
+				MachineTemplates: []*capicommon.GraphNode{mtNode},
 			}
 		} else {
 			imgData.MachineTemplates = append(imgData.MachineTemplates, mtNode)
@@ -219,21 +219,21 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		cad.ClusterResources = cdi
 	}
 
-	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
+	clusterObj, err := capicommon.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return "", "", false, err
 	}
 
 	// Update OCIMachineDeployments to use the new images.
 	log.Debugf("Getting graph for Cluster %s in namespace %s", clusterObj.GetName(), clusterObj.GetNamespace())
-	graph, err := capi.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
+	graph, err := capicommon.GetClusterGraph(restConfig, clusterObj.GetNamespace(), clusterObj.GetName())
 	if err != nil {
 		return "", "", false, err
 	}
 
 	// Make sure that there is a control plane defined.  Also check to see
 	// if the minor version changed.
-	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capi.ControlPlaneVersion...)
+	currentKubeVersion, found, err := unstructured.NestedString(graph.ControlPlane.Object.Object, capicommon.ControlPlaneVersion...)
 	if err != nil {
 		return "", "", false, err
 	} else if !found {
@@ -242,7 +242,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 
 	// Apply necessary control plane modifications whether there
 	// is an update or not.
-	err = capi.PatchControlPlane(restConfig, graph.ControlPlane.Object)
+	err = capicommon.PatchControlPlane(restConfig, graph.ControlPlane.Object)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -327,7 +327,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	// Make new machine templates.  This is done by creating a new
 	// OCIMachineTemplate for each existing one that uses an existing
 	// OCI custom image.
-	updatedMts := map[*capi.GraphNode]*unstructured.Unstructured{}
+	updatedMts := map[*capicommon.GraphNode]*unstructured.Unstructured{}
 	for _, img := range ociImages {
 		log.Debugf("Creating template for %s", *img.Image.Id)
 		newId := img.NewId
@@ -367,8 +367,8 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
 	var helpMessages []string
-	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
-		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
+	err = graph.WalkMachineTemplates(func(parent *capicommon.GraphNode, mtNode *capicommon.GraphNode, arg interface{}) error {
+		updatedMts := arg.(map[*capicommon.GraphNode]*unstructured.Unstructured)
 
 		var umt *unstructured.Unstructured
 		umt, ok := updatedMts[mtNode]
@@ -382,7 +382,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 				return err
 			}
 
-			patches, err := capi.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			patches, err := capicommon.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
 			if err != nil {
 				return err
 			}
@@ -394,7 +394,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 				return err
 			}
 
-			patches := (&util.JsonPatches{}).Replace(capi.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capi.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
+			patches := (&util.JsonPatches{}).Replace(capicommon.MachineDeploymentVersion, kubeVersions.Kubernetes).Replace(append(capicommon.MachineDeploymentInfrastructureRef, "name"), umt.GetName()).String()
 			helpMessages = append(helpMessages, fmt.Sprintf("To update MachineDeployment %s in %s, run:\n    kubectl patch -n %s machinedeployment %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), patches))
 		}
 

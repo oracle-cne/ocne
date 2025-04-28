@@ -17,6 +17,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
+	capicommon "github.com/oracle-cne/ocne/pkg/cluster/driver/capi-common"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -28,7 +29,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
@@ -394,7 +394,7 @@ func getStringVal(source map[string]interface{}, val string, ns string, name str
 }
 
 func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, error) {
-	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
+	clusterObj, err := capicommon.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
 	}
@@ -778,7 +778,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	// A fair bit of metadata is anchored by the Cluster
 	// object in the bundle of Cluster API resources.  Fetch it
 	// to a) make sure it exists and b) fetch useful information
-	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
+	clusterObj, err := capicommon.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return false, false, err
 	}
@@ -1057,7 +1057,7 @@ func (cad *ClusterApiDriver) Delete() error {
 
 	// Get the namespace.  This is done by finding the metadata
 	// for the Cluster resource.
-	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
+	clusterObj, err := capicommon.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return err
 	}
