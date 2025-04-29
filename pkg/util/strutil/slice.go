@@ -5,6 +5,7 @@ package strutil
 
 import (
 	"sort"
+	"strings"
 )
 
 // SliceContainsString checks for a string in a slice of strings
@@ -86,4 +87,14 @@ func AreSlicesEqualWithoutOrder(slice1 []string, slice2 []string) bool {
 		}
 	}
 	return true
+}
+
+// SplitAndTrim splits a string, trims each segment, and returns a slice of strings
+func SplitAndTrim(s string, sep string) []string {
+	out := []string{}
+	segs := strings.Split(s, sep)
+	for i := range segs {
+		out = append(out, strings.TrimSpace(segs[i]))
+	}
+	return out
 }

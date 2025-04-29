@@ -9,11 +9,11 @@ spec:
   clusterNetwork:
     pods:
       cidrBlocks:
-        - {{.ClusterConfig.PodSubnet}}
+        - {{.PodSubnetCidrBlocks}}
     serviceDomain: "cluster.local"
     services:
       cidrBlocks:
-        - {{.ClusterConfig.ServiceSubnet}}
+        - {{.ServiceSubnetCidrBlocks}}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1
     kind: OLVMCluster
@@ -147,8 +147,12 @@ spec:
           interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.InterfaceType}}"
           ipv4:
-            cidrBlocks: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.CIDRBlocks}}"
-            cidrBlocks: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.CIDRBlocks}}"
+            cidrBlocks: "{{.IPV4CidrBlocks}}"
+            subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.Subnet}}"
+          ipv6:
+           cidrBlocks: "{{.IPV6CidrBlocks}}"
+           subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV6.Subnet}}"
+
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Cpu.Architecture}}"
           topology:
@@ -185,23 +189,31 @@ metadata:
 spec:
   template:
     spec:
-      olvmClusterName: "{{.ClusterConfig.Name}}"
-      olvmVmIpProfileName: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVmIpProfileName}}"
-      olvm:
-        memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Memory}}"
-        olvmClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmClusterName}}"
-        vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
+      olvmOvirtClusterName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmOvirtClusterName}}"
+      vmTemplateName:  "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VMTemplateName}}"
+      olvmNetwork:
+        networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmMachineNetwork.NetworkName}}"
+        vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmMachineNetwork.VnicName}}"
+        vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmMachineNetwork.VnicProfileName}}"
+      virtualMachine:
+        memory: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Memory}}"
         network:
-          interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.InterfaceType}}"
-          networkName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.NetworkName}}"
-          vnicName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicName}}"
-          vnicProfileName: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Network.VnicProfileName}}"
+          gateway: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.Gateway}}"
+          interface: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.Interface}}"
+          interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.InterfaceType}}"
+          ipv4:
+            cidrBlocks: "{{.IPV4CidrBlocks}}"
+            subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.IPV4.Subnet}}"
+          ipv6:
+            cidrBlocks: "{{.IPV6CidrBlocks}}"
+            subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.IPV6.Subnet}}"
+
         cpu:
-          architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Architecture}}"
+          architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Cpu.Architecture}}"
           topology:
-            cores: {{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Cores}}
-            sockets: {{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Sockets}}
-            threads: {{.ClusterConfig.Providers.Olvm.WorkerMachine.Cpu.Topology.Threads}}
+            cores: {{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Cpu.Topology.Cores}}
+            sockets: {{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Cpu.Topology.Sockets}}
+            threads: {{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Cpu.Topology.Threads}}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment

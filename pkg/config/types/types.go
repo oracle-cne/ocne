@@ -99,13 +99,13 @@ type OlvmAPIServer struct {
 }
 
 type OlvmMachine struct {
-	OlvmMachineNetwork   OlvmMachineNetwork `yaml:"olvmMachineNetwork"`
+	OlvmNetwork          OlvmNetwork        `yaml:"olvmNetwork"`
 	OlvmOvirtClusterName string             `yaml:"olvmOvirtClusterName"`
-	OlvmVirtualMachine   OlvmVirtualMachine `yaml:"virtualMachine"`
+	VirtualMachine       OlvmVirtualMachine `yaml:"virtualMachine"`
 	VMTemplateName       string             `yaml:"vmTemplateName"`
 }
 
-type OlvmMachineNetwork struct {
+type OlvmNetwork struct {
 	NetworkName     string `yaml:"networkName"`
 	VnicName        string `yaml:"vnicName"`
 	VnicProfileName string `yaml:"vnicProfileName"`
@@ -574,19 +574,19 @@ func MergeOlvmAPIServer(def *OlvmAPIServer, ovr *OlvmAPIServer) OlvmAPIServer {
 // takes precedence.
 func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	return OlvmMachine{
-		OlvmMachineNetwork:   MergeOlvmMachineNetwork(&def.OlvmMachineNetwork, &ovr.OlvmMachineNetwork),
+		OlvmNetwork:          MergeOlvmNetwork(&def.OlvmNetwork, &ovr.OlvmNetwork),
 		OlvmOvirtClusterName: ies(def.OlvmOvirtClusterName, ovr.OlvmOvirtClusterName),
-		OlvmVirtualMachine:   MergeOlvmVirtualMachine(&def.OlvmVirtualMachine, &ovr.OlvmVirtualMachine),
+		VirtualMachine:       MergeOlvmVirtualMachine(&def.VirtualMachine, &ovr.VirtualMachine),
 		VMTemplateName:       ies(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
 
-// MergeOlvmMachineNetwork takes two OlvmMachineNetworks and merges them into
+// MergeOlvmNetwork takes two OlvmNetworks and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) OlvmMachineNetwork {
-	return OlvmMachineNetwork{
+func MergeOlvmNetwork(def *OlvmNetwork, ovr *OlvmNetwork) OlvmNetwork {
+	return OlvmNetwork{
 		NetworkName:     ies(def.NetworkName, ovr.NetworkName),
 		VnicName:        ies(def.VnicName, ovr.VnicName),
 		VnicProfileName: ies(def.VnicProfileName, ovr.VnicProfileName),
