@@ -79,7 +79,7 @@ In this example, a Kubernetes cluster is updated from Kubernetes 1.29 to 1.30.
 
 #### Creating a Cluster
 
-Create a small cluster with the libvirt provider.  The same process is used for
+Create a cluster with the libvirt provider.  The same process is used for
 most providers.  The oci provider is an exception because the Cluster API
 update process is driven through Cluster API.
 
@@ -425,7 +425,7 @@ ocne-control-plane-1   Ready    control-plane   15m   v1.31.6+1.el8
 
 #### Create a Cluster
 
-Instantiate a small cluster with the oci provider using Kubernetes 1.29.  If a
+Instantiate a cluster with the oci provider using Kubernetes 1.29.  If a
 management cluster is available, it can be used.  This example uses an ephemeral
 cluster for simplicity.
 
@@ -576,7 +576,7 @@ Follow the instructions to [create](olvm.md/#creating-the-olvm-ock-image) and [u
 
 #### Create a Cluster
 
-Instantiate a small cluster with the OLVM provider using Kubernetes 1.30.
+Instantiate a cluster with the OLVM provider using Kubernetes 1.30.
 If a management cluster is available, it can be used.
 This example uses an ephemeral cluster for simplicity.
 
