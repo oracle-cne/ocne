@@ -608,7 +608,7 @@ The second updates the worker nodes.
 
 ```
 $ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
-$ ocne cluster stage --version 1.31 -c <(yq '.providers.olvm.controlPlaneMachine.vmTemplateName = "kubernetes-1-31", .providers.olvm.workerMachine.vmTemplateName = "kubernetes-1-31"' < ~/tools/capi-1.29.yaml)
+$ ocne cluster stage --version 1.31 -c <(yq '.providers.olvm.controlPlaneMachine.vmTemplateName = "kubernetes-1-31", .providers.olvm.workerMachine.vmTemplateName = "kubernetes-1-31"' < ~/tools/capi-1.30.yaml)
 INFO[2025-04-28T14:46:01Z] Installing cert-manager into cert-manager: ok 
 INFO[2025-04-28T14:46:02Z] Installing core-capi into capi-system: ok 
 INFO[2025-04-28T14:46:03Z] Installing olvm-capi into cluster-api-provider-olvm: ok 
