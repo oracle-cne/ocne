@@ -277,15 +277,15 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 
 // GetCA gets the oVirt CA string from the config, either inline or from a file.
 func GetCA(prov *types.OlvmProvider) (string, error) {
-	if prov.OLVMCluster.OlvmAPI.ServerCA != "" && prov.OLVMCluster.OlvmAPI.ServerCAPath != "" {
+	if prov.OlvmAPIServer.ServerCA != "" && prov.OlvmAPIServer.ServerCAPath != "" {
 		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
-	if prov.OLVMCluster.OlvmAPI.ServerCA != "" {
-		return prov.OLVMCluster.OlvmAPI.ServerCA, nil
+	if prov.OlvmAPIServer.ServerCA != "" {
+		return prov.OlvmAPIServer.ServerCA, nil
 	}
 
-	if prov.OLVMCluster.OlvmAPI.ServerCAPath != "" {
-		f, err := file.AbsDir(prov.OLVMCluster.OlvmAPI.ServerCAPath)
+	if prov.OlvmAPIServer.ServerCAPath != "" {
+		f, err := file.AbsDir(prov.OlvmAPIServer.ServerCAPath)
 		if err != nil {
 			return "", err
 		}

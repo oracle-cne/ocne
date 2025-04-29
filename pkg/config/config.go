@@ -80,11 +80,18 @@ func GetDefaultConfig() (*types.Config, error) {
 			},
 			Olvm: types.OlvmProvider{
 				Namespace: constants.OLVMCAPIResourcesNamespace,
+				//ControlPlaneMachine: types.OlvmMachine{
+				//	Memory: constants.OLVMCAPIControlPlaneMemory,
+				//},
 				ControlPlaneMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIControlPlaneMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIControlPlaneMemory,
+					},
 				},
 				WorkerMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIWorkerMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIWorkerMemory,
+					},
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
 					BindPort: 6444,

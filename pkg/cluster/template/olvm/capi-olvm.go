@@ -17,30 +17,20 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
-Note these must be converted from comma list to yaml (see template)
-pods:
-cidrBlocks:
-- {{.ClusterConfig.PodSubnet}}
-serviceDomain: "cluster.local"
-services:
-cidrBlocks:
-- {{.ClusterConfig.ServiceSubnet}}
-
-
 type olvmData struct {
-	Config                  *types.Config
-	ClusterConfig           *types.ClusterConfig
-	ExtraConfigControlPlane string
-	ExtraConfigWorker       string
-	KubeVersions            *versions.KubernetesVersions
-	VolumePluginDir         string
-	CipherSuite             string
-	PodSubnetCidrBlocks 	[]string
-	ServiceSubnetCidrBlocks []string
-	ControlPlaneIPV4CidrBlocks 			[]string
-	ControlPlaneIPV6CidrBlocks 			[]string
-	WorkerIPV4CidrBlocks 			[]string
-	WorkerIPV6CidrBlocks 			[]string
+	Config                     *types.Config
+	ClusterConfig              *types.ClusterConfig
+	ExtraConfigControlPlane    string
+	ExtraConfigWorker          string
+	KubeVersions               *versions.KubernetesVersions
+	VolumePluginDir            string
+	CipherSuite                string
+	PodSubnetCidrBlocks        []string
+	ServiceSubnetCidrBlocks    []string
+	ControlPlaneIPV4CidrBlocks []string
+	ControlPlaneIPV6CidrBlocks []string
+	WorkerIPV4CidrBlocks       []string
+	WorkerIPV6CidrBlocks       []string
 }
 
 // GetOlvmTemplate renders the OLVM template that specifies the CAPI resources.
@@ -63,8 +53,6 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 
 	// Get the CIDR blocks
 
-
-
 	// Build up the extra ignition structures.  Internal LB for control plane only
 	cpIgn, err := getExtraIgnition(config, clusterConfig, true)
 	if err != nil {
@@ -76,19 +64,19 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	}
 	olvm := &clusterConfig.Providers.Olvm
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
-		Config:                  config,
-		ClusterConfig:           clusterConfig,
-		ExtraConfigControlPlane: cpIgn,
-		ExtraConfigWorker:       workerIgn,
-		KubeVersions:            &kubeVer,
-		VolumePluginDir:         ignition.VolumePluginDir,
-		CipherSuite:             clusterConfig.CipherSuites,
-		PodSubnetCidrBlocks: strutil.SplitAndTrim(clusterConfig.PodSubnet,","),
-		ServiceSubnetCidrBlocks: strutil.SplitAndTrim(clusterConfig.ServiceSubnet,","),
-		ControlPlaneIPV4CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.CIDRBlocks,","),
-		ControlPlaneIPV6CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.CIDRBlocks,","),
-		WorkerIPV4CidrBlocks: strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV4.CIDRBlocks,","),
-		WorkerIPV6CidrBlocks: strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV6.CIDRBlocks,","),
+		Config:                     config,
+		ClusterConfig:              clusterConfig,
+		ExtraConfigControlPlane:    cpIgn,
+		ExtraConfigWorker:          workerIgn,
+		KubeVersions:               &kubeVer,
+		VolumePluginDir:            ignition.VolumePluginDir,
+		CipherSuite:                clusterConfig.CipherSuites,
+		PodSubnetCidrBlocks:        strutil.SplitAndTrim(clusterConfig.PodSubnet, ","),
+		ServiceSubnetCidrBlocks:    strutil.SplitAndTrim(clusterConfig.ServiceSubnet, ","),
+		ControlPlaneIPV4CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.CIDRBlocks, ","),
+		ControlPlaneIPV6CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.CIDRBlocks, ","),
+		WorkerIPV4CidrBlocks:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV4.CIDRBlocks, ","),
+		WorkerIPV6CidrBlocks:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV6.CIDRBlocks, ","),
 	}, nil)
 }
 

@@ -147,10 +147,10 @@ spec:
           interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.InterfaceType}}"
           ipv4:
-            cidrBlocks: "{{.IPV4CidrBlocks}}"
+            cidrBlocks: "{{.ControlPlaneIPV4CidrBlocks}}"
             subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV4.Subnet}}"
           ipv6:
-           cidrBlocks: "{{.IPV6CidrBlocks}}"
+           cidrBlocks: "{{.ControlPlaneIPV6CidrBlocks}}"
            subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.OlvmVirtualMachine.Network.IPV6.Subnet}}"
 
         cpu:
@@ -202,10 +202,10 @@ spec:
           interface: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.InterfaceType}}"
           ipv4:
-            cidrBlocks: "{{.IPV4CidrBlocks}}"
+            cidrBlocks: "{{.WorkerIPV4CidrBlocks}}"
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.IPV4.Subnet}}"
           ipv6:
-            cidrBlocks: "{{.IPV6CidrBlocks}}"
+            cidrBlocks: "{{.WorkerIPV6CidrBlocks}}"
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.OlvmVirtualMachine.Network.IPV6.Subnet}}"
 
         cpu:

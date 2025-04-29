@@ -114,7 +114,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	olvm := &cad.ClusterConfig.Providers.Olvm
 
 	// Append /api to ovirt URL
-	parsedURL, err := url.Parse(olvm.OLVMCluster.OlvmAPI.ServerURL)
+	parsedURL, err := url.Parse(olvm.OlvmAPIServer.ServerURL)
 	if err != nil {
 		return nil, err
 	}

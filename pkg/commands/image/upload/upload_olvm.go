@@ -30,20 +30,20 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
-	oCluster := &o.ClusterConfig.Providers.Olvm.OLVMCluster
+	olvmProv := &o.ClusterConfig.Providers.Olvm
 
 	// Get OvClient
 	ca, err := olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
 	if err != nil {
 		return err
 	}
-	ovcli, err := ovclient.GetOVClient(kubeClient, ca, oCluster.OlvmAPI.ServerURL)
+	ovcli, err := ovclient.GetOVClient(kubeClient, ca, olvmProv.OlvmAPIServer.ServerURL)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, oCluster.OlvmOck.DiskName,
-		oCluster.OlvmOck.StorageDomainName)
+	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, olvmProv.OlvmOck.DiskName,
+		olvmProv.OlvmOck.StorageDomainName)
 
 	fileInfo, err := getImageInfo(o.ImagePath)
 	if err != nil {
@@ -51,7 +51,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Create an empty disk in the oVirt storage domain
-	disk, err := createDisk(ovcli, oCluster, fileInfo)
+	disk, err := createDisk(ovcli, &olvmProv.OlvmOck, fileInfo)
 	if err != nil {
 		return err
 	}
@@ -110,9 +110,9 @@ func UploadOlvm(o UploadOptions) error {
 	return nil
 }
 
-func createDisk(ovcli *ovclient.Client, oCluster *otypes.OLVMOvirtCluster, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
+func createDisk(ovcli *ovclient.Client, ock *otypes.OlvmOck, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
 	// Get storage name
-	sd, err := ovsd.GetStorageDomain(ovcli, oCluster.OlvmOck.StorageDomainName)
+	sd, err := ovsd.GetStorageDomain(ovcli, ock.StorageDomainName)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +120,9 @@ func createDisk(ovcli *ovclient.Client, oCluster *otypes.OLVMOvirtCluster, fileI
 	initialSize := fmt.Sprintf("%v", fileInfo.Size())
 
 	// convert disk size to bytes
-	diskSizeBytes, err := units.RAMInBytes(oCluster.OlvmOck.DiskSize)
+	diskSizeBytes, err := units.RAMInBytes(ock.DiskSize)
 	if err != nil {
-		err = fmt.Errorf("Error, DiskSize value %s is an invalid format", oCluster.OlvmOck.DiskSize)
+		err = fmt.Errorf("Error, DiskSize value %s is an invalid format", ock.DiskSize)
 		log.Error(err)
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func createDisk(ovcli *ovclient.Client, oCluster *otypes.OLVMOvirtCluster, fileI
 			StorageDomains: []ovdisk.StorageDomain{
 				{Id: sd.Id}},
 		},
-		Name:            oCluster.OlvmOck.DiskName,
+		Name:            ock.DiskName,
 		ProvisionedSize: diskSizeBytesStr,
 		Format:          ovdisk.FormatCow,
 		Backup:          ovdisk.BackupNone,
