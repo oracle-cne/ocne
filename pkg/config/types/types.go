@@ -89,13 +89,13 @@ type OlvmControlPlaneEndpoint struct {
 }
 
 type OlvmAPIServer struct {
-	CAConfigMap              *NamespacedName `yaml:"caConfigMap"`
-	CredentialsSecret        *NamespacedName `yaml:"credentialsSecret"`
-	InsecureSkipTLSVerify    bool            `yaml:"insecureSkipTLSVerifyFake"`
-	InsecureSkipTLSVerifyPtr *bool           `yaml:"insecureSkipTLSVerify,omitempty"`
-	ServerCA                 string          `yaml:"serverCA"`
-	ServerCAPath             string          `yaml:"serverCAPath"`
-	ServerURL                string          `yaml:"serverURL"`
+	CAConfigMap              NamespacedName `yaml:"caConfigMap"`
+	CredentialsSecret        NamespacedName `yaml:"credentialsSecret"`
+	InsecureSkipTLSVerify    bool           `yaml:"insecureSkipTLSVerifyFake"`
+	InsecureSkipTLSVerifyPtr *bool          `yaml:"insecureSkipTLSVerify,omitempty"`
+	ServerCA                 string         `yaml:"serverCA"`
+	ServerCAPath             string         `yaml:"serverCAPath"`
+	ServerURL                string         `yaml:"serverURL"`
 }
 
 type OlvmMachine struct {
@@ -522,8 +522,8 @@ func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeNamespacedName(def *NamespacedName, ovr *NamespacedName) *NamespacedName {
-	return &NamespacedName{
+func MergeNamespacedName(def *NamespacedName, ovr *NamespacedName) NamespacedName {
+	return NamespacedName{
 		Name:      ies(def.Name, ovr.Name),
 		Namespace: ies(def.Namespace, ovr.Namespace),
 	}
@@ -558,8 +558,8 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 // takes precedence.
 func MergeOlvmAPIServer(def *OlvmAPIServer, ovr *OlvmAPIServer) OlvmAPIServer {
 	return OlvmAPIServer{
-		CAConfigMap:              MergeNamespacedName(def.CAConfigMap, ovr.CAConfigMap),
-		CredentialsSecret:        MergeNamespacedName(def.CredentialsSecret, ovr.CredentialsSecret),
+		CAConfigMap:              MergeNamespacedName(&def.CAConfigMap, &ovr.CAConfigMap),
+		CredentialsSecret:        MergeNamespacedName(&def.CredentialsSecret, &ovr.CredentialsSecret),
 		InsecureSkipTLSVerify:    iebp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr, false),
 		InsecureSkipTLSVerifyPtr: iebpp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr),
 		ServerURL:                ies(def.ServerURL, ovr.ServerURL),
