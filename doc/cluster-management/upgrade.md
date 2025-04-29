@@ -1,7 +1,7 @@
 # Updating Clusters
 
 Keeping a Kubernetes cluster and its components up to date is an essential part
-of maintaing the cluster.
+of maintaining the cluster.
 
 ## Updating Delivery
 
@@ -23,7 +23,7 @@ For providers implemented with Cluster API, staging an update involves creating
 new boot media, uploading that media, creating new machine templates, and
 suggesting patches that could be applied to Cluster API resources to perform
 the upgrade of the cluster nodes.  For providers that are not implemented with
-Cluster API, staging an update sets various configuraiton options in the cluster
+Cluster API, staging an update sets various configuration options in the cluster
 and configures each cluster node to upgrade to the next Kubernetes minor version.
 
 ```
@@ -34,8 +34,8 @@ $ ocne cluster stage --version 1.30
 
 Clusters managed with Cluster API have different update behavior than other
 providers.  Nodes in a Cluster API managed cluster are never updated in place.
-All updates are perfomed by instantiating a new node and removing an existing
-one.  Updates are initiated from the management cluster rather than targetting
+All updates are performed by instantiating a new node and removing an existing
+one.  Updates are initiated from the management cluster rather than targeting
 the managed cluster directly.  To stage an update for a Cluster API managed
 cluster, use the kubeconfig for the management cluster and supply either the
 cluster configuration file or the name of the cluster.
@@ -53,7 +53,7 @@ $ ocne cluster stage --version 1.30  -C managed
 ```
 
 Note that there are cases where doing an in-place upgrade of nodes in a Cluster
-API cluster is useful.  Some cluster nodes must be long lived because the host
+API cluster is useful.  Some cluster nodes must be long-lived because the host
 resources that are difficult to migrate.  These can be updated in place if
 necessary.
 
@@ -63,7 +63,7 @@ The `ocne node update` command is used to apply an available update to a cluster
 node.  Nodes update by rebooting.  `ocne node update` configures the system to
 reboot into the latest version and then reboots it.  When the node finishes
 starting, it will perform various tasks that are necessary to complete the
-update process.  The same command is used and the same process is followed to
+update process.  The same command is used, and the same process is followed to
 apply incremental updates as well as updating from one Kubernetes minor version
 to the next.
 
@@ -80,7 +80,7 @@ In this example, a Kubernetes cluster is updated from Kubernetes 1.29 to 1.30.
 #### Creating a Cluster
 
 Create a small cluster with the libvirt provider.  The same process is used for
-most providers.  The oci provider is an exception because the the Cluster API
+most providers.  The oci provider is an exception because the Cluster API
 update process is driven through Cluster API.
 
 ```
@@ -318,10 +318,10 @@ Nodes:
 
 #### Using Alternate Transports
 
-The default tranport for upgrades is `ostree-unverified-registry`.  This value
-is a good choice whenver there is a container image registry available.  If a
+The default transport for upgrades is `ostree-unverified-registry`.  This value
+is a good choice whenever there is a container image registry available.  If a
 container image registry is not available, other transports are available.
-Refer to [OSTree Native Conainers URL Format](https://coreos.github.io/rpm-ostree/container/#url-format-for-ostree-native-containers) for detailed documentation
+Refer to [OSTree Native Containers URL Format](https://coreos.github.io/rpm-ostree/container/#url-format-for-ostree-native-containers) for detailed documentation
 on what transports are available.  Note that `containers-storage` is not
 supported.
 
@@ -421,7 +421,7 @@ ocne-control-plane-1   Ready    control-plane   15m   v1.31.6+1.el8
 ```
 
 
-### Upgrading Cluster API Clusters
+### Upgrading OCI Cluster API Clusters
 
 #### Create a Cluster
 
@@ -528,7 +528,7 @@ ocne-md-0-jt8hb-vhndn      Ready    <none>          30m     v1.29.3+3.el8
 #### Update the Worker Nodes
 
 Once all control plane nodes are updated, it is possible to update the worker
-nodes.  The overall behavior of updating worker nodes is identitical to the
+nodes.  The overall behavior of updating worker nodes is identical to the
 control plane nodes.
 
 ```
@@ -566,4 +566,145 @@ NAME                       STATUS   ROLES           AGE     VERSION
 ocne-control-plane-p55sl   Ready    control-plane   10m     v1.30.3+2.el8
 ocne-md-0-9xzrv-dphhk      Ready    <none>          4m43s   v1.30.3+2.el8
 ocne-md-0-9xzrv-qsbbj      Ready    <none>          2m43s   v1.30.3+2.el8
+```
+
+### Upgrading OLVM Cluster API Clusters
+
+#### Prepare for the Upgrade
+Follow the instructions to [create](olvm.md/#creating-the-olvm-ock-image) and [upload](olvm.md/#uploading-the-olvm-ock-image) an OLVM OCK image for the Kubernetes version being upgraded to.
+[Create](olvm.md/#creating-a-vm-template) an OLVM VM template to use the OLVM OCK image for the upgrade.
+
+#### Create a Cluster
+
+Instantiate a small cluster with the OLVM provider using Kubernetes 1.30.
+If a management cluster is available, it can be used.
+This example uses an ephemeral cluster for simplicity.
+
+```
+$ ocne cluster start -c mycapi.yaml
+INFO[2025-04-28T13:43:26Z] Installing cert-manager into cert-manager: ok 
+INFO[2025-04-28T13:43:27Z] Installing core-capi into capi-system: ok 
+INFO[2025-04-28T13:43:28Z] Installing olvm-capi into cluster-api-provider-olvm: ok 
+INFO[2025-04-28T13:43:30Z] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+INFO[2025-04-28T13:43:31Z] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
+INFO[2025-04-28T13:44:01Z] Waiting for Core Cluster API Controllers: ok 
+INFO[2025-04-28T13:44:21Z] Waiting for Olvm Cluster API Controllers: ok 
+INFO[2025-04-28T13:44:51Z] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2025-04-28T13:45:01Z] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2025-04-28T13:45:01Z] Applying Cluster API resources               
+...
+```
+
+#### Stage an Update
+
+Set the kubeconfig to the ephemeral cluster and stage an update to Kubernetes 1.31.
+The name of the OLVM VM template to use for the control-plane and worker nodes must either be updated in the cluster configuration file or overridden on the command line.
+The example below demonstrates how to override the values on the command line.
+
+The cluster stage will clone and update any existing OLVMMachineTemplates that are used by the cluster.
+Finally, two commands are suggested.
+The first updates the cluster version and control plane nodes.
+The second updates the worker nodes.
+
+```
+$ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
+$ ocne cluster stage --version 1.31 -c <(yq '.providers.olvm.controlPlaneMachine.vmTemplateName = "kubernetes-1-31", .providers.olvm.workerMachine.vmTemplateName = "kubernetes-1-31"' < ~/tools/capi-1.29.yaml)
+INFO[2025-04-28T14:46:01Z] Installing cert-manager into cert-manager: ok 
+INFO[2025-04-28T14:46:02Z] Installing core-capi into capi-system: ok 
+INFO[2025-04-28T14:46:03Z] Installing olvm-capi into cluster-api-provider-olvm: ok 
+INFO[2025-04-28T14:46:04Z] Installing bootstrap-capi into capi-kubeadm-bootstrap-system: ok 
+INFO[2025-04-28T14:46:05Z] Installing control-plane-capi into capi-kubeadm-control-plane-system: ok 
+INFO[2025-04-28T14:46:05Z] Waiting for Core Cluster API Controllers: ok 
+INFO[2025-04-28T14:46:05Z] Waiting for Kubadm Boostrap Cluster API Controllers: ok 
+INFO[2025-04-28T14:46:05Z] Waiting for Kubadm Control Plane Cluster API Controllers: ok 
+INFO[2025-04-28T14:46:05Z] Waiting for Olvm Cluster API Controllers: ok 
+INFO[2025-04-28T14:46:08Z] Running node stage                           
+INFO[2025-04-28T14:46:14Z] Waiting for pod ocne-system/stage-node-ocne-control-plane-2dft5-pod to be ready: ok 
+INFO[2025-04-28T14:46:15Z] Node ocne-control-plane-2dft5 successfully staged 
+INFO[2025-04-28T14:46:15Z] Running node stage                           
+INFO[2025-04-28T14:46:20Z] Waiting for pod ocne-system/stage-node-ocne-md-0-vllzw-5fnrn-pod to be ready: ok 
+INFO[2025-04-28T14:46:22Z] Node ocne-md-0-vllzw-5fnrn successfully staged 
+To update KubeadmControlPlane ocne-control-plane in olvm-cluster, run:
+    kubectl patch -n olvm-cluster kubeadmcontrolplane ocne-control-plane --type=json -p='[{"op":"replace","path":"/spec/version","value":"1.31.0"},{"op":"replace","path":"/spec/machineTemplate/infrastructureRef/name","value":"ocne-control-plane-1"}]'
+
+To update MachineDeployment ocne-md-0 in olvm-cluster, run:
+    kubectl patch -n olvm-cluster machinedeployment ocne-md-0 --type=json -p='[{"op":"replace","path":"/spec/template/spec/version","value":"1.31.0"},{"op":"replace","path":"/spec/template/spec/infrastructureRef/name","value":"ocne-md-1"}]'
+```
+
+#### Update the Control Plane
+
+Executing the first suggested command from the previous step will update the
+control plane.  The cluster version is updated and then a new set of control
+plane nodes are instantiated using that version.  It can take several minutes
+to update the control plane based on how many control plane nodes are in the
+cluster.
+
+```
+$ kubectl patch -n olvm-cluster kubeadmcontrolplane ocne-control-plane --type=json -p='[{"op":"replace","path":"/spec/version","value":"1.31.0"},{"op":"replace","path":"/spec/machineTemplate/infrastructureRef/name","value":"ocne-control-plane-1"}]'
+kubeadmcontrolplane.controlplane.cluster.x-k8s.io/ocne-control-plane patched
+```
+
+#### Wait for the Update to Complete
+
+The control plane update will take some amount of time.
+It is possible to watch the progress of the update by inspecting the Cluster API resources.
+
+```
+# A new node is being created.  Notice the version.
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                    PHASE          AGE   VERSION
+ocne-control-plane-2dft5   ocne      ocne-control-plane-2dft5   olvm://5b2b401c-ab58-4167-9bf3-111111111111   Running        8h    v1.30.3
+ocne-control-plane-xrd6d   ocne                                                                               Provisioning   4m    v1.31.0
+ocne-md-0-vllzw-5fnrn      ocne      ocne-md-0-vllzw-5fnrn      olvm://8bba39e3-c706-472f-95f5-222222222222   Running        8h    v1.30.3
+
+# The previous node has been deleted
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                   PROVIDERID                                    PHASE          AGE   VERSION
+ocne-control-plane-xrd6d   ocne      ocne-control-plane-xrd6d   olvm://5b2b401c-ab58-4167-9bf3-333333333333   Running        15m   v1.31.0
+ocne-md-0-vllzw-5fnrn      ocne      ocne-md-0-vllzw-5fnrn      olvm://8bba39e3-c706-472f-95f5-222222222222   Running        8h    v1.30.3
+
+# The cluster nodes report the same information
+$ KUBECONFIG=$(ocne cluster show -C capi) kubectl get node
+NAME                       STATUS   ROLES           AGE     VERSION
+ocne-control-plane-xrd6d   Ready    control-plane   4m30s   v1.31.6+2.el8
+ocne-md-0-vllzw-5fnrn      Ready    <none>          31m     v1.30.10+2.el8
+```
+
+#### Update the Worker Nodes
+
+Once all control plane nodes are updated, it is possible to update the worker
+nodes.  The overall behavior of updating worker nodes is identical to the
+control plane nodes.
+
+```
+$ export KUBECONFIG=$(ocne cluster show -C ocne-ephemeral)
+$ kubectl patch -n olvm-cluster machinedeployment ocne-md-0 --type=json -p='[{"op":"replace","path":"/spec/template/spec/version","value":"1.31.0"},{"op":"replace","path":"/spec/template/spec/infrastructureRef/name","value":"ocne-md-1"}]'
+machinedeployment.cluster.x-k8s.io/ocne-md-0 patched
+```
+
+#### Watch the Worker Node Update Progress
+
+The worker node update can take a while, especially if there are a lot of nodes.
+The time it takes to update nodes depends on many factors, such as cluster size, workloads, and more.
+
+```
+# A new node is rolling out
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                     PROVIDERID                                    PHASE          AGE    VERSION
+ocne-control-plane-xrd6d   ocne      ocne-control-plane-6jxxw     olvm://5b2b401c-ab58-4167-9bf3-333333333333   Running        14m    v1.31.0
+ocne-md-0-vllzw-5fnrn      ocne      ocne-md-0-vllzw-5fnrn        olvm://8bba39e3-c706-472f-95f5-222222222222   Running        4h5m   v1.30.3
+ocne-md-0-j7dbx-kq69l      ocne                                                                                 Provisioning   63s    v1.31.0
+
+# The previous node has been deleted
+$ kubectl -n ocne get machine
+NAME                       CLUSTER   NODENAME                     PROVIDERID                                    PHASE          AGE    VERSION
+ocne-control-plane-xrd6d   ocne      ocne-control-plane-6jxxw     olvm://5b2b401c-ab58-4167-9bf3-333333333333   Running        14m    v1.31.0
+ocne-md-0-j7dbx-kq69l      ocne      ocne-md-0-j7dbx-kq69l        olvm://8bba39e3-c706-472f-95f5-444444444444   Running        4h5m   v1.31.0
+
+# The managed cluster shows the same information
+$ export KUBECONFIG=$(ocne cluster show -C capi)
+$ kubectl get node
+NAME                       STATUS   ROLES           AGE     VERSION
+ocne-control-plane-xrd6d   Ready    control-plane   4m30s   v1.31.6+2.el8
+ocne-md-0-j7dbx-kq69l      Ready    <none>          31m     v1.31.6+2.el8
 ```
