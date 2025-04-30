@@ -8,12 +8,16 @@ metadata:
 spec:
   clusterNetwork:
     pods:
-      cidrBlocks: {{range .PodSubnetCidrBlocks}}
-        - "{{.}}"{{end}}
+      cidrBlocks:
+      {{- range .PodSubnetCidrBlocks }}
+        - "{{.}}"
+      {{- end }}
     serviceDomain: "cluster.local"
     services:
-      cidrBlocks: {{range .ServiceSubnetCidrBlocks}}
-        - "{{.}}"{{end}}
+      cidrBlocks:
+      {{- range .ServiceSubnetCidrBlocks }}
+        - "{{.}}"
+      {{- end }}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1
     kind: OLVMCluster
@@ -146,13 +150,22 @@ spec:
           gateway: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.Gateway}}"
           interface: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.InterfaceType}}"
+          {{- if .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.Subnet }}
           ipv4:
-            cidrBlocks: {{range .ControlPlaneIPV4CidrBlocks}}
-            - "{{.}}"{{end}}
+            cidrBlocks:
+            {{- range .ControlPlaneIPV4CidrBlocks }}
+            - "{{.}}"
+            {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.Subnet}}"
+          {{- end }}
+          {{- if .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet }}
           ipv6:
-            cidrBlocks: {{range .ControlPlaneIPV6CidrBlocks}}
-              - "{{.}}"{{end}}
+            cidrBlocks:
+            {{- range .ControlPlaneIPV6CidrBlocks }}
+            - "{{.}}"
+            {{- end }}
+            subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet}}"
+          {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet}}"
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Cpu.Architecture}}"
@@ -202,14 +215,22 @@ spec:
           gateway: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.Gateway}}"
           interface: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.Interface}}"
           interfaceType: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.InterfaceType}}"
+          {{- if .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV4.Subnet }}
           ipv4:
-            cidrBlocks: {{range .WorkerIPV4CidrBlocks}}
-            - "{{.}}"{{end}}
+            cidrBlocks:
+            {{- range .WorkerIPV4CidrBlocks }}
+            - "{{.}}"
+            {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV4.Subnet}}"
+          {{- end }}
+          {{- if .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet }}
           ipv6:
-            cidrBlocks: {{range .WorkerIPV6CidrBlocks}}
-              - "{{.}}"{{end}}
+            cidrBlocks:
+            {{- range .WorkerIPV6CidrBlocks }}
+              - "{{.}}"
+            {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet}}"
+          {{- end }}
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Cpu.Architecture}}"
           topology:
