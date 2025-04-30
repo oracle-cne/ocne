@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )

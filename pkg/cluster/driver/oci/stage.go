@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package capi
+package oci
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
@@ -19,7 +20,6 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
