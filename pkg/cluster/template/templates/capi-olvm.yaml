@@ -154,7 +154,6 @@ spec:
             cidrBlocks: {{range .ControlPlaneIPV6CidrBlocks}}
               - "{{.}}"{{end}}
             subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet}}"
-
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Cpu.Architecture}}"
           topology:
@@ -211,7 +210,6 @@ spec:
             cidrBlocks: {{range .WorkerIPV6CidrBlocks}}
               - "{{.}}"{{end}}
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet}}"
-
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Cpu.Architecture}}"
           topology:
