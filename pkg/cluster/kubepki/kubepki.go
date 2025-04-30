@@ -69,7 +69,7 @@ apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: {{.RootCACert}}
-    server: {{.ApiServerURL}}
+    server: {{.ServerURL}}
   name: kubernetes
 contexts:
 - context:
