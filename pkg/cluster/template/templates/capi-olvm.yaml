@@ -34,6 +34,7 @@ kind: OLVMCluster
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: "{{.ClusterConfig.Name}}"
+    cluster.x-k8s.io/v1beta1: "v1"
   name: "{{.ClusterConfig.Name}}"
   namespace: "{{.ClusterConfig.Providers.Olvm.Namespace}}"
 spec:

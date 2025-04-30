@@ -59,18 +59,18 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				},
 			},
 		},
-		//install.ApplicationDescription{
-		//	Application: &types.Application{
-		//		Name:      constants.OLVMCAPIChart,
-		//		Namespace: constants.OLVMCAPIOperatorNamespace,
-		//		Release:   constants.OLVMCAPIRelease,
-		//		Version:   constants.OLVMCAPIVersion,
-		//		Catalog:   catalog.InternalCatalog,
-		//		Config: map[string]interface{}{
-		//			"proxy": proxyValues,
-		//		},
-		//	},
-		//},
+		install.ApplicationDescription{
+			Application: &types.Application{
+				Name:      constants.OLVMCAPIChart,
+				Namespace: constants.OLVMCAPIOperatorNamespace,
+				Release:   constants.OLVMCAPIRelease,
+				Version:   constants.OLVMCAPIVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"proxy": proxyValues,
+				},
+			},
+		},
 		install.ApplicationDescription{
 			Application: &types.Application{
 				Name:      constants.KubeadmBootstrapCAPIChart,
