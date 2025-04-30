@@ -239,7 +239,7 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 
 	secretNsn := cad.credSecretNsn()
 	k8s.DeleteSecret(kubeClient, secretNsn.Namespace, secretNsn.Name)
-	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
+	err = k8s.CreateSecret(kubeClient, secretNsn.Namespace, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretNsn.Name,
 			Namespace: secretNsn.Namespace,
