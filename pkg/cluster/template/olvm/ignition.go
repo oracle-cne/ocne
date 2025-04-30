@@ -5,13 +5,14 @@ package olvm
 
 import (
 	"fmt"
+	"strings"
+
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"strings"
 )
 
 const (
@@ -69,6 +70,7 @@ disable crio.service
 disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
+enable ocne-image-cleanup.service
 `
 )
 
