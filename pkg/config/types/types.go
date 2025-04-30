@@ -137,8 +137,8 @@ type OlvmVirtualMachineNetwork struct {
 }
 
 type OlvmIP struct {
-	Subnet     string `yaml:"subnet"`
-	CIDRBlocks string `yaml:"cidrBlocks"`
+	Subnet      string `yaml:"subnet"`
+	IpAddresses string `yaml:"ipAddresses"`
 }
 
 type OlvmLocalAPIEndpoint struct {
@@ -648,8 +648,8 @@ func MergeOlvmVirtualMachineNetwork(def *OlvmVirtualMachineNetwork, ovr *OlvmVir
 // takes precedence.
 func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) OlvmIP {
 	return OlvmIP{
-		Subnet:     ies(def.Subnet, ovr.Subnet),
-		CIDRBlocks: ies(def.CIDRBlocks, ovr.CIDRBlocks),
+		Subnet:      ies(def.Subnet, ovr.Subnet),
+		IpAddresses: ies(def.IpAddresses, ovr.IpAddresses),
 	}
 }
 

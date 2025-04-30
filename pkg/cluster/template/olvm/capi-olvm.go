@@ -18,19 +18,19 @@ import (
 )
 
 type olvmData struct {
-	Config                     *types.Config
-	ClusterConfig              *types.ClusterConfig
-	ExtraConfigControlPlane    string
-	ExtraConfigWorker          string
-	KubeVersions               *versions.KubernetesVersions
-	VolumePluginDir            string
-	CipherSuite                string
-	PodSubnetCidrBlocks        []string
-	ServiceSubnetCidrBlocks    []string
-	ControlPlaneIPV4CidrBlocks []string
-	ControlPlaneIPV6CidrBlocks []string
-	WorkerIPV4CidrBlocks       []string
-	WorkerIPV6CidrBlocks       []string
+	Config                    *types.Config
+	ClusterConfig             *types.ClusterConfig
+	ExtraConfigControlPlane   string
+	ExtraConfigWorker         string
+	KubeVersions              *versions.KubernetesVersions
+	VolumePluginDir           string
+	CipherSuite               string
+	PodSubnetCidrBlocks       []string
+	ServiceSubnetCidrBlocks   []string
+	ControlPlaneIPV4Addresses []string
+	ControlPlaneIPV6Addresses []string
+	WorkerIPV4Addresses       []string
+	WorkerIPV6Addresses       []string
 }
 
 // GetOlvmTemplate renders the OLVM template that specifies the CAPI resources.
@@ -64,19 +64,19 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	}
 	olvm := &clusterConfig.Providers.Olvm
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
-		Config:                     config,
-		ClusterConfig:              clusterConfig,
-		ExtraConfigControlPlane:    cpIgn,
-		ExtraConfigWorker:          workerIgn,
-		KubeVersions:               &kubeVer,
-		VolumePluginDir:            ignition.VolumePluginDir,
-		CipherSuite:                clusterConfig.CipherSuites,
-		PodSubnetCidrBlocks:        strutil.SplitAndTrim(clusterConfig.PodSubnet, ","),
-		ServiceSubnetCidrBlocks:    strutil.SplitAndTrim(clusterConfig.ServiceSubnet, ","),
-		ControlPlaneIPV4CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.CIDRBlocks, ","),
-		ControlPlaneIPV6CidrBlocks: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.CIDRBlocks, ","),
-		WorkerIPV4CidrBlocks:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV4.CIDRBlocks, ","),
-		WorkerIPV6CidrBlocks:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV6.CIDRBlocks, ","),
+		Config:                    config,
+		ClusterConfig:             clusterConfig,
+		ExtraConfigControlPlane:   cpIgn,
+		ExtraConfigWorker:         workerIgn,
+		KubeVersions:              &kubeVer,
+		VolumePluginDir:           ignition.VolumePluginDir,
+		CipherSuite:               clusterConfig.CipherSuites,
+		PodSubnetCidrBlocks:       strutil.SplitAndTrim(clusterConfig.PodSubnet, ","),
+		ServiceSubnetCidrBlocks:   strutil.SplitAndTrim(clusterConfig.ServiceSubnet, ","),
+		ControlPlaneIPV4Addresses: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.IpAddresses, ","),
+		ControlPlaneIPV6Addresses: strutil.SplitAndTrim(olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.IpAddresses, ","),
+		WorkerIPV4Addresses:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV4.IpAddresses, ","),
+		WorkerIPV6Addresses:       strutil.SplitAndTrim(olvm.WorkerMachine.VirtualMachine.Network.IPV6.IpAddresses, ","),
 	}, nil)
 }
 
