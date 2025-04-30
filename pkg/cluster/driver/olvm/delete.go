@@ -79,16 +79,14 @@ func (cad *OlvmDriver) Delete() error {
 		return err
 	}
 
-	secretName := cad.credSecretName()
-	if err = k8s.DeleteSecret(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
-		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	secretNsn := cad.credSecretNsn()
+	if err = k8s.DeleteSecret(clientIface, secretNsn.Namespace, secretNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v", secretNsn.Namespace, secretNsn.Name)
 	}
 
-	cmName := cad.caConfigMapName()
-	if err = k8s.DeleteConfigmap(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
-		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	cmNsn := cad.caConfigMapNsn()
+	if err = k8s.DeleteConfigmap(clientIface, cmNsn.Namespace, cmNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v", cmNsn.Namespace, cmNsn.Name)
 	}
 
 	return nil

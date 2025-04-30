@@ -237,12 +237,12 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 		return err
 	}
 
-	secretName := cad.credSecretName()
-	k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	secretNsn := cad.credSecretNsn()
+	k8s.DeleteSecret(kubeClient, secretNsn.Namespace, secretNsn.Name)
 	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+			Name:      secretNsn.Name,
+			Namespace: secretNsn.Namespace,
 		},
 		Data: credmap,
 		Type: "Opaque",
@@ -257,12 +257,12 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 		return err
 	}
 
-	cmName := cad.caConfigMapName()
-	k8s.DeleteConfigmap(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
+	cmNsn := cad.caConfigMapNsn()
+	k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
 	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+			Name:      cmNsn.Name,
+			Namespace: cmNsn.Namespace,
 		},
 		Data: map[string]string{
 			"ca.crt": ca,
@@ -321,18 +321,34 @@ func getCreds() (map[string][]byte, error) {
 
 }
 
-func (cad *OlvmDriver) credSecretName() string {
-	return CredSecretName(cad.ClusterConfig)
+func (cad *OlvmDriver) credSecretNsn() *types.NamespacedName {
+	return CredSecretNsn(cad.ClusterConfig)
 }
 
-func (cad *OlvmDriver) caConfigMapName() string {
-	return CaConfigMapName(cad.ClusterConfig)
+func (cad *OlvmDriver) caConfigMapNsn() *types.NamespacedName {
+	return CaConfigMapNsn(cad.ClusterConfig)
 }
 
-func CredSecretName(cc *types.ClusterConfig) string {
-	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
+func CredSecretNsn(cc *types.ClusterConfig) *types.NamespacedName {
+	defName := fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
+	nn := cc.Providers.Olvm.OlvmAPIServer.CredentialsSecret
+	if nn.Name == "" {
+		nn.Name = defName
+	}
+	if nn.Namespace == "" {
+		nn.Namespace = cc.Providers.Olvm.Namespace
+	}
+	return &nn
 }
 
-func CaConfigMapName(cc *types.ClusterConfig) string {
-	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
+func CaConfigMapNsn(cc *types.ClusterConfig) *types.NamespacedName {
+	defName := fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
+	nn := cc.Providers.Olvm.OlvmAPIServer.CAConfigMap
+	if nn.Name == "" {
+		nn.Name = defName
+	}
+	if nn.Namespace == "" {
+		nn.Namespace = cc.Providers.Olvm.Namespace
+	}
+	return &nn
 }

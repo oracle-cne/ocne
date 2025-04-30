@@ -42,10 +42,10 @@ spec:
     host: "{{.ClusterConfig.VirtualIp}}"
     port: {{.Config.KubeAPIServerBindPort}}
   olvmOvirtAPIServer:
-    caConfigMapName:
+    caConfigMap:
       name: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CAConfigMap.Name}}"
       namespace: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CAConfigMap.Namespace}}"
-    credentialsSecretName:
+    credentialsSecret:
       name: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Name}}"
       namespace: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Namespace}}"
     insecureSkipTlsVerify: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify}}"

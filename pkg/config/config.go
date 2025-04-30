@@ -79,10 +79,15 @@ func GetDefaultConfig() (*types.Config, error) {
 				},
 			},
 			Olvm: types.OlvmProvider{
-				Namespace: constants.OLVMCAPIResourcesNamespace,
-				//ControlPlaneMachine: types.OlvmMachine{
-				//	Memory: constants.OLVMCAPIControlPlaneMemory,
+				//OlvmOvirtAPIServer: types.OlvmAPIServer{
+				//	CAConfigMap: types.NamespacedName{
+				//		Namespace: constants.OLVMCAPIResourcesNamespace,
+				//	},
+				//	CredentialsSecret:        types.NamespacedName{
+				//		Namespace: constants.OLVMCAPIResourcesNamespace,
+				//	},
 				//},
+				Namespace: constants.OLVMCAPIResourcesNamespace,
 				ControlPlaneMachine: types.OlvmMachine{
 					VirtualMachine: types.OlvmVirtualMachine{
 						Memory: constants.OLVMCAPIControlPlaneMemory,

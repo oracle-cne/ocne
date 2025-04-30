@@ -128,7 +128,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	}
 
 	// create chart overrides
-	chartOverrides := getOverrides(olvm)
+	chartOverrides := getOvirtOverrides(olvm)
 
 	// Specify pre-install function to create secret and configmap, then
 	// Also specify function to install the csi driver chart
@@ -201,7 +201,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 //		csiNode:
 //			ovirtNode:
 //				name: ovirt-csi-node-plugin
-func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
+func getOvirtOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	const (
 		caProvidedKey = "caProvided"
 		cmNameKey     = "caConfigMapName"
