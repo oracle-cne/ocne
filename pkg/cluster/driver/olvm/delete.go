@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package olvm
@@ -80,16 +80,14 @@ func (cad *OlvmDriver) Delete() error {
 		return err
 	}
 
-	secretName := cad.credSecretName()
-	if err = k8s.DeleteSecret(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
-		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName, err)
+	secretNsn := cad.credSecretNsn()
+	if err = k8s.DeleteSecret(clientIface, secretNsn.Namespace, secretNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v", secretNsn.Namespace, secretNsn.Name, err)
 	}
 
-	cmName := cad.caConfigMapName()
-	if err = k8s.DeleteConfigmap(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
-		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName, err)
+	cmNsn := cad.caConfigMapNsn()
+	if err = k8s.DeleteConfigmap(clientIface, cmNsn.Namespace, cmNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v", cmNsn.Namespace, cmNsn.Name, err)
 	}
 
 	return nil

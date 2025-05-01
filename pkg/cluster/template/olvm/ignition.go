@@ -212,7 +212,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		})
 
 		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
-			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
+			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.Interface)
 		if err != nil {
 			return "", err
 		}

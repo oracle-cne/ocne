@@ -46,16 +46,17 @@ type OciProvider struct {
 }
 
 type OlvmProvider struct {
+	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
+	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
+	DatacenterName      string               `yaml:"olvmDatacenterName"`
+	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
 	Namespace           string               `yaml:"namespace"`
+	OlvmAPIServer       OlvmAPIServer        `yaml:"olvmOvirtAPIServer"`
+	OlvmOck             OlvmOck              `yaml:"olvmOCK"`
+	Proxy               Proxy                `yaml:"proxy"`
 	SelfManaged         bool                 `yaml:"selfmanagedfake"`
 	SelfManagedPtr      *bool                `yaml:"selfManaged,omitempty"`
-	Proxy               Proxy                `yaml:"proxy"`
-	NetworkInterface    string               `yaml:"networkInterface"`
-	OlvmCluster         OlvmCluster          `yaml:"olvmCluster"`
-	ControlPlaneMachine OlvmMachine          `yaml:"controlPlaneMachine"`
 	WorkerMachine       OlvmMachine          `yaml:"workerMachine"`
-	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
-	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
 }
 
 type OvirtCsiDriver struct {
@@ -71,24 +72,15 @@ type OvirtCsiDriver struct {
 	SecretName           string `yaml:"credsSecretName"`
 }
 
-type OlvmCluster struct {
-	ControlPlaneEndpoint OlvmControlPlaneEndpoint `yaml:"controlPlaneEndpoint"`
-	DatacenterName       string                   `yaml:"ovirtDatacenterName"`
-	OVirtAPI             OlvmOvirtAPI             `yaml:"ovirtAPI"`
-	OVirtOck             OlvmOvirtOck             `yaml:"ovirtOCK"`
-	OlvmVmIpProfile      OlvmVmIpProfile          `yaml:"olvmVmIpProfile"`
+type NamespacedName struct {
+	Name      string `yaml:"name"`
+	Namespace string `yaml:"namespace"`
 }
 
-type OlvmOvirtOck struct {
+type OlvmOck struct {
 	DiskName          string `yaml:"diskName"`
 	DiskSize          string `yaml:"diskSize"`
 	StorageDomainName string `yaml:"storageDomainName"`
-}
-
-type OlvmOvirtAPI struct {
-	ServerURL    string `yaml:"serverURL"`
-	ServerCA     string `yaml:"serverCA"`
-	ServerCAPath string `yaml:"serverCAPath"`
 }
 
 type OlvmControlPlaneEndpoint struct {
@@ -96,21 +88,33 @@ type OlvmControlPlaneEndpoint struct {
 	Port string `yaml:"port"`
 }
 
-type OlvmVmIpProfile struct {
-	Name              string `yaml:"name"`
-	StartingIpAddress string `yaml:"startingIpAddress"`
-	Device            string `yaml:"device"`
-	Gateway           string `yaml:"gateway"`
-	Netmask           string `yaml:"netmask"`
+type OlvmAPIServer struct {
+	CAConfigMap              NamespacedName `yaml:"caConfigMap"`
+	CredentialsSecret        NamespacedName `yaml:"credentialsSecret"`
+	InsecureSkipTLSVerify    bool           `yaml:"insecureSkipTLSVerifyFake"`
+	InsecureSkipTLSVerifyPtr *bool          `yaml:"insecureSkipTLSVerify,omitempty"`
+	ServerCA                 string         `yaml:"serverCA"`
+	ServerCAPath             string         `yaml:"serverCAPath"`
+	ServerURL                string         `yaml:"serverURL"`
 }
 
 type OlvmMachine struct {
-	Memory              string             `yaml:"memory"`
-	Network             OlvmMachineNetwork `yaml:"network"`
-	Cpu                 OlvmMachineCpu     `yaml:"cpu"`
-	OVirtClusterName    string             `yaml:"ovirtClusterName"`
-	OlvmVmIpProfileName string             `yaml:"olvmVmIpProfileName"`
-	VMTemplateName      string             `yaml:"vmTemplateName"`
+	OlvmNetwork          OlvmNetwork        `yaml:"olvmNetwork"`
+	OlvmOvirtClusterName string             `yaml:"olvmOvirtClusterName"`
+	VirtualMachine       OlvmVirtualMachine `yaml:"virtualMachine"`
+	VMTemplateName       string             `yaml:"vmTemplateName"`
+}
+
+type OlvmNetwork struct {
+	NetworkName     string `yaml:"networkName"`
+	VnicName        string `yaml:"vnicName"`
+	VnicProfileName string `yaml:"vnicProfileName"`
+}
+
+type OlvmVirtualMachine struct {
+	Cpu     OlvmMachineCpu            `yaml:"cpu"`
+	Memory  string                    `yaml:"memory"`
+	Network OlvmVirtualMachineNetwork `yaml:"network"`
 }
 
 type OlvmMachineCpu struct {
@@ -124,11 +128,17 @@ type OlvmMachineCpuToplogy struct {
 	Threads int `yaml:"threads"`
 }
 
-type OlvmMachineNetwork struct {
-	NetworkName     string `yaml:"networkName"`
-	InterfaceType   string `yaml:"interfaceType"`
-	VnicName        string `yaml:"vnicName"`
-	VnicProfileName string `yaml:"vnicProfileName"`
+type OlvmVirtualMachineNetwork struct {
+	Gateway       string `yaml:"gateway"`
+	Interface     string `yaml:"interface"`
+	InterfaceType string `yaml:"interfaceType"`
+	IPV4          OlvmIP `yaml:"ipv4"`
+	IPV6          OlvmIP `yaml:"ipv6"`
+}
+
+type OlvmIP struct {
+	Subnet      string `yaml:"subnet"`
+	IpAddresses string `yaml:"ipAddresses"`
 }
 
 type OlvmLocalAPIEndpoint struct {
@@ -475,16 +485,17 @@ func MergeOciProvider(def *OciProvider, ovr *OciProvider) OciProvider {
 // values takes precedence.
 func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 	return OlvmProvider{
+		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
+		CSIDriver:           MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
+		DatacenterName:      ies(def.DatacenterName, ovr.DatacenterName),
+		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
 		Namespace:           ies(def.Namespace, ovr.Namespace),
+		OlvmAPIServer:       MergeOlvmAPIServer(&def.OlvmAPIServer, &ovr.OlvmAPIServer),
+		OlvmOck:             MergeOlvmOck(&def.OlvmOck, &ovr.OlvmOck),
+		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
 		SelfManaged:         iebp(def.SelfManagedPtr, ovr.SelfManagedPtr, false),
 		SelfManagedPtr:      iebpp(def.SelfManagedPtr, ovr.SelfManagedPtr),
-		Proxy:               MergeProxy(&def.Proxy, &ovr.Proxy),
-		NetworkInterface:    ies(def.NetworkInterface, ovr.NetworkInterface),
-		OlvmCluster:         MergeOlvmCluster(&def.OlvmCluster, &ovr.OlvmCluster),
-		ControlPlaneMachine: MergeOlvmMachine(&def.ControlPlaneMachine, &ovr.ControlPlaneMachine),
 		WorkerMachine:       MergeOlvmMachine(&def.WorkerMachine, &ovr.WorkerMachine),
-		LocalAPIEndpoint:    MergeOlvmLocalAPIEndpoint(&def.LocalAPIEndpoint, &ovr.LocalAPIEndpoint),
-		CSIDriver:           MergeOlvmCsiDriver(&def.CSIDriver, &ovr.CSIDriver),
 	}
 }
 
@@ -507,31 +518,26 @@ func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver
 	}
 }
 
-// MergeOlvmCluster takes two OlvmClusters and merges them into
+// MergeNamespacedName takes two NamespacedName and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmCluster(def *OlvmCluster, ovr *OlvmCluster) OlvmCluster {
-	return OlvmCluster{
-		ControlPlaneEndpoint: MergeOlvmControlPlaneEndpoint(&def.ControlPlaneEndpoint, &ovr.ControlPlaneEndpoint),
-		DatacenterName:       ies(def.DatacenterName, ovr.DatacenterName),
-		OVirtAPI:             MergeOlvmOvirtAPI(&def.OVirtAPI, &ovr.OVirtAPI),
-		OVirtOck:             MergeOlvmOvirtOck(&def.OVirtOck, &ovr.OVirtOck),
-		OlvmVmIpProfile:      MergeOlvmVmIpProfile(&def.OlvmVmIpProfile, &ovr.OlvmVmIpProfile),
+func MergeNamespacedName(def *NamespacedName, ovr *NamespacedName) NamespacedName {
+	return NamespacedName{
+		Name:      ies(def.Name, ovr.Name),
+		Namespace: ies(def.Namespace, ovr.Namespace),
 	}
 }
 
-// MergeOlvmVmIpProfile takes two OlvmVmIpProfiles and merges them into
+// MergeOlvmOck takes two OlvmOcks and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmVmIpProfile(def *OlvmVmIpProfile, ovr *OlvmVmIpProfile) OlvmVmIpProfile {
-	return OlvmVmIpProfile{
-		Name:              ies(def.Name, ovr.Name),
-		StartingIpAddress: ies(def.StartingIpAddress, ovr.StartingIpAddress),
-		Device:            ies(def.Device, ovr.Device),
-		Gateway:           ies(def.Gateway, ovr.Gateway),
-		Netmask:           ies(def.Netmask, ovr.Netmask),
+func MergeOlvmOck(def *OlvmOck, ovr *OlvmOck) OlvmOck {
+	return OlvmOck{
+		DiskName:          ies(def.DiskName, ovr.DiskName),
+		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
+		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
 	}
 }
 
@@ -546,27 +552,19 @@ func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmContr
 	}
 }
 
-// MergeOlvmOvirtAPI takes two OlvmOvirtAPIs and merges them into
+// MergeOlvmAPIServer takes two OlvmAPIServer and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmOvirtAPI(def *OlvmOvirtAPI, ovr *OlvmOvirtAPI) OlvmOvirtAPI {
-	return OlvmOvirtAPI{
-		ServerURL:    ies(def.ServerURL, ovr.ServerURL),
-		ServerCA:     ies(def.ServerCA, ovr.ServerCA),
-		ServerCAPath: ies(def.ServerCAPath, ovr.ServerCAPath),
-	}
-}
-
-// MergeOlvmOvirtOck takes two OlvmOvirtOcks and merges them into
-// a third.  The default value for the result comes from the first
-// argument.  If a value is set in the second argument, that value
-// takes precedence.
-func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
-	return OlvmOvirtOck{
-		DiskName:          ies(def.DiskName, ovr.DiskName),
-		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
-		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
+func MergeOlvmAPIServer(def *OlvmAPIServer, ovr *OlvmAPIServer) OlvmAPIServer {
+	return OlvmAPIServer{
+		CAConfigMap:              MergeNamespacedName(&def.CAConfigMap, &ovr.CAConfigMap),
+		CredentialsSecret:        MergeNamespacedName(&def.CredentialsSecret, &ovr.CredentialsSecret),
+		InsecureSkipTLSVerify:    iebp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr, false),
+		InsecureSkipTLSVerifyPtr: iebpp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr),
+		ServerURL:                ies(def.ServerURL, ovr.ServerURL),
+		ServerCA:                 ies(def.ServerCA, ovr.ServerCA),
+		ServerCAPath:             ies(def.ServerCAPath, ovr.ServerCAPath),
 	}
 }
 
@@ -576,25 +574,34 @@ func MergeOlvmOvirtOck(def *OlvmOvirtOck, ovr *OlvmOvirtOck) OlvmOvirtOck {
 // takes precedence.
 func MergeOlvmMachine(def *OlvmMachine, ovr *OlvmMachine) OlvmMachine {
 	return OlvmMachine{
-		OVirtClusterName:    ies(def.OVirtClusterName, ovr.OVirtClusterName),
-		OlvmVmIpProfileName: ies(def.OlvmVmIpProfileName, ovr.OlvmVmIpProfileName),
-		Memory:              ies(def.Memory, ovr.Memory),
-		Network:             MergeOlvmMachineNetwork(&def.Network, &ovr.Network),
-		Cpu:                 MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
-		VMTemplateName:      ies(def.VMTemplateName, ovr.VMTemplateName),
+		OlvmNetwork:          MergeOlvmNetwork(&def.OlvmNetwork, &ovr.OlvmNetwork),
+		OlvmOvirtClusterName: ies(def.OlvmOvirtClusterName, ovr.OlvmOvirtClusterName),
+		VirtualMachine:       MergeOlvmVirtualMachine(&def.VirtualMachine, &ovr.VirtualMachine),
+		VMTemplateName:       ies(def.VMTemplateName, ovr.VMTemplateName),
 	}
 }
 
-// MergeOlvmMachineNetwork takes two OlvmMachineNetworks and merges them into
+// MergeOlvmNetwork takes two OlvmNetworks and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmMachineNetwork(def *OlvmMachineNetwork, ovr *OlvmMachineNetwork) OlvmMachineNetwork {
-	return OlvmMachineNetwork{
+func MergeOlvmNetwork(def *OlvmNetwork, ovr *OlvmNetwork) OlvmNetwork {
+	return OlvmNetwork{
 		NetworkName:     ies(def.NetworkName, ovr.NetworkName),
-		InterfaceType:   ies(def.InterfaceType, ovr.InterfaceType),
 		VnicName:        ies(def.VnicName, ovr.VnicName),
 		VnicProfileName: ies(def.VnicProfileName, ovr.VnicProfileName),
+	}
+}
+
+// MergeOlvmVirtualMachine takes two OlvmVirtualMachines and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmVirtualMachine(def *OlvmVirtualMachine, ovr *OlvmVirtualMachine) OlvmVirtualMachine {
+	return OlvmVirtualMachine{
+		Cpu:     MergeOlvmMachineCpu(&def.Cpu, &ovr.Cpu),
+		Memory:  ies(def.Memory, ovr.Memory),
+		Network: MergeOlvmVirtualMachineNetwork(&def.Network, &ovr.Network),
 	}
 }
 
@@ -618,6 +625,31 @@ func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuT
 		Cores:   iei(def.Cores, ovr.Cores),
 		Sockets: iei(def.Sockets, ovr.Sockets),
 		Threads: iei(def.Threads, ovr.Threads),
+	}
+}
+
+// MergeOlvmVirtualMachineNetwork takes two OlvmVirtualMachineNetwork and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmVirtualMachineNetwork(def *OlvmVirtualMachineNetwork, ovr *OlvmVirtualMachineNetwork) OlvmVirtualMachineNetwork {
+	return OlvmVirtualMachineNetwork{
+		Gateway:       ies(def.Gateway, ovr.Gateway),
+		Interface:     ies(def.Interface, ovr.Interface),
+		InterfaceType: ies(def.InterfaceType, ovr.InterfaceType),
+		IPV4:          MergeOlvmIP(&def.IPV4, &ovr.IPV4),
+		IPV6:          MergeOlvmIP(&def.IPV6, &ovr.IPV6),
+	}
+}
+
+// MergeOlvmIP takes two OlvmIP and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) OlvmIP {
+	return OlvmIP{
+		Subnet:      ies(def.Subnet, ovr.Subnet),
+		IpAddresses: ies(def.IpAddresses, ovr.IpAddresses),
 	}
 }
 
