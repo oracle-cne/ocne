@@ -82,12 +82,12 @@ func (cad *OlvmDriver) Delete() error {
 
 	secretNsn := cad.credSecretNsn()
 	if err = k8s.DeleteSecret(clientIface, secretNsn.Namespace, secretNsn.Name); err != nil {
-		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v", secretNsn.Namespace, secretNsn.Name)
+		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v", secretNsn.Namespace, secretNsn.Name, err)
 	}
 
 	cmNsn := cad.caConfigMapNsn()
 	if err = k8s.DeleteConfigmap(clientIface, cmNsn.Namespace, cmNsn.Name); err != nil {
-		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v", cmNsn.Namespace, cmNsn.Name)
+		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v", cmNsn.Namespace, cmNsn.Name, err)
 	}
 
 	return nil
