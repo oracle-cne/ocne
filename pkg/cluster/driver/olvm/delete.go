@@ -6,6 +6,10 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -13,10 +17,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	log "github.com/sirupsen/logrus"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 // Delete deletes the CAPI resources in the bootstrap cluster which results in the CAPI cluster being deleted.
@@ -70,7 +71,7 @@ func (cad *OlvmDriver) Delete() error {
 	// delete the capi cluster kubeconfig
 	if err = os.Remove(cad.KubeConfig); err != nil {
 		// log the error but keep going
-		log.Errorf("Error deleting capi kubeconfig file %s/%s: %v",
+		log.Errorf("Error deleting capi kubeconfig file %s: %v",
 			cad.KubeConfig, err)
 	}
 

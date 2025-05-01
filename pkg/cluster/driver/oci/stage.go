@@ -1,20 +1,18 @@
 // Copyright (c) 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package capi
+package oci
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/containers/image/v5/transports/alltransports"
-	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
-	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -22,25 +20,24 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"github.com/oracle-cne/ocne/pkg/util/capi"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type OciImageData struct {
-	Image *core.Image
-	HasUpdate bool
-	Arch string
-	NewId string
-	WorkRequestId string
+	Image            *core.Image
+	HasUpdate        bool
+	Arch             string
+	NewId            string
+	WorkRequestId    string
 	MachineTemplates []*capi.GraphNode
 }
 
 // These should be treated as constants
-var MachineTemplateImageId []string = []string{"spec", "template", "spec", "imageId"}
-var MachineTemplateShape []string = []string{"spec", "template", "spec", "shape"}
+var MachineTemplateImageId = []string{"spec", "template", "spec", "imageId"}
+var MachineTemplateShape = []string{"spec", "template", "spec", "shape"}
 
 // imageFromMachineTemplate gets an OCI Image object from an OCIMachineTemplate
 // by gathering the Image ID from the template and then looking up the image.
@@ -60,97 +57,6 @@ func imageFromMachineTemplate(mt *unstructured.Unstructured, profile string) (*c
 	}
 
 	return img, nil
-}
-
-// patchControlPlane adds any changes required to a KubeadmControlPlane
-func patchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) error {
-	// Ensure this is a KubeadmControlPlane
-	if kcp.GetAPIVersion() != capi.ControlPlaneAPI || kcp.GetKind() != capi.KubeadmControlPlane {
-		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), capi.ControlPlaneAPI, capi.KubeadmControlPlane)
-	}
-
-	didUpdate := false
-	annots := kcp.GetAnnotations()
-	if annots == nil {
-		annots = map[string]string{}
-	}
-	_, ok := annots[capi.SkipKubeProxyAnnotation]
-	if !ok {
-		annots[capi.SkipKubeProxyAnnotation] = "true"
-		didUpdate = true
-	}
-
-	_, ok = annots[capi.SkipCoreDNSAnnotation]
-	if !ok {
-		annots[capi.SkipCoreDNSAnnotation] = "true"
-		didUpdate = true
-	}
-
-	if !didUpdate {
-		return nil
-	}
-
-	kcp.SetAnnotations(annots)
-	err := k8s.UpdateResource(restConfig, kcp)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// getControlPlanePatches calculates the set of patches that need to be
-// applied to the KubeadmControlPlane after staging is complete to
-// apply the new configuration
-func getControlPlanePatches(kcp *unstructured.Unstructured, version string, mtName string) (*util.JsonPatches, error) {
-	ret := &util.JsonPatches{}
-
-	// These are mandatory changes to update control plane nodes
-	ret.Replace(capi.ControlPlaneVersion, version)
-	ret.Replace(append(capi.ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
-
-	//  The joinConfiguration needs to apply the OCK patches
-	patches, found, err := unstructured.NestedStringMap(kcp.Object, capi.ControlPlaneJoinPatches...)
-	if err != nil {
-		return nil, err
-	}
-
-	if found {
-		return ret, nil
-	}
-
-	patchDir, ok := patches[capi.PatchesDirectory]
-	if ok {
-		if patchDir != update.OckPatchDirectory {
-			ret.Replace(append(capi.ControlPlaneJoinPatches, capi.PatchesDirectory), update.OckPatchDirectory)
-		}
-	} else {
-		ret.Add(capi.ControlPlaneJoinPatches, map[string]string{capi.PatchesDirectory: update.OckPatchDirectory})
-	}
-
-	joinSkips, found, err := unstructured.NestedStringSlice(kcp.Object, capi.ControlPlaneJoinSkipPhases...)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		joinSkips = []string{}
-	}
-	if !slices.Contains(joinSkips, capi.PhasePreflight) {
-		joinSkips = append(joinSkips, capi.PhasePreflight)
-		err = unstructured.SetNestedStringSlice(kcp.Object, joinSkips, capi.ControlPlaneJoinSkipPhases...)
-		if err != nil {
-			return nil, err
-		}
-
-		// If the field was already there, replace it.  Otherwise add it.
-		if found {
-			ret.Replace(capi.ControlPlaneJoinSkipPhases, joinSkips)
-		} else {
-			ret.Add(capi.ControlPlaneJoinSkipPhases, joinSkips)
-		}
-	}
-
-	return ret, nil
 }
 
 // doUpdate calculates if there is reason to upload a new OCI custom image
@@ -245,14 +151,13 @@ func doUpdate(img *core.Image, arch string, version string, bvImage string, prof
 func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OciImageData, error) {
 	ret := map[string]*OciImageData{}
 
-	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+	err := graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		mt := mtNode.Object
 		retVal := arg.(map[string]*OciImageData)
 		img, err := imageFromMachineTemplate(mt, profile)
 		if err != nil {
 			return err
 		}
-
 
 		shape, found, err := unstructured.NestedString(mt.Object, MachineTemplateShape...)
 		if !found {
@@ -268,9 +173,9 @@ func graphToImages(graph *capi.ClusterGraph, profile string) (map[string]*OciIma
 		imgData, ok := retVal[*img.Id]
 		if !ok {
 			retVal[*img.Id] = &OciImageData{
-				Image: img,
-				HasUpdate: false,
-				Arch: arch,
+				Image:            img,
+				HasUpdate:        false,
+				Arch:             arch,
 				MachineTemplates: []*capi.GraphNode{mtNode},
 			}
 		} else {
@@ -314,7 +219,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		cad.ClusterResources = cdi
 	}
 
-	clusterObj, err := cad.getClusterObject()
+	clusterObj, err := capi.GetClusterObject(cad.ClusterResources)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -332,12 +237,12 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	if err != nil {
 		return "", "", false, err
 	} else if !found {
-		return "", "", false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
+		return "", "", false, fmt.Errorf("%s/%s %s in %s does not have a version", graph.ControlPlane.Object.GroupVersionKind().String(), graph.ControlPlane.Object.GetAPIVersion(), graph.ControlPlane.Object.GetName(), graph.ControlPlane.Object.GetNamespace())
 	}
 
 	// Apply necessary control plane modifications whether there
 	// is an update or not.
-	err = patchControlPlane(restConfig, graph.ControlPlane.Object)
+	err = capi.PatchControlPlane(restConfig, graph.ControlPlane.Object)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -429,11 +334,11 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 
 		// Template updates can be forced for testing purposes.
 		// This is useful because the templates are generated only
-		// if there a reasonable update to perform.  This calculation
+		// if there is a reasonable update to perform.  This calculation
 		// is made by looking at resources, timestamps, and other
 		// durable data that is difficult to set up within the
 		// context of a test harness.
-		if  os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
+		if os.Getenv("OCNE_OCI_STAGE_FORCE_TEMPLATES") != "" {
 			newId = *img.Image.Id
 		} else if !img.HasUpdate {
 			continue
@@ -461,8 +366,8 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 	// Spit out some state information and instructions.  The new machine
 	// templates that were generated need to get propagated into the
 	// MachineDeployments and KubeadmControlPlanes in the cluster.
-	helpMessages := []string{}
-	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{})error{
+	var helpMessages []string
+	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
 
 		var umt *unstructured.Unstructured
@@ -477,7 +382,7 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 				return err
 			}
 
-			patches, err := getControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			patches, err := capi.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
 			if err != nil {
 				return err
 			}

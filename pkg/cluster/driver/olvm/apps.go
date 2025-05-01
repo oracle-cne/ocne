@@ -4,6 +4,8 @@
 package olvm
 
 import (
+	"net/url"
+
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -15,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"net/url"
 )
 
 const (
@@ -38,7 +39,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 	}
 
 	return []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CertManagerChart,
 				Namespace: constants.CertManagerNamespace,
@@ -47,7 +48,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				Catalog:   catalog.InternalCatalog,
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.CoreCAPIChart,
 				Namespace: constants.CoreCAPINamespace,
@@ -59,7 +60,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.OLVMCAPIChart,
 				Namespace: constants.OLVMCAPIOperatorNamespace,
@@ -71,7 +72,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmBootstrapCAPIChart,
 				Namespace: constants.KubeadmBootstrapCAPINamespace,
@@ -83,7 +84,7 @@ func (cad *OlvmDriver) getApplications() ([]install.ApplicationDescription, erro
 				},
 			},
 		},
-		install.ApplicationDescription{
+		{
 			Application: &types.Application{
 				Name:      constants.KubeadmControlPlaneCAPIChart,
 				Namespace: constants.KubeadmControlPlaneCAPINamespace,
@@ -122,8 +123,8 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 
 	// set the creds needed by the ovirt csi driver
 	credmap := map[string][]byte{
-		csiDriverUsernameKey: []byte(ovirtCreds[credsUsernameKey]),
-		csiDriverPasswordKey: []byte(ovirtCreds[credsPasswordKey]),
+		csiDriverUsernameKey: ovirtCreds[credsUsernameKey],
+		csiDriverPasswordKey: ovirtCreds[credsPasswordKey],
 		csiDriverURLKey:      []byte(ovirtURL.String()),
 	}
 
@@ -134,7 +135,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	// Also specify function to install the csi driver chart
 	namespace := olvm.CSIDriver.Namespace
 	ret := []install.ApplicationDescription{
-		install.ApplicationDescription{
+		{
 			PreInstall: func() error {
 				// Create the oVirt creds secret
 				k8s.DeleteSecret(kubeClient, namespace, olvm.CSIDriver.SecretName)
