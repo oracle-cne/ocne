@@ -163,12 +163,12 @@ func (cad *OlvmDriver) waitForControllers(kubeClient kubernetes.Interface) error
 				return k8s.WaitForDeployment(kubeClient, constants.KubeadmControlPlaneCAPINamespace, constants.KubeadmControlPlaneCAPIDeployment, 1)
 			},
 		},
-		//{
-		//	Message: "Waiting for Olvm Cluster API Controllers",
-		//	WaitFunction: func(i interface{}) error {
-		//		return k8s.WaitForDeployment(kubeClient, constants.OLVMCAPIOperatorNamespace, constants.OLVMCAPIDeployment, 1)
-		//	},
-		//},
+		{
+			Message: "Waiting for Olvm Cluster API Controllers",
+			WaitFunction: func(i interface{}) error {
+				return k8s.WaitForDeployment(kubeClient, constants.OLVMCAPIOperatorNamespace, constants.OLVMCAPIDeployment, 1)
+			},
+		},
 	})
 	if haveError {
 		return fmt.Errorf("Not all Cluster API controllers became available")
