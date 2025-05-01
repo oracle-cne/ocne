@@ -51,7 +51,9 @@ ifeq ($(DEVELOPER_BUILD),)
 	ifeq ($(findstring release/,$(RELEASE_BRANCH)), release/)
 		DEVELOPER_BUILD=false
 	else
-		DEVELOPER_BUILD=true
+		# Disable all developer builds by default, there is currently no
+		# content on the developer branch of the ocne-catalog repo.
+		DEVELOPER_BUILD=false
 	endif
 endif
 
