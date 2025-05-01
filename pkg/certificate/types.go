@@ -16,7 +16,7 @@ type CertConfig struct {
 	// DNS names
 	DNSNames []string
 
-	// IP IpAddresses
+	// IP Addresses
 	IPAddresses []net.IP
 
 	// CommonName is the certificate common name
