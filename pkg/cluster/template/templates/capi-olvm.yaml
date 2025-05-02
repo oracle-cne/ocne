@@ -49,7 +49,7 @@ spec:
     credentialsSecret:
       name: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Name}}"
       namespace: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.CredentialsSecret.Namespace}}"
-    insecureSkipTlsVerify: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify}}"
+    insecureSkipTLSVerify: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify}}"
     serverURL: "{{.ClusterConfig.Providers.Olvm.OlvmAPIServer.ServerURL}}"
 
 ---
