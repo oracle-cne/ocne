@@ -10,12 +10,12 @@ import (
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/config/types"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/oracle-cne/ocne/pkg/util/olvmutil"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -322,33 +322,9 @@ func getCreds() (map[string][]byte, error) {
 }
 
 func (cad *OlvmDriver) credSecretNsn() *types.NamespacedName {
-	return CredSecretNsn(cad.ClusterConfig)
+	return olvmutil.CredSecretNsn(cad.ClusterConfig)
 }
 
 func (cad *OlvmDriver) caConfigMapNsn() *types.NamespacedName {
-	return CaConfigMapNsn(cad.ClusterConfig)
-}
-
-func CredSecretNsn(cc *types.ClusterConfig) *types.NamespacedName {
-	defName := fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
-	nn := cc.Providers.Olvm.OlvmAPIServer.CredentialsSecret
-	if nn.Name == "" {
-		nn.Name = defName
-	}
-	if nn.Namespace == "" {
-		nn.Namespace = cc.Providers.Olvm.Namespace
-	}
-	return &nn
-}
-
-func CaConfigMapNsn(cc *types.ClusterConfig) *types.NamespacedName {
-	defName := fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
-	nn := cc.Providers.Olvm.OlvmAPIServer.CAConfigMap
-	if nn.Name == "" {
-		nn.Name = defName
-	}
-	if nn.Namespace == "" {
-		nn.Namespace = cc.Providers.Olvm.Namespace
-	}
-	return &nn
+	return olvmutil.CaConfigMapNsn(cad.ClusterConfig)
 }
