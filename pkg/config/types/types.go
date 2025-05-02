@@ -17,6 +17,7 @@ type LibvirtProvider struct {
 type OciInstanceShape struct {
 	Shape string `yaml:"shape"`
 	Ocpus int    `yaml:"ocpus"`
+	BootVolumeSize string `yaml:"bootVolumeInGBs"`
 }
 
 type LoadBalancer struct {
@@ -432,6 +433,7 @@ func MergeOciInstanceShape(def *OciInstanceShape, ovr *OciInstanceShape) OciInst
 	return OciInstanceShape{
 		Shape: ies(def.Shape, ovr.Shape),
 		Ocpus: iei(def.Ocpus, ovr.Ocpus),
+		BootVolumeSize: ies(def.BootVolumeSize, ovr.BootVolumeSize),
 	}
 }
 
