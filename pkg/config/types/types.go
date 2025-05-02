@@ -17,7 +17,7 @@ type LibvirtProvider struct {
 type OciInstanceShape struct {
 	Shape string `yaml:"shape"`
 	Ocpus int    `yaml:"ocpus"`
-	BootVolumeSize string `yaml:"bootVolumeInGBs"`
+	BootVolumeSize string `yaml:"bootVolumeSizeInGBs"`
 }
 
 type LoadBalancer struct {
