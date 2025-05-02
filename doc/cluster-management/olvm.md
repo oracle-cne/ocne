@@ -592,6 +592,11 @@ INFO[2024-12-20T14:32:42-05:00] Waiting for Core Cluster API Controllers: ok
 INFO[2024-12-20T14:32:42-05:00] Deleting Cluster olvm-cluster/demo           
 INFO[2024-12-20T14:33:09-05:00] Waiting for deletion: ok     
 ```
+If the cluster does not appear in the output of `ocne cluster ls`, an error may have occurred during cluster creation (e.g., the command was manually aborted). An alternative way to delete the cluster is to specify the cluster config file.
+```
+ocne cluster delete --config /Users/user/.ocne/olvm-demo-cluster-config.yaml
+```
+
 
 See that the CAPI cluster is gone:
 ```
