@@ -44,7 +44,7 @@ const (
 	CertKey = "tls.crt"
 	PrivKey = "tls.key"
 
-	KubeVersion = "1.31"
+	KubeVersion = "1.32"
 
 	OciControlPlaneOcpus = 2
 	OciWorkerOcpus       = 4
