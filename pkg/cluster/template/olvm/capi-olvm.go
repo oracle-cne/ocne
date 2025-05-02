@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/template"
+	"github.com/oracle-cne/ocne/pkg/util/olvmutil"
 	"github.com/oracle-cne/ocne/pkg/util/strutil"
 	"regexp"
 	"strings"
@@ -51,6 +52,11 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 		return "", err
 	}
 
+	// Get the default CA and Secret (which require cluster name)
+	olvm := &clusterConfig.Providers.Olvm
+	olvm.OlvmAPIServer.CAConfigMap = *olvmutil.CaConfigMapNsn(clusterConfig)
+	olvm.OlvmAPIServer.CredentialsSecret = *olvmutil.CredSecretNsn(clusterConfig)
+
 	// Get the CIDR blocks
 
 	// Build up the extra ignition structures.  Internal LB for control plane only
@@ -62,7 +68,6 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	if err != nil {
 		return "", err
 	}
-	olvm := &clusterConfig.Providers.Olvm
 	return util.TemplateToStringWithFuncs(string(tmplBytes), &olvmData{
 		Config:                    config,
 		ClusterConfig:             clusterConfig,
