@@ -152,20 +152,22 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				}
 
 				// create the CA.CRT configmap
-				ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
-				if err != nil {
-					return err
+				if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+					ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+					if err != nil {
+						return err
+					}
+					k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
+					err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      olvm.CSIDriver.ConfigMapName,
+							Namespace: namespace,
+						},
+						Data: map[string]string{
+							csiDriverCaKey: ca,
+						},
+					})
 				}
-				k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
-				err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      olvm.CSIDriver.ConfigMapName,
-						Namespace: namespace,
-					},
-					Data: map[string]string{
-						csiDriverCaKey: ca,
-					},
-				})
 				return err
 			},
 			// install ovirt-csi-driver chart

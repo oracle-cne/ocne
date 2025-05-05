@@ -281,24 +281,26 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	// get the CA
-	ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
-	if err != nil {
-		return err
-	}
+	if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+		if err != nil {
+			return err
+		}
 
-	cmNsn := cad.caConfigMapNsn()
-	k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
-	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmNsn.Name,
-			Namespace: cmNsn.Namespace,
-		},
-		Data: map[string]string{
-			"ca.crt": ca,
-		},
-	})
-	if err != nil {
-		return err
+		cmNsn := cad.caConfigMapNsn()
+		k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
+		err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmNsn.Name,
+				Namespace: cmNsn.Namespace,
+			},
+			Data: map[string]string{
+				"ca.crt": ca,
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
