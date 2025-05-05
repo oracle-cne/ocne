@@ -6,10 +6,16 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -20,10 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 const (
@@ -74,6 +77,32 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 	if err != nil {
 		return false, false, err
 	}
+
+	// Get logs for the OLVM controller
+	pods, err := application.PodsForApplication(constants.OLVMCAPIRelease, constants.OLVMCAPIOperatorNamespace, cad.BootstrapKubeConfig)
+	log.Debugf("Have %d OLVM CAPI pods", len(pods))
+	if err != nil {
+		return false, false, err
+	}
+	podLogs := []*util.ScanCloser{}
+	for _, op := range pods {
+		podLog, err := k8s.GetPodLogs(clientIface, op, "")
+		if err != nil {
+			return false, false, err
+		}
+		re := "^[A-Z][0-9]+"
+		md, err := util.NewMessageDispatcher(re, NewOlvmLogHandler())
+		if err != nil {
+			err = fmt.Errorf("Internal error: regex \"%s\" does not compile: %v", re, err)
+			return false, false, err
+		}
+		podLogs = append(podLogs, util.Scan(podLog, md))
+	}
+	defer func(toClose []*util.ScanCloser) {
+		for _, tc := range toClose {
+			tc.Close()
+		}
+	}(podLogs)
 
 	// create all the CAPI resources
 	log.Info("Applying Cluster API resources")
@@ -137,7 +166,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 func (cad *OlvmDriver) PostStart() error {
 	// If the cluster is not self-managed, then the configuration is
 	// complete.
-	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+	if !cad.ClusterConfig.Providers.Olvm.SelfManaged {
 		return nil
 	}
 
