@@ -157,10 +157,12 @@ providers:
     controlPlaneShape:
       shape: VM.Standard.A1.Flex
       ocpus: 2
+      bootVolumeSizeInGBs: 50
     # The shape of compute instances for worker nodes
     workerShape:
       shape: VM.Standard.E4.Flex
       ocpus: 4
+      bootVolumeSizeInGBs: 50
     # Indicates if a cluster is self-managing or not.  If set to
     # true, the cluster will contain all the necessary controllers
     # and resources to manage its own lifecycle.  If not, those
