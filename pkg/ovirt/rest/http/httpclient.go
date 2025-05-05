@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package http
@@ -33,10 +33,10 @@ type REST struct {
 	tokenResetter TokenResetter
 }
 
-func NewRestClient(resetter TokenResetter, endpointURL string, ca string) *REST {
+func NewRestClient(resetter TokenResetter, endpointURL string, ca string, insecureSkipTLSVerify bool) *REST {
 	// Create Transport object
 	tr := &http.Transport{
-		TLSClientConfig:       &tls.Config{RootCAs: rootCertPool([]byte(ca))},
+		TLSClientConfig:       &tls.Config{RootCAs: rootCertPool([]byte(ca)), InsecureSkipVerify: insecureSkipTLSVerify},
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,

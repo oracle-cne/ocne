@@ -5,6 +5,9 @@ package upload
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/docker/go-units"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
@@ -15,8 +18,6 @@ import (
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-	"os"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -33,11 +34,14 @@ func UploadOlvm(o UploadOptions) error {
 	olvmProv := &o.ClusterConfig.Providers.Olvm
 
 	// Get OvClient
-	ca, err := olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
-	if err != nil {
-		return err
+	ca := ""
+	if !olvmProv.OlvmAPIServer.InsecureSkipTLSVerify {
+		ca, err = olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
+		if err != nil {
+			return err
+		}
 	}
-	ovcli, err := ovclient.GetOVClient(kubeClient, ca, olvmProv.OlvmAPIServer.ServerURL)
+	ovcli, err := ovclient.GetOVClient(kubeClient, ca, olvmProv.OlvmAPIServer.ServerURL, olvmProv.OlvmAPIServer.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
