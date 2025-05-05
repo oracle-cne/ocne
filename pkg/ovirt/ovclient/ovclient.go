@@ -1,19 +1,20 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ovclient
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	ovhttp "github.com/oracle-cne/ocne/pkg/ovirt/rest/http"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
 )
 
 type Credentials struct {
@@ -45,10 +46,12 @@ type Client struct {
 	*ovhttp.REST
 
 	*Credentials
+
+	InsecureSkipTLSVerify bool
 }
 
 // GetOVClient gets an ovClient
-func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string) (*Client, error) {
+func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string, insecureSkipTLSVerify bool) (*Client, error) {
 	// validate the secret that has the oVirt REST creds
 	creds, err := getCredentials(cli)
 	if err != nil {
@@ -58,7 +61,7 @@ func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string) (*Cli
 	creds.CA = ca
 
 	// Get an oVirt client
-	ovcli, err := ensureOvClient(creds, apiServerURL)
+	ovcli, err := ensureOvClient(creds, apiServerURL, insecureSkipTLSVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -67,18 +70,19 @@ func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string) (*Cli
 }
 
 // ensureOvClient ensures that we have an access token that can be used with the oVirt REST API.
-func ensureOvClient(creds *Credentials, apiServerURL string) (*Client, error) {
+func ensureOvClient(creds *Credentials, apiServerURL string, insecureSkipTLSVerify bool) (*Client, error) {
 	// Create a new client and validate that it works
 	ovcli := &Client{
-		ApiServerURL: apiServerURL,
-		Credentials:  creds,
+		ApiServerURL:          apiServerURL,
+		Credentials:           creds,
+		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}
 
 	if err := ovcli.ensureAccessToken(); err != nil {
 		return nil, err
 	}
 
-	// Validate the token by geting system information
+	// Validate the token by getting system information
 	const path = "/api"
 
 	// call the server to get the datacenters just to verify the REST API works.
@@ -105,7 +109,7 @@ func (o *Client) ensureAccessToken() error {
 		return nil
 	}
 
-	o.REST = ovhttp.NewRestClient(o, o.ApiServerURL, o.CA)
+	o.REST = ovhttp.NewRestClient(o, o.ApiServerURL, o.CA, o.InsecureSkipTLSVerify)
 
 	// create the payload to send using POST
 	d := url.Values{}

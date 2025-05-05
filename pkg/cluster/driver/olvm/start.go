@@ -6,6 +6,10 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -20,10 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 const (
@@ -252,24 +253,26 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	// get the CA
-	ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
-	if err != nil {
-		return err
-	}
+	if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+		if err != nil {
+			return err
+		}
 
-	cmNsn := cad.caConfigMapNsn()
-	k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
-	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmNsn.Name,
-			Namespace: cmNsn.Namespace,
-		},
-		Data: map[string]string{
-			"ca.crt": ca,
-		},
-	})
-	if err != nil {
-		return err
+		cmNsn := cad.caConfigMapNsn()
+		k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
+		err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmNsn.Name,
+				Namespace: cmNsn.Namespace,
+			},
+			Data: map[string]string{
+				"ca.crt": ca,
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
