@@ -50,19 +50,11 @@ func (olh *OlvmLogHandler) Handle(lines []string) {
 	// This message is an error.  Look at it to see if it's an error
 	// that has been seen before.  If it has, don't print it again.
 
-	// Get rid of the Opc request id field.  This is going to change every
-	// time.  Failing to ignore, it is going to cause log messages to spew.
-	prefix, suffix, _ := strings.Cut(lines[1], " Opc request id: ")
+	prefix, suffix, _ := strings.Cut(lines[1], " Message: ")
 	if prefix == "" {
 		log.Errorf("Saw unexpected line in error message in OLVM Cluster API provider logs: %s", lines[1])
 		return
 	}
-	if suffix == "" {
-		log.Errorf("Saw unexpected line in error message in OLVM Cluster API provider logs: %s", lines[1])
-		return
-	}
-
-	_, suffix, _ = strings.Cut(suffix, " Message: ")
 	if suffix == "" {
 		log.Errorf("Saw unexpected line in error message in OLVM Cluster API provider logs: %s", lines[1])
 		return
