@@ -93,8 +93,8 @@ type OlvmAPIServer struct {
 	CredentialsSecret        NamespacedName `yaml:"credentialsSecret"`
 	InsecureSkipTLSVerify    bool           `yaml:"insecureSkipTLSVerifyFake"`
 	InsecureSkipTLSVerifyPtr *bool          `yaml:"insecureSkipTLSVerify,omitempty"`
-	ServerCA                 string         `yaml:"serverCA,omitempty"`
-	ServerCAPath             string         `yaml:"serverCAPath,omitempty"`
+	ServerCA                 string         `yaml:"serverCA"`
+	ServerCAPath             string         `yaml:"serverCAPath"`
 	ServerURL                string         `yaml:"serverURL"`
 }
 
