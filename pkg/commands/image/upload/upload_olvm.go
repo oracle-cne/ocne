@@ -18,7 +18,6 @@ import (
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,15 +33,14 @@ func UploadOlvm(o UploadOptions) error {
 	olvmProv := &o.ClusterConfig.Providers.Olvm
 
 	// Get OvClient
-	ca := ""
+	caMap := map[string]string{}
 	if !olvmProv.OlvmAPIServer.InsecureSkipTLSVerify {
-		caMap, err := olvm.GetCAMap(&o.ClusterConfig.Providers.Olvm)
+		caMap, err = olvm.GetCAMap(&o.ClusterConfig.Providers.Olvm)
 		if err != nil {
 			return err
 		}
-		ca = caMap["ca.crt"]
 	}
-	ovcli, err := ovclient.GetOVClient(kubeClient, ca, olvmProv.OlvmAPIServer.ServerURL, olvmProv.OlvmAPIServer.InsecureSkipTLSVerify)
+	ovcli, err := ovclient.GetOVClient(kubeClient, caMap, olvmProv.OlvmAPIServer.ServerURL, olvmProv.OlvmAPIServer.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}

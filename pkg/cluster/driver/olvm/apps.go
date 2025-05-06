@@ -24,9 +24,6 @@ const (
 	csiDriverUsernameKey = "ovirt_username"
 	csiDriverPasswordKey = "ovirt_password"
 	csiDriverURLKey      = "ovirt_url"
-
-	// keys for csi driver ca.crt
-	csiDriverCaKey = "ca.crt"
 )
 
 // getApplications gets the applications that are needed for the OLVM provider.

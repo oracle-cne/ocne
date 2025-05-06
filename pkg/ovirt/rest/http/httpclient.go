@@ -33,10 +33,10 @@ type REST struct {
 	tokenResetter TokenResetter
 }
 
-func NewRestClient(resetter TokenResetter, endpointURL string, ca string, insecureSkipTLSVerify bool) *REST {
+func NewRestClient(resetter TokenResetter, endpointURL string, caMap map[string]string, insecureSkipTLSVerify bool) *REST {
 	// Create Transport object
 	tr := &http.Transport{
-		TLSClientConfig:       &tls.Config{RootCAs: rootCertPool([]byte(ca)), InsecureSkipVerify: insecureSkipTLSVerify},
+		TLSClientConfig:       &tls.Config{RootCAs: rootCertPool(caMap), InsecureSkipVerify: insecureSkipTLSVerify},
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
@@ -88,13 +88,18 @@ func (r REST) HeaderNoCache(header *http.Header) {
 	header.Set("Pragma", "no-cache")
 }
 
-func rootCertPool(caData []byte) *x509.CertPool {
-	if len(caData) == 0 {
+func rootCertPool(caMap map[string]string) *x509.CertPool {
+	if len(caMap) == 0 {
 		return nil
 	}
+
 	// if we have caData, use it
 	certPool := x509.NewCertPool()
-	certPool.AppendCertsFromPEM(caData)
+
+	// Create CA cert pool
+	for _, cert := range caMap {
+		certPool.AppendCertsFromPEM([]byte(cert))
+	}
 	return certPool
 }
 
