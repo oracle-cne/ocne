@@ -36,10 +36,11 @@ func UploadOlvm(o UploadOptions) error {
 	// Get OvClient
 	ca := ""
 	if !olvmProv.OlvmAPIServer.InsecureSkipTLSVerify {
-		ca, err = olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
+		caMap, err := olvm.GetCAMap(&o.ClusterConfig.Providers.Olvm)
 		if err != nil {
 			return err
 		}
+		ca = caMap["ca.crt"]
 	}
 	ovcli, err := ovclient.GetOVClient(kubeClient, ca, olvmProv.OlvmAPIServer.ServerURL, olvmProv.OlvmAPIServer.InsecureSkipTLSVerify)
 	if err != nil {
@@ -260,12 +261,12 @@ func getImageInfo(imagePath string) (os.FileInfo, error) {
 	return info, nil
 }
 
-func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo, disk *ovdisk.Disk) error {
+func uploadImageAndWait(ovcli *ovclient.Client, proxyUrl string, imagePath string, info os.FileInfo, disk *ovdisk.Disk) error {
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: fmt.Sprintf("Uploading image %s with %v bytes to %s", imagePath, info.Size(), disk.Name),
 			WaitFunction: func(i interface{}) error {
-				err := uploadImage(ovcli, proxy_url, imagePath, info)
+				err := uploadImage(ovcli, proxyUrl, imagePath, info)
 				return err
 			},
 		},
@@ -276,7 +277,7 @@ func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath stri
 	return nil
 }
 
-func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo) error {
+func uploadImage(ovcli *ovclient.Client, proxyUrl string, imagePath string, info os.FileInfo) error {
 	path, err := file.AbsDir(imagePath)
 	if err != nil {
 		return err
@@ -288,7 +289,7 @@ func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string, inf
 	}
 	defer reader.Close()
 
-	err = ovit.UploadFile(ovcli, proxy_url, reader, info.Size())
+	err = ovit.UploadFile(ovcli, proxyUrl, reader, info.Size())
 	if err != nil {
 		return err
 	}

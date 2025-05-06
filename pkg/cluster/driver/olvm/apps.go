@@ -153,7 +153,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 
 				// create the CA.CRT configmap
 				if !cad.ClusterConfig.Providers.Olvm.CSIDriver.InsecureSkipTLSVerify {
-					ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+					caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
 					if err != nil {
 						return err
 					}
@@ -163,9 +163,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 							Name:      olvm.CSIDriver.ConfigMapName,
 							Namespace: namespace,
 						},
-						Data: map[string]string{
-							csiDriverCaKey: ca,
-						},
+						Data: caMap,
 					})
 				}
 				return err
