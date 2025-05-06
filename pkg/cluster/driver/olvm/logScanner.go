@@ -11,17 +11,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type OlvmLogHandler struct {
+type LogHandler struct {
 	Errors map[string]bool
 }
 
-func NewOlvmLogHandler() *OlvmLogHandler {
-	return &OlvmLogHandler{
+func NewLogHandler() *LogHandler {
+	return &LogHandler{
 		Errors: map[string]bool{},
 	}
 }
 
-var tolerations []*regexp.Regexp = []*regexp.Regexp{
+var tolerations = []*regexp.Regexp{
 	// '\' is a special character in regex as well as strings, so we need
 	// some goop to match '\"'.
 	// \\\\\" -> \\ escapes the next backslash \\ literal backslash \" escapes the quote
@@ -29,7 +29,7 @@ var tolerations []*regexp.Regexp = []*regexp.Regexp{
 	regexp.MustCompile("OLVMCluster\\.infrastructure\\.cluster\\.x-k8s\\.io \\\\\".*\\\\\" not found"),
 }
 
-func (olh *OlvmLogHandler) Handle(lines []string) {
+func (olh *LogHandler) Handle(lines []string) {
 	// If the message is not an error, ignore it
 	if lines[0][0] != 'E' {
 		return
