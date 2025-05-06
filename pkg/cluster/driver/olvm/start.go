@@ -289,15 +289,22 @@ func GetCAMap(prov *types.OlvmProvider) (map[string]string, error) {
 	}
 
 	if prov.OlvmAPIServer.ServerCAPath != "" {
-		f, err := file.AbsDir(prov.OlvmAPIServer.ServerCAPath)
-		if err != nil {
-			return caMap, err
+		caFiles := strings.Split(prov.OlvmAPIServer.ServerCAPath, ",")
+		baseKey := caCrtBaseKey
+		for i, caFile := range caFiles {
+			f, err := file.AbsDir(strings.TrimSpace(caFile))
+			if err != nil {
+				return caMap, err
+			}
+			by, err := os.ReadFile(f)
+			if err != nil {
+				return caMap, fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
+			}
+			caMap[baseKey] = string(by)
+
+			// Update the key for the next time through the loop
+			baseKey = fmt.Sprintf("%s%d", caCrtBaseKey, i+1)
 		}
-		by, err := os.ReadFile(f)
-		if err != nil {
-			return caMap, fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
-		}
-		caMap[caCrtBaseKey] = string(by)
 		return caMap, nil
 	}
 	return caMap, fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")

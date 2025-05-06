@@ -171,7 +171,7 @@ func getCredentials(cli kubernetes.Interface) (*Credentials, error) {
 	}
 	c.Scope = os.Getenv(olvm.EnvScope)
 	if c.Scope == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", olvm.EnvScope)
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM scope", olvm.EnvScope)
 	}
 
 	return &c, nil
