@@ -152,7 +152,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				}
 
 				// create the CA.CRT configmap
-				if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+				if !cad.ClusterConfig.Providers.Olvm.CSIDriver.InsecureSkipTLSVerify {
 					ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
 					if err != nil {
 						return err
@@ -210,6 +210,7 @@ func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 		cmNameKey     = "caConfigMapName"
 		nameKey       = "name"
 		secretNameKey = "secretName"
+		insecureKey   = "insecure"
 
 		driverPath          = "driver"
 		ovirtPath           = "ovirt"
@@ -237,6 +238,10 @@ func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	}
 	if olvm.CSIDriver.SecretName != "" {
 		util.EnsureNestedMap(ov, ovirtPath)[secretNameKey] = olvm.CSIDriver.SecretName
+	}
+	if olvm.CSIDriver.InsecureSkipTLSVerify {
+		util.EnsureNestedMap(ov, ovirtPath)[insecureKey] = olvm.CSIDriver.InsecureSkipTLSVerify
+		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = false
 	}
 
 	return ov
