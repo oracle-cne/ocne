@@ -241,6 +241,7 @@ func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	}
 	if olvm.CSIDriver.InsecureSkipTLSVerify {
 		util.EnsureNestedMap(ov, ovirtPath)[insecureKey] = olvm.CSIDriver.InsecureSkipTLSVerify
+		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = false
 	}
 
 	return ov
