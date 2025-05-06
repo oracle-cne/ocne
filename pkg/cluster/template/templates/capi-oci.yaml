@@ -491,7 +491,7 @@ spec:
       shape: "{{.ClusterConfig.Providers.Oci.WorkerShape.Shape}}"
       shapeConfig:
         ocpus: "{{.ClusterConfig.Providers.Oci.WorkerShape.Ocpus}}"
-      bootVolumeSizeInGBs: "{{.ClusterConfig.Providers.Oci.ControlPlaneShape.BootVolumeSize}}"
+      bootVolumeSizeInGBs: "{{.ClusterConfig.Providers.Oci.WorkerShape.BootVolumeSize}}"
       metadata:
         ssh_authorized_keys: "{{.ClusterConfig.SshPublicKey}}"
       isPvEncryptionInTransitEnabled: false
