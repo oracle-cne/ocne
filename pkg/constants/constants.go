@@ -48,6 +48,7 @@ const (
 
 	OciControlPlaneOcpus = 2
 	OciWorkerOcpus       = 4
+	OciBootVolumeSize    = "50"
 	OciImageName         = "ock"
 	OciBucket            = "ocne-images"
 
