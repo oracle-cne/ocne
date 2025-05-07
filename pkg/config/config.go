@@ -72,10 +72,12 @@ func GetDefaultConfig() (*types.Config, error) {
 				ControlPlaneShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardA1Flex,
 					Ocpus: constants.OciControlPlaneOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 				WorkerShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardE4Flex,
 					Ocpus: constants.OciWorkerOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 			},
 			Olvm: types.OlvmProvider{
