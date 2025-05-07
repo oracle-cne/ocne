@@ -262,15 +262,17 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 
 		cmNsn := cad.caConfigMapNsn()
 		k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
-		err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cmNsn.Name,
-				Namespace: cmNsn.Namespace,
-			},
-			Data: caMap,
-		})
-		if err != nil {
-			return err
+		if len(caMap) > 0 {
+			err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cmNsn.Name,
+					Namespace: cmNsn.Namespace,
+				},
+				Data: caMap,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -307,7 +309,8 @@ func GetCAMap(prov *types.OlvmProvider) (map[string]string, error) {
 		}
 		return caMap, nil
 	}
-	return caMap, fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
+	log.Info("The OLVM Provider was not configured with ovirtApiCA or ovirtApiCAPath, assuming the CA is already in the trust store")
+	return caMap, nil
 }
 
 // getCreds gets the oVirt creds from a set of ENV vars.

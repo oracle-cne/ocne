@@ -155,13 +155,15 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 						return err
 					}
 					k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
-					err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      olvm.CSIDriver.ConfigMapName,
-							Namespace: namespace,
-						},
-						Data: caMap,
-					})
+					if len(caMap) > 0 {
+						err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      olvm.CSIDriver.ConfigMapName,
+								Namespace: namespace,
+							},
+							Data: caMap,
+						})
+					}
 				}
 				return err
 			},
