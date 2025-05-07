@@ -24,9 +24,6 @@ const (
 	csiDriverUsernameKey = "ovirt_username"
 	csiDriverPasswordKey = "ovirt_password"
 	csiDriverURLKey      = "ovirt_url"
-
-	// keys for csi driver ca.crt
-	csiDriverCaKey = "ca.crt"
 )
 
 // getApplications gets the applications that are needed for the OLVM provider.
@@ -153,20 +150,20 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 
 				// create the CA.CRT configmap
 				if !cad.ClusterConfig.Providers.Olvm.CSIDriver.InsecureSkipTLSVerify {
-					ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+					caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
 					if err != nil {
 						return err
 					}
 					k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
-					err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      olvm.CSIDriver.ConfigMapName,
-							Namespace: namespace,
-						},
-						Data: map[string]string{
-							csiDriverCaKey: ca,
-						},
-					})
+					if len(caMap) > 0 {
+						err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      olvm.CSIDriver.ConfigMapName,
+								Namespace: namespace,
+							},
+							Data: caMap,
+						})
+					}
 				}
 				return err
 			},

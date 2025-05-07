@@ -28,7 +28,7 @@ type Credentials struct {
 	Scope string
 
 	// CA is the oVirt CA
-	CA string
+	CA map[string]string
 }
 
 type AuthData struct {
@@ -51,14 +51,14 @@ type Client struct {
 }
 
 // GetOVClient gets an ovClient
-func GetOVClient(cli kubernetes.Interface, ca string, apiServerURL string, insecureSkipTLSVerify bool) (*Client, error) {
+func GetOVClient(cli kubernetes.Interface, caMap map[string]string, apiServerURL string, insecureSkipTLSVerify bool) (*Client, error) {
 	// validate the secret that has the oVirt REST creds
 	creds, err := getCredentials(cli)
 	if err != nil {
 		return nil, err
 	}
 
-	creds.CA = ca
+	creds.CA = caMap
 
 	// Get an oVirt client
 	ovcli, err := ensureOvClient(creds, apiServerURL, insecureSkipTLSVerify)
@@ -171,7 +171,7 @@ func getCredentials(cli kubernetes.Interface) (*Credentials, error) {
 	}
 	c.Scope = os.Getenv(olvm.EnvScope)
 	if c.Scope == "" {
-		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM username", olvm.EnvScope)
+		return nil, fmt.Errorf("Missing environment variable %s used to specify OLVM scope", olvm.EnvScope)
 	}
 
 	return &c, nil
