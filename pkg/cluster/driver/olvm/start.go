@@ -33,6 +33,7 @@ const (
 	credsUsernameKey = "username"
 	credsPasswordKey = "password"
 	credsScopeKey    = "scope"
+	caCrtBaseKey     = "ca.crt"
 )
 
 // Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
@@ -282,51 +283,62 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 
 	// get the CA
 	if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
-		ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
+		caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
 		if err != nil {
 			return err
 		}
 
 		cmNsn := cad.caConfigMapNsn()
 		k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
-		err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cmNsn.Name,
-				Namespace: cmNsn.Namespace,
-			},
-			Data: map[string]string{
-				"ca.crt": ca,
-			},
-		})
-		if err != nil {
-			return err
+		if len(caMap) > 0 {
+			err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cmNsn.Name,
+					Namespace: cmNsn.Namespace,
+				},
+				Data: caMap,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-// GetCA gets the oVirt CA string from the config, either inline or from a file.
-func GetCA(prov *types.OlvmProvider) (string, error) {
+// GetCAMap gets a map of oVirt CA strings from the config, either inline or from a file.
+func GetCAMap(prov *types.OlvmProvider) (map[string]string, error) {
+	caMap := map[string]string{}
 	if prov.OlvmAPIServer.ServerCA != "" && prov.OlvmAPIServer.ServerCAPath != "" {
-		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
+		return caMap, fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
 	if prov.OlvmAPIServer.ServerCA != "" {
-		return prov.OlvmAPIServer.ServerCA, nil
+		caMap[caCrtBaseKey] = prov.OlvmAPIServer.ServerCA
+		return caMap, nil
 	}
 
 	if prov.OlvmAPIServer.ServerCAPath != "" {
-		f, err := file.AbsDir(prov.OlvmAPIServer.ServerCAPath)
-		if err != nil {
-			return "", err
+		caFiles := strings.Split(prov.OlvmAPIServer.ServerCAPath, ",")
+		baseKey := caCrtBaseKey
+		for i, caFile := range caFiles {
+			f, err := file.AbsDir(strings.TrimSpace(caFile))
+			if err != nil {
+				return caMap, err
+			}
+			by, err := os.ReadFile(f)
+			if err != nil {
+				return caMap, fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
+			}
+			caMap[baseKey] = string(by)
+
+			// Update the key for the next time through the loop
+			baseKey = fmt.Sprintf("%s%d", caCrtBaseKey, i+1)
 		}
-		by, err := os.ReadFile(f)
-		if err != nil {
-			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
-		}
-		return string(by), nil
+		return caMap, nil
 	}
-	return "", fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
+	log.Info("The OLVM Provider was not configured with ovirtApiCA or ovirtApiCAPath, assuming the CA is already in the trust store")
+	return caMap, nil
 }
 
 // getCreds gets the oVirt creds from a set of ENV vars.
