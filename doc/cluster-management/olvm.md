@@ -68,68 +68,127 @@ configuration introduces a new olvm provider with custom configuration with 4 se
 * OLVMMachine configuration for the control plane nodes
 * OLVMMachine configuration for the worker nodes
 
+The following YAML shows the required fields only:
+```
+name: demo
+provider: olvm
+providers:
+  olvm:
+    olvmDatacenterName: Default
+    olvmOvirtAPIServer:
+      serverURL: https://example.com/ovirt-engine
+      serverCAPath: "/tmp/ca.crt"
+    olvmOCK:
+      storageDomainName: olvm-data
+      diskName: ock-1.31
+      diskSize: 16GB
+    controlPlaneMachine:
+      olvmOvirtClusterName: Default
+      vmTemplateName: ock-1.31
+      olvmNetwork:
+        networkName: kvm-vlan
+        vnicProfileName: kvm-vlan
+      virtualMachine:
+        memory: "7GB"
+        network:
+          gateway: 2.3.4.1
+          ipv4:
+            subnet: 2.3.4.160/24
+            ipAddresses: 2.1.4.161/30, 2.3.4.196, 2.3.4.200-2.3.4.220
+    workerMachine:
+      olvmOvirtClusterName: Default
+      vmTemplateName: ock-1.31
+      olvmNetwork:
+        networkName: kvm-vlan
+        vnicProfileName: kvm-vlan
+      virtualMachine:
+        memory: "16GB"
+        network:
+          gateway: 1.2.3.1
+          interfaceType: virtio
+          ipv4:
+            autoconf: false
+            ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.4.200-1.2.4.220
+```
+
+
+The following YAML shows all the fields, including optional fields:
 ```
 name: demo
 workerNodes: 1
 controlPlaneNodes: 1
-virtualIp: 1.2.3.100
-password: "$6...1"
+podSubnet: 10.244.0.0/16, fdXY:IJKL:MNOP:15::/64
+serviceSubnet: 10.96.0.0/12, fdXY:IJKL:42::/112
+virtualIp: 1.2.3.160
 provider: olvm
 providers:
   olvm:
-    networkInterface: enp1s0
-    namespace: olvm-cluster
-    olvmCluster:
-      ovirtDatacenterName: Default
-      olvmVmIpProfile:
-        name: default-ip
-        gateway: 1.2.3.1
-        netmask: 255.255.255.0
-        device: enp1s0
-        startingIpAddress: 1.2.3.161
-      ovirtAPI:
-        serverURL: https://ovirt.example.com/ovirt-engine
-        serverCAPath: "~/olvm/ca.crt"
-      ovirtOCK:
-        storageDomainName: oblock
-        diskName: olvm-ock-1.30
-        diskSize: 16GB
+    namespace: olvm
+    olvmDatacenterName: Default
+    olvmOvirtAPIServer:
+      serverURL: https://example.com/ovirt-engine
+      serverCAPath: "/tmp/ca.crt"
+      credentialsSecret:
+        name: olvm-creds
+        namespace: olvm
+      caConfigMap:
+        name: olvm-ca
+        namespace: opvm
+      insecureSkipTLSVerify: true
+    olvmOCK:
+      storageDomainName: olvm-data
+      diskName: ock-1.31
+      diskSize: 16GB
     controlPlaneMachine:
-      memory: "7GB"
-      network:
-        interfaceType: virtio
-        networkName: vlan
+      olvmOvirtClusterName: Default
+      vmTemplateName: ock-1.31
+      olvmNetwork:
+        networkName: kvm-vlan
         vnicName: nic-1
-        vnicProfileName: vlan
-      ovirtClusterName: Default
-      olvmVmIpProfileName: default-ip
-      vmTemplateName: olvm-tmplate-1.30
+        vnicProfileName: kvm-vlan
+      virtualMachine:
+        memory: "7GB"
+        cpu:
+          topology:
+            cores: 7
+            sockets: 9
+            threads: 2
+        network:
+          gateway: 1.2.3.1
+          interface: enp1s0
+          interfaceType: virtio
+          ipv4:
+            subnet: 1.2.3.160/24
+            ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.3.200-1.2.3.220
+          ipv6:
+            autoconf: false
+            ipAddresses: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
+          networkName: kvm-vlan
     workerMachine:
-      memory: "16GB"
-      network:
-        interfaceType: virtio
-        networkName: vlan
+      olvmOvirtClusterName: Default
+      vmTemplateName: ock-1.31
+      olvmNetwork:
+        networkName: kvm-vlan
         vnicName: nic-1
-        vnicProfileName: vlan
-      ovirtClusterName: Default
-      olvmVmIpProfileName: default-ip
-      vmTemplateName: olvm-tmplate-1.30
-
-kubernetesVersion: 1.30
-proxy:
-  httpsProxy: http://www-proxy-example.com:80
-  noProxy: .mycorp.com,localhost,127.0.0.1,1.2.3.0/14,nip.io
-extraIgnitionInline: |
-  variant: fcos
-  version: 1.5.0
-  storage:
-    files:
-    - path: /etc/resolv.conf
-      mode: 0644
-      overwrite: false
-      contents:
-        inline: |
-          nameserver 1.2.3.250
+        vnicProfileName: kvm-vlan
+      virtualMachine:
+        memory: "16GB"
+        cpu:
+          topology:
+            cores: 6
+            sockets: 8
+            threads: 3
+        network:
+          gateway: 1.2.3.1
+          interface: enp1s0
+          interfaceType: virtio
+          ipv4:
+            autoconf: false
+            ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.4.200-1.2.4.220
+          ipv6:
+            autoconf: false
+            ipAddresses: fdXY:IJKL::2250-fdXY:IJKL::2259, fdXY:ABCX::3000/64
+          networkName: kvm-vlan
 ```
 
 ## Global OLVM configuration
