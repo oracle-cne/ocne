@@ -243,7 +243,7 @@ The name and namespace of the OLVM Kubernetes ConfigMap containing the OLVM CA.
 Optional.
 
 **insecureSkipTLSVerify**  
-If true, the skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
+If true, skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
 
 ## olvmOCK
 The ovirtOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
@@ -333,67 +333,29 @@ The IPV4 subnet used by the VM.
 **network.ipv4.ipAddresses**  
 The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
 Ranges are inclusive. Space after the comma is optional.
-10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27
+For example: 10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27  
 
 ### IPV6
 The IPV4 configuration is optional.
 
 **network.ipv6.autoconf**  
-If true, then auto-configure the IPV6 using SLAAC.
-Optional, default false.
+If true, then auto-configure the IPV6 using SLAAC.   
+Optional, default false.  
 
 **network.ipv6.ipAddresses**  
 The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
 Ranges are inclusive. Space after the comma is optional.
-10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27
-Optional
-
-
+For example: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
+Required if IPV6 used and autoconf is false.  
 
 
 ## Machine configuration
 The control plane and worker fields are identical, but the values may be different.  These values
-apply to all the control plane nodes and worker nodes in the cluster.
-```
-    controlPlaneMachine:
-      memory: "7GB"
-      network:
-        interfaceType: virtio
-        networkName: vlan
-        vnicName: nic-1
-        vnicProfileName: vlan
-      ovirtClusterName: Default
-      olvmVmIpProfileName: default-ip
-      vmTemplateName: olvm-tmplate-1.30
-      
-    workerMachine:
-      memory: "16GB"
-      network:
-        interfaceType: virtio
-        networkName: vlan
-        vnicName: nic-1
-        vnicProfileName: vlan
-      ovirtClusterName: Default
-      olvmVmIpProfileName: default-ip
-      vmTemplateName: olvm-tmplate-1.30
-
-```
-**memory**  
-VM memory allocated for each Kubernetes node.
-
-**cpu.topology**  
-The cpu cores, sockets and threads.  
-Optional.  Default is 2 cores, 2 sockets, 1 thread.
-
-
-**network.Name**
-The oVirt network name.  This must exist in the oVirt instance.
-
-
+apply to all the worker nodes in the MachineDeployment.
 
 ## Ovirt CSI Driver configuration (optional)
-The ovirt-csi-driver configuration is optional, there is no need to explicitly configure anything. The driver is
-automatically installed and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.
+The ovirt-csi-driver configuration is completely optional. The driver is automatically installed
+and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.  
 See [ovirt-csi-driver usage example](https://github.com/oracle-cne/ovirt-csi-driver/blob/master/docs/usage-example.md).
 
 Following is the structure of the config showing the default values:
@@ -402,17 +364,20 @@ providers:
   olvm:
     ovirtCsiDriver:
       install: true
+      insecureSkipTLSVerify: false
       caProvided: true
       caConfigmapName: ovirt-csi-ca.crt
       controllerPluginName: ovirt-csi-controller
       credsSecretName: ovirt-csi-creds 
       csiDriverName: csi.ovirt.org 
       namespace: ovirt-csi
-      nodePluginName: ovirt-csi-node
-  ...    
+      nodePluginName: ovirt-csi-node 
 ```
-**install**
+**install**  
 If install is true, install the ovirt-csi-driver and required resources.
+
+**insecureSkipTLSVerify**  
+If true, the skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
 
 **caProvided**
 If caProvided is true, the ovirt-csi-driver expects to find the ConfigMap containing the CA and will use that
