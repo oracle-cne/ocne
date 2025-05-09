@@ -313,7 +313,9 @@ func (cad *ClusterApiDriver) getOciCcmOptions(restConfig *rest.Config) error {
 
 	cad.ClusterConfig.Providers.Oci.Vcn = vcnId
 	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet1 = serviceSubnets[0]
-	cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 = serviceSubnets[len(serviceSubnets)-1]
+	if len(serviceSubnets) > 1 {
+		cad.ClusterConfig.Providers.Oci.LoadBalancer.Subnet2 = serviceSubnets[len(serviceSubnets)-1]
+	}
 
 	return nil
 }
