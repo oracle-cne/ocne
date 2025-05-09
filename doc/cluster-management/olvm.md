@@ -38,7 +38,7 @@ IP used to access the Kubernetes API server.  This must be also be reachable fro
 from the Cluster API boostrap cluster, and from the OCNE client.
 
 ## IPV4/IPV6 Dual-Stack Support
-The OLMV Cluster API Provider supports IPV4 alone or an IPV4/IPV6 dual-stack configuration. An IPV6-only configuration is not supported.
+The OLVM Cluster API Provider supports IPV4 alone or an IPV4/IPV6 dual-stack configuration. An IPV6-only configuration is not supported.
 
 ## Prerequisites
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
@@ -202,16 +202,16 @@ The virtual IP is used as the Kubernetes control plane endpoint (the server fiel
 This IP must be external, and cannot be in the range used by the VMs.
 
 **podSubnet**  
-An IPV4 Pod subnet comma-separated by an optional IPV6 subnet
+An IPV4 Pod subnet comma-separated from an optional IPV6 subnet
 
 **serviceSubnet**  
-An IPV4 Service subnet comma-separated by an optional IPV6 subnet
+An IPV4 Service subnet comma-separated from an optional IPV6 subnet
 
 **namespace**  
-The namespace where CLUSTER API resources will be created in your management cluster.
+The namespace where Cluster API resources will be created in your management cluster.
 
-**ovirtDatacenterName**  
-The oVirt datacenter name
+**olvmDatacenterName**  
+The OLVM datacenter name.
 
 ## olvmOvirtAPIServer
 The olvmOvirtAPIServer section specifies the configuration needed to access the OLVM oVirt REST API server.
@@ -231,19 +231,20 @@ The olvmOvirtAPIServer section specifies the configuration needed to access the 
 The serverURL is the URL of the OLVM oVirt engine that is accessed via the OLVM oVirt REST API.
 
 **serverCAPath**  
-The local file that contains the OLVM CA certificate.
+The local file that contains the OLVM CA certificate.  
 Optional if insecureSkipTLSVerify is true.
 
 **credentialsSecret**  
-The name and namespace of the OLVM credentials Kubernetes secret. 
+The name and namespace of the OLVM credentials Kubernetes secret.   
 Optional.
 
 **caConfigMap**  
-The name and namespace of the OLVM Kubernetes ConfigMap containing the OLVM CA.
+The name and namespace of the OLVM Kubernetes ConfigMap containing the OLVM CA.  
 Optional.
 
 **insecureSkipTLSVerify**  
-If true, skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
+If true, skip TLS verify when connecting to OLVM oVirt server and the CA is not needed or used.  
+Optional.
 
 ## olvmOCK
 The ovirtOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
@@ -301,14 +302,13 @@ The OLVM oVirt cluster. This cluster must exist in the OLVM datacenter.
 The OLVM vmTemplate name.  This must exist in the OLVM instance
 (Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document).
 
-
 ### controlPlaneMachine - olvmNetwork
 **olvmNetwork.networkName**  
 The OLVM network name.  This must exist in the OLVM instance.
 
 **olvmNetwork.vnicName**  
-The OLVM vnicName.  The scope of this name is the VM.
-Optional.
+The OLVM vnicName.  The scope of this name is the VM.  
+Optional.  
 
 **olvmNetwork.vnicProfileName**  
 The OLVM vnic profile name.  This must exist in the oVirt instance
@@ -318,11 +318,12 @@ The OLVM vnic profile name.  This must exist in the oVirt instance
 VM memory allocated for each Kubernetes node.
 
 **network.interface**  
-The interface used by VM.  Currently, the value `enp1s0` is required.
+The interface used by VM.  
+Optional, default is `enp1s0`  
 
 **network.interfaceType**  
-The interface type.  
-Optional, Default is virtio.
+The interface type.   
+Optional, default is `virtio`.
 
 ### IPV4
 The IPV4 configuration is required. 
@@ -332,7 +333,7 @@ The IPV4 subnet used by the VM.
 
 **network.ipv4.ipAddresses**  
 The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
-Ranges are inclusive. Space after the comma is optional.
+Ranges are inclusive. Space after the comma is optional.  
 For example: 10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27  
 
 ### IPV6
@@ -344,10 +345,9 @@ Optional, default false.
 
 **network.ipv6.ipAddresses**  
 The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
-Ranges are inclusive. Space after the comma is optional.
+Ranges are inclusive. Space after the comma is optional.  
 For example: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
 Required if IPV6 used and autoconf is false.  
-
 
 ## Machine configuration
 The control plane and worker fields are identical, but the values may be different.  These values
@@ -358,7 +358,7 @@ The ovirt-csi-driver configuration is completely optional. The driver is automat
 and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.  
 See [ovirt-csi-driver usage example](https://github.com/oracle-cne/ovirt-csi-driver/blob/master/docs/usage-example.md).
 
-Following is the structure of the config showing the default values:
+Following is the structure of the ovirt-csi-driver configuration, showing the default values:
 ```
 providers:
   olvm:
@@ -387,7 +387,7 @@ CA during network connections to the OLVM server.
 The caConfigmapName is the name of the ConfigMap containing the CA.
 
 **credsSecretName**
-The credsSecretName is the name of the Secret containing the credentials needed to communicate with the OVLM server.
+The credsSecretName is the name of the Secret containing the credentials needed to communicate with the OLVM server.
 
 **controllerPluginName**
 The controllerPluginName is the name of the deployment for the controller plugin, which is part of the driver.
