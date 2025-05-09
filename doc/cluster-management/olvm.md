@@ -37,16 +37,8 @@ much be reachable from each node in the cluster, and from the Cluster API boostr
 IP used to access the Kubernetes API server.  This must be also be reachable from each node in the cluster, 
 from the Cluster API boostrap cluster, and from the OCNE client.
 
-## OLVM vs oVirt
-There is some overlap in the terminology used for OLVM vs oVirt.  The term OLVM really has two meanings
-in this context.  First, it represents the backend OLVM oVirt instance, which is an oVirt implementation.  So, the
-term oVirt **always** means the backend OLVM oVirt instance.  Any resource or entity described as oVirt can
-be viewed from the OLVM management console, or accessed via the oVirt REST API.
-
-There is also the client side, where you create Cluster API resources.  The OLVM Cluster API has an OLVMCluster 
-resource which is not to be confused with either a Kubernetes cluster or an oVirt cluster. 
-So, when you see OLVM* field names or resource names described in this  document, it is **always** referring to OLVM Cluster API 
-resources and terminology on the client.
+## IPV4/IPV6 Dual-Stack Support
+The OLMV Cluster API Provider supports IPV4 alone or an IPV4/IPV6 dual-stack configuration. An IPV6-only configuration is not supported.
 
 ## Prerequisites
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
@@ -117,8 +109,8 @@ The following YAML shows all the fields, including optional fields:
 name: demo
 workerNodes: 1
 controlPlaneNodes: 1
-podSubnet: 10.244.0.0/16, fdXY:IJKL:MNOP:15::/64
-serviceSubnet: 10.96.0.0/12, fdXY:IJKL:42::/112
+podSubnet: 10.244.0.0/16,fdXY:IJKL:MNOP:15::/64
+serviceSubnet: 10.96.0.0/12,fdXY:IJKL:42::/112
 virtualIp: 1.2.3.160
 provider: olvm
 providers:
@@ -163,7 +155,6 @@ providers:
           ipv6:
             autoconf: false
             ipAddresses: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
-          networkName: kvm-vlan
     workerMachine:
       olvmOvirtClusterName: Default
       vmTemplateName: ock-1.31
@@ -188,121 +179,177 @@ providers:
           ipv6:
             autoconf: false
             ipAddresses: fdXY:IJKL::2250-fdXY:IJKL::2259, fdXY:ABCX::3000/64
-          networkName: kvm-vlan
 ```
-
-## Global OLVM configuration
-The global configuration has 2 sections, global fields and ignition fields.
 
 ## Global fields
+The global fields also include the [Oracle Cloud Native Environment Configuration](https://docs.oracle.com/en/operating-systems/olcne/2/cli/config_concept.html)
 ```
-virtualIp: 1.2.3.100 
 provider: olvm
+virtualIp: 1.2.3.100 
+podSubnet: 10.244.0.0/16,fdXY:IJKL:MNOP:15::/64
+serviceSubnet: 10.96.0.0/12,fdXY:IJKL:42::/112
 ...
 providers:
   olvm:
-    networkInterface: enp1s0
-    namespace: olvm-cluster
+    namespace: olvm
+    olvmDatacenterName: Default
 ```
-**virtualIp**
+**provider**  
+The provider must be olvm.
+
+**virtualIp**  
 The virtual IP is used as the Kubernetes control plane endpoint (the server field in the kubeconifg file).
 This IP must be external, and cannot be in the range used by the VMs.
 
-**provider**
-The provider must be olvm.
+**podSubnet**  
+An IPV4 Pod subnet comma-separated by an optional IPV6 subnet
 
-**networkInterface**
-The interface used by OLVM virtual machines (VMs).  Currently, the value `enp1s0` is required.
+**serviceSubnet**  
+An IPV4 Service subnet comma-separated by an optional IPV6 subnet
 
-**namespace**
+**namespace**  
 The namespace where CLUSTER API resources will be created in your management cluster.
 
-## Ignition fields
-The ignition fields need to be updated with your nameserver IP.  The other fields should stay as is.
-```
-extraIgnitionInline:
-  variant: fcos
-  version: 1.5.0
-  storage:
-    files:
-    - path: /etc/resolv.conf
-      mode: 0644
-      overwrite: false
-      contents:
-        inline: |
-          nameserver <name-server-ip>
-```
-
-## Cluster configuration
-The cluster configuration specifies fields for the OLVMCluster resource.
-```
-    olvmCluster:
-      ovirtDatacenterName: Default
-      olvmVmIpProfile:
-        name: default-ip
-        gateway: 1.2.3.1
-        netmask: 255.255.255.0
-        device: enp1s0
-        startingIpAddress: 1.2.3.161
-      ovirtAPI:
-        serverURL: https://ovirt.example.com/ovirt-engine
-        serverCAPath: "~/olvm/ca.crt"
-      ovirtOCK:
-        storageDomainName: oblock
-        diskName: olvm-ock-1.30
-        diskSize: 16GB
-```
-**ovirtDatacenterName**
+**ovirtDatacenterName**  
 The oVirt datacenter name
 
-### olvmVmIpProfile
-The profile that describes VM IP information. This profile is an OLVMMCluster concept (hence the name).
+## olvmOvirtAPIServer
+The olvmOvirtAPIServer section specifies the configuration needed to access the OLVM oVirt REST API server.
 ```
-      olvmVmIpProfile:
-        name: default-ip
-        gateway: 1.2.3.1
-        netmask: 255.255.255.0
-        device: enp1s0
-        startingIpAddress: 1.2.3.161
+    olvmOvirtAPIServer:
+      serverURL: https://example.com/ovirt-engine
+      serverCAPath: "/tmp/ca.crt"
+      credentialsSecret:
+        name: olvm-creds
+        namespace: olvm
+      caConfigMap:
+        name: olvm-ca
+        namespace: opvm
+      insecureSkipTLSVerify: true
 ```
-**name**
-The profile name. This is referenced by the control plane and machine sections.
+**serverURL**  
+The serverURL is the URL of the OLVM oVirt engine that is accessed via the OLVM oVirt REST API.
 
-**gateway**
-The default gateway on the VM.
+**serverCAPath**  
+The local file that contains the OLVM CA certificate.
+Optional if insecureSkipTLSVerify is true.
 
-**netmask**
-The netmask used by the VM.
+**credentialsSecret**  
+The name and namespace of the OLVM credentials Kubernetes secret. 
+Optional.
 
-**device**
-The ethernet interface device on the VM.
+**caConfigMap**  
+The name and namespace of the OLVM Kubernetes ConfigMap containing the OLVM CA.
+Optional.
 
-**startingIpAddress**
-The starting IP address of a contiguous block of addresses to use for VMs.  NOTE: the **virtualIp** cannot be in this range.  
+**insecureSkipTLSVerify**  
+If true, the skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
 
-### ovirtAPI
-The ovirtAPI section specifies the information needed to access the oVirt engine via the REST API.
-
-**serverURL**
-The serverURL is the URL of the oVirt engine that is accessed via the oVirt REST API. 
-
-**serverCAPath**
-The local file that contains the oVirt CA certificate.
-
-### ovirtOCK
+## olvmOCK
 The ovirtOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
+```text
+    olvmOCK:
+      storageDomainName: olvm-data
+      diskName: ock-1.31
+      diskSize: 16GB
+```
 
-**storageDomainName**
+**storageDomainName**  
 The name of an existing oVirt storage domain where the image will be uploaded.
 
-**diskName**
+**diskName**  
 The name of the disk that will be created in the storage domain as a result of the upload.
 This is the disk name that you specify when you create a VM template.
 
-**diskSize**
+**diskSize**  
 The provisioned virtual disk size name to be used for the disk created in the storage domain.  This is the disk space that will
 be allocated for the VM regardless of the size of the image on disk.  For example, the image might be 2.5GB, but the provisioned size
 could be 16GB.
+
+## controlPlaneMachine
+```text
+    controlPlaneMachine:
+      olvmOvirtClusterName: Default
+      vmTemplateName: ock-1.31
+      olvmNetwork:
+        networkName: kvm-vlan
+        vnicName: nic-1
+        vnicProfileName: kvm-vlan
+      virtualMachine:
+        memory: "7GB"
+        cpu:
+          topology:
+            cores: 7
+            sockets: 9
+            threads: 2
+        network:
+          gateway: 1.2.3.1
+          interface: enp1s0
+          interfaceType: virtio
+          ipv4:
+            subnet: 1.2.3.160/24
+            ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.3.200-1.2.3.220
+          ipv6:
+            autoconf: false
+            ipAddresses: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
+```
+**olvmOvirtClusterName**  
+The OLVM oVirt cluster. This cluster must exist in the OLVM datacenter.
+**Note**This is not to be confused with the OLVMCluster which is a Cluster API resource.
+
+**vmTemplateName**  
+The OLVM vmTemplate name.  This must exist in the OLVM instance
+(Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document).
+
+
+### controlPlaneMachine - olvmNetwork
+**olvmNetwork.networkName**  
+The OLVM network name.  This must exist in the OLVM instance.
+
+**olvmNetwork.vnicName**  
+The OLVM vnicName.  The scope of this name is the VM.
+Optional.
+
+**olvmNetwork.vnicProfileName**  
+The OLVM vnic profile name.  This must exist in the oVirt instance
+
+### controlPlaneMachine - virtualMachine
+**memory**  
+VM memory allocated for each Kubernetes node.
+
+**network.interface**  
+The interface used by VM.  Currently, the value `enp1s0` is required.
+
+**network.interfaceType**  
+The interface type.  
+Optional, Default is virtio.
+
+### IPV4
+The IPV4 configuration is required. 
+
+**network.ipv4.subnet**   
+The IPV4 subnet used by the VM.
+
+**network.ipv4.ipAddresses**  
+The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
+Ranges are inclusive. Space after the comma is optional.
+10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27
+
+### IPV6
+The IPV4 configuration is optional.
+
+**network.ipv6.autoconf**  
+If true, then auto-configure the IPV6 using SLAAC.
+Optional, default false.
+
+**network.ipv6.ipAddresses**  
+The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
+Ranges are inclusive. Space after the comma is optional.
+10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27
+Optional
+
+
+
 
 ## Machine configuration
 The control plane and worker fields are identical, but the values may be different.  These values
@@ -331,32 +378,18 @@ apply to all the control plane nodes and worker nodes in the cluster.
       vmTemplateName: olvm-tmplate-1.30
 
 ```
-**memory**
+**memory**  
 VM memory allocated for each Kubernetes node.
 
-**network.interfaceType**
-The interface type.  Use virtio unless you need to change it.
+**cpu.topology**  
+The cpu cores, sockets and threads.  
+Optional.  Default is 2 cores, 2 sockets, 1 thread.
+
 
 **network.Name**
 The oVirt network name.  This must exist in the oVirt instance.
 
-**network.vnicName**
-The oVirt vnicName.  The scope is the VM.
-optional
 
-**network.vnicProfileName**
-The oVirt vnic profile name.  This must exist in the oVirt instance
-
-**ovirtClusterName**
-The oVirt cluster.  This must exist in the datacenter.
-
-**olvmVmIpProfileName**
-The OLVM VM IP profile name that is defined in the cluster section above.
-The VM will use that profile.
-
-**vmTemplateName**
-The oVirt vmTemplate name.  This must exist in the oVirt instance
-(Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document.)
 
 ## Ovirt CSI Driver configuration (optional)
 The ovirt-csi-driver configuration is optional, there is no need to explicitly configure anything. The driver is
@@ -403,6 +436,23 @@ The namespace where the ovirt-csi-driver and all related resources are created.
 
 **nodePluginName**
 The nodePluginName is the name of the daemonset for the node plugin, which is part of the driver.
+
+
+## Ignition fields
+The ignition fields need to be updated with your nameserver IP.  The other fields should stay as is.
+```
+extraIgnitionInline:
+  variant: fcos
+  version: 1.5.0
+  storage:
+    files:
+    - path: /etc/resolv.conf
+      mode: 0644
+      overwrite: false
+      contents:
+        inline: |
+          nameserver <name-server-ip>
+```
 
 
 # Preparing to Create a Cluster
