@@ -177,6 +177,8 @@ providers:
     sshKey: /home/myuser/.ssh/id_rsa.ocne
     # The storage pool to use for images
     storagePool: mypool
+    # The subnet to use for the slirp network interface
+    slirpSubnet: 192.18.255.0/24
     # The virtual network to use for domains
     network: bridge-1
     # Boot volume name
