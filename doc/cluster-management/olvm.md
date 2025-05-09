@@ -350,8 +350,8 @@ For example: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
 Required if IPV6 used and autoconf is false.  
 
 ## Machine configuration
-The control plane and worker fields are identical, but the values may be different.  These values
-apply to all the worker nodes in the MachineDeployment.
+The worker machine has identical fields to control-plane machine, but the values may be different.  These values
+apply to all the worker nodes in the MachineDeployment.  
 
 ## Ovirt CSI Driver configuration (optional)
 The ovirt-csi-driver configuration is completely optional. The driver is automatically installed
