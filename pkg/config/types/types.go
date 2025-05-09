@@ -12,6 +12,7 @@ type LibvirtProvider struct {
 	WorkerNode                   Node   `yaml:"workerNode"`
 	BootVolumeName               string `yaml:"bootVolumeName"`
 	BootVolumeContainerImagePath string `yaml:"bootVolumeContainerImagePath"`
+	SlirpSubnet                  string `yaml:"slirpSubnet"`
 }
 
 type OciInstanceShape struct {
@@ -417,6 +418,7 @@ func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtPro
 	}
 	return LibvirtProvider{
 		SessionURI:                   ies(def.SessionURI, ovr.SessionURI),
+		SlirpSubnet:                  ies(def.SlirpSubnet, ovr.SlirpSubnet),
 		SshKey:                       ies(def.SshKey, ovr.SshKey),
 		StoragePool:                  ies(def.StoragePool, ovr.StoragePool),
 		Network:                      ies(def.Network, ovr.Network),

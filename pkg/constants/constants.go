@@ -32,6 +32,7 @@ const (
 	EphemeralNodeStorage         = "30Gi"
 	EphemeralClusterName         = "ocne-ephemeral"
 	EphemeralClusterPreserve     = true
+	SlirpSubnet                  = "192.18.255.0/24"
 
 	// Kubernetes defaults`
 	KubeAPIServerBindPort    = uint16(6443)

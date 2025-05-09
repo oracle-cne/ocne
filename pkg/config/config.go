@@ -50,6 +50,7 @@ func GetDefaultConfig() (*types.Config, error) {
 		Providers: types.Providers{
 			Libvirt: types.LibvirtProvider{
 				SessionURI:  constants.SessionURI,
+				SlirpSubnet: constants.SlirpSubnet,
 				StoragePool: constants.StoragePool,
 				Network:     constants.Network,
 				ControlPlaneNode: types.Node{

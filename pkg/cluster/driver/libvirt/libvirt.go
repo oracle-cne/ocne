@@ -78,6 +78,7 @@ type Network struct {
 	Network      string
 	Bus          string
 	Slot         string
+	Subnet       string
 	PortForwards []PortForward
 }
 
@@ -512,6 +513,7 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 			Slot: fmt.Sprintf("%d", UserSlot),
 		}
 		if ld.Config.LoadBalancer == "" {
+			userNetwork.Subnet = ld.Config.Providers.Libvirt.SlirpSubnet
 			userNetwork.PortForwards = []PortForward{
 				{
 					From:   ld.TunnelPort,

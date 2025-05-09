@@ -146,7 +146,7 @@ const (
 {{range $net := .Networks}}
   {{if (eq $net.Type "user")}}
     <qemu:arg value='-netdev'/>
-    <qemu:arg value='user,id=mynet,net=10.0.10.0/24{{range $pf := $net.PortForwards}},hostfwd=tcp:{{$pf.Listen}}:{{$pf.From}}-:{{$pf.To}}{{end}}'/>
+    <qemu:arg value='user,id=mynet,net={{$net.Subnet}}{{range $pf := $net.PortForwards}},hostfwd=tcp:{{$pf.Listen}}:{{$pf.From}}-:{{$pf.To}}{{end}}'/>
     <qemu:arg value='-device'/>
     <qemu:arg value='virtio-net,netdev=mynet,addr=0{{$net.Slot}}.0'/>
   {{end}}
