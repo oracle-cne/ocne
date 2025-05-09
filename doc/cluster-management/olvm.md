@@ -28,9 +28,9 @@ The OLVM Cluster API Provider implements an infrastructure Cluster controller (O
 an infrastructure Machine controller (OLVMMachine CRD).  Both are housed in a single operator. This
 provider interacts with OLVM using the [oVirt REST API.](https://www.ovirt.org/documentation/doc-REST_API_Guide/)
 
-Machine and OLVMMachines are CAPI resources. There is an OLVM VM created for each Machine.  Each VM contains a single Kubernetes node.
+Machine and OLVMMachines are CAPI resources. There is an OLVM VM created for each machine.  Each VM contains a single Kubernetes node.
 
-The oVirt instance is the same as the oVirt installation.  It is where the oVirt console runs, the oVirt engine, etc.
+The OLVM instance refers to the OLVM installation running on a set of servers.  It is where the OLVM console runs, the OLVM oVirt engine, etc.
 
 The term `external IPs` describes a range of static IPs within the subnet of the network that the VMs are attached to.  These IPs
 much be reachable from each node in the cluster, and from the Cluster API boostrap cluster.  The `virtual IP` is the
@@ -43,7 +43,7 @@ The OLVM Cluster API Provider supports IPV4 alone or an IPV4/IPV6 dual-stack con
 ## Prerequisites
 * You must have an existing OLVM installation that can be accessed via a set of external IPs.
 * You will need an IP for the Kubernetes control plane node and an IP for each cluster node.
-* The CA certificate used for the oVirt rest API must be downloaded to a local file, even if it is not self-signed.  See [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate)
+* The CA certificate used for the OLVM oVirt rest API must be downloaded to a local file, even if it is not self-signed.  See [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate)
 * All the network interface devices should be the same, such as enp1s0.
 
 ## Restrictions
@@ -247,7 +247,7 @@ If true, skip TLS verify when connecting to OLVM oVirt server and the CA is not 
 Optional.
 
 ## olvmOCK
-The ovirtOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
+The olvmOCK section specifies the information needed to upload the OLVM OCK image using the `ocne image upload` command.
 ```text
     olvmOCK:
       storageDomainName: olvm-data
@@ -256,7 +256,7 @@ The ovirtOCK section specifies the information needed to upload the OLVM OCK ima
 ```
 
 **storageDomainName**  
-The name of an existing oVirt storage domain where the image will be uploaded.
+The name of an existing OLVM storage domain where the image will be uploaded.
 
 **diskName**  
 The name of the disk that will be created in the storage domain as a result of the upload.
@@ -311,7 +311,7 @@ The OLVM vnicName.  The scope of this name is the VM.
 Optional.  
 
 **olvmNetwork.vnicProfileName**  
-The OLVM vnic profile name.  This must exist in the oVirt instance
+The OLVM vnic profile name.  This must exist in the OLVM instance
 
 ### controlPlaneMachine - virtualMachine
 **memory**  
@@ -436,8 +436,8 @@ Use "ovirt-app-api" as the scope, unless you have created a user with a differen
 The username must have @internal suffix.  So if you log into the OLVM console with "admin", then
 the OCNE_OLVM_USERNAME is "admin@internal"
 
-## oVirt REST API CA Certificate
-You also must download the oVirt REST API CA certificate and put it into a file referenced by the cluster configuration (see below).
+## OLVM oVirt REST API CA Certificate
+You also must download the OLVM oVirt REST API CA certificate and put it into a file referenced by the cluster configuration (see below).
 Make sure you only use the second certificate returned by the instructions at [oVirt CA](https://www.ovirt.org/documentation/doc-REST_API_Guide/#obtaining-the-ca-certificate).
 
 
@@ -504,7 +504,7 @@ INFO[2024-12-20T13:52:11-05:00] Successfully uploaded OCK image
 ```
 
 ### Creating a VM template
-Now you need to use the OLVM oVirt console to create a template that uses the image you just uploaded.
+Now you need to use the OLVM console to create a template that uses the image you just uploaded.
 
 1. Navigate to Compute->Virtual Machines  
 2. Click the New button to create a virtual machine  
@@ -587,15 +587,15 @@ creating the next.  However, all the worker nodes are created concurrently.
 Also, can watch the CAPI infrastructure machines being created (IPs redacted):
 ```
 kubectl get OLVMMachine -A -o wide
-NAMESPACE      NAME                       CLUSTER   READY   AGE     OVIRT-CLUSTER   MEMORY   CORES   SOCKETS   VMSTATUS   VMIPADDRESS
-olvm-cluster   demo-control-plane-l2zrs   demo      true    14m     Default         7GB      2       2         up         1.2.3.1
-olvm-cluster   demo-control-plane-mkd4p   demo      true    2m19s   Default         7GB      2       2         up         1.2.3.2
-olvm-cluster   demo-control-plane-t5gvv   demo      true    5m      Default         7GB      2       2         up         1.2.3.3
-olvm-cluster   demo-md-0-v5xsk-hsbcw      demo      true    14m     Default         16GB     2       2         up         1.2.3.4
-olvm-cluster   demo-md-0-v5xsk-s9sm4      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.5
-olvm-cluster   demo-md-0-v5xsk-sfmfg      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.6
-olvm-cluster   demo-md-0-v5xsk-v6dw9      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.7
-olvm-cluster   demo-md-0-v5xsk-wfhjg      demo      true    3m2s    Default         16GB     2       2         up         1.2.3.8
+NAMESPACE      NAME                       CLUSTER   READY   AGE     MEMORY   CORES   SOCKETS   VMSTATUS   VMIPADDRESS
+olvm-cluster   demo-control-plane-l2zrs   demo      true    14m      7GB      2       2         up         1.2.3.1
+olvm-cluster   demo-control-plane-mkd4p   demo      true    2m19s    7GB      2       2         up         1.2.3.2
+olvm-cluster   demo-control-plane-t5gvv   demo      true    5m       7GB      2       2         up         1.2.3.3
+olvm-cluster   demo-md-0-v5xsk-hsbcw      demo      true    14m      16GB     2       2         up         1.2.3.4
+olvm-cluster   demo-md-0-v5xsk-s9sm4      demo      true    3m2s     16GB     2       2         up         1.2.3.5
+olvm-cluster   demo-md-0-v5xsk-sfmfg      demo      true    3m2s     16GB     2       2         up         1.2.3.6
+olvm-cluster   demo-md-0-v5xsk-v6dw9      demo      true    3m2s     16GB     2       2         up         1.2.3.7
+olvm-cluster   demo-md-0-v5xsk-wfhjg      demo      true    3m2s     16GB     2       2         up         1.2.3.8
 ```
 
 Eventually, you should see all the nodes created and ready:
