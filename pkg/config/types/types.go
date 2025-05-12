@@ -82,11 +82,6 @@ type OlvmOck struct {
 	StorageDomainName string `yaml:"storageDomainName"`
 }
 
-type OlvmControlPlaneEndpoint struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
-}
-
 type OlvmAPIServer struct {
 	CAConfigMap              NamespacedName `yaml:"caConfigMap"`
 	CredentialsSecret        NamespacedName `yaml:"credentialsSecret"`
