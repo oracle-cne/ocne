@@ -5,7 +5,6 @@ package olvm
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -21,31 +20,13 @@ func NewLogHandler() *LogHandler {
 	}
 }
 
-var tolerations = []*regexp.Regexp{
-	// '\' is a special character in regex as well as strings, so we need
-	// some goop to match '\"'.
-	// \\\\\" -> \\ escapes the next backslash \\ literal backslash \" escapes the quote
-	// In each pair, the first backslash is for the string escaping.
-	regexp.MustCompile("OLVMCluster\\.infrastructure\\.cluster\\.x-k8s\\.io \\\\\".*\\\\\" not found"),
-}
-
 func (olh *LogHandler) Handle(lines []string) {
 	// If the message is not an error, ignore it
 	if !strings.Contains(lines[0], "ERROR") {
 		return
 	}
 
-	// Check if this error message is tolerated
-	for _, r := range tolerations {
-		if r.Match([]byte(lines[0])) {
-			return
-		}
-	}
-
-	// This message is an error.  Look at it to see if it's an error
-	// that has been seen before.  If it has, don't print it again.
-
-	// The format of the text messages is text fields separated by tabs.
+	// The format of the unstructured log messages is text fields separated by tabs.
 	// Assuming the format to be:
 	//   part[0] - timestamp
 	//   part[1] - log level
@@ -56,6 +37,7 @@ func (olh *LogHandler) Handle(lines []string) {
 
 	// The key for the message is:
 	// - Error message
+	// Keep track of errors we have seen before and only log them once.
 	key := fmt.Sprintf("%s", strings.TrimSpace(parts[3]))
 	_, ok := olh.Errors[key]
 	if ok {
@@ -64,5 +46,7 @@ func (olh *LogHandler) Handle(lines []string) {
 
 	olh.Errors[key] = true
 
-	log.Errorf("Error with OLVM Cluster API provider:\n%s", lines[0])
+	// The complete error may span more than one line.
+	// Print all the lines as a single message to the console.
+	log.Errorf("Error with OLVM Cluster API provider:\n%s", strings.Join(lines[0:], "\n"))
 }
