@@ -62,18 +62,14 @@ type OlvmProvider struct {
 }
 
 type OvirtCsiDriver struct {
-	CaProvided               bool   `yaml:"caProvidedFake"`
-	CaProvidedPtr            *bool  `yaml:"caProvided,omitempty"`
-	InsecureSkipTLSVerify    bool   `yaml:"insecureSkipTLSVerifyFake"`
-	InsecureSkipTLSVerifyPtr *bool  `yaml:"insecureSkipTLSVerify,omitempty"`
-	ConfigMapName            string `yaml:"caConfigmapName"`
-	ControllerPluginName     string `yaml:"controllerPluginName"`
-	CsiDriverName            string `yaml:"csiDriverName"`
-	Install                  bool   `yaml:"installFake"`
-	InstallPtr               *bool  `yaml:"install,omitempty"`
-	Namespace                string `yaml:"namespace"`
-	NodePluginName           string `yaml:"nodePluginName"`
-	SecretName               string `yaml:"credsSecretName"`
+	ConfigMapName        string `yaml:"caConfigmapName"`
+	ControllerPluginName string `yaml:"controllerPluginName"`
+	CsiDriverName        string `yaml:"csiDriverName"`
+	Install              bool   `yaml:"installFake"`
+	InstallPtr           *bool  `yaml:"install,omitempty"`
+	Namespace            string `yaml:"namespace"`
+	NodePluginName       string `yaml:"nodePluginName"`
+	SecretName           string `yaml:"credsSecretName"`
 }
 
 type NamespacedName struct {
@@ -85,11 +81,6 @@ type OlvmOck struct {
 	DiskName          string `yaml:"diskName"`
 	DiskSize          string `yaml:"diskSize"`
 	StorageDomainName string `yaml:"storageDomainName"`
-}
-
-type OlvmControlPlaneEndpoint struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
 }
 
 type OlvmAPIServer struct {
@@ -379,7 +370,7 @@ func MergeApplications(def []Application, ovr []Application) []Application {
 	return append(append([]Application{}, def...), ovr...)
 }
 
-// MergeCertificationInformation takes two CertificateInformations and merges them into a third.
+// MergeCertificateInformation takes two CertificateInformations and merges them into a third.
 // The default values for the result come from the first argument.  If a value
 // is set in the second argument, that value takes precedence.
 func MergeCertificateInformation(def *CertificateInformation, ovr *CertificateInformation) CertificateInformation {
@@ -517,18 +508,14 @@ func MergeOlvmProvider(def *OlvmProvider, ovr *OlvmProvider) OlvmProvider {
 // takes precedence.
 func MergeOlvmCsiDriver(def *OvirtCsiDriver, ovr *OvirtCsiDriver) OvirtCsiDriver {
 	return OvirtCsiDriver{
-		CaProvided:               iebp(def.CaProvidedPtr, ovr.CaProvidedPtr, true),
-		CaProvidedPtr:            iebpp(def.CaProvidedPtr, ovr.CaProvidedPtr),
-		InsecureSkipTLSVerify:    iebp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr, false),
-		InsecureSkipTLSVerifyPtr: iebpp(def.InsecureSkipTLSVerifyPtr, ovr.InsecureSkipTLSVerifyPtr),
-		ConfigMapName:            ies(def.ConfigMapName, ovr.ConfigMapName),
-		ControllerPluginName:     ies(def.ControllerPluginName, ovr.ControllerPluginName),
-		CsiDriverName:            ies(def.CsiDriverName, ovr.CsiDriverName),
-		Install:                  iebp(def.InstallPtr, ovr.InstallPtr, true),
-		InstallPtr:               iebpp(def.InstallPtr, ovr.InstallPtr),
-		NodePluginName:           ies(def.NodePluginName, ovr.NodePluginName),
-		Namespace:                ies(def.Namespace, ovr.Namespace),
-		SecretName:               ies(def.SecretName, ovr.SecretName),
+		ConfigMapName:        ies(def.ConfigMapName, ovr.ConfigMapName),
+		ControllerPluginName: ies(def.ControllerPluginName, ovr.ControllerPluginName),
+		CsiDriverName:        ies(def.CsiDriverName, ovr.CsiDriverName),
+		Install:              iebp(def.InstallPtr, ovr.InstallPtr, true),
+		InstallPtr:           iebpp(def.InstallPtr, ovr.InstallPtr),
+		NodePluginName:       ies(def.NodePluginName, ovr.NodePluginName),
+		Namespace:            ies(def.Namespace, ovr.Namespace),
+		SecretName:           ies(def.SecretName, ovr.SecretName),
 	}
 }
 
@@ -552,17 +539,6 @@ func MergeOlvmOck(def *OlvmOck, ovr *OlvmOck) OlvmOck {
 		DiskName:          ies(def.DiskName, ovr.DiskName),
 		DiskSize:          ies(def.DiskSize, ovr.DiskSize),
 		StorageDomainName: ies(def.StorageDomainName, ovr.StorageDomainName),
-	}
-}
-
-// MergeOlvmControlPlaneEndpoint takes two OlvmControlPlaneEndpoints and merges them into
-// a third.  The default value for the result comes from the first
-// argument.  If a value is set in the second argument, that value
-// takes precedence.
-func MergeOlvmControlPlaneEndpoint(def *OlvmControlPlaneEndpoint, ovr *OlvmControlPlaneEndpoint) OlvmControlPlaneEndpoint {
-	return OlvmControlPlaneEndpoint{
-		Host: ies(def.Host, ovr.Host),
-		Port: ies(def.Port, ovr.Port),
 	}
 }
 
