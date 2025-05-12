@@ -149,7 +149,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				}
 
 				// create the CA.CRT configmap
-				if !cad.ClusterConfig.Providers.Olvm.CSIDriver.InsecureSkipTLSVerify {
+				if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
 					caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
 					if err != nil {
 						return err
@@ -218,8 +218,10 @@ func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	// Create override structure required by the ovirt-csi-driver Helm chart.
 	ov := make(map[string]interface{})
 
-	if olvm.CSIDriver.CaProvidedPtr != nil {
-		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = olvm.CSIDriver.CaProvided
+	if !olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		if len(olvm.OlvmAPIServer.ServerCA) > 0 || len(olvm.OlvmAPIServer.ServerCAPath) > 0 {
+			util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = true
+		}
 	}
 	if olvm.CSIDriver.ConfigMapName != "" {
 		util.EnsureNestedMap(ov, ovirtPath)[cmNameKey] = olvm.CSIDriver.ConfigMapName
@@ -236,8 +238,8 @@ func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	if olvm.CSIDriver.SecretName != "" {
 		util.EnsureNestedMap(ov, ovirtPath)[secretNameKey] = olvm.CSIDriver.SecretName
 	}
-	if olvm.CSIDriver.InsecureSkipTLSVerify {
-		util.EnsureNestedMap(ov, ovirtPath)[insecureKey] = olvm.CSIDriver.InsecureSkipTLSVerify
+	if olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		util.EnsureNestedMap(ov, ovirtPath)[insecureKey] = olvm.OlvmAPIServer.InsecureSkipTLSVerify
 		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = false
 	}
 
