@@ -31,67 +31,32 @@ var tolerations = []*regexp.Regexp{
 
 func (olh *LogHandler) Handle(lines []string) {
 	// If the message is not an error, ignore it
-	if lines[0][0] != 'E' {
+	if !strings.Contains(lines[0], "ERROR") {
 		return
 	}
 
-	// Error messages are usually split across a few lines.  If it's not,
-	// then log an error if the error is not tolerated.
-	if len(lines) == 1 {
-		for _, r := range tolerations {
-			if r.Match([]byte(lines[0])) {
-				return
-			}
+	// Check if this error message is tolerated
+	for _, r := range tolerations {
+		if r.Match([]byte(lines[0])) {
+			return
 		}
-		log.Errorf("Saw unexpected error message in OLVM Cluster API provider logs: %s", lines[0])
-		return
 	}
 
 	// This message is an error.  Look at it to see if it's an error
 	// that has been seen before.  If it has, don't print it again.
 
-	prefix, suffix, _ := strings.Cut(lines[1], " Message: ")
-	if prefix == "" {
-		log.Errorf("Saw unexpected line in error message in OLVM Cluster API provider logs: %s", lines[1])
-		return
-	}
-	if suffix == "" {
-		log.Errorf("Saw unexpected line in error message in OLVM Cluster API provider logs: %s", lines[1])
-		return
-	}
-
-	// Assemble the message
-	lines[1] = fmt.Sprintf("%s %s", prefix, suffix)
+	// The format of the text messages is text fields separated by tabs.
+	// Assuming the format to be:
+	//   part[0] - timestamp
+	//   part[1] - log level
+	//   part[2] - caller
+	//   part[3] - error text
+	//   part[4] - additional info (e.g., name, namespace, GVK)
+	parts := strings.Split(lines[0], "\t")
 
 	// The key for the message is:
-	// - Error message minus request id
-	// - Operation name
-	// - Endpoint
-	opName := ""
-	endpoint := ""
-	for idx, l := range lines {
-		line := strings.TrimSpace(l)
-		lines[idx] = line
-		if strings.HasPrefix(line, "Operation Name:") {
-			opName = line
-			continue
-		}
-		if strings.HasPrefix(line, "Request Endpoint:") {
-			endpoint = line
-			continue
-		}
-	}
-
-	if opName == "" {
-		log.Errorf("OLVM Cluster API provider log does not have an operation name")
-		return
-	}
-	if endpoint == "" {
-		log.Errorf("OLVM Cluster API provider log does not have a request endpoint")
-		return
-	}
-
-	key := fmt.Sprintf("%s %s %s", lines[1], opName, endpoint)
+	// - Error message
+	key := fmt.Sprintf("%s", strings.TrimSpace(parts[3]))
 	_, ok := olh.Errors[key]
 	if ok {
 		return
@@ -99,5 +64,5 @@ func (olh *LogHandler) Handle(lines []string) {
 
 	olh.Errors[key] = true
 
-	log.Errorf("Error with OLVM Cluster API provider:\n%s", strings.Join(lines[1:], "\n"))
+	log.Errorf("Error with OLVM Cluster API provider:\n%s", lines[0])
 }

@@ -91,7 +91,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 		if err != nil {
 			return false, false, err
 		}
-		re := "^[A-Z][0-9]+"
+		re := "^.*\\s+(ERROR)\\s+.*$"
 		md, err := util.NewMessageDispatcher(re, NewLogHandler())
 		if err != nil {
 			err = fmt.Errorf("Internal error: regex \"%s\" does not compile: %v", re, err)
