@@ -16,8 +16,8 @@ type LibvirtProvider struct {
 }
 
 type OciInstanceShape struct {
-	Shape string `yaml:"shape"`
-	Ocpus int    `yaml:"ocpus"`
+	Shape          string `yaml:"shape"`
+	Ocpus          int    `yaml:"ocpus"`
 	BootVolumeSize string `yaml:"bootVolumeSizeInGBs"`
 }
 
@@ -122,26 +122,32 @@ type OlvmVirtualMachine struct {
 }
 
 type OlvmMachineCpu struct {
-	Architecture string                `yaml:"architecture"`
-	Topology     OlvmMachineCpuToplogy `yaml:"topology"`
+	Architecture string                 `yaml:"architecture"`
+	Topology     OlvmMachineCpuTopology `yaml:"topology"`
 }
 
-type OlvmMachineCpuToplogy struct {
+type OlvmMachineCpuTopology struct {
 	Cores   int `yaml:"cores"`
 	Sockets int `yaml:"sockets"`
 	Threads int `yaml:"threads"`
 }
 
 type OlvmVirtualMachineNetwork struct {
-	Gateway       string `yaml:"gateway"`
-	Interface     string `yaml:"interface"`
-	InterfaceType string `yaml:"interfaceType"`
-	IPV4          OlvmIP `yaml:"ipv4"`
-	IPV6          OlvmIP `yaml:"ipv6"`
+	Gateway       string   `yaml:"gateway"`
+	Interface     string   `yaml:"interface"`
+	InterfaceType string   `yaml:"interfaceType"`
+	IPV4          OlvmIPV4 `yaml:"ipv4"`
+	IPV6          OlvmIPV6 `yaml:"ipv6"`
 }
 
-type OlvmIP struct {
+type OlvmIPV4 struct {
 	Subnet      string `yaml:"subnet"`
+	IpAddresses string `yaml:"ipAddresses"`
+}
+
+type OlvmIPV6 struct {
+	AutoConf    bool   `yaml:"autoConfFake"`
+	AutoConfPtr *bool  `yaml:"autoConf,omitempty"`
 	IpAddresses string `yaml:"ipAddresses"`
 }
 
@@ -435,8 +441,8 @@ func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtPro
 // takes precendence.
 func MergeOciInstanceShape(def *OciInstanceShape, ovr *OciInstanceShape) OciInstanceShape {
 	return OciInstanceShape{
-		Shape: ies(def.Shape, ovr.Shape),
-		Ocpus: iei(def.Ocpus, ovr.Ocpus),
+		Shape:          ies(def.Shape, ovr.Shape),
+		Ocpus:          iei(def.Ocpus, ovr.Ocpus),
 		BootVolumeSize: ies(def.BootVolumeSize, ovr.BootVolumeSize),
 	}
 }
@@ -620,16 +626,16 @@ func MergeOlvmVirtualMachine(def *OlvmVirtualMachine, ovr *OlvmVirtualMachine) O
 func MergeOlvmMachineCpu(def *OlvmMachineCpu, ovr *OlvmMachineCpu) OlvmMachineCpu {
 	return OlvmMachineCpu{
 		Architecture: ies(def.Architecture, ovr.Architecture),
-		Topology:     MergeOlvmMachineCpuToplogy(&def.Topology, &ovr.Topology),
+		Topology:     MergeOlvmMachineCpuTopology(&def.Topology, &ovr.Topology),
 	}
 }
 
-// MergeOlvmMachineCpuToplogy takes two OlvmMachineCpuToplogies and merges them into
+// MergeOlvmMachineCpuTopology takes two OlvmMachineCpuTopologies and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmMachineCpuToplogy(def *OlvmMachineCpuToplogy, ovr *OlvmMachineCpuToplogy) OlvmMachineCpuToplogy {
-	return OlvmMachineCpuToplogy{
+func MergeOlvmMachineCpuTopology(def *OlvmMachineCpuTopology, ovr *OlvmMachineCpuTopology) OlvmMachineCpuTopology {
+	return OlvmMachineCpuTopology{
 		Cores:   iei(def.Cores, ovr.Cores),
 		Sockets: iei(def.Sockets, ovr.Sockets),
 		Threads: iei(def.Threads, ovr.Threads),
@@ -645,18 +651,30 @@ func MergeOlvmVirtualMachineNetwork(def *OlvmVirtualMachineNetwork, ovr *OlvmVir
 		Gateway:       ies(def.Gateway, ovr.Gateway),
 		Interface:     ies(def.Interface, ovr.Interface),
 		InterfaceType: ies(def.InterfaceType, ovr.InterfaceType),
-		IPV4:          MergeOlvmIP(&def.IPV4, &ovr.IPV4),
-		IPV6:          MergeOlvmIP(&def.IPV6, &ovr.IPV6),
+		IPV4:          MergeOlvmIPV4(&def.IPV4, &ovr.IPV4),
+		IPV6:          MergeOlvmIPV6(&def.IPV6, &ovr.IPV6),
 	}
 }
 
-// MergeOlvmIP takes two OlvmIP and merges them into
+// MergeOlvmIPV4 takes two OlvmIPV4 and merges them into
 // a third.  The default value for the result comes from the first
 // argument.  If a value is set in the second argument, that value
 // takes precedence.
-func MergeOlvmIP(def *OlvmIP, ovr *OlvmIP) OlvmIP {
-	return OlvmIP{
+func MergeOlvmIPV4(def *OlvmIPV4, ovr *OlvmIPV4) OlvmIPV4 {
+	return OlvmIPV4{
 		Subnet:      ies(def.Subnet, ovr.Subnet),
+		IpAddresses: ies(def.IpAddresses, ovr.IpAddresses),
+	}
+}
+
+// MergeOlvmIPV6 takes two OlvmIPV6 and merges them into
+// a third.  The default value for the result comes from the first
+// argument.  If a value is set in the second argument, that value
+// takes precedence.
+func MergeOlvmIPV6(def *OlvmIPV6, ovr *OlvmIPV6) OlvmIPV6 {
+	return OlvmIPV6{
+		AutoConf:    iebp(def.AutoConfPtr, ovr.AutoConfPtr, false),
+		AutoConfPtr: iebpp(def.AutoConfPtr, ovr.AutoConfPtr),
 		IpAddresses: ies(def.IpAddresses, ovr.IpAddresses),
 	}
 }

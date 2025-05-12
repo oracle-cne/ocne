@@ -165,7 +165,7 @@ spec:
             {{- range .ControlPlaneIPV6Addresses }}
             - "{{.}}"
             {{- end }}
-            subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet}}"
+            autoConf: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.AutoConf}}"
           {{- end }}
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Cpu.Architecture}}"
@@ -229,7 +229,7 @@ spec:
             {{- range .WorkerIPV6Addresses }}
               - "{{.}}"
             {{- end }}
-            subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet}}"
+            autoConf: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.AutoConf}}"
           {{- end }}
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Cpu.Architecture}}"
