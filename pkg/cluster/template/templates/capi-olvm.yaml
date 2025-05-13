@@ -159,13 +159,15 @@ spec:
             {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV4.Subnet}}"
           {{- end }}
-          {{- if .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet }}
+          {{- if or .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.IpAddresses .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.AutoConf }}
           ipv6:
+            {{- if .ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.IpAddresses }}
             ipAddresses:
             {{- range .ControlPlaneIPV6Addresses }}
             - "{{.}}"
             {{- end }}
-            subnet: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.Subnet}}"
+            {{- end }}
+            autoConf: {{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.IPV6.AutoConf}}
           {{- end }}
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Cpu.Architecture}}"
@@ -223,13 +225,15 @@ spec:
             {{- end }}
             subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV4.Subnet}}"
           {{- end }}
-          {{- if .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet }}
+          {{- if or .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.IpAddresses .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.AutoConf }}
           ipv6:
+            {{- if .ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.IpAddresses }}
             ipAddresses:
             {{- range .WorkerIPV6Addresses }}
               - "{{.}}"
             {{- end }}
-            subnet: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.Subnet}}"
+            {{- end }}
+            autoConf: {{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Network.IPV6.AutoConf}}
           {{- end }}
         cpu:
           architecture: "{{.ClusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine.Cpu.Architecture}}"
