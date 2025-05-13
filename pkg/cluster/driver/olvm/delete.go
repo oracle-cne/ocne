@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package olvm
@@ -6,6 +6,10 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -13,10 +17,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	log "github.com/sirupsen/logrus"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 // Delete deletes the CAPI resources in the bootstrap cluster which results in the CAPI cluster being deleted.
@@ -70,7 +71,7 @@ func (cad *OlvmDriver) Delete() error {
 	// delete the capi cluster kubeconfig
 	if err = os.Remove(cad.KubeConfig); err != nil {
 		// log the error but keep going
-		log.Errorf("Error deleting capi kubeconfig file %s/%s: %v",
+		log.Errorf("Error deleting capi kubeconfig file %s: %v",
 			cad.KubeConfig, err)
 	}
 
@@ -79,16 +80,14 @@ func (cad *OlvmDriver) Delete() error {
 		return err
 	}
 
-	secretName := cad.credSecretName()
-	if err = k8s.DeleteSecret(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, secretName); err != nil {
-		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	secretNsn := cad.credSecretNsn()
+	if err = k8s.DeleteSecret(clientIface, secretNsn.Namespace, secretNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt credential secret %s/%s: %v", secretNsn.Namespace, secretNsn.Name, err)
 	}
 
-	cmName := cad.caConfigMapName()
-	if err = k8s.DeleteConfigmap(clientIface, cad.ClusterConfig.Providers.Olvm.Namespace, cmName); err != nil {
-		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v",
-			cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
+	cmNsn := cad.caConfigMapNsn()
+	if err = k8s.DeleteConfigmap(clientIface, cmNsn.Namespace, cmNsn.Name); err != nil {
+		return fmt.Errorf("Error deleting oVirt CA configmap %s/%s: %v", cmNsn.Namespace, cmNsn.Name, err)
 	}
 
 	return nil

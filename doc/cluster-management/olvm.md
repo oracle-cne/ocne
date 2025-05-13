@@ -219,7 +219,7 @@ The netmask used by the VM.
 The ethernet interface device on the VM.
 
 **startingIpAddress**
-The starting IP address to use for VMs.  NOTE: the **virtualIp** cannot be in this range.
+The starting IP address of a contiguous block of addresses to use for VMs.  NOTE: the **virtualIp** cannot be in this range.  
 
 ### ovirtAPI
 The ovirtAPI section specifies the information needed to access the oVirt engine via the REST API.
@@ -298,6 +298,52 @@ The VM will use that profile.
 **vmTemplateName**
 The oVirt vmTemplate name.  This must exist in the oVirt instance
 (Note: you will need to create a vmTemplate with the OCK image, see instructions later in this document.)
+
+## Ovirt CSI Driver configuration (optional)
+The ovirt-csi-driver configuration is optional, there is no need to explicitly configure anything. The driver is
+automatically installed and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.
+See [ovirt-csi-driver usage example](https://github.com/oracle-cne/ovirt-csi-driver/blob/master/docs/usage-example.md).
+
+Following is the structure of the config showing the default values:
+```
+providers:
+  olvm:
+    ovirtCsiDriver:
+      install: true
+      caProvided: true
+      caConfigmapName: ovirt-csi-ca.crt
+      controllerPluginName: ovirt-csi-controller
+      credsSecretName: ovirt-csi-creds 
+      csiDriverName: csi.ovirt.org 
+      namespace: ovirt-csi
+      nodePluginName: ovirt-csi-node
+  ...    
+```
+**install**
+If install is true, install the ovirt-csi-driver and required resources.
+
+**caProvided**
+If caProvided is true, the ovirt-csi-driver expects to find the ConfigMap containing the CA and will use that
+CA during network connections to the OLVM server.
+
+**caConfigmapName**
+The caConfigmapName is the name of the ConfigMap containing the CA.
+
+**credsSecretName**
+The credsSecretName is the name of the Secret containing the credentials needed to communicate with the OVLM server.
+
+**controllerPluginName**
+The controllerPluginName is the name of the deployment for the controller plugin, which is part of the driver.
+
+**csiDriverName**
+The csiDriverName is the name of the CsiDriver.  This name is used when you create a StorageClass, it is the value
+of the `provisioner` field.
+
+**namespace**
+The namespace where the ovirt-csi-driver and all related resources are created.
+
+**nodePluginName**
+The nodePluginName is the name of the daemonset for the node plugin, which is part of the driver.
 
 
 # Preparing to Create a Cluster
@@ -546,6 +592,11 @@ INFO[2024-12-20T14:32:42-05:00] Waiting for Core Cluster API Controllers: ok
 INFO[2024-12-20T14:32:42-05:00] Deleting Cluster olvm-cluster/demo           
 INFO[2024-12-20T14:33:09-05:00] Waiting for deletion: ok     
 ```
+If the cluster does not appear in the output of `ocne cluster ls`, an error may have occurred during cluster creation (e.g., the command was manually aborted). An alternative way to delete the cluster is to specify the cluster config file.
+```
+ocne cluster delete --config /Users/user/.ocne/olvm-demo-cluster-config.yaml
+```
+
 
 See that the CAPI cluster is gone:
 ```

@@ -7,6 +7,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -19,9 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -236,11 +237,7 @@ func (cad *OlvmDriver) PostInstallHelpStanza() string {
 	return fmt.Sprintf("To access the cluster:\n    use %s", cad.KubeConfig)
 }
 
-func (Cad *OlvmDriver) DefaultCNIInterfaces() []string {
+func (cad *OlvmDriver) DefaultCNIInterfaces() []string {
 	// let CNI pick the interface
 	return nil
-}
-
-func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
-	return "", "", false, fmt.Errorf("Implement me")
 }

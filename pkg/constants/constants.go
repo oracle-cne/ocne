@@ -32,6 +32,7 @@ const (
 	EphemeralNodeStorage         = "30Gi"
 	EphemeralClusterName         = "ocne-ephemeral"
 	EphemeralClusterPreserve     = true
+	SlirpSubnet                  = "192.18.255.0/24"
 
 	// Kubernetes defaults`
 	KubeAPIServerBindPort    = uint16(6443)
@@ -48,6 +49,7 @@ const (
 
 	OciControlPlaneOcpus = 2
 	OciWorkerOcpus       = 4
+	OciBootVolumeSize    = "50"
 	OciImageName         = "ock"
 	OciBucket            = "ocne-images"
 

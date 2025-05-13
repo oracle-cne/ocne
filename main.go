@@ -4,30 +4,27 @@
 package main
 
 import (
-	"github.com/oracle-cne/ocne/pkg/cluster/driver/none"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
-	"github.com/oracle-cne/ocne/pkg/features"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"os"
 
 	"github.com/oracle-cne/ocne/cmd/root"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/byo"
-	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/libvirt"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/none"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/oci"
 	"github.com/oracle-cne/ocne/pkg/util/garbage"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 func registerDrivers() {
 	driver.RegisterDriver(byo.DriverName, byo.CreateDriver)
-	driver.RegisterDriver(capi.DriverName, capi.CreateDriver)
-	if features.OLVM {
-		driver.RegisterDriver(olvm.DriverName, olvm.CreateDriver)
-	}
+	driver.RegisterDriver(oci.DriverName, oci.CreateDriver)
 	driver.RegisterDriver(libvirt.DriverName, libvirt.CreateDriver)
 	driver.RegisterDriver(none.DriverName, none.CreateDriver)
+	driver.RegisterDriver(olvm.DriverName, olvm.CreateDriver)
 }
 
 func main() {

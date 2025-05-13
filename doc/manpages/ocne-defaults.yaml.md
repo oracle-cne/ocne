@@ -114,6 +114,8 @@ providers:
     sshKey: /home/myuser/.ssh/id_rsa.ocne
     # The storage pool to use for images
     storagePool: mypool
+    # The subnet to use for the slirp network interface
+    slirpSubnet: 192.18.255.0/24
     # The virtual network to use for domains
     network: bridge-1
     # Boot volume name
@@ -157,10 +159,12 @@ providers:
     controlPlaneShape:
       shape: VM.Standard.A1.Flex
       ocpus: 2
+      bootVolumeSizeInGBs: 50
     # The shape of compute instances for worker nodes
     workerShape:
       shape: VM.Standard.E4.Flex
       ocpus: 4
+      bootVolumeSizeInGBs: 50
     # Indicates if a cluster is self-managing or not.  If set to
     # true, the cluster will contain all the necessary controllers
     # and resources to manage its own lifecycle.  If not, those

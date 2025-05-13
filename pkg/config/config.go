@@ -50,6 +50,7 @@ func GetDefaultConfig() (*types.Config, error) {
 		Providers: types.Providers{
 			Libvirt: types.LibvirtProvider{
 				SessionURI:  constants.SessionURI,
+				SlirpSubnet: constants.SlirpSubnet,
 				StoragePool: constants.StoragePool,
 				Network:     constants.Network,
 				ControlPlaneNode: types.Node{
@@ -72,19 +73,25 @@ func GetDefaultConfig() (*types.Config, error) {
 				ControlPlaneShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardA1Flex,
 					Ocpus: constants.OciControlPlaneOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 				WorkerShape: types.OciInstanceShape{
 					Shape: constants.OciVmStandardE4Flex,
 					Ocpus: constants.OciWorkerOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 			},
 			Olvm: types.OlvmProvider{
 				Namespace: constants.OLVMCAPIResourcesNamespace,
 				ControlPlaneMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIControlPlaneMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIControlPlaneMemory,
+					},
 				},
 				WorkerMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIWorkerMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIWorkerMemory,
+					},
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
 					BindPort: 6444,

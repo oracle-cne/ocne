@@ -5,12 +5,14 @@ package olvm
 
 import (
 	"fmt"
+	"strings"
+
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"strings"
 )
 
 const (
@@ -68,6 +70,7 @@ disable crio.service
 disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
+enable ocne-image-cleanup.service
 `
 )
 
@@ -128,11 +131,18 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ignition.AddFile(ign, presetFileLib)
 
 	// Update service configuration file
+	ostreeTransport, registry, tag, err := image.ParseOstreeReference(clusterConfig.OsRegistry)
+	if err != nil {
+		return "", err
+	}
+	if tag != "" {
+		return "", fmt.Errorf("osRegistry field cannot have a tag")
+	}
 	updateFile := &ignition.File{
 		Path: ignition.OcneUpdateConfigPath,
 		Mode: 0400,
 		Contents: ignition.FileContents{
-			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, clusterConfig.OsRegistry, clusterConfig.OsTag),
+			Source: fmt.Sprintf(ignition.OcneUpdateYamlPattern, registry, clusterConfig.OsTag, ostreeTransport),
 		},
 	}
 	ignition.AddFile(ign, updateFile)
@@ -202,7 +212,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		})
 
 		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
-			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
+			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.Interface)
 		if err != nil {
 			return "", err
 		}
