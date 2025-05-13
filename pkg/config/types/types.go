@@ -84,12 +84,12 @@ type OlvmOck struct {
 }
 
 type OlvmAPIServer struct {
-	CAConfigMap              NamespacedName `yaml:"caConfigMap"`
-	CredentialsSecret        NamespacedName `yaml:"credentialsSecret"`
+	CAConfigMap              NamespacedName `yaml:"caConfigMap,omitempty"`
+	CredentialsSecret        NamespacedName `yaml:"credentialsSecret,omitempty"`
 	InsecureSkipTLSVerify    bool           `yaml:"insecureSkipTLSVerifyFake"`
 	InsecureSkipTLSVerifyPtr *bool          `yaml:"insecureSkipTLSVerify,omitempty"`
-	ServerCA                 string         `yaml:"serverCA"`
-	ServerCAPath             string         `yaml:"serverCAPath"`
+	ServerCA                 string         `yaml:"serverCA,omitempty"`
+	ServerCAPath             string         `yaml:"serverCAPath,omitempty"`
 	ServerURL                string         `yaml:"serverURL"`
 }
 
@@ -102,7 +102,7 @@ type OlvmMachine struct {
 
 type OlvmNetwork struct {
 	NetworkName     string `yaml:"networkName"`
-	VnicName        string `yaml:"vnicName"`
+	VnicName        string `yaml:"vnicName,omitempty"`
 	VnicProfileName string `yaml:"vnicProfileName"`
 }
 
@@ -113,20 +113,20 @@ type OlvmVirtualMachine struct {
 }
 
 type OlvmMachineCpu struct {
-	Architecture string                 `yaml:"architecture"`
+	Architecture string                 `yaml:"architecture,omitempty"`
 	Topology     OlvmMachineCpuTopology `yaml:"topology"`
 }
 
 type OlvmMachineCpuTopology struct {
-	Cores   int `yaml:"cores"`
-	Sockets int `yaml:"sockets"`
-	Threads int `yaml:"threads"`
+	Cores   int `yaml:"cores,omitempty"`
+	Sockets int `yaml:"sockets,omitempty"`
+	Threads int `yaml:"threads,omitempty"`
 }
 
 type OlvmVirtualMachineNetwork struct {
-	Gateway       string   `yaml:"gateway"`
-	Interface     string   `yaml:"interface"`
-	InterfaceType string   `yaml:"interfaceType"`
+	Gateway       string   `yaml:"gateway,omitempty"`
+	Interface     string   `yaml:"interface,omitempty"`
+	InterfaceType string   `yaml:"interfaceType,omitempty"`
 	IPV4          OlvmIPV4 `yaml:"ipv4"`
 	IPV6          OlvmIPV6 `yaml:"ipv6"`
 }
