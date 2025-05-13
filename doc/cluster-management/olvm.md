@@ -99,7 +99,6 @@ providers:
           gateway: 1.2.3.1
           interfaceType: virtio
           ipv4:
-            autoconf: false
             ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.4.200-1.2.4.220
 ```
 
@@ -153,7 +152,6 @@ providers:
             subnet: 1.2.3.160/24
             ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.3.200-1.2.3.220
           ipv6:
-            autoconf: false
             ipAddresses: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
     workerMachine:
       olvmOvirtClusterName: Default
@@ -174,10 +172,9 @@ providers:
           interface: enp1s0
           interfaceType: virtio
           ipv4:
-            autoconf: false
+            subnet: 1.2.3.160/24
             ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.4.200-1.2.4.220
           ipv6:
-            autoconf: false
             ipAddresses: fdXY:IJKL::2250-fdXY:IJKL::2259, fdXY:ABCX::3000/64
 ```
 
@@ -230,9 +227,15 @@ The olvmOvirtAPIServer section specifies the configuration needed to access the 
 **serverURL**  
 The serverURL is the URL of the OLVM oVirt engine that is accessed via the OLVM oVirt REST API.
 
+**serverCA**  
+The OLVM CA certificate inline.
+Mutually exclusive with serverCAPath field.
+Required if insecureSkipTLSVerify is false, the CA is not in the trust store, and serverCAPath is not specified.
+
 **serverCAPath**  
-The local file that contains the OLVM CA certificate.  
-Optional if insecureSkipTLSVerify is true.
+The local file that contains the OLVM CA certificate.
+Mutually exclusive with serverCA field.
+Required if insecureSkipTLSVerify is false, the CA is not in the trust store, and serverCA is not specified.
 
 **credentialsSecret**  
 The name and namespace of the OLVM credentials Kubernetes secret.   
@@ -291,7 +294,6 @@ could be 16GB.
             subnet: 1.2.3.160/24
             ipAddresses: 1.2.3.161/30, 1.2.3.196, 1.2.3.200-1.2.3.220
           ipv6:
-            autoconf: false
             ipAddresses: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
 ```
 **olvmOvirtClusterName**  
@@ -339,15 +341,11 @@ For example: 10.1.2.0/30, 10.1.2.10-10.1.2.20, 10.1.2.27
 ### IPV6
 The IPV4 configuration is optional.
 
-**network.ipv6.autoconf**  
-If true, then auto-configure the IPV6 using SLAAC.   
-Optional, default false.  
-
 **network.ipv6.ipAddresses**  
 The IPV4 addresses used by the VM.  This is a comma separated list with any combination as follows:
 Ranges are inclusive. Space after the comma is optional.  
 For example: fdXY:IJKL::2222-fdXY:IJKL::2232, fdXY:ABCX::2000/64
-Required if IPV6 used and autoconf is false.  
+Required if IPV6 used  
 
 ## Machine configuration
 The worker machine has identical fields to control-plane machine, but the values may be different.  These values
@@ -358,14 +356,13 @@ The ovirt-csi-driver configuration is completely optional. The driver is automat
 and the required namespace, credential Secret, CA ConfigMap, and CsiDriver resources are created.  
 See [ovirt-csi-driver usage example](https://github.com/oracle-cne/ovirt-csi-driver/blob/master/docs/usage-example.md).
 
-Following is the structure of the ovirt-csi-driver configuration, showing the default values:
+**Note:** The following fields from the OLVM configuration are used by the ovirt-csi-driver: insecureSkipTLSVerify, serverCAPath, and serverCA.
+The structure of the ovirt-csi-driver configuration with the default values follows:
 ```
 providers:
   olvm:
     ovirtCsiDriver:
       install: true
-      insecureSkipTLSVerify: false
-      caProvided: true
       caConfigmapName: ovirt-csi-ca.crt
       controllerPluginName: ovirt-csi-controller
       credsSecretName: ovirt-csi-creds 
@@ -375,13 +372,6 @@ providers:
 ```
 **install**  
 If install is true, install the ovirt-csi-driver and required resources.
-
-**insecureSkipTLSVerify**  
-If true, the skip TLS verify when connecting to OLVM oVirt server.  The CA is not needed or used.
-
-**caProvided**
-If caProvided is true, the ovirt-csi-driver expects to find the ConfigMap containing the CA and will use that
-CA during network connections to the OLVM server.
 
 **caConfigmapName**
 The caConfigmapName is the name of the ConfigMap containing the CA.
