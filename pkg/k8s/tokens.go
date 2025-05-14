@@ -160,11 +160,16 @@ func UploadCertificates(kubeconfigPath string, key string) error {
 
 	nodeName := nodes.Items[0].ObjectMeta.Name
 
-	pod, err := StartAdminPodOnNode(client, nodeName, constants.OCNESystemNamespace, "exec", false)
-	defer DeletePod(client, pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	err = CreateNamespaceIfNotExists(client, constants.OCNESystemNamespace)
 	if err != nil {
 		return err
 	}
+
+	pod, err := StartAdminPodOnNode(client, nodeName, constants.OCNESystemNamespace, "exec", false)
+	if err != nil {
+		return err
+	}
+	defer DeletePod(client, pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 
 	ignore := []string{
 		"could not fetch a Kubernetes version",
