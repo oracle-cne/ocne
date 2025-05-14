@@ -52,7 +52,7 @@ type OlvmProvider struct {
 	CSIDriver           OvirtCsiDriver       `yaml:"ovirtCsiDriver"`
 	DatacenterName      string               `yaml:"olvmDatacenterName"`
 	LocalAPIEndpoint    OlvmLocalAPIEndpoint `yaml:"localAPIEndpoint"`
-	Namespace           string               `yaml:"namespace"`
+	Namespace           string               `yaml:"namespace,omitempty"`
 	OlvmAPIServer       OlvmAPIServer        `yaml:"olvmOvirtAPIServer"`
 	OlvmOck             OlvmOck              `yaml:"olvmOCK"`
 	Proxy               Proxy                `yaml:"proxy"`
@@ -108,7 +108,7 @@ type OlvmNetwork struct {
 
 type OlvmVirtualMachine struct {
 	Cpu     OlvmMachineCpu            `yaml:"cpu"`
-	Memory  string                    `yaml:"memory"`
+	Memory  string                    `yaml:"memory,omitempty"`
 	Network OlvmVirtualMachineNetwork `yaml:"network"`
 }
 
@@ -139,12 +139,12 @@ type OlvmIPV4 struct {
 type OlvmIPV6 struct {
 	AutoConf    bool   `yaml:"autoConfFake"`
 	AutoConfPtr *bool  `yaml:"autoConf,omitempty"`
-	IpAddresses string `yaml:"ipAddresses"`
+	IpAddresses string `yaml:"ipAddresses,omitempty"`
 }
 
 type OlvmLocalAPIEndpoint struct {
-	BindPort         int    `yaml:"bindPort"`
-	AdvertiseAddress string `yaml:"advertiseAddress"`
+	BindPort         int    `yaml:"bindPort,omitempty"`
+	AdvertiseAddress string `yaml:"advertiseAddress,omitempty"`
 }
 
 type ByoProvider struct {

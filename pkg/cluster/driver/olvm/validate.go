@@ -76,9 +76,6 @@ func validateNetwork(network types.OlvmNetwork, fmtString string, basePath strin
 
 // validateVirtualMachine - validate a virtual machine configuration
 func validateVirtualMachine(vm types.OlvmVirtualMachine, fmtString string, basePath string) error {
-	if len(vm.Memory) == 0 {
-		return fmt.Errorf(fmtString, fmt.Sprintf("%s.%s", basePath, "memory"))
-	}
 	if err := validateVirtualMachineNetwork(vm.Network, fmtString, fmt.Sprintf("%s.%s", basePath, "network")); err != nil {
 		return err
 	}
@@ -87,9 +84,6 @@ func validateVirtualMachine(vm types.OlvmVirtualMachine, fmtString string, baseP
 
 func validateVirtualMachineNetwork(vmn types.OlvmVirtualMachineNetwork, fmtString string, basePath string) error {
 	if err := validateIpV4(vmn.IPV4, fmtString, fmt.Sprintf("%s.%s", basePath, "ipv4")); err != nil {
-		return err
-	}
-	if err := validateIpV6(vmn.IPV6, fmtString, fmt.Sprintf("%s.%s", basePath, "ipv6")); err != nil {
 		return err
 	}
 	return nil
@@ -102,14 +96,6 @@ func validateIpV4(ipv4 types.OlvmIPV4, fmtString string, basePath string) error 
 	}
 	if len(ipv4.Subnet) == 0 {
 		return fmt.Errorf(fmtString, fmt.Sprintf("%s.%s", basePath, "subnet"))
-	}
-	return nil
-}
-
-// validateIpV6 - validate IPV6 configuration
-func validateIpV6(ipv6 types.OlvmIPV6, fmtString string, basePath string) error {
-	if len(ipv6.IpAddresses) == 0 {
-		return fmt.Errorf(fmtString, fmt.Sprintf("%s.%s", basePath, "ipAddresses"))
 	}
 	return nil
 }
