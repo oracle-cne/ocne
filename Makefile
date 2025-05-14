@@ -23,10 +23,7 @@ CATALOG_BRANCH?=release/2.1
 DEVELOPER_CHART_BUILD_DIR:=${BUILD_DIR}/developer-catalog
 DEVELOPER_CATALOG_BRANCH?=developer
 
-TEST_PATTERN:=.*
-TEST_FILTERS:=
 TEST_DIR:=$(OUT_DIR)/tests
-BATS_RESULT_DIR:=$(MAKEFILE_DIR)/$(TEST_DIR)/results
 GOCOVERDIR:=$(MAKEFILE_DIR)/$(TEST_DIR)/coverage_raw
 MERGED_COVER_DIR:=$(MAKEFILE_DIR)/$(TEST_DIR)/coverage_merged
 CODE_COVERAGE:=$(TEST_DIR)/coverage
@@ -68,7 +65,6 @@ ifeq (${DEVELOPER_BUILD}, true)
 endif
 
 export GOCOVERDIR
-export BATS_RESULT_DIR
 
 #
 # CLI
@@ -128,42 +124,6 @@ cli: build-cli ## Build and install the CLI
 .PHONY: unit-test
 unit-test: cli
 	$(GO) test -v  ./...
-
-# Integration tests
-#
-# Example commands
-#   Run tests only on the setup named "default"
-#     make integration-test TEST_PATTERN=default
-#
-#  Run application tests on the setup named "default"
-#    make integration-test TEST_PATTERN=default TEST_FILTERS="--filter-tags APPLICATION"
-#
-#  Run the cluster upgrade tests on all setups, start with Kubernetes 1.29 on each cluster
-#    make integration-test TEST_FILTERS="--filter-tags CLUSTER_UPGRADE" TEST_K8S_VERSION="1.29"
-#
-$(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR):
-	mkdir -p $@
-
-.PHONY: integration-test
-integration-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
-	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./run-tests.sh '$(TEST_PATTERN)'
-	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
-	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
-	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
-
-.PHONY: capi-test
-capi-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
-	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./run-tests.sh '$(TEST_PATTERN)' 1
-	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
-	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
-	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
-
-.PHONY: release-test
-release-test: $(GOCOVERDIR) $(MERGED_COVER_DIR) $(BATS_RESULT_DIR) build-cli-instrumented
-	cd test && PATH="$(MAKEFILE_DIR)/$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented:$$PATH" ./release-test.sh
-	$(GO) tool covdata merge -i=$(GOCOVERDIR) -o=$(MERGED_COVER_DIR)
-	$(GO) tool covdata textfmt -i=$(MERGED_COVER_DIR) -o=$(CODE_COVERAGE)
-	echo To view coverage data, execute \"go tool cover -html=$(CODE_COVERAGE)\"
 
 clean-charts:
 	rm -rf $(CHART_EMBED)
