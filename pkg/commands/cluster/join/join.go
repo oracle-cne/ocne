@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +14,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -73,13 +73,13 @@ func joinNodeToCluster(options *JoinOptions) error {
 		return err
 	}
 
-	destRestConfig, destKubeClient, err := client.GetKubeClient(options.DestKubeConfigPath)
+	_, destKubeClient, err := client.GetKubeClient(options.DestKubeConfigPath)
 	if err != nil {
 		return err
 	}
 
 	// get the control plane endpoint from the destination cluster
-	cpEndpoint, err := getControlPlaneEndpoint(destRestConfig)
+	cpEndpoint, err := getControlPlaneEndpoint(destKubeClient)
 	if err != nil {
 		return err
 	}
@@ -139,12 +139,26 @@ func joinNodeToCluster(options *JoinOptions) error {
 }
 
 // getControlPlaneEndpoint fetches the control plane endpoint from the kubeadm-config ConfigMap.
-func getControlPlaneEndpoint(restConfig *rest.Config) (string, error) {
-	u, err := url.Parse(restConfig.Host)
+func getControlPlaneEndpoint(kubeClient kubernetes.Interface) (string, error) {
+	cm, err := k8s.GetConfigmap(kubeClient, constants.KubeNamespace, constants.KubeCMName)
 	if err != nil {
 		return "", err
 	}
-	return u.Host, nil
+	config := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(cm.Data["ClusterConfiguration"]), config)
+	if err != nil {
+		return "", err
+	}
+	hostIface, ok := config["controlPlaneEndpoint"]
+	if !ok {
+		return "", fmt.Errorf("Kubeadm configuration does have a controlPlaneEndpoint")
+	}
+
+	host, ok := hostIface.(string)
+	if !ok {
+		return "", fmt.Errorf("Kubeadm configuration field controlPlaneEndpoint is not a string")
+	}
+	return host, nil
 }
 
 // updateNode creates a temporary pod and runs a script to reconfigure the node so that it joins the destination cluster.
