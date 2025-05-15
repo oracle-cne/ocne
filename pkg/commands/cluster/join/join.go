@@ -151,7 +151,7 @@ func getControlPlaneEndpoint(kubeClient kubernetes.Interface) (string, error) {
 	}
 	hostIface, ok := config["controlPlaneEndpoint"]
 	if !ok {
-		return "", fmt.Errorf("Kubeadm configuration does have a controlPlaneEndpoint")
+		return "", fmt.Errorf("Kubeadm configuration does not have a controlPlaneEndpoint")
 	}
 
 	host, ok := hostIface.(string)
