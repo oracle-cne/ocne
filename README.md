@@ -18,6 +18,12 @@ Building the CLI requires a variety of libraries and utilities.
 - pkg-config
 - gpgme
 
+On Oracle Linux 8, please enable below dnf repos:
+```
+sudo dnf install -y oracle-ocne-release-el8
+sudo dnf config-manager --enable ol8_codeready_builder ol8_ocne
+```
+
 These dependencies can be installed on Oracle Linux 8 and Oracle Linux 9
 by leveraging `yum-buildep`.
 
