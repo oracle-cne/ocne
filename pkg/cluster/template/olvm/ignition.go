@@ -39,6 +39,15 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
+	// Used to disable ignition so that it doesn't run after first boot
+	disableIgnitionDropinFile = "disable-ignition.conf"
+	disableIgnitionDropin     = `[Service]
+ExecStartPre=/bin/bash -c "/etc/ocne/disable-ignition.sh &"
+`
+	disableIgnitionPath   = "/etc/ocne/disable-ignition.sh"
+	disableIgnitionScript = `#! /bin/bash
+rpm-ostree kargs --delete-if-present=ignition.firstboot=1
+`
 
 	// Used to start services needed for kubeadm service
 	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
@@ -159,6 +168,16 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	}
 	ignition.AddFile(ign, enableServicesFile)
 
+	// Disable ignition after first boot
+	disableIgnitionFile := &ignition.File{
+		Path: disableIgnitionPath,
+		Mode: 0555,
+		Contents: ignition.FileContents{
+			Source: disableIgnitionScript,
+		},
+	}
+	ignition.AddFile(ign, disableIgnitionFile)
+
 	// Add drop-in to run enable services script
 	ign = ignition.AddUnit(ign, &igntypes.Unit{
 		Name:    ignition.OcneUpdateServiceName,
@@ -167,6 +186,10 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			{
 				Name:     "pre-kubeadm.conf",
 				Contents: util.StrPtr(preKubeadmDropin),
+			},
+			{
+				Name:     disableIgnitionDropinFile,
+				Contents: util.StrPtr(disableIgnitionDropin),
 			},
 			{
 				Name:     enableServicesDropinFile,
