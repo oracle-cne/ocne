@@ -37,7 +37,7 @@ type ChartMeta struct {
 	Created     time.Time         `yaml:"created"`
 	Digest      string            `yaml:"digest"`
 	Annotations map[string]string `yaml:"annotations"`
-	Deprecated  string            `yaml:"deprecated"`
+	Deprecated  bool              `yaml:"deprecated"`
 }
 
 // Catalog contains the helm chart index of all the charts in the catalog

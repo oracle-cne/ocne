@@ -96,7 +96,7 @@ func RunCmd(cmd *cobra.Command) error {
 	table.AddRow("APPLICATION", "VERSION")
 	for _, chart := range charts {
 		version := chart.Version
-		if len(chart.Deprecated) > 0 {
+		if chart.Deprecated {
 			version = fmt.Sprintf("%s (deprecated)", version)
 		}
 		table.AddRow(chart.Name, version)
