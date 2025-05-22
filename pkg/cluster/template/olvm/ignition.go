@@ -39,6 +39,7 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
+
 	// Used to start services needed for kubeadm service
 	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
 	copyKubeconfigDropin     = `[Service]
