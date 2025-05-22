@@ -39,16 +39,6 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
-	// Used to disable ignition so that it doesn't run after first boot
-	disableIgnitionDropinFile = "disable-ignition.conf"
-	disableIgnitionDropin     = `[Service]
-ExecStartPre=/bin/bash -c "/etc/ocne/disable-ignition.sh &"
-`
-	disableIgnitionPath   = "/etc/ocne/disable-ignition.sh"
-	disableIgnitionScript = `#! /bin/bash
-rpm-ostree kargs --delete-if-present=ignition.firstboot=1
-`
-
 	// Used to start services needed for kubeadm service
 	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
 	copyKubeconfigDropin     = `[Service]
@@ -71,6 +61,7 @@ chmod 400 /etc/keepalived/kubeconfig
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
 	// showing up in the /etc/systemd/system-preset files.
+	// Also enable the service to disable ignition firstboot
 	presetFilePathEtc = "/etc/systemd/system-preset/10-ocne.preset"
 	presetFilePathLib = "/etc/systemd/system-preset/80-ocne.preset"
 	presetFileData    = `disable ocne.service
@@ -80,6 +71,7 @@ disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
 enable ocne-image-cleanup.service
+enable ocne-disable-ignition.service
 `
 )
 
@@ -168,16 +160,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	}
 	ignition.AddFile(ign, enableServicesFile)
 
-	// Disable ignition after first boot
-	disableIgnitionFile := &ignition.File{
-		Path: disableIgnitionPath,
-		Mode: 0555,
-		Contents: ignition.FileContents{
-			Source: disableIgnitionScript,
-		},
-	}
-	ignition.AddFile(ign, disableIgnitionFile)
-
 	// Add drop-in to run enable services script
 	ign = ignition.AddUnit(ign, &igntypes.Unit{
 		Name:    ignition.OcneUpdateServiceName,
@@ -186,10 +168,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			{
 				Name:     "pre-kubeadm.conf",
 				Contents: util.StrPtr(preKubeadmDropin),
-			},
-			{
-				Name:     disableIgnitionDropinFile,
-				Contents: util.StrPtr(disableIgnitionDropin),
 			},
 			{
 				Name:     enableServicesDropinFile,
