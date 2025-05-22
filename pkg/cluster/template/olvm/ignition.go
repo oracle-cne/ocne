@@ -62,6 +62,7 @@ chmod 400 /etc/keepalived/kubeconfig
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
 	// showing up in the /etc/systemd/system-preset files.
+	// Also enable the service to disable ignition firstboot
 	presetFilePathEtc = "/etc/systemd/system-preset/10-ocne.preset"
 	presetFilePathLib = "/etc/systemd/system-preset/80-ocne.preset"
 	presetFileData    = `disable ocne.service
@@ -71,6 +72,7 @@ disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
 enable ocne-image-cleanup.service
+enable ocne-disable-ignition.service
 `
 )
 
