@@ -39,6 +39,21 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
+	ipv6DefaultRouteName    = "ocne-ipv6-default-route"
+	ipv6DefaultRouteService = `
+[Unit]
+Description=Set default route for IPV6
+Wants=network.target
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=ip -6 route add default dev enp1s0
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+`
 
 	// Used to start services needed for kubeadm service
 	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
@@ -102,6 +117,13 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	}
 
 	ign := ignition.NewIgnition()
+
+	ipv6DefaultRoute := &igntypes.Unit{
+		Name:     ipv6DefaultRouteName,
+		Enabled:  util.BoolPtr(true),
+		Contents: util.StrPtr(ipv6DefaultRouteService),
+	}
+	ignition.AddFile(ign, ipv6DefaultRoute)
 
 	// Cluster API has its own kubeadm service to start
 	// kubelet.  Use that one instead of ocne.service.
@@ -182,6 +204,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
 	ign = ignition.Merge(ign, patches)
+	ign = ignition.Merge(ign, ipv6DefaultRoute)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
 	// needs to be copied to /etc/keepalived
