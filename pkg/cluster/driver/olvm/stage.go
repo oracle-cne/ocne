@@ -28,7 +28,7 @@ type TemplateData struct {
 }
 
 // vmTemplateName should be treated as a constant
-var vmTemplateName = []string{"spec", "template", "spec", "ovirt", "vmTemplateName"}
+var vmTemplateName = []string{"spec", "template", "spec", "vmTemplateName"}
 
 // Stage looks at the resources for an OLVM CAPI cluster and generates as
 // much of the material necessary to update a cluster from one version to
