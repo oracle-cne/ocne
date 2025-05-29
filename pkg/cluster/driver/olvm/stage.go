@@ -112,7 +112,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 			name := util.IncrementCount(mt.GetName(), "-")
 			mt.SetName(name)
 
-			err = unstructured.SetNestedField(mt.Object, newTemplate, "spec", "template", "spec", "ovirt", "vmTemplateName")
+			err = unstructured.SetNestedField(mt.Object, newTemplate, vmTemplateName...)
 			if err != nil {
 				return "", "", false, err
 			}
