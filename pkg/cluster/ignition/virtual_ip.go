@@ -1,21 +1,20 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ignition
 
 import (
 	"fmt"
-	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 
+	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 const (
 	keepAlivedServiceName = "keepalived.service"
-	keepAlivedUid = 991
-	keepAlivedUser = "keepalived_script"
-	keepAlivedGroup = "keepalived_script"
+	keepAlivedUser        = "keepalived_script"
+	keepAlivedGroup       = "keepalived_script"
 
 	nginxServiceName = "ocne-nginx.service"
 
@@ -133,6 +132,7 @@ events {
 stream {
   upstream backend1 {
 {{ .Peer }}
+    least_conn;
   }
   server {
     listen {{ .BindPort }};
@@ -216,7 +216,7 @@ type nginxConfigArguments struct {
 	Peer     string
 }
 
-// generateNginxConfig generates a configuration file for nginx to load balaance between
+// generateNginxConfig generates a configuration file for nginx to load balance between
 // all the master nodes in a given cluster.
 func generateNginxConfig(bindPort uint16, peer string) (string, error) {
 	return util.TemplateToString(nginxConfig, &nginxConfigArguments{
@@ -275,7 +275,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
-			User: keepAlivedUser,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 		},
 		&File{
@@ -292,36 +292,36 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	}
 	data.Files = append(data.Files,
 		&File{
-			Path: keepAlivedCheckScriptPath,
-			Mode: 0755,
-			User: keepAlivedUser,
+			Path:  keepAlivedCheckScriptPath,
+			Mode:  0755,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
 		},
 		&File{
-			Path: keepAlivedStateScriptPath,
-			Mode: 0755,
-			User: keepAlivedUser,
+			Path:  keepAlivedStateScriptPath,
+			Mode:  0755,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
 		},
 		&File{
-			Path: "/etc/keepalived/peers",
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  "/etc/keepalived/peers",
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		},
 		&File{
-			Path: "/etc/keepalived/log",
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  "/etc/keepalived/log",
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
@@ -340,9 +340,9 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 	data.Files = append(data.Files,
 		&File{
-			Path: nginxConfigPath,
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  nginxConfigPath,
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: nginxConfig,
@@ -377,9 +377,9 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		},
 		&File{
-			Path: "/etc/ocne/nginx/servers",
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  "/etc/ocne/nginx/servers",
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
