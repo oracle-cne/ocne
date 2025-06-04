@@ -50,12 +50,12 @@ ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
 	copyKubeconfigScript     = `#! /bin/bash
 set -x
 set -e
-while [ ! -f "/etc/kubernetes/admin.conf" ]; do
-   echo "Waiting for /etc/kubernetes/admin.conf to exist"
+while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
+   echo "Waiting for /etc/kubernetes/kubelet.conf to exist"
    sleep 2
 done
 
-cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
+cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
 chmod 400 /etc/keepalived/kubeconfig
 `
