@@ -56,15 +56,17 @@ while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
 done
 
 cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
+
+grep -q "/var/lib/kubelet/pki/kubelet-client-current.pem" kubeconfig
+if [ $? -eq 0 ]; then
+	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
+	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
+	chmod 400 /etc/keepalived/kubelet-client-current.pem
+	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' kubeconfig
+fi
+
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
-sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' kubeconfig
 chmod 400 /etc/keepalived/kubeconfig
-
-cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
-chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
-chmod 400 /etc/keepalived/kubelet-client-current.pem
-
-
 `
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
