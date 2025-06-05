@@ -57,9 +57,7 @@ done
 
 cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
 
-grep -q "/var/lib/kubelet/pki/kubelet-client-current.pem" kubeconfig
-exit_status=$?
-if [ $exit_status -eq 0 ]; then
+if [ grep -q "/var/lib/kubelet/pki/kubelet-client-current.pem" kubeconfig -eq 0 ]; then
 	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
 	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
 	chmod 400 /etc/keepalived/kubelet-client-current.pem
