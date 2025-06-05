@@ -57,7 +57,14 @@ done
 
 cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
+sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' kubeconfig
 chmod 400 /etc/keepalived/kubeconfig
+
+cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
+chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
+chmod 400 /etc/keepalived/kubelet-client-current.pem
+
+
 `
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
