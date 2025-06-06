@@ -9,6 +9,8 @@ Migrate Calico 3.27.5 install to be managed by Helm
 1.x Calico default cni installation through Kubernetes module is not deployed using a Helm Chart.
 The installed version of Calico needs to be transformed to be manageable by Helm.
 
+**NOTE:** `mycalico` is chosen to be the release name for this example
+
 tigera-operator:
 ```text
 kubectl -n tigera-operator label ServiceAccount tigera-operator app.kubernetes.io/managed-by=Helm
