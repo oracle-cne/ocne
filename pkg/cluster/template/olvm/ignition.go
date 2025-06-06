@@ -57,11 +57,11 @@ done
 
 cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
 
-if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "kubeconfig") ]]; then
+if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "/etc/keepalived/kubeconfig") ]]; then
 	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
 	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
 	chmod 400 /etc/keepalived/kubelet-client-current.pem
-	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' kubeconfig
+	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' /etc/keepalived/kubeconfig
 fi
 
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
