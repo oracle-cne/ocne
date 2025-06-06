@@ -50,12 +50,24 @@ ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
 	copyKubeconfigScript     = `#! /bin/bash
 set -x
 set -e
-while [ ! -f "/etc/kubernetes/admin.conf" ]; do
-   echo "Waiting for /etc/kubernetes/admin.conf to exist"
+while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
+   echo "Waiting for /etc/kubernetes/kubelet.conf to exist"
    sleep 2
 done
 
-cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
+cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
+
+if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "/etc/keepalived/kubeconfig") ]]; then
+	while [ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]; do
+		echo "Waiting for /var/lib/kubelet/pki/kubelet-client-current.pem to exist"
+		sleep 2
+	done
+	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
+	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
+	chmod 400 /etc/keepalived/kubelet-client-current.pem
+	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' /etc/keepalived/kubeconfig
+fi
+
 chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
 chmod 400 /etc/keepalived/kubeconfig
 `
