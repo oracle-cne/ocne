@@ -7,7 +7,7 @@ Migrate Calico 3.27.5 install to be managed by Helm
 ## Modify the Tigera Operator objects to be annotated as being managed by Helm
 
 1.x Calico default cni installation through Kubernetes module is not deployed using a Helm Chart.
-The installed version of Calico needs to be transfomed to be manageable by Helm.
+The installed version of Calico needs to be transformed to be manageable by Helm.
 
 tigera-operator:
 ```text
