@@ -58,6 +58,10 @@ done
 cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
 
 if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "/etc/keepalived/kubeconfig") ]]; then
+	while [ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]; do
+		echo "Waiting for /var/lib/kubelet/pki/kubelet-client-current.pem to exist"
+		sleep 2
+	done
 	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
 	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
 	chmod 400 /etc/keepalived/kubelet-client-current.pem
