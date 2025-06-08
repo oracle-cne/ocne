@@ -41,13 +41,17 @@ systemctl enable --now kubeadm.service
 `
 
 	// Used to start services needed for kubeadm service
-	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
-	copyKubeconfigDropin     = `[Service]
-ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
+	copyKubeconfigDropinFile       = "copy-kubeconfig.conf"
+	copyKubeconfigDropinKeepalived = `[Service]
+ExecStartPre=/bin/bash -c "/etc/keepalived/copy-kubeconfig.sh"
 `
-	// Copy kubeconfig to the keepalived dir and change ownership
-	copyKubeconfigScriptPath = "/etc/ocne/keepalived-copy-kubeconfig.sh"
-	copyKubeconfigScript     = `#! /bin/bash
+	copyKubeconfigDropinNginx = `[Service]
+ExecStartPre=/bin/bash -c "/etc/ocne/nginx/copy-kubeconfig.sh"
+`
+	// Copy kubeconfig and change ownership
+	copyKubeconfigScriptPathKeepalived = "/etc/keepalived/copy-kubeconfig.sh"
+	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx/copy-kubeconfig.sh"
+	copyKubeconfigScriptTemplate       = `#! /bin/bash
 set -x
 set -e
 while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
@@ -55,21 +59,21 @@ while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
    sleep 2
 done
 
-cp /etc/kubernetes/kubelet.conf /etc/keepalived/kubeconfig
+cp /etc/kubernetes/kubelet.conf {{ .BasePath }}/kubeconfig
 
-if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "/etc/keepalived/kubeconfig") ]]; then
+if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "{{ .BasePath }}/kubeconfig") ]]; then
 	while [ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]; do
 		echo "Waiting for /var/lib/kubelet/pki/kubelet-client-current.pem to exist"
 		sleep 2
 	done
-	cp /var/lib/kubelet/pki/kubelet-client-current.pem /etc/keepalived/kubelet-client-current.pem
-	chown keepalived_script:keepalived_script /etc/keepalived/kubelet-client-current.pem
-	chmod 400 /etc/keepalived/kubelet-client-current.pem
-	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|/etc/keepalived/kubelet-client-current.pem|g' /etc/keepalived/kubeconfig
+	cp /var/lib/kubelet/pki/kubelet-client-current.pem {{ .BasePath }}/kubelet-client-current.pem
+	chown nginx_script:nginx_script {{ .BasePath }}/kubelet-client-current.pem
+	chmod 400 {{ .BasePath }}/kubelet-client-current.pem
+	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|{{ .BasePath }}/kubelet-client-current.pem|g' {{ .BasePath }}/kubeconfig
 fi
 
-chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
-chmod 400 /etc/keepalived/kubeconfig
+chown nginx_script:nginx_script {{ .BasePath }}/kubeconfig
+chmod 400 {{ .BasePath }}/kubeconfig
 `
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
@@ -87,6 +91,18 @@ enable ocne-image-cleanup.service
 enable ocne-disable-ignition.service
 `
 )
+
+type copyKubeconfigArguments struct {
+	BasePath string
+	Owner    string
+}
+
+func generateCopyKubeconfigScript(basePath string, owner string) (string, error) {
+	return util.TemplateToString(copyKubeconfigScriptTemplate, &copyKubeconfigArguments{
+		BasePath: basePath,
+		Owner:    owner,
+	})
+}
 
 // getExtraIgnition creates the ignition string that will be passed to the VM.
 func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
@@ -196,15 +212,34 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, patches)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
-	// needs to be copied to /etc/keepalived
+	// needs to be copied to /etc/ocne/nginx
 	if internalLB {
 		// Copy the kubeconfig file needed by keepalived service to get the
 		// list of cluster nodes
+		copyKubeconfigScriptSource, err := generateCopyKubeconfigScript("/etc/keepalived", "keepalived_script:keepalived_script")
+		if err != nil {
+			return "", err
+		}
 		copyKubeconfig := &ignition.File{
-			Path: copyKubeconfigScriptPath,
+			Path: copyKubeconfigScriptPathKeepalived,
 			Mode: 0555,
 			Contents: ignition.FileContents{
-				Source: copyKubeconfigScript,
+				Source: copyKubeconfigScriptSource,
+			},
+		}
+		ignition.AddFile(ign, copyKubeconfig)
+
+		// Copy the kubeconfig file needed by ocne-nginx service to get the
+		// list of cluster nodes
+		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/ngninx", "ngninx_script:ngninx_script")
+		if err != nil {
+			return "", err
+		}
+		copyKubeconfig = &ignition.File{
+			Path: copyKubeconfigScriptPathNginx,
+			Mode: 0555,
+			Contents: ignition.FileContents{
+				Source: copyKubeconfigScriptSource,
 			},
 		}
 		ignition.AddFile(ign, copyKubeconfig)
@@ -220,7 +255,23 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 				},
 				{
 					Name:     copyKubeconfigDropinFile,
-					Contents: util.StrPtr(copyKubeconfigDropin),
+					Contents: util.StrPtr(copyKubeconfigDropinKeepalived),
+				},
+			},
+		})
+
+		// Add drop-in to copy the kubeadm config file for ocne-nginx
+		ign = ignition.AddUnit(ign, &igntypes.Unit{
+			Name:    ignition.NginxServiceName,
+			Enabled: util.BoolPtr(true),
+			Dropins: []igntypes.Dropin{
+				{
+					Name:     "post-kubeadm.conf",
+					Contents: util.StrPtr(postKubeadmDropin),
+				},
+				{
+					Name:     copyKubeconfigDropinFile,
+					Contents: util.StrPtr(copyKubeconfigDropinNginx),
 				},
 			},
 		})

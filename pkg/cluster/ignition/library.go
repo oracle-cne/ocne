@@ -9,9 +9,7 @@ import (
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
-
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
-
 	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/image"
@@ -42,12 +40,13 @@ const (
 	CrioServiceName       = "crio.service"
 	IscsidServiceName     = "iscsid.service"
 	KeepalivedServiceName = "keepalived.service"
+	NginxServiceName      = "ocne-nginx.service"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.
 	// There is a bug in the coreos/go-systemd library used by ignition
-	// that is not capable of handling unit files that do not with with
-	// and endline.  It counts all such lines as "too long".
+	// that is not capable of handling unit files that do not end with
+	// an endline.  It counts all such lines as "too long".
 	//
 	// Please refer to this: https://github.com/coreos/go-systemd/blob/v22.5.0/unit/deserialize.go#L153
 	OcneServiceName                   = "ocne.service"
@@ -99,7 +98,7 @@ if [[ "$ACTION" == "" ]]; then
 	kubeadm init --config /etc/ocne/kubeadm-default.conf
 	KUBECONFIG=/etc/kubernetes/admin.conf kubectl taint node $(hostname)  node-role.kubernetes.io/control-plane:NoSchedule-
 elif [[ "$ACTION" == "init" ]]; then
-	echo Initalizing new Kubernetes cluster
+	echo Initializing new Kubernetes cluster
 	mkdir -p $PKI
 
 	kubeadm init --config ${K8S}/kubeadm.conf --upload-certs
@@ -121,6 +120,13 @@ if [ -f "/etc/kubernetes/admin.conf" ]; then
 	cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
 	chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
 	chmod 400 /etc/keepalived/kubeconfig
+fi
+
+# nginx track script user nginx_script needs to read this file
+if [ -f "/etc/kubernetes/kubelet.conf" ]; then
+	cp /etc/kubernetes/kubelet.conf /etc/ocne/nginx/kubeconfig
+	chown nginx_script:nginx_script /etc/ocne/nging/kubeconfig
+	chmod 400 /etc/ocne/nginx/kubeconfig
 fi
 `
 
@@ -350,7 +356,6 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	}
 	ret, err := clusterCommon(ccc, ActionInit)
 	if err != nil {
-		fmt.Errorf("Have error: %+v", err)
 		return nil, err
 	}
 

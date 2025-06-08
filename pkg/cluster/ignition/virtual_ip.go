@@ -12,19 +12,20 @@ import (
 )
 
 const (
-	keepAlivedServiceName = "keepalived.service"
-	keepAlivedUser        = "keepalived_script"
-	keepAlivedGroup       = "keepalived_script"
-
-	nginxServiceName = "ocne-nginx.service"
+	keepAlivedUser  = "keepalived_script"
+	keepAlivedGroup = "keepalived_script"
 
 	keepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
 	KeepAlivedConfigTemplatePath = "/etc/ocne/keepalived.conf.tmpl"
 	keepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
 	keepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
 
+	nginxUser  = "nginx_script"
+	nginxGroup = "nginx_script"
+
 	nginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
 	nginxConfigTemplatePath = "/etc/ocne/nginx/nginx.conf.tmpl"
+	nginxCheckScriptPath    = "/etc/ocne/nginx/check_nginx.sh"
 	nginxPullPath           = "/etc/ocne/nginx/pull_ocne_nginx"
 	nginxStartPath          = "/etc/ocne/nginx/start_ocne_nginx"
 	nginxImagePath          = "/etc/ocne/nginx/image"
@@ -65,9 +66,9 @@ errorExit() {
   exit 1
 }
 
-# update keepalived.conf/nginx.conf and restart keepalived.service/ocne-nginx.service if necessary
-refreshServices() {
-  NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | grep -v SchedulingDisabled | awk -v OFS='\t\t' '{print $6}')
+# update keepalived.conf and restart keepalived.service if necessary
+refreshService() {
+  NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
   if [ $? -ne 0 ]; then
     return 0
   fi
@@ -96,27 +97,22 @@ refreshServices() {
 
     systemctl reload keepalived.service &
   fi
-
-  # check if the existing servers is the same as NODES
-  if [[ "${NODES}" != "$(cat /etc/ocne/nginx/servers)" ]]; then
-    echo $(date): ocne-nginx servers have been changed to: $NODES >> /etc/keepalived/log
-    echo "$NODES" > /etc/ocne/nginx/servers
-
-    ESCAPED_SERVERS=""
-    for node in $NODES; do
-      if echo "$node" | grep ':'; then
-        node="[$node]"
-      fi
-      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }};"
-    done
-
-    sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
-
-    systemctl restart ocne-nginx.service &
-  fi
 }
 
-refreshServices
+refreshService
+
+PORTS=$(netstat -nltp)
+echo $PORT | grep -q {{ .BindPort }}
+if [ $? -ne 0 ]; then
+  echo $(date): keepalived failed to find nginx bound to port >> /etc/keepalived/log
+  return 1
+fi
+echo $PORT | grep -q {{ .AltPort }}
+if [ $? -ne 0 ]; then
+  echo $(date): keepalived failed to find kube-apiserver bound to port >> /etc/keepalived/log
+  return 1
+fi
+
 curl --silent --max-time 2 --insecure https://localhost:{{ .BindPort }}/ -o /dev/null || errorExit "Error GET https://localhost:{{ .BindPort }}/"
 `
 
@@ -188,14 +184,53 @@ exec podman run --name ocne-nginx --replace --rm --network=host --volume=/etc/oc
 	nginxImage = "IMAGE=container-registry.oracle.com/olcne/nginx:1.17.7-1"
 
 	polkitRules = `
-// Allow keepalived_script user to restart services
+// Allow keepalived_script and nginx_script user to restart services
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
-        (action.lookup("unit") == "keepalived.service" || action.lookup("unit") == "ocne-nginx.service") &&
+        (action.lookup("unit") == "keepalived.service" &&
         subject.user == "keepalived_script") {
         return polkit.Result.YES;
     }
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        (action.lookup("unit") == "ocne-nginx.service" &&
+        subject.user == "nginx_script") {
+        return polkit.Result.YES;
+    }
 });
+`
+
+	nginxCheckScript = `#!/bin/bash
+# update nginx.conf and restart ocne-nginx.service if necessary
+refreshService() {
+  NODES=$(KUBECONFIG=/etc/ocne/nginx/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
+  if [ $? -ne 0 ]; then
+    return 0
+  fi
+
+  if [ -z "${NODES}" ]; then
+	NODES="localhost"
+  fi
+
+  # check if the existing servers is the same as NODES
+  if [[ "${NODES}" != "$(cat /etc/ocne/nginx/servers)" ]]; then
+    echo $(date): ocne-nginx servers have been changed to: $NODES >> /etc/ocne/nginx/log
+    echo "$NODES" > /etc/ocne/nginx/servers
+
+    ESCAPED_SERVERS=""
+    for node in $NODES; do
+      if echo "$node" | grep ':'; then
+        node="[$node]"
+      fi
+      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }} fail_timeout=500m max_fails=1;"
+    done
+
+    sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
+
+    systemctl restart ocne-nginx.service &
+  fi
+}
+
+refreshService
 `
 )
 
@@ -246,6 +281,13 @@ func generateKeepalivedCheckScript(bindPort uint16, altPort uint16) (string, err
 	})
 }
 
+func generateNginxCheckScript(bindPort uint16, altPort uint16) (string, error) {
+	return util.TemplateToString(nginxCheckScript, &keepalivedCheckScriptArguments{
+		BindPort: fmt.Sprintf("%d", bindPort),
+		AltPort:  fmt.Sprintf("%d", altPort),
+	})
+}
+
 type IgnitionData struct {
 	Files []*File
 	Units []*igntypes.Unit
@@ -290,7 +332,20 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	if err != nil {
 		return nil, err
 	}
+	nginxScript, err := generateNginxCheckScript(bindPort, altPort)
+	if err != nil {
+		return nil, err
+	}
 	data.Files = append(data.Files,
+		&File{
+			Path:  nginxCheckScriptPath,
+			Mode:  0755,
+			User:  nginxUser,
+			Group: nginxGroup,
+			Contents: FileContents{
+				Source: nginxScript,
+			},
+		},
 		&File{
 			Path:  keepAlivedCheckScriptPath,
 			Mode:  0755,
@@ -326,9 +381,18 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: "",
 			},
+		},
+		&File{
+			Path:  "/etc/ocne/nginx/log",
+			Mode:  0644,
+			User:  nginxUser,
+			Group: nginxGroup,
+			Contents: FileContents{
+				Source: "",
+			},
 		})
 
-	nginxConfig, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
+	nginxConfigSource, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
 	if err != nil {
 		return nil, err
 	}
@@ -342,10 +406,10 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  nginxConfigPath,
 			Mode:  0644,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  nginxUser,
+			Group: nginxGroup,
 			Contents: FileContents{
-				Source: nginxConfig,
+				Source: nginxConfigSource,
 			},
 		},
 		&File{
@@ -379,8 +443,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  "/etc/ocne/nginx/servers",
 			Mode:  0644,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  nginxUser,
+			Group: nginxGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -395,7 +459,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 	// services don't start unless they are included in the units in ostree
 	nginxUnit := &igntypes.Unit{
-		Name:     nginxServiceName,
+		Name:     NginxServiceName,
 		Enabled:  util.BoolPtr(true),
 		Contents: util.StrPtr(nginxService),
 	}
@@ -413,7 +477,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		}
 	}
 	keepAlivedUnit := &igntypes.Unit{
-		Name:    keepAlivedServiceName,
+		Name:    KeepalivedServiceName,
 		Enabled: util.BoolPtr(true),
 	}
 
