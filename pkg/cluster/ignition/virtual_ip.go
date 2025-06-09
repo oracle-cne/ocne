@@ -102,12 +102,12 @@ refreshService() {
 refreshService
 
 PORTS=$(netstat -nltp)
-echo $PORT | grep -q {{ .BindPort }}
+echo $PORTS | grep -q {{ .BindPort }}
 if [ $? -ne 0 ]; then
   echo $(date): keepalived failed to find nginx bound to port >> /etc/keepalived/log
   return 1
 fi
-echo $PORT | grep -q {{ .AltPort }}
+echo $PORTS | grep -q {{ .AltPort }}
 if [ $? -ne 0 ]; then
   echo $(date): keepalived failed to find kube-apiserver bound to port >> /etc/keepalived/log
   return 1
