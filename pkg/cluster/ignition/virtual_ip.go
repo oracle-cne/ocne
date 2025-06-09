@@ -338,21 +338,21 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	}
 	data.Files = append(data.Files,
 		&File{
-			Path:  nginxCheckScriptPath,
-			Mode:  0755,
-			User:  nginxUser,
-			Group: nginxGroup,
-			Contents: FileContents{
-				Source: nginxScript,
-			},
-		},
-		&File{
 			Path:  keepAlivedCheckScriptPath,
 			Mode:  0755,
 			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
+			},
+		},
+		&File{
+			Path:  nginxCheckScriptPath,
+			Mode:  0755,
+			User:  nginxUser,
+			Group: nginxGroup,
+			Contents: FileContents{
+				Source: nginxScript,
 			},
 		},
 		&File{

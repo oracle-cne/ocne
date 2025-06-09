@@ -125,7 +125,7 @@ fi
 # nginx track script user nginx_script needs to read this file
 if [ -f "/etc/kubernetes/kubelet.conf" ]; then
 	cp /etc/kubernetes/kubelet.conf /etc/ocne/nginx/kubeconfig
-	chown nginx_script:nginx_script /etc/ocne/nging/kubeconfig
+	chown nginx_script:nginx_script /etc/ocne/nginx/kubeconfig
 	chmod 400 /etc/ocne/nginx/kubeconfig
 fi
 `
