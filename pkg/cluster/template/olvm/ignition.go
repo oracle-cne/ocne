@@ -43,14 +43,14 @@ systemctl enable --now kubeadm.service
 	// Used to start services needed for kubeadm service
 	copyKubeconfigDropinFile       = "copy-kubeconfig.conf"
 	copyKubeconfigDropinKeepalived = `[Service]
-ExecStartPre=/bin/bash -c "/etc/keepalived/copy-kubeconfig.sh"
+ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
 `
 	copyKubeconfigDropinNginx = `[Service]
-ExecStartPre=/bin/bash -c "/etc/ocne/nginx/copy-kubeconfig.sh"
+ExecStartPre=/bin/bash -c "/etc/ocne/nginx-copy-kubeconfig.sh"
 `
 	// Copy kubeconfig and change ownership
-	copyKubeconfigScriptPathKeepalived = "/etc/keepalived/copy-kubeconfig.sh"
-	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx/copy-kubeconfig.sh"
+	copyKubeconfigScriptPathKeepalived = "/etc/ocne/keepalived-copy-kubeconfig.sh"
+	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx-copy-kubeconfig.sh"
 	copyKubeconfigScriptTemplate       = `#! /bin/bash
 set -x
 set -e
@@ -67,12 +67,12 @@ if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "{{ .BasePath }}/
 		sleep 2
 	done
 	cp /var/lib/kubelet/pki/kubelet-client-current.pem {{ .BasePath }}/kubelet-client-current.pem
-	chown nginx_script:nginx_script {{ .BasePath }}/kubelet-client-current.pem
+	chown {{ .Owner }} {{ .BasePath }}/kubelet-client-current.pem
 	chmod 400 {{ .BasePath }}/kubelet-client-current.pem
 	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|{{ .BasePath }}/kubelet-client-current.pem|g' {{ .BasePath }}/kubeconfig
 fi
 
-chown nginx_script:nginx_script {{ .BasePath }}/kubeconfig
+chown {{ .Owner }} {{ .BasePath }}/kubeconfig
 chmod 400 {{ .BasePath }}/kubeconfig
 `
 	// Disable ocne.server with a preset file
@@ -212,7 +212,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, patches)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
-	// needs to be copied to /etc/ocne/nginx
+	// needs to be copied to /etc/keepalived and /etc/ocne/nginx
 	if internalLB {
 		// Copy the kubeconfig file needed by keepalived service to get the
 		// list of cluster nodes
