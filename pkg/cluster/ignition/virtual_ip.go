@@ -183,14 +183,19 @@ exec podman run --name ocne-nginx --replace --rm --network=host --volume=/etc/oc
 
 	nginxImage = "IMAGE=container-registry.oracle.com/olcne/nginx:1.17.7-1"
 
-	polkitRules = `
-// Allow keepalived_script and nginx_script user to restart services
+	polkitRulesKeepalived = `
+// Allow keepalived_script user to restart keepalived.service
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
         (action.lookup("unit") == "keepalived.service" &&
         subject.user == "keepalived_script") {
         return polkit.Result.YES;
     }
+});
+`
+	polkitRulesNginx = `
+// Allow nginx_script user to restart ocne-nginx.service
+polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
         (action.lookup("unit") == "ocne-nginx.service" &&
         subject.user == "nginx_script") {
@@ -453,7 +458,14 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Path: "/etc/polkit-1/rules.d/51-keepalived.rules",
 			Mode: 0644,
 			Contents: FileContents{
-				Source: polkitRules,
+				Source: polkitRulesKeepalived,
+			},
+		},
+		&File{
+			Path: "/etc/polkit-1/rules.d/52-nginx.rules",
+			Mode: 0644,
+			Contents: FileContents{
+				Source: polkitRulesNginx,
 			},
 		})
 
