@@ -4,6 +4,8 @@
 package helm
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net/url"
@@ -13,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -24,6 +27,8 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/strvals"
+	apiex "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
@@ -166,12 +171,128 @@ func GetValues(kubeInfo *client.KubeInfo, releaseName string, namespace string) 
 	return yamlValues, nil
 }
 
-// UpgradeChartFromArchive installs a release into a cluster or upgrades an existing one.  The
-// reader must be a compressed tar archive.
-func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
+// ValidateCRDs checks the CRDs in a chart against the CRs in a cluster
+// and makes sure they are all valid.
+func ValidateCRDs(kubeInfo *client.KubeInfo, theChart *chart.Chart, overrides []HelmOverrides) error {
+	fail := false
+
+	// First check stuff in the crds directory
+	crds := []*apiex.CustomResourceDefinition{}
+	for _, chartCrd := range theChart.CRDObjects() {
+		crd, err := k8s.CRDFromBytes(chartCrd.File.Data)
+		if err != nil {
+			log.Errorf("could not load CRD: %v", err)
+			fail = true
+		}
+
+		log.Debugf("Adding CRD %s/%s", crd.Spec.Group, crd.Spec.Names.Kind)
+		crds = append(crds, crd)
+	}
+
+	// Then check stuff in the templates
+	k8sVer, err := k8s.GetServerVersion(kubeInfo.RestConfig)
+	if err != nil {
+		return err
+	}
+
+	k8sSemVer, err := semver.NewVersion(k8sVer.String())
+	if err != nil {
+		return err
+	}
+
+	tmplResYaml, err := Template(kubeInfo, theChart, overrides, k8sSemVer)
+	if err != nil {
+		return err
+	}
+
+	tmplReses, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBuffer([]byte(tmplResYaml))))
+	if err != nil {
+		return err
+	}
+	for _, tmplRes := range tmplReses {
+		if tmplRes.GetKind() != "CustomResourceDefinition" {
+			continue
+		}
+		if tmplRes.GetAPIVersion() != "apiextensions.k8s.io/v1" {
+			continue
+		}
+
+		crdBytes, err := tmplRes.MarshalJSON()
+		if err != nil {
+			log.Errorf("could not load CRD: %v", err)
+			fail = true
+		}
+
+		crd, err := k8s.CRDFromBytes(crdBytes)
+		if err != nil {
+			log.Errorf("could not load CRD: %v", err)
+			fail = true
+		}
+
+		log.Debugf("Adding CRD %s/%s", crd.Spec.Group, crd.Spec.Names.Kind)
+		crds = append(crds, crd)
+	}
+
+	for _, crd := range crds {
+		for _, ver := range crd.Spec.Versions {
+			gvk := schema.GroupVersionKind{
+				Group:   crd.Spec.Group,
+				Version: ver.Name,
+				Kind:    crd.Spec.Names.Kind,
+			}
+
+			reses, err := k8s.GetResources(kubeInfo.RestConfig, "", gvk.GroupVersion().String(), gvk.Kind)
+			if err != nil {
+				// If a CRD has not been applied, this error
+				// is returned.  A resource that does not exist
+				// cannot be invalid, so ignore this error.
+				if strings.Contains(err.Error(), "no matches for kind") {
+					continue
+				}
+
+				log.Errorf("%v", err)
+				fail = true
+				continue
+			}
+
+			for _, res := range reses.Items {
+				log.Debugf("Validing %s", res.GroupVersionKind().String())
+				valid, errs, warns := k8s.ValidateCustomResource(crd, &res)
+				for _, w := range warns {
+					log.Warnf("%v", w)
+				}
+				if valid {
+					continue
+				}
+				for _, e := range errs {
+					log.Errorf("%v", e)
+				}
+				fail = true
+			}
+		}
+	}
+
+	if fail {
+		return fmt.Errorf("Some custom resources failed to validate")
+	}
+	return nil
+}
+
+// GetChartFromArchive gets a Chart from a compressed tar archive.
+func GetChartFromArchive(archive io.Reader) (*chart.Chart, error) {
 	theChart, err := loader.LoadArchive(archive)
 	if err != nil {
 		log.Errorf("Error loading archive: %v", err)
+		return nil, err
+	}
+	return theChart, nil
+}
+
+// UpgradeChartFromArchive installs a release into a cluster or upgrades an existing one.  The
+// reader must be a compressed tar archive.
+func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
+	theChart, err := GetChartFromArchive(archive)
+	if err != nil {
 		return nil, err
 	}
 
@@ -211,6 +332,20 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.Wait = wait
 		client.ResetValues = resetValues
 		client.TakeOwnership = force
+
+		// Forcibly upgrade any CRDs.
+		for _, crd := range theChart.CRDObjects() {
+			crdObj, err := k8s.Unmarshall(bufio.NewReader(bytes.NewBuffer(crd.File.Data)))
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range crdObj {
+				err = k8s.CreateResourceIfNotExist(kubeInfo.RestConfig, &r)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 
 		// Reuse the original set of input values as the base set of helm overrides
 		helmValues := map[string]interface{}{}
