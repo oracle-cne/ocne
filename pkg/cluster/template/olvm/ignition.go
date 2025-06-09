@@ -231,7 +231,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 
 		// Copy the kubeconfig file needed by ocne-nginx service to get the
 		// list of cluster nodes
-		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/ngninx", "ngninx_script:ngninx_script")
+		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/nginx", "nginx_script:nginx_script")
 		if err != nil {
 			return "", err
 		}
