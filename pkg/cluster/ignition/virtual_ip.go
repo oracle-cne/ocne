@@ -20,12 +20,12 @@ const (
 	keepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
 	keepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
 
-	nginxUser  = "nginx_script"
-	nginxGroup = "nginx_script"
+	NginxUser  = "nginx_script"
+	NginxGroup = "nginx_script"
 
 	nginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
 	nginxConfigTemplatePath = "/etc/ocne/nginx/nginx.conf.tmpl"
-	nginxCheckScriptPath    = "/etc/ocne/nginx/check_nginx.sh"
+	nginxCheckScriptPath    = "/etc/ocne/nginx-refresh/check_nginx.sh"
 	nginxPullPath           = "/etc/ocne/nginx/pull_ocne_nginx"
 	nginxStartPath          = "/etc/ocne/nginx/start_ocne_nginx"
 	nginxImagePath          = "/etc/ocne/nginx/image"
@@ -157,6 +157,22 @@ RestartSec=1
 WantedBy=multi-user.target
 WantedBy=keepalived.service
 `
+	nginxRefreshService = `
+[Unit]
+Description=Nginx refresh service for OCNE
+After=network-online.target
+After=ocne-nginx.service
+Wants=network.target
+
+[Service]
+ExecStart=/bin/bash -c "/etc/ocne/nginx-refresh/check_nginx.sh"
+User=nginx_script
+Group=nginx_script
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+`
 
 	nginxPull = `#!/bin/bash
 
@@ -207,7 +223,7 @@ polkit.addRule(function(action, subject) {
 	nginxCheckScript = `#!/bin/bash
 # update nginx.conf and restart ocne-nginx.service if necessary
 refreshService() {
-  NODES=$(KUBECONFIG=/etc/ocne/nginx/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
+  NODES=$(KUBECONFIG=/etc/ocne/nginx-refresh/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
   if [ $? -ne 0 ]; then
     return 0
   fi
@@ -217,9 +233,9 @@ refreshService() {
   fi
 
   # check if the existing servers is the same as NODES
-  if [[ "${NODES}" != "$(cat /etc/ocne/nginx/servers)" ]]; then
-    echo $(date): ocne-nginx servers have been changed to: $NODES >> /etc/ocne/nginx/log
-    echo "$NODES" > /etc/ocne/nginx/servers
+  if [[ "${NODES}" != "$(cat /etc/ocne/nginx-refresh/servers)" ]]; then
+    echo $(date): ocne-nginx-refresh servers have been changed to: $NODES >> /etc/ocne/nginx-refresh/log
+    echo "$NODES" > /etc/ocne/nginx-refresh/servers
 
     ESCAPED_SERVERS=""
     for node in $NODES; do
@@ -383,10 +399,10 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		},
 		&File{
-			Path:  "/etc/ocne/nginx/log",
+			Path:  "/etc/ocne/nginx-refresh/log",
 			Mode:  0644,
-			User:  nginxUser,
-			Group: nginxGroup,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -406,8 +422,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  nginxCheckScriptPath,
 			Mode:  0755,
-			User:  nginxUser,
-			Group: nginxGroup,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: nginxScript,
 			},
@@ -415,8 +431,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  nginxConfigPath,
 			Mode:  0644,
-			User:  nginxUser,
-			Group: nginxGroup,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: nginxConfigSource,
 			},
@@ -450,10 +466,10 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		},
 		&File{
-			Path:  "/etc/ocne/nginx/servers",
+			Path:  "/etc/ocne/nginx-refresh/servers",
 			Mode:  0644,
-			User:  nginxUser,
-			Group: nginxGroup,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -492,12 +508,17 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		}
 	}
+	nginxRefreshUnit := &igntypes.Unit{
+		Name:     NginxRefreshServiceName,
+		Enabled:  util.BoolPtr(true),
+		Contents: util.StrPtr(nginxRefreshService),
+	}
 	keepAlivedUnit := &igntypes.Unit{
 		Name:    KeepalivedServiceName,
 		Enabled: util.BoolPtr(true),
 	}
 
-	data.Units = append(data.Units, nginxUnit, keepAlivedUnit)
+	data.Units = append(data.Units, nginxUnit, nginxRefreshUnit, keepAlivedUnit)
 
 	return data, nil
 }

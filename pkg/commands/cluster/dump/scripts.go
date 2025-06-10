@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package dump
@@ -70,6 +70,7 @@ journalctl -u crio.service -m --no-hostname > ./journal.crio.service
 journalctl -u ocne.service -m --no-hostname > ./journal.ocne.service
 journalctl -u ocne-image-cleanup.service -m --no-hostname > ./journal.ocne-image-cleanup.service
 journalctl -u ocne-nginx.service -m --no-hostname > ./journal.ocne-nginx.service
+journalctl -u ocne-nginx-refresh.service -m --no-hostname > ./journal.ocne-nginx-refresh.service
 journalctl -u ocne-update.service -m --no-hostname > ./journal.ocne-update.service
 journalctl -u ostree-remount.service -m --no-hostname > ./journal.ostree-remount.service
 

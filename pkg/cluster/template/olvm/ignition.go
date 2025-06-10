@@ -46,11 +46,11 @@ systemctl enable --now kubeadm.service
 ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
 `
 	copyKubeconfigDropinNginx = `[Service]
-ExecStartPre=/bin/bash -c "/etc/ocne/nginx-copy-kubeconfig.sh"
+ExecStartPre=/bin/bash -c "/etc/ocne/nginx-refresh/nginx-copy-kubeconfig.sh"
 `
 	// Copy kubeconfig and change ownership
 	copyKubeconfigScriptPathKeepalived = "/etc/ocne/keepalived-copy-kubeconfig.sh"
-	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx-copy-kubeconfig.sh"
+	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx-refresh/nginx-copy-kubeconfig.sh"
 	copyKubeconfigScriptTemplate       = `#! /bin/bash
 set -x
 set -e
@@ -87,6 +87,7 @@ disable crio.service
 disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
+enable ocne-nginx-refresh.service
 enable ocne-image-cleanup.service
 enable ocne-disable-ignition.service
 `
@@ -225,8 +226,21 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, patches)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
-	// needs to be copied to /etc/keepalived and /etc/ocne/nginx
+	// needs to be copied to /etc/keepalived and /etc/ocne/nginx-refresh
 	if internalLB {
+		nginxRefreshDir := &igntypes.Directory{
+			Node: igntypes.Node{
+				Path: "/etc/ocne/nginx-refresh",
+				User: igntypes.NodeUser{
+					Name: util.StrPtr(ignition.NginxUser),
+				},
+				Group: igntypes.NodeGroup{
+					Name: util.StrPtr(ignition.NginxGroup),
+				},
+			},
+		}
+		ignition.AddDir(ign, nginxRefreshDir)
+
 		// Copy the kubeconfig file needed by keepalived service to get the
 		// list of cluster nodes
 		copyKubeconfigScriptSource, err := generateCopyKubeconfigScript("/etc/keepalived", "keepalived_script:keepalived_script")
@@ -244,13 +258,15 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 
 		// Copy the kubeconfig file needed by ocne-nginx service to get the
 		// list of cluster nodes
-		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/nginx", "nginx_script:nginx_script")
+		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/nginx-refresh", "nginx_script:nginx_script")
 		if err != nil {
 			return "", err
 		}
 		copyKubeconfig = &ignition.File{
-			Path: copyKubeconfigScriptPathNginx,
-			Mode: 0555,
+			Path:  copyKubeconfigScriptPathNginx,
+			User:  ignition.NginxUser,
+			Group: ignition.NginxGroup,
+			Mode:  0555,
 			Contents: ignition.FileContents{
 				Source: copyKubeconfigScriptSource,
 			},

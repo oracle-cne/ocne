@@ -14,7 +14,7 @@ chroot /hostroot bash -c "echo \"$JOIN_CONFIG\" > /etc/kubernetes/kubeadm.conf"
 chroot /hostroot sed -i '/Environment=ACTION=/c\Environment=ACTION=join' /etc/systemd/system/ocne.service.d/bootstrap.conf
 chroot /hostroot systemctl daemon-reload
 chroot /hostroot chown keepalived_script:keepalived_script /etc/keepalived/peers  /etc/keepalived/keepalived.conf /etc/keepalived/log || true
-chroot /hostroot chown nginx_script:nginx_script /etc/ocne/nginx/log /etc/ocne/nginx/servers /etc/ocne/nginx/nginx.conf || true
+chroot /hostroot chown nginx_script:nginx_script /etc/ocne/nginx-refresh /etc/ocne/nginx-refresh/log /etc/ocne/nginx-refresh/servers /etc/ocne/nginx/nginx.conf || true
 chroot /hostroot bash -c 'for svc in $ENABLE_SERVICES; do systemctl enable $svc --now; done'
 chroot /hostroot touch /etc/ocne/reset-kubeadm
 chroot /hostroot systemctl restart ocne
