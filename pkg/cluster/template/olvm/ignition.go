@@ -138,6 +138,19 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		Enabled: util.BoolPtr(false),
 	})
 
+	// Temporary setup of nginx_script user
+	err = ignition.AddGroup(ign, &ignition.Group{
+		Name:   "nginx_script",
+		System: true,
+	})
+	err = ignition.AddUser(ign, &ignition.User{
+		Name:         "nginx_script",
+		PrimaryGroup: "nginx_script",
+		Shell:        "/sbin/nologin",
+		System:       true,
+		NoCreateHome: true,
+	})
+
 	// Disable some services via preset file in /etc/systemd/system-preset/10-ocne.preset
 	// to override 20-ignition.preset
 	presetFileEtc := &ignition.File{

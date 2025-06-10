@@ -235,7 +235,11 @@ refreshService() {
   fi
 }
 
-refreshService
+# Loop forever, checking for and  updates as needed
+while true; do
+	refreshService
+	sleep 30s
+done
 `
 )
 
