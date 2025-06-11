@@ -279,10 +279,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			Enabled: util.BoolPtr(true),
 			Dropins: []igntypes.Dropin{
 				{
-					Name:     "post-kubeadm.conf",
-					Contents: util.StrPtr(postKubeadmDropin),
-				},
-				{
 					Name:     copyKubeconfigDropinFile,
 					Contents: util.StrPtr(copyKubeconfigDropinKeepalived),
 				},
@@ -294,10 +290,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			Name:    ignition.NginxServiceName,
 			Enabled: util.BoolPtr(true),
 			Dropins: []igntypes.Dropin{
-				{
-					Name:     "post-kubeadm.conf",
-					Contents: util.StrPtr(postKubeadmDropin),
-				},
 				{
 					Name:     copyKubeconfigDropinFile,
 					Contents: util.StrPtr(copyKubeconfigDropinNginx),
