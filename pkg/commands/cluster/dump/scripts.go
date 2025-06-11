@@ -67,6 +67,7 @@ journalctl -n 2000 > ./journal.tail.out
 journalctl -u kubelet.service -m --no-hostname > ./journal.kubelet.service
 journalctl -u grow-rootfs.service > ./journal.grow-rootfs.service
 journalctl -u crio.service -m --no-hostname > ./journal.crio.service
+journalctl -u keepalived.service -m --no-hostname > ./journal.keepalived.service
 journalctl -u ocne.service -m --no-hostname > ./journal.ocne.service
 journalctl -u ocne-image-cleanup.service -m --no-hostname > ./journal.ocne-image-cleanup.service
 journalctl -u ocne-nginx.service -m --no-hostname > ./journal.ocne-nginx.service
