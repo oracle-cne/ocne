@@ -21,11 +21,6 @@ const (
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
 `
-	// Used whenever a service has to start after the CAPI
-	// service used to start Kubernetes services on a node
-	postKubeadmDropin = `[Unit]
-After=kubeadm.service
-`
 	// Used to start services needed for kubeadm service
 	enableServicesDropinFile = "enable-services.conf"
 	enableServicesDropin     = `[Service]
