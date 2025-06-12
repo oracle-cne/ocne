@@ -9,6 +9,7 @@ import (
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -531,6 +532,9 @@ func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16,
 		Name:   "nginx_script",
 		System: true,
 	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		return nil, err
+	}
 	err = AddUser(ign, &User{
 		Name:         "nginx_script",
 		PrimaryGroup: "nginx_script",
@@ -538,6 +542,9 @@ func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16,
 		System:       true,
 		NoCreateHome: true,
 	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		return nil, err
+	}
 
 	data, err := GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, proxy, netInterface)
 	if err != nil {
