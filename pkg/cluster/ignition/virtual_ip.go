@@ -525,7 +525,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 // IgnitionForVirtualIp add keepalived and nginx services and its files to ignition
 func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) (*igntypes.Config, error) {
-	// Temporary setup of nginx_script user
+	// Setup nginx_script user. This user may eventually be part of the base ock image;
+	// however, it is being created here for compatibility with existing ock images.
 	err := AddGroup(ign, &Group{
 		Name:   "nginx_script",
 		System: true,
