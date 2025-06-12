@@ -386,19 +386,6 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 		},
 	}
 
-	// Temporary setup of nginx_script user
-	err = AddGroup(ret, &Group{
-		Name:   "nginx_script",
-		System: true,
-	})
-	err = AddUser(ret, &User{
-		Name:         "nginx_script",
-		PrimaryGroup: "nginx_script",
-		Shell:        "/sbin/nologin",
-		System:       true,
-		NoCreateHome: true,
-	})
-
 	// Take all of the resources that were made and stick them into the
 	// ignition structure.  Errors can be ignored because this is a fresh
 	// struct and it is guaranteed that no errors will happen so long as

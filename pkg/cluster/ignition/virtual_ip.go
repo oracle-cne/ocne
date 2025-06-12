@@ -525,6 +525,19 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 // IgnitionForVirtualIp add keepalived and nginx services and its files to ignition
 func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) (*igntypes.Config, error) {
+	// Temporary setup of nginx_script user
+	err := AddGroup(ign, &Group{
+		Name:   "nginx_script",
+		System: true,
+	})
+	err = AddUser(ign, &User{
+		Name:         "nginx_script",
+		PrimaryGroup: "nginx_script",
+		Shell:        "/sbin/nologin",
+		System:       true,
+		NoCreateHome: true,
+	})
+
 	data, err := GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, proxy, netInterface)
 	if err != nil {
 		return nil, err
