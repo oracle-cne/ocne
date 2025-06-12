@@ -15,8 +15,6 @@ import (
 	ign34 "github.com/coreos/ignition/v2/config/v3_4"
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -61,10 +59,7 @@ type Group struct {
 func AddUser(ign *igntypes.Config, u *User) error {
 	for _, pu := range ign.Passwd.Users {
 		if pu.Name == u.Name {
-			return errors.NewAlreadyExists(schema.GroupResource{
-				Group:    "user",
-				Resource: "user",
-			}, fmt.Sprintf("A user with name %s is already defined", u.Name))
+			return fmt.Errorf("A user with name %s is already defined", u.Name)
 		}
 	}
 
@@ -102,10 +97,7 @@ func AddUser(ign *igntypes.Config, u *User) error {
 func AddGroup(ign *igntypes.Config, g *Group) error {
 	for _, pg := range ign.Passwd.Groups {
 		if pg.Name == g.Name {
-			return errors.NewAlreadyExists(schema.GroupResource{
-				Group:    "group",
-				Resource: "user",
-			}, fmt.Sprintf("A group with name %s is already defined", g.Name))
+			return fmt.Errorf("A group with name %s is already defined", g.Name)
 		}
 	}
 

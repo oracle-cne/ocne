@@ -5,11 +5,11 @@ package ignition
 
 import (
 	"fmt"
+	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -532,7 +532,7 @@ func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16,
 		Name:   "nginx_script",
 		System: true,
 	})
-	if err != nil && !errors.IsAlreadyExists(err) {
+	if err != nil && !strings.Contains(err.Error(), "already defined") {
 		return nil, err
 	}
 	err = AddUser(ign, &User{
@@ -542,7 +542,7 @@ func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16,
 		System:       true,
 		NoCreateHome: true,
 	})
-	if err != nil && !errors.IsAlreadyExists(err) {
+	if err != nil && !strings.Contains(err.Error(), "already defined") {
 		return nil, err
 	}
 
