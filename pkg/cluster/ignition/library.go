@@ -9,9 +9,7 @@ import (
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
-
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
-
 	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/image"
@@ -38,16 +36,18 @@ const (
 	ActionInit    = "init"
 	ActionJoin    = "join"
 
-	KubeletServiceName    = "kubelet.service"
-	CrioServiceName       = "crio.service"
-	IscsidServiceName     = "iscsid.service"
-	KeepalivedServiceName = "keepalived.service"
+	KubeletServiceName      = "kubelet.service"
+	CrioServiceName         = "crio.service"
+	IscsidServiceName       = "iscsid.service"
+	KeepalivedServiceName   = "keepalived.service"
+	NginxServiceName        = "ocne-nginx.service"
+	NginxRefreshServiceName = "ocne-nginx-refresh.service"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.
 	// There is a bug in the coreos/go-systemd library used by ignition
-	// that is not capable of handling unit files that do not with with
-	// and endline.  It counts all such lines as "too long".
+	// that is not capable of handling unit files that do not end with
+	// an endline.  It counts all such lines as "too long".
 	//
 	// Please refer to this: https://github.com/coreos/go-systemd/blob/v22.5.0/unit/deserialize.go#L153
 	OcneServiceName                   = "ocne.service"
@@ -99,7 +99,7 @@ if [[ "$ACTION" == "" ]]; then
 	kubeadm init --config /etc/ocne/kubeadm-default.conf
 	KUBECONFIG=/etc/kubernetes/admin.conf kubectl taint node $(hostname)  node-role.kubernetes.io/control-plane:NoSchedule-
 elif [[ "$ACTION" == "init" ]]; then
-	echo Initalizing new Kubernetes cluster
+	echo Initializing new Kubernetes cluster
 	mkdir -p $PKI
 
 	kubeadm init --config ${K8S}/kubeadm.conf --upload-certs
@@ -350,7 +350,6 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	}
 	ret, err := clusterCommon(ccc, ActionInit)
 	if err != nil {
-		fmt.Errorf("Have error: %+v", err)
 		return nil, err
 	}
 
