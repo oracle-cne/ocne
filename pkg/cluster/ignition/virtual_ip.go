@@ -238,7 +238,7 @@ refreshService() {
       if echo "$node" | grep ':'; then
         node="[$node]"
       fi
-      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }} fail_timeout=500m max_fails=1;"
+      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }} fail_timeout=10s max_fails=1;"
     done
 
     sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
