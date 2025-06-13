@@ -10,6 +10,7 @@ import (
 	apiexv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apival "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 )
 
 // Given a CRD and a resource, validate the resource.  The first return
@@ -53,7 +54,10 @@ func CRDFromBytes(in []byte) (*apiex.CustomResourceDefinition, error) {
 	ret := &apiex.CustomResourceDefinition{}
 
 	apiexv1.SetDefaults_CustomResourceDefinition(crdv1)
-	err := crdv1.Unmarshal(in)
+	err := yaml.Unmarshal(in, crdv1)
+	if err != nil {
+		return nil, err
+	}
 
 	err = apiexv1.Convert_v1_CustomResourceDefinition_To_apiextensions_CustomResourceDefinition(crdv1, ret, nil)
 	if err != nil {
