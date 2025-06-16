@@ -123,7 +123,7 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 		Enabled:  util.BoolPtr(true),
 		Contents: util.StrPtr(ipv6DefaultRouteService),
 	}
-	ignition.AddFile(ign, ipv6DefaultRoute)
+	ign = ignition.AddUnit(ign, ipv6DefaultRoute)
 
 	// Cluster API has its own kubeadm service to start
 	// kubelet.  Use that one instead of ocne.service.
@@ -204,7 +204,6 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, proxy)
 	ign = ignition.Merge(ign, usr)
 	ign = ignition.Merge(ign, patches)
-	ign = ignition.Merge(ign, ipv6DefaultRoute)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
 	// needs to be copied to /etc/keepalived
