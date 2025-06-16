@@ -108,8 +108,6 @@ if [ $? -ne 0 ]; then
   echo $(date): keepalived failed to find nginx bound to port >> /etc/keepalived/log
   return 1
 fi
-
-curl --silent --max-time 2 --insecure https://localhost:{{ .BindPort }}/ -o /dev/null || errorExit "Error GET https://localhost:{{ .BindPort }}/"
 `
 
 	keepAlivedStateScript = `#!/bin/bash
