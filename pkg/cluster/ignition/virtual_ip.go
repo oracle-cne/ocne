@@ -128,6 +128,7 @@ stream {
     listen {{ .BindPort }};
     listen [::]:{{ .BindPort }};
     proxy_pass backend1;
+    proxy_connect_timeout 500m;
   }
 }
 `
