@@ -14,7 +14,6 @@ import (
 	ignutil "github.com/coreos/ignition/v2/config/util"
 	ign34 "github.com/coreos/ignition/v2/config/v3_4"
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
-
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
@@ -40,15 +39,19 @@ type File struct {
 }
 
 type User struct {
-	Name     string   `json:"name"`
-	SshKey   string   `json:"sshKey"`
-	Password string   `json:"password"`
-	Groups   []string `json:"groups"`
-	Shell    string   `json:"shell"`
+	Name         string   `json:"name"`
+	SshKey       string   `json:"sshKey"`
+	Password     string   `json:"password"`
+	Groups       []string `json:"groups"`
+	Shell        string   `json:"shell"`
+	System       bool     `json:"system"`
+	NoCreateHome bool     `json:"noCreateHome"`
+	PrimaryGroup string   `json:"primaryGroup"`
 }
 
 type Group struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	System bool   `json:"system"`
 }
 
 // AddUser adds a user with the correct variables set, and also checks
@@ -65,12 +68,12 @@ func AddUser(ign *igntypes.Config, u *User) error {
 		pwh = &u.Password
 	}
 
-	keys := []igntypes.SSHAuthorizedKey{}
+	var keys []igntypes.SSHAuthorizedKey
 	if u.SshKey != "" {
 		keys = append(keys, igntypes.SSHAuthorizedKey(u.SshKey))
 	}
 
-	groups := []igntypes.Group{}
+	var groups []igntypes.Group
 	for _, g := range u.Groups {
 		groups = append(groups, igntypes.Group(g))
 	}
@@ -81,6 +84,9 @@ func AddUser(ign *igntypes.Config, u *User) error {
 		SSHAuthorizedKeys: keys,
 		Groups:            groups,
 		Shell:             util.StrPtr(u.Shell),
+		System:            util.BoolPtr(u.System),
+		NoCreateHome:      util.BoolPtr(u.NoCreateHome),
+		PrimaryGroup:      util.StrPtr(u.PrimaryGroup),
 	})
 
 	return nil
@@ -96,7 +102,8 @@ func AddGroup(ign *igntypes.Config, g *Group) error {
 	}
 
 	ign.Passwd.Groups = append(ign.Passwd.Groups, igntypes.PasswdGroup{
-		Name: g.Name,
+		Name:   g.Name,
+		System: util.BoolPtr(g.System),
 	})
 
 	return nil
@@ -139,11 +146,11 @@ func AddFile(ign *igntypes.Config, f *File) error {
 			Path:      f.Path,
 			Overwrite: util.BoolPtr(true),
 			User: igntypes.NodeUser{
-				ID: uidPtr,
+				ID:   uidPtr,
 				Name: unamePtr,
 			},
 			Group: igntypes.NodeGroup{
-				ID: gidPtr,
+				ID:   gidPtr,
 				Name: gnamePtr,
 			},
 		},
@@ -185,7 +192,6 @@ func AddDir(ign *igntypes.Config, d *igntypes.Directory) error {
 	return nil
 }
 
-
 // AddUnit adds a unit to an existing ignition config.
 func AddUnit(ign *igntypes.Config, unit *igntypes.Unit) *igntypes.Config {
 	wrapped := NewIgnition()
@@ -193,7 +199,7 @@ func AddUnit(ign *igntypes.Config, unit *igntypes.Unit) *igntypes.Config {
 	return Merge(ign, wrapped)
 }
 
-// Merge merges two ignition configuration
+// Merge merges two ignition configurations
 func Merge(a *igntypes.Config, b *igntypes.Config) *igntypes.Config {
 	ret := ign34.Merge(*a, *b)
 	return &ret
@@ -293,7 +299,7 @@ func NewIgnition() *igntypes.Config {
 	}
 }
 
-// Marshal converts and ignition configuration to a byte array
+// MarshalIgnition converts and ignition configuration to a byte array
 // containing the json encoding of the configuration.
 func MarshalIgnition(ign *igntypes.Config) ([]byte, error) {
 	return json.Marshal(ign)
