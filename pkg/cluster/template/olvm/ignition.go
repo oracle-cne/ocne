@@ -39,16 +39,16 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
-	ipv6DefaultRouteName    = "ocne-ipv6-default-route"
-	ipv6DefaultRouteService = `
-[Unit]
+	ipv6DefaultRouteName    = "ocne-ipv6-default-route.service"
+	ipv6DefaultRouteService = `[Unit]
 Description=Set default route for IPV6
-Wants=network.target
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+User=root
 Type=oneshot
-ExecStart=ip -6 route add default dev enp1s0
+ExecStart=/usr/sbin/ip -6 route add default dev {{interface}}
 RemainAfterExit=no
 
 [Install]
@@ -92,7 +92,7 @@ enable ocne-disable-ignition.service
 )
 
 // getExtraIgnition creates the ignition string that will be passed to the VM.
-func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
+func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool, vm *types.OlvmVirtualMachine) (string, error) {
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
@@ -118,12 +118,17 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 
 	ign := ignition.NewIgnition()
 
-	ipv6DefaultRoute := &igntypes.Unit{
-		Name:     ipv6DefaultRouteName,
-		Enabled:  util.BoolPtr(true),
-		Contents: util.StrPtr(ipv6DefaultRouteService),
+	// For IPV6 add service to set default IPV6 route
+	if vm.Network.IPV6.IpAddresses != "" || vm.Network.IPV6.AutoConf {
+		// Replace the placeholder with the real interface name
+		data := strings.Replace(ipv6DefaultRouteService, "{{interface}}", vm.Network.Interface, 1)
+		ipv6DefaultRoute := &igntypes.Unit{
+			Name:     ipv6DefaultRouteName,
+			Enabled:  util.BoolPtr(true),
+			Contents: util.StrPtr(data),
+		}
+		ign = ignition.AddUnit(ign, ipv6DefaultRoute)
 	}
-	ign = ignition.AddUnit(ign, ipv6DefaultRoute)
 
 	// Cluster API has its own kubeadm service to start
 	// kubelet.  Use that one instead of ocne.service.

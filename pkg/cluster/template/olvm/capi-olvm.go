@@ -60,11 +60,11 @@ func GetOlvmTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (
 	// Get the CIDR blocks
 
 	// Build up the extra ignition structures.  Internal LB for control plane only
-	cpIgn, err := getExtraIgnition(config, clusterConfig, true)
+	cpIgn, err := getExtraIgnition(config, clusterConfig, true, &clusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine)
 	if err != nil {
 		return "", err
 	}
-	workerIgn, err := getExtraIgnition(config, clusterConfig, false)
+	workerIgn, err := getExtraIgnition(config, clusterConfig, false, &clusterConfig.Providers.Olvm.WorkerMachine.VirtualMachine)
 	if err != nil {
 		return "", err
 	}
