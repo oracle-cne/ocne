@@ -71,13 +71,13 @@ func GetDefaultConfig() (*types.Config, error) {
 				Profile:     constants.OciDefaultProfile,
 				ImageBucket: constants.OciBucket,
 				ControlPlaneShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardA1Flex,
-					Ocpus: constants.OciControlPlaneOcpus,
+					Shape:          constants.OciVmStandardA1Flex,
+					Ocpus:          constants.OciControlPlaneOcpus,
 					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 				WorkerShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardE4Flex,
-					Ocpus: constants.OciWorkerOcpus,
+					Shape:          constants.OciVmStandardE4Flex,
+					Ocpus:          constants.OciWorkerOcpus,
 					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 			},
@@ -86,11 +86,17 @@ func GetDefaultConfig() (*types.Config, error) {
 				ControlPlaneMachine: types.OlvmMachine{
 					VirtualMachine: types.OlvmVirtualMachine{
 						Memory: constants.OLVMCAPIControlPlaneMemory,
+						Network: types.OlvmVirtualMachineNetwork{
+							Interface: constants.OLVMNetworkInterface,
+						},
 					},
 				},
 				WorkerMachine: types.OlvmMachine{
 					VirtualMachine: types.OlvmVirtualMachine{
 						Memory: constants.OLVMCAPIWorkerMemory,
+						Network: types.OlvmVirtualMachineNetwork{
+							Interface: constants.OLVMNetworkInterface,
+						},
 					},
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{

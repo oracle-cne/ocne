@@ -138,6 +138,7 @@ const (
 	OLVMCAPIResourcesNamespace = "ocne"
 	OLVMCAPIControlPlaneMemory = "7GB"
 	OLVMCAPIWorkerMemory       = "16GB"
+	OLVMNetworkInterface       = "enp1s0"
 
 	// oVirt CSI Driver constants
 	OvirtCsiSecretName    = "ovirt-csi-creds"
