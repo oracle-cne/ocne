@@ -37,7 +37,7 @@ require (
 	k8s.io/cluster-bootstrap v0.30.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.32.2
-	k8s.io/kubernetes v1.30.3
+	k8s.io/kubernetes v1.32.1
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
 	sigs.k8s.io/cluster-api v1.8.5
 	sigs.k8s.io/controller-runtime v0.19.4
@@ -159,6 +159,7 @@ require (
 	github.com/letsencrypt/boulder v0.0.0-20240620165639-de9c06129bec // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
+	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
