@@ -7,7 +7,10 @@ SPDX:UPL-1.0
 Copyright (C) 2022 Oracle. All rights reserved.
 Copyright (c) 2023 Oracle and/or its affiliates.
 Copyright (c) 2024 Oracle and/or its affiliates.
+Copyright (c) 2024, 2025 Oracle and/or its affiliates.
+Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 Copyright (c) 2024, Oracle and/or its affiliates.
+Copyright (c) 2025, Oracle and/or its affiliates.
 
 -------------------------- Fourth Party Dependencies ---------------------------
 
@@ -21,6 +24,17 @@ Copyright (c) 2024, Oracle and/or its affiliates.
 -  MPL-2.0
 -  UPL-1.0
 -  Unlicense
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+cel.dev/expr
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -189,14 +203,44 @@ Copyright (c) 2014 Adrian-George Bostan.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/antlr/antlr4/runtime/Go/antlr/v4
+github.com/antlr4-go/antlr/v4
 
 == License Type
-SPDX:BSD-3-Clause
+=== BSD-3-Clause-f399e127
+Copyright (c) 2012-2023 The ANTLR Project. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+3. Neither name of copyright holders nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 == Copyright
 Copyright (c) 2012-2022 The ANTLR Project. All rights reserved.
-Copyright 2021 The ANTLR Project
+Copyright (c) 2012-2023 The ANTLR Project. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1180,13 +1224,15 @@ Copyright © fsnotify Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/fvbommel/sortorder
+github.com/fxamacker/cbor/v2
 
 == License Type
 SPDX:MIT
 
 == Copyright
-Copyright (c) 2015 Frits van Bommel
+Copyright (c) 2019-present Faye Amacker
+Copyright (c) Faye Amacker. All rights reserved.
+Copyright © 2019-2024 [Faye Amacker](https://github.com/fxamacker).
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1441,7 +1487,8 @@ Copyright (c) 2016 Sergey Kamardin
 github.com/gofrs/flock
 
 == License Type
-=== BSD-3-Clause-4e7459b3
+=== BSD-3-Clause-ccdad8f4
+Copyright (c) 2018-2024, The Gofrs
 Copyright (c) 2015-2020, Tim Heckman
 All rights reserved.
 
@@ -1474,10 +1521,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright (c) 2015-2020, Tim Heckman
+Copyright (c) 2018-2024, The Gofrs
 Copyright 2015 Tim Heckman. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
-Copyright 2018 The Gofrs. All rights reserved.
-Copyright 2019 Tim Heckman. All rights reserved. Use of this source code is
+Copyright 2018-2024 The Gofrs. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1802,6 +1849,7 @@ Copyright 2020 Google LLC
 Copyright 2021 Google LLC
 Copyright 2022 Google LLC
 Copyright 2023 Google LLC
+Copyright 2024 Google LLC
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2074,21 +2122,6 @@ SPDX:MIT
 == Copyright
 Copyright (c) 2015 Huan Du
 Copyright 2015 Huan Du. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/imdario/mergo
-
-== License Type
-SPDX:BSD-3-Clause--modified-by-Google
-
-== Copyright
-Copyright (c) 2012 The Go Authors. All rights reserved.
-Copyright (c) 2013 Dario Castañé. All rights reserved.
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2013 Dario Castañé. All rights reserved.
-Copyright 2014 Dario Castañé. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3899,6 +3932,18 @@ Copyright (c) 2014 Vincent Petithory
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/x448/float16
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2019 Montgomery Edwards⁴⁴⁸ and Faye Amacker
+Copyright 2019 Montgomery Edwards⁴⁴⁸ and Faye Amacker
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/xanzy/ssh-agent
 
 == License Type
@@ -4079,25 +4124,10 @@ go.opentelemetry.io/proto/otlp
 SPDX:Apache-2.0
 
 == Copyright
+Copyright 2016 Google Inc. All Rights Reserved.
 Copyright 2019, OpenTelemetry Authors
 Copyright 2020, OpenTelemetry Authors
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-go.starlark.net
-
-== License Type
-SPDX:BSD-3-Clause
-
-== Copyright
-Copyright (c) 2017 The Bazel Authors.  All rights reserved.
-Copyright (c) 2018 The Bazel Authors.
-Copyright 2017 The Bazel Authors. All rights reserved.
-Copyright 2018 The Bazel Authors. All rights reserved.
-Copyright 2019 The Bazel Authors. All rights reserved.
-Copyright 2020 The Bazel Authors. All rights reserved.
-Copyright 2021 The Bazel Authors. All rights reserved.
+Copyright 2023, OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4317,6 +4347,7 @@ Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2023 The Go Authors. All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -4440,7 +4471,6 @@ Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2016 The Go Authors. All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
-Copyright 2023 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -4524,6 +4554,7 @@ Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2023 The Go Authors. All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -4887,6 +4918,44 @@ shall terminate as of the date such litigation is filed.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+gopkg.in/evanphx/json-patch.v4
+
+== License Type
+=== BSD-3-Clause-96ae735c
+Copyright (c) 2014, Evan Phoenix
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+* Neither the name of the Evan Phoenix nor the names of its contributors 
+  may be used to endorse or promote products derived from this software 
+  without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+== Copyright
+Copyright (c) 2014, Evan Phoenix
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 gopkg.in/inf.v0
 
 == License Type
@@ -4946,34 +5015,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright (c) 2016 Péter Surányi.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-gopkg.in/yaml.v2
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright (c) 2006 Kirill Simonov
-Copyright 2011-2016 Canonical Ltd.
-
-== Notices
-Copyright 2011-2016 Canonical Ltd.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5113,6 +5154,7 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5233,6 +5275,7 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5296,6 +5339,7 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5685,6 +5729,8 @@ Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
+Copyright 2023 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5695,11 +5741,6 @@ sigs.k8s.io/kustomize/kyaml
 SPDX:Apache-2.0
 
 == Copyright
-Copyright (c) 2006-2010 Kirill Simonov
-Copyright (c) 2006-2011 Kirill Simonov
-Copyright (c) 2011-2019 Canonical Ltd
-Copyright (c) 2018 QRI, Inc.
-Copyright 2011-2016 Canonical Ltd.
 Copyright 2014 The Kubernetes Authors.
 Copyright 2015 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
