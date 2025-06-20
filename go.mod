@@ -3,9 +3,9 @@
 
 module github.com/oracle-cne/ocne
 
-go 1.22.6
+go 1.23.0
 
-toolchain go1.22.9
+toolchain go1.23.9
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.0
