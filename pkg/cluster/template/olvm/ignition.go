@@ -5,13 +5,14 @@ package olvm
 
 import (
 	"fmt"
+	"strings"
+
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
-	"strings"
 )
 
 const (
@@ -19,11 +20,6 @@ const (
 	// service used to start Kubernetes services on a node
 	preKubeadmDropin = `[Unit]
 Before=kubeadm.service
-`
-	// Used whenever a service has to start after the CAPI
-	// service used to start Kubernetes services on a node
-	postKubeadmDropin = `[Unit]
-After=kubeadm.service
 `
 	// Used to start services needed for kubeadm service
 	enableServicesDropinFile = "enable-services.conf"
@@ -38,29 +34,61 @@ systemctl enable --now crio.service
 systemctl enable kubelet.service
 systemctl enable --now kubeadm.service
 `
+	ipv6DefaultRouteName    = "ocne-ipv6-default-route.service"
+	ipv6DefaultRouteService = `[Unit]
+Description=Set default route for IPV6
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/usr/sbin/ip -6 route add default dev {{interface}}
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+`
 
 	// Used to start services needed for kubeadm service
-	copyKubeconfigDropinFile = "keepalived-copy-kubeconfig.conf"
-	copyKubeconfigDropin     = `[Service]
+	copyKubeconfigDropinFile       = "copy-kubeconfig.conf"
+	copyKubeconfigDropinKeepalived = `[Service]
 ExecStartPre=/bin/bash -c "/etc/ocne/keepalived-copy-kubeconfig.sh"
 `
-	// Copy kubeconfig to the keepalived dir and change ownership
-	copyKubeconfigScriptPath = "/etc/ocne/keepalived-copy-kubeconfig.sh"
-	copyKubeconfigScript     = `#! /bin/bash
+	copyKubeconfigDropinNginx = `[Service]
+ExecStartPre=/bin/bash -c "/etc/ocne/nginx-refresh/nginx-copy-kubeconfig.sh"
+`
+	// Copy kubeconfig and change ownership
+	copyKubeconfigScriptPathKeepalived = "/etc/ocne/keepalived-copy-kubeconfig.sh"
+	copyKubeconfigScriptPathNginx      = "/etc/ocne/nginx-refresh/nginx-copy-kubeconfig.sh"
+	copyKubeconfigScriptTemplate       = `#! /bin/bash
 set -x
 set -e
-while [ ! -f "/etc/kubernetes/admin.conf" ]; do
-   echo "Waiting for /etc/kubernetes/admin.conf to exist"
+while [ ! -f "/etc/kubernetes/kubelet.conf" ]; do
+   echo "Waiting for /etc/kubernetes/kubelet.conf to exist"
    sleep 2
 done
 
-cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
-chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
-chmod 400 /etc/keepalived/kubeconfig
+cp /etc/kubernetes/kubelet.conf {{ .BasePath }}/kubeconfig
+
+if [[ $(grep "/var/lib/kubelet/pki/kubelet-client-current.pem" "{{ .BasePath }}/kubeconfig") ]]; then
+	while [ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]; do
+		echo "Waiting for /var/lib/kubelet/pki/kubelet-client-current.pem to exist"
+		sleep 2
+	done
+	cp /var/lib/kubelet/pki/kubelet-client-current.pem {{ .BasePath }}/kubelet-client-current.pem
+	chown {{ .Owner }} {{ .BasePath }}/kubelet-client-current.pem
+	chmod 400 {{ .BasePath }}/kubelet-client-current.pem
+	sed -i 's|/var/lib/kubelet/pki/kubelet-client-current.pem|{{ .BasePath }}/kubelet-client-current.pem|g' {{ .BasePath }}/kubeconfig
+fi
+
+chown {{ .Owner }} {{ .BasePath }}/kubeconfig
+chmod 400 {{ .BasePath }}/kubeconfig
 `
 	// Disable ocne.server with a preset file
 	// These need to be disabled because the disable presets set by ignition are not
 	// showing up in the /etc/systemd/system-preset files.
+	// Also enable the service to disable ignition firstboot
 	presetFilePathEtc = "/etc/systemd/system-preset/10-ocne.preset"
 	presetFilePathLib = "/etc/systemd/system-preset/80-ocne.preset"
 	presetFileData    = `disable ocne.service
@@ -69,11 +97,26 @@ disable crio.service
 disable kubelet.service
 enable keepalived.service
 enable ocne-nginx.service
+enable ocne-nginx-refresh.service
+enable ocne-image-cleanup.service
+enable ocne-disable-ignition.service
 `
 )
 
+type copyKubeconfigArguments struct {
+	BasePath string
+	Owner    string
+}
+
+func generateCopyKubeconfigScript(basePath string, owner string) (string, error) {
+	return util.TemplateToString(copyKubeconfigScriptTemplate, &copyKubeconfigArguments{
+		BasePath: basePath,
+		Owner:    owner,
+	})
+}
+
 // getExtraIgnition creates the ignition string that will be passed to the VM.
-func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool) (string, error) {
+func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, internalLB bool, vm *types.OlvmVirtualMachine) (string, error) {
 	// Accept proxy configuration
 	proxy, err := ignition.Proxy(&clusterConfig.Proxy, clusterConfig.ServiceSubnet, clusterConfig.PodSubnet, constants.InstanceMetadata)
 	if err != nil {
@@ -98,6 +141,18 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	}
 
 	ign := ignition.NewIgnition()
+
+	// For IPV6 add service to set default IPV6 route
+	if vm.Network.IPV6.IpAddresses != "" || vm.Network.IPV6.AutoConf {
+		// Replace the placeholder with the real interface name
+		data := strings.Replace(ipv6DefaultRouteService, "{{interface}}", vm.Network.Interface, 1)
+		ipv6DefaultRoute := &igntypes.Unit{
+			Name:     ipv6DefaultRouteName,
+			Enabled:  util.BoolPtr(true),
+			Contents: util.StrPtr(data),
+		}
+		ign = ignition.AddUnit(ign, ipv6DefaultRoute)
+	}
 
 	// Cluster API has its own kubeadm service to start
 	// kubelet.  Use that one instead of ocne.service.
@@ -180,15 +235,49 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 	ign = ignition.Merge(ign, patches)
 
 	// If an internal LB is needed for the control plane then the kubeconfig file
-	// needs to be copied to /etc/keepalived
+	// needs to be copied to /etc/keepalived and /etc/ocne/nginx-refresh
 	if internalLB {
+		nginxRefreshDir := &igntypes.Directory{
+			Node: igntypes.Node{
+				Path: "/etc/ocne/nginx-refresh",
+				User: igntypes.NodeUser{
+					Name: util.StrPtr(ignition.NginxUser),
+				},
+				Group: igntypes.NodeGroup{
+					Name: util.StrPtr(ignition.NginxGroup),
+				},
+			},
+		}
+		ignition.AddDir(ign, nginxRefreshDir)
+
 		// Copy the kubeconfig file needed by keepalived service to get the
 		// list of cluster nodes
+		copyKubeconfigScriptSource, err := generateCopyKubeconfigScript("/etc/keepalived", "keepalived_script:keepalived_script")
+		if err != nil {
+			return "", err
+		}
 		copyKubeconfig := &ignition.File{
-			Path: copyKubeconfigScriptPath,
+			Path: copyKubeconfigScriptPathKeepalived,
 			Mode: 0555,
 			Contents: ignition.FileContents{
-				Source: copyKubeconfigScript,
+				Source: copyKubeconfigScriptSource,
+			},
+		}
+		ignition.AddFile(ign, copyKubeconfig)
+
+		// Copy the kubeconfig file needed by ocne-nginx service to get the
+		// list of cluster nodes
+		copyKubeconfigScriptSource, err = generateCopyKubeconfigScript("/etc/ocne/nginx-refresh", "nginx_script:nginx_script")
+		if err != nil {
+			return "", err
+		}
+		copyKubeconfig = &ignition.File{
+			Path:  copyKubeconfigScriptPathNginx,
+			User:  ignition.NginxUser,
+			Group: ignition.NginxGroup,
+			Mode:  0555,
+			Contents: ignition.FileContents{
+				Source: copyKubeconfigScriptSource,
 			},
 		}
 		ignition.AddFile(ign, copyKubeconfig)
@@ -199,18 +288,26 @@ func getExtraIgnition(config *types.Config, clusterConfig *types.ClusterConfig, 
 			Enabled: util.BoolPtr(true),
 			Dropins: []igntypes.Dropin{
 				{
-					Name:     "post-kubeadm.conf",
-					Contents: util.StrPtr(postKubeadmDropin),
+					Name:     copyKubeconfigDropinFile,
+					Contents: util.StrPtr(copyKubeconfigDropinKeepalived),
 				},
+			},
+		})
+
+		// Add drop-in to copy the kubeadm config file for ocne-nginx
+		ign = ignition.AddUnit(ign, &igntypes.Unit{
+			Name:    ignition.NginxServiceName,
+			Enabled: util.BoolPtr(true),
+			Dropins: []igntypes.Dropin{
 				{
 					Name:     copyKubeconfigDropinFile,
-					Contents: util.StrPtr(copyKubeconfigDropin),
+					Contents: util.StrPtr(copyKubeconfigDropinNginx),
 				},
 			},
 		})
 
 		ign, err = ignition.IgnitionForVirtualIp(ign, config.KubeAPIServerBindPort, config.KubeAPIServerBindPortAlt,
-			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.NetworkInterface)
+			clusterConfig.VirtualIp, &clusterConfig.Proxy, clusterConfig.Providers.Olvm.ControlPlaneMachine.VirtualMachine.Network.Interface)
 		if err != nil {
 			return "", err
 		}

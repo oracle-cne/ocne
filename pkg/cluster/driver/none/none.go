@@ -7,8 +7,6 @@ import (
 	"net"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -31,35 +29,14 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, fmt.Errorf("When the none provider is used, an existing kubeconfig file must be specified")
 	}
 
-	_, kubeIface, err := client.GetKubeClient(config.KubeConfig)
+	restConfig, _, err := client.GetKubeClient(config.KubeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeadmConfigMap, err := k8s.GetConfigmap(kubeIface, constants.KubeNamespace, constants.KubeCMName)
+	controlPlaneEndpoint, err := k8s.GetControlPlaneEndpoint(restConfig)
 	if err != nil {
 		return nil, err
-	}
-
-	kubeadmConfig, ok := kubeadmConfigMap.Data[constants.KubeCMField]
-	if !ok {
-		return nil, fmt.Errorf("ConfigMap %s in namespace %s does not have a field named %s", constants.KubeCMName, constants.KubeNamespace, constants.KubeCMField)
-	}
-
-	confParsed := map[string]interface{}{}
-	err = yaml.Unmarshal([]byte(kubeadmConfig), confParsed)
-	if err != nil {
-		return nil, err
-	}
-
-	controlPlaneEndpointIface, ok := confParsed[constants.KubeCMEndpoint]
-	if !ok {
-		return nil, fmt.Errorf("ClusterConfiguration does not have a field named %s", constants.KubeCMEndpoint)
-	}
-
-	controlPlaneEndpoint, ok := controlPlaneEndpointIface.(string)
-	if !ok {
-		return nil, fmt.Errorf("ClusterConfiguration field %s is not a string", constants.KubeCMEndpoint)
 	}
 
 	kubeAPIServerIP, _, err := net.SplitHostPort(controlPlaneEndpoint)

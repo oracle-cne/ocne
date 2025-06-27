@@ -50,6 +50,7 @@ func GetDefaultConfig() (*types.Config, error) {
 		Providers: types.Providers{
 			Libvirt: types.LibvirtProvider{
 				SessionURI:  constants.SessionURI,
+				SlirpSubnet: constants.SlirpSubnet,
 				StoragePool: constants.StoragePool,
 				Network:     constants.Network,
 				ControlPlaneNode: types.Node{
@@ -70,21 +71,33 @@ func GetDefaultConfig() (*types.Config, error) {
 				Profile:     constants.OciDefaultProfile,
 				ImageBucket: constants.OciBucket,
 				ControlPlaneShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardA1Flex,
-					Ocpus: constants.OciControlPlaneOcpus,
+					Shape:          constants.OciVmStandardA1Flex,
+					Ocpus:          constants.OciControlPlaneOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 				WorkerShape: types.OciInstanceShape{
-					Shape: constants.OciVmStandardE4Flex,
-					Ocpus: constants.OciWorkerOcpus,
+					Shape:          constants.OciVmStandardE4Flex,
+					Ocpus:          constants.OciWorkerOcpus,
+					BootVolumeSize: constants.OciBootVolumeSize,
 				},
 			},
 			Olvm: types.OlvmProvider{
 				Namespace: constants.OLVMCAPIResourcesNamespace,
 				ControlPlaneMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIControlPlaneMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIControlPlaneMemory,
+						Network: types.OlvmVirtualMachineNetwork{
+							Interface: constants.OLVMNetworkInterface,
+						},
+					},
 				},
 				WorkerMachine: types.OlvmMachine{
-					Memory: constants.OLVMCAPIWorkerMemory,
+					VirtualMachine: types.OlvmVirtualMachine{
+						Memory: constants.OLVMCAPIWorkerMemory,
+						Network: types.OlvmVirtualMachineNetwork{
+							Interface: constants.OLVMNetworkInterface,
+						},
+					},
 				},
 				LocalAPIEndpoint: types.OlvmLocalAPIEndpoint{
 					BindPort: 6444,

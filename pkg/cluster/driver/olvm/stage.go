@@ -28,7 +28,7 @@ type TemplateData struct {
 }
 
 // vmTemplateName should be treated as a constant
-var vmTemplateName = []string{"spec", "template", "spec", "ovirt", "vmTemplateName"}
+var vmTemplateName = []string{"spec", "template", "spec", "vmTemplateName"}
 
 // Stage looks at the resources for an OLVM CAPI cluster and generates as
 // much of the material necessary to update a cluster from one version to
@@ -112,7 +112,7 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 			name := util.IncrementCount(mt.GetName(), "-")
 			mt.SetName(name)
 
-			err = unstructured.SetNestedField(mt.Object, newTemplate, "spec", "template", "spec", "ovirt", "vmTemplateName")
+			err = unstructured.SetNestedField(mt.Object, newTemplate, vmTemplateName...)
 			if err != nil {
 				return "", "", false, err
 			}

@@ -4,10 +4,11 @@
 package catalog
 
 import (
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"github.com/oracle-cne/ocne/pkg/helm"
 	"time"
+
+	"github.com/oracle-cne/ocne/pkg/helm"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // CatalogConnection represents a connection to a catalog
@@ -25,17 +26,18 @@ type CatalogConnection interface {
 // ChartMeta represents a single helm chart
 // NOTE: This structure is derived from the JSON return from the catalog service /charts/ endpoint
 type ChartMeta struct {
-	Name        string             `yaml:"name"`
-	Version     string             `yaml:"version"`
-	Description string             `yaml:"description"`
-	ApiVersion  string             `yaml:"apiVersion"`
-	AppVersion  string             `yaml:"appVersion"`
-	KubeVersion string             `yaml:"kubeVersion"`
-	Type        string             `yaml:"type"`
-	Urls        []string           `yaml:"urls"`
-	Created     time.Time          `yaml:"created"`
-	Digest      string             `yaml:"digest"`
-	Annotations map[string]string  `yaml:"annotations"`
+	Name        string            `yaml:"name"`
+	Version     string            `yaml:"version"`
+	Description string            `yaml:"description"`
+	ApiVersion  string            `yaml:"apiVersion"`
+	AppVersion  string            `yaml:"appVersion"`
+	KubeVersion string            `yaml:"kubeVersion"`
+	Type        string            `yaml:"type"`
+	Urls        []string          `yaml:"urls"`
+	Created     time.Time         `yaml:"created"`
+	Digest      string            `yaml:"digest"`
+	Annotations map[string]string `yaml:"annotations"`
+	Deprecated  bool              `yaml:"deprecated"`
 }
 
 // Catalog contains the helm chart index of all the charts in the catalog
@@ -59,7 +61,7 @@ type CatalogInfo struct {
 	// Protocol is the catalog protocol for the catalog
 	Protocol string
 
-	// Uri is the URI of the of the catalog
+	// Uri is the URI of the catalog
 	Uri string
 
 	// Port is the port for the service, if one is defined

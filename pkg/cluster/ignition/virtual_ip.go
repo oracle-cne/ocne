@@ -1,31 +1,32 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ignition
 
 import (
 	"fmt"
-	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
+	"strings"
 
+	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 const (
-	keepAlivedServiceName = "keepalived.service"
-	keepAlivedUid = 991
-	keepAlivedUser = "keepalived_script"
+	keepAlivedUser  = "keepalived_script"
 	keepAlivedGroup = "keepalived_script"
-
-	nginxServiceName = "ocne-nginx.service"
 
 	keepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
 	KeepAlivedConfigTemplatePath = "/etc/ocne/keepalived.conf.tmpl"
 	keepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
 	keepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
 
+	NginxUser  = "nginx_script"
+	NginxGroup = "nginx_script"
+
 	nginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
 	nginxConfigTemplatePath = "/etc/ocne/nginx/nginx.conf.tmpl"
+	nginxCheckScriptPath    = "/etc/ocne/nginx-refresh/check_nginx.sh"
 	nginxPullPath           = "/etc/ocne/nginx/pull_ocne_nginx"
 	nginxStartPath          = "/etc/ocne/nginx/start_ocne_nginx"
 	nginxImagePath          = "/etc/ocne/nginx/image"
@@ -66,8 +67,8 @@ errorExit() {
   exit 1
 }
 
-# update keepalived.conf/nginx.conf and restart keepalived.service/ocne-nginx.service if necessary
-refreshServices() {
+# update keepalived.conf and restart keepalived.service if necessary
+refreshService() {
   NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
   if [ $? -ne 0 ]; then
     return 0
@@ -97,28 +98,16 @@ refreshServices() {
 
     systemctl reload keepalived.service &
   fi
-
-  # check if the existing servers is the same as NODES
-  if [[ "${NODES}" != "$(cat /etc/ocne/nginx/servers)" ]]; then
-    echo $(date): ocne-nginx servers have been changed to: $NODES >> /etc/keepalived/log
-    echo "$NODES" > /etc/ocne/nginx/servers
-
-    ESCAPED_SERVERS=""
-    for node in $NODES; do
-      if echo "$node" | grep ':'; then
-        node="[$node]"
-      fi
-      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }};"
-    done
-
-    sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
-
-    systemctl restart ocne-nginx.service &
-  fi
 }
 
-refreshServices
-curl --silent --max-time 2 --insecure https://localhost:{{ .BindPort }}/ -o /dev/null || errorExit "Error GET https://localhost:{{ .BindPort }}/"
+refreshService
+
+PORTS=$(netstat -nltp)
+echo $PORTS | grep -q {{ .BindPort }}
+if [ $? -ne 0 ]; then
+  echo $(date): keepalived failed to find nginx bound to port >> /etc/keepalived/log
+  return 1
+fi
 `
 
 	keepAlivedStateScript = `#!/bin/bash
@@ -133,11 +122,13 @@ events {
 stream {
   upstream backend1 {
 {{ .Peer }}
+    least_conn;
   }
   server {
     listen {{ .BindPort }};
     listen [::]:{{ .BindPort }};
     proxy_pass backend1;
+    proxy_connect_timeout 500m;
   }
 }
 `
@@ -160,6 +151,22 @@ RestartSec=1
 [Install]
 WantedBy=multi-user.target
 WantedBy=keepalived.service
+`
+	nginxRefreshService = `
+[Unit]
+Description=Nginx refresh service for OCNE
+After=network-online.target
+After=ocne-nginx.service
+Wants=network.target
+
+[Service]
+ExecStart=/bin/bash -c "/etc/ocne/nginx-refresh/check_nginx.sh"
+User=nginx_script
+Group=nginx_script
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 `
 
 	nginxPull = `#!/bin/bash
@@ -187,15 +194,63 @@ exec podman run --name ocne-nginx --replace --rm --network=host --volume=/etc/oc
 
 	nginxImage = "IMAGE=container-registry.oracle.com/olcne/nginx:1.17.7-1"
 
-	polkitRules = `
-// Allow keepalived_script user to restart services
+	polkitRulesKeepalived = `
+// Allow keepalived_script user to restart keepalived.service
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
-        (action.lookup("unit") == "keepalived.service" || action.lookup("unit") == "ocne-nginx.service") &&
+        action.lookup("unit") == "keepalived.service" &&
         subject.user == "keepalived_script") {
         return polkit.Result.YES;
     }
 });
+`
+	polkitRulesNginx = `
+// Allow nginx_script user to restart ocne-nginx.service
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") == "ocne-nginx.service" &&
+        subject.user == "nginx_script") {
+        return polkit.Result.YES;
+    }
+});
+`
+
+	nginxCheckScript = `#!/bin/bash
+# update nginx.conf and restart ocne-nginx.service if necessary
+refreshService() {
+  NODES=$(KUBECONFIG=/etc/ocne/nginx-refresh/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
+  if [ $? -ne 0 ]; then
+    return 0
+  fi
+
+  if [ -z "${NODES}" ]; then
+	NODES="localhost"
+  fi
+
+  # check if the existing servers is the same as NODES
+  if [[ "${NODES}" != "$(cat /etc/ocne/nginx-refresh/servers)" ]]; then
+    echo $(date): ocne-nginx-refresh servers have been changed to: $NODES >> /etc/ocne/nginx-refresh/log
+    echo "$NODES" > /etc/ocne/nginx-refresh/servers
+
+    ESCAPED_SERVERS=""
+    for node in $NODES; do
+      if echo "$node" | grep ':'; then
+        node="[$node]"
+      fi
+      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }} fail_timeout=10s max_fails=1;"
+    done
+
+    sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
+
+    systemctl restart ocne-nginx.service &
+  fi
+}
+
+# Loop forever, checking for and  updates as needed
+while true; do
+	refreshService
+	sleep 10s
+done
 `
 )
 
@@ -216,7 +271,7 @@ type nginxConfigArguments struct {
 	Peer     string
 }
 
-// generateNginxConfig generates a configuration file for nginx to load balaance between
+// generateNginxConfig generates a configuration file for nginx to load balance between
 // all the master nodes in a given cluster.
 func generateNginxConfig(bindPort uint16, peer string) (string, error) {
 	return util.TemplateToString(nginxConfig, &nginxConfigArguments{
@@ -241,6 +296,13 @@ func generateKeepalivedConfig(iface string, priority string, virtualIP string, p
 // generated by generateKeepalivedConfig
 func generateKeepalivedCheckScript(bindPort uint16, altPort uint16) (string, error) {
 	return util.TemplateToString(keepalivedCheckScript, &keepalivedCheckScriptArguments{
+		BindPort: fmt.Sprintf("%d", bindPort),
+		AltPort:  fmt.Sprintf("%d", altPort),
+	})
+}
+
+func generateNginxCheckScript(bindPort uint16, altPort uint16) (string, error) {
+	return util.TemplateToString(nginxCheckScript, &keepalivedCheckScriptArguments{
 		BindPort: fmt.Sprintf("%d", bindPort),
 		AltPort:  fmt.Sprintf("%d", altPort),
 	})
@@ -275,7 +337,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
-			User: keepAlivedUser,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 		},
 		&File{
@@ -290,45 +352,58 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	if err != nil {
 		return nil, err
 	}
+	nginxScript, err := generateNginxCheckScript(bindPort, altPort)
+	if err != nil {
+		return nil, err
+	}
 	data.Files = append(data.Files,
 		&File{
-			Path: keepAlivedCheckScriptPath,
-			Mode: 0755,
-			User: keepAlivedUser,
+			Path:  keepAlivedCheckScriptPath,
+			Mode:  0755,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
 		},
 		&File{
-			Path: keepAlivedStateScriptPath,
-			Mode: 0755,
-			User: keepAlivedUser,
+			Path:  keepAlivedStateScriptPath,
+			Mode:  0755,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
 		},
 		&File{
-			Path: "/etc/keepalived/peers",
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  "/etc/keepalived/peers",
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		},
 		&File{
-			Path: "/etc/keepalived/log",
-			Mode: 0644,
-			User: keepAlivedUser,
+			Path:  "/etc/keepalived/log",
+			Mode:  0644,
+			User:  keepAlivedUser,
 			Group: keepAlivedGroup,
+			Contents: FileContents{
+				Source: "",
+			},
+		},
+		&File{
+			Path:  "/etc/ocne/nginx-refresh/log",
+			Mode:  0644,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		})
 
-	nginxConfig, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
+	nginxConfigSource, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
 	if err != nil {
 		return nil, err
 	}
@@ -340,12 +415,21 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 	data.Files = append(data.Files,
 		&File{
-			Path: nginxConfigPath,
-			Mode: 0644,
-			User: keepAlivedUser,
-			Group: keepAlivedGroup,
+			Path:  nginxCheckScriptPath,
+			Mode:  0755,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
-				Source: nginxConfig,
+				Source: nginxScript,
+			},
+		},
+		&File{
+			Path:  nginxConfigPath,
+			Mode:  0644,
+			User:  NginxUser,
+			Group: NginxGroup,
+			Contents: FileContents{
+				Source: nginxConfigSource,
 			},
 		},
 		&File{
@@ -377,10 +461,10 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		},
 		&File{
-			Path: "/etc/ocne/nginx/servers",
-			Mode: 0644,
-			User: keepAlivedUser,
-			Group: keepAlivedGroup,
+			Path:  "/etc/ocne/nginx-refresh/servers",
+			Mode:  0644,
+			User:  NginxUser,
+			Group: NginxGroup,
 			Contents: FileContents{
 				Source: "",
 			},
@@ -389,13 +473,20 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Path: "/etc/polkit-1/rules.d/51-keepalived.rules",
 			Mode: 0644,
 			Contents: FileContents{
-				Source: polkitRules,
+				Source: polkitRulesKeepalived,
+			},
+		},
+		&File{
+			Path: "/etc/polkit-1/rules.d/52-nginx.rules",
+			Mode: 0644,
+			Contents: FileContents{
+				Source: polkitRulesNginx,
 			},
 		})
 
 	// services don't start unless they are included in the units in ostree
 	nginxUnit := &igntypes.Unit{
-		Name:     nginxServiceName,
+		Name:     NginxServiceName,
 		Enabled:  util.BoolPtr(true),
 		Contents: util.StrPtr(nginxService),
 	}
@@ -412,18 +503,43 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			},
 		}
 	}
+	nginxRefreshUnit := &igntypes.Unit{
+		Name:     NginxRefreshServiceName,
+		Enabled:  util.BoolPtr(true),
+		Contents: util.StrPtr(nginxRefreshService),
+	}
 	keepAlivedUnit := &igntypes.Unit{
-		Name:    keepAlivedServiceName,
+		Name:    KeepalivedServiceName,
 		Enabled: util.BoolPtr(true),
 	}
 
-	data.Units = append(data.Units, nginxUnit, keepAlivedUnit)
+	data.Units = append(data.Units, nginxUnit, nginxRefreshUnit, keepAlivedUnit)
 
 	return data, nil
 }
 
 // IgnitionForVirtualIp add keepalived and nginx services and its files to ignition
 func IgnitionForVirtualIp(ign *igntypes.Config, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) (*igntypes.Config, error) {
+	// Setup nginx_script user. This user may eventually be part of the base ock image;
+	// however, it is being created here for compatibility with existing ock images.
+	err := AddGroup(ign, &Group{
+		Name:   "nginx_script",
+		System: true,
+	})
+	if err != nil && !strings.Contains(err.Error(), "already defined") {
+		return nil, err
+	}
+	err = AddUser(ign, &User{
+		Name:         "nginx_script",
+		PrimaryGroup: "nginx_script",
+		Shell:        "/sbin/nologin",
+		System:       true,
+		NoCreateHome: true,
+	})
+	if err != nil && !strings.Contains(err.Error(), "already defined") {
+		return nil, err
+	}
+
 	data, err := GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, proxy, netInterface)
 	if err != nil {
 		return nil, err

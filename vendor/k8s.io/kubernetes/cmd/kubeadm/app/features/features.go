@@ -34,12 +34,14 @@ const (
 	PublicKeysECDSA = "PublicKeysECDSA"
 	// RootlessControlPlane is expected to be in alpha in v1.22
 	RootlessControlPlane = "RootlessControlPlane"
-	// EtcdLearnerMode is expected to be in alpha in v1.27, beta in v1.29
+	// EtcdLearnerMode is expected to be in alpha in v1.27, beta in v1.29, ga in v1.32
 	EtcdLearnerMode = "EtcdLearnerMode"
-	// UpgradeAddonsBeforeControlPlane is expected to be in deprecated in v1.28 and will be removed in future release
-	UpgradeAddonsBeforeControlPlane = "UpgradeAddonsBeforeControlPlane"
 	// WaitForAllControlPlaneComponents is expected to be alpha in v1.30
 	WaitForAllControlPlaneComponents = "WaitForAllControlPlaneComponents"
+	// ControlPlaneKubeletLocalMode is expected to be in alpha in v1.31, beta in v1.32
+	ControlPlaneKubeletLocalMode = "ControlPlaneKubeletLocalMode"
+	// NodeLocalCRISocket is expected to be in alpha in v1.32, beta in v1.33, ga in v1.35
+	NodeLocalCRISocket = "NodeLocalCRISocket"
 )
 
 // InitFeatureGates are the default feature gates for the init command
@@ -49,13 +51,14 @@ var InitFeatureGates = FeatureList{
 		DeprecationMessage: "The PublicKeysECDSA feature gate is deprecated and will be removed when v1beta3 is removed." +
 			" v1beta4 supports a new option 'ClusterConfiguration.EncryptionAlgorithm'.",
 	},
-	RootlessControlPlane: {FeatureSpec: featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Alpha}},
-	EtcdLearnerMode:      {FeatureSpec: featuregate.FeatureSpec{Default: true, PreRelease: featuregate.Beta}},
-	UpgradeAddonsBeforeControlPlane: {
-		FeatureSpec:        featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Deprecated},
-		DeprecationMessage: "The UpgradeAddonsBeforeControlPlane feature gate is deprecated and will be removed in a future release.",
+	RootlessControlPlane: {FeatureSpec: featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Alpha},
+		DeprecationMessage: "Deprecated in favor of the core kubelet feature UserNamespacesSupport which is beta since 1.30." +
+			" Once UserNamespacesSupport graduates to GA, kubeadm will start using it and RootlessControlPlane will be removed.",
 	},
+	EtcdLearnerMode:                  {FeatureSpec: featuregate.FeatureSpec{Default: true, PreRelease: featuregate.GA, LockToDefault: true}},
 	WaitForAllControlPlaneComponents: {FeatureSpec: featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Alpha}},
+	ControlPlaneKubeletLocalMode:     {FeatureSpec: featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Alpha}},
+	NodeLocalCRISocket:               {FeatureSpec: featuregate.FeatureSpec{Default: false, PreRelease: featuregate.Alpha}},
 }
 
 // Feature represents a feature being gated

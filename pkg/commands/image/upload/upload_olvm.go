@@ -1,10 +1,13 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/docker/go-units"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
@@ -15,9 +18,6 @@ import (
 	ovit "github.com/oracle-cne/ocne/pkg/ovirt/rest/imagetransfer"
 	ovsd "github.com/oracle-cne/ocne/pkg/ovirt/rest/storagedomain"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
-	"os"
-	"time"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,20 +30,23 @@ func UploadOlvm(o UploadOptions) error {
 		return err
 	}
 
-	oCluster := &o.ClusterConfig.Providers.Olvm.OlvmCluster
+	olvmProv := &o.ClusterConfig.Providers.Olvm
 
 	// Get OvClient
-	ca, err := olvm.GetCA(&o.ClusterConfig.Providers.Olvm)
-	if err != nil {
-		return err
+	caMap := map[string]string{}
+	if !olvmProv.OlvmAPIServer.InsecureSkipTLSVerify {
+		caMap, err = olvm.GetCAMap(&o.ClusterConfig.Providers.Olvm)
+		if err != nil {
+			return err
+		}
 	}
-	ovcli, err := ovclient.GetOVClient(kubeClient, ca, oCluster.OVirtAPI.ServerURL)
+	ovcli, err := ovclient.GetOVClient(kubeClient, caMap, olvmProv.OlvmAPIServer.ServerURL, olvmProv.OlvmAPIServer.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, oCluster.OVirtOck.DiskName,
-		oCluster.OVirtOck.StorageDomainName)
+	log.Infof("Starting uploaded OCK image `%s` to disk `%s` in storage domain `%s`", o.ImagePath, olvmProv.OlvmOck.DiskName,
+		olvmProv.OlvmOck.StorageDomainName)
 
 	fileInfo, err := getImageInfo(o.ImagePath)
 	if err != nil {
@@ -51,7 +54,7 @@ func UploadOlvm(o UploadOptions) error {
 	}
 
 	// Create an empty disk in the oVirt storage domain
-	disk, err := createDisk(ovcli, oCluster, fileInfo)
+	disk, err := createDisk(ovcli, &olvmProv.OlvmOck, fileInfo)
 	if err != nil {
 		return err
 	}
@@ -110,9 +113,9 @@ func UploadOlvm(o UploadOptions) error {
 	return nil
 }
 
-func createDisk(ovcli *ovclient.Client, oCluster *otypes.OlvmCluster, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
+func createDisk(ovcli *ovclient.Client, ock *otypes.OlvmOck, fileInfo os.FileInfo) (*ovdisk.Disk, error) {
 	// Get storage name
-	sd, err := ovsd.GetStorageDomain(ovcli, oCluster.OVirtOck.StorageDomainName)
+	sd, err := ovsd.GetStorageDomain(ovcli, ock.StorageDomainName)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +123,9 @@ func createDisk(ovcli *ovclient.Client, oCluster *otypes.OlvmCluster, fileInfo o
 	initialSize := fmt.Sprintf("%v", fileInfo.Size())
 
 	// convert disk size to bytes
-	diskSizeBytes, err := units.RAMInBytes(oCluster.OVirtOck.DiskSize)
+	diskSizeBytes, err := units.RAMInBytes(ock.DiskSize)
 	if err != nil {
-		err = fmt.Errorf("Error, DiskSize value %s is an invalid format", oCluster.OVirtOck.DiskSize)
+		err = fmt.Errorf("Error, DiskSize value %s is an invalid format", ock.DiskSize)
 		log.Error(err)
 		return nil, err
 	}
@@ -134,7 +137,7 @@ func createDisk(ovcli *ovclient.Client, oCluster *otypes.OlvmCluster, fileInfo o
 			StorageDomains: []ovdisk.StorageDomain{
 				{Id: sd.Id}},
 		},
-		Name:            oCluster.OVirtOck.DiskName,
+		Name:            ock.DiskName,
 		ProvisionedSize: diskSizeBytesStr,
 		Format:          ovdisk.FormatCow,
 		Backup:          ovdisk.BackupNone,
@@ -256,12 +259,12 @@ func getImageInfo(imagePath string) (os.FileInfo, error) {
 	return info, nil
 }
 
-func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo, disk *ovdisk.Disk) error {
+func uploadImageAndWait(ovcli *ovclient.Client, proxyUrl string, imagePath string, info os.FileInfo, disk *ovdisk.Disk) error {
 	haveError := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Message: fmt.Sprintf("Uploading image %s with %v bytes to %s", imagePath, info.Size(), disk.Name),
 			WaitFunction: func(i interface{}) error {
-				err := uploadImage(ovcli, proxy_url, imagePath, info)
+				err := uploadImage(ovcli, proxyUrl, imagePath, info)
 				return err
 			},
 		},
@@ -272,7 +275,7 @@ func uploadImageAndWait(ovcli *ovclient.Client, proxy_url string, imagePath stri
 	return nil
 }
 
-func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string, info os.FileInfo) error {
+func uploadImage(ovcli *ovclient.Client, proxyUrl string, imagePath string, info os.FileInfo) error {
 	path, err := file.AbsDir(imagePath)
 	if err != nil {
 		return err
@@ -284,7 +287,7 @@ func uploadImage(ovcli *ovclient.Client, proxy_url string, imagePath string, inf
 	}
 	defer reader.Close()
 
-	err = ovit.UploadFile(ovcli, proxy_url, reader, info.Size())
+	err = ovit.UploadFile(ovcli, proxyUrl, reader, info.Size())
 	if err != nil {
 		return err
 	}

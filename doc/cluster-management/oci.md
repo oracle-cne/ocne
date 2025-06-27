@@ -217,3 +217,19 @@ destruction will terminate any remaining compute instances and by extension
 cluster nodes.  When this is complete, there will be no compute instances
 available to run the controllers.  If a second cluster is not available, an
 ephemeral cluster is created to service this need.
+
+## Deleting a Cluster
+You can delete the cluster as follows:
+```
+ocne cluster delete --cluster-name ocne
+```
+If the cluster does not appear in the output of `ocne cluster ls`, an error may have occurred during cluster creation (e.g., the command was manually aborted). An alternative way to delete the cluster is to specify the cluster config file.
+```
+ocne cluster delete --config capi.yaml
+```
+
+See that the CAPI cluster is gone:
+```
+kubectl get cluster -A
+No resources found
+```

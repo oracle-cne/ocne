@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -73,13 +72,13 @@ func joinNodeToCluster(options *JoinOptions) error {
 		return err
 	}
 
-	_, destKubeClient, err := client.GetKubeClient(options.DestKubeConfigPath)
+	destRestConfig, destKubeClient, err := client.GetKubeClient(options.DestKubeConfigPath)
 	if err != nil {
 		return err
 	}
 
 	// get the control plane endpoint from the destination cluster
-	cpEndpoint, err := getControlPlaneEndpoint(destKubeClient)
+	cpEndpoint, err := getControlPlaneEndpoint(destRestConfig)
 	if err != nil {
 		return err
 	}
@@ -139,19 +138,8 @@ func joinNodeToCluster(options *JoinOptions) error {
 }
 
 // getControlPlaneEndpoint fetches the control plane endpoint from the kubeadm-config ConfigMap.
-func getControlPlaneEndpoint(kubeClient kubernetes.Interface) (string, error) {
-	cm, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(context.TODO(), kubeadmconst.KubeadmConfigConfigMap, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
-	ccYaml := cm.Data["ClusterConfiguration"]
-	cc := &ignition.ClusterConfig{}
-	if err = yaml.Unmarshal([]byte(ccYaml), cc); err != nil {
-		return "", err
-	}
-
-	return cc.ControlPlaneEndpoint, nil
+func getControlPlaneEndpoint(restConfig *rest.Config) (string, error) {
+	return k8s.GetControlPlaneEndpoint(restConfig)
 }
 
 // updateNode creates a temporary pod and runs a script to reconfigure the node so that it joins the destination cluster.
@@ -283,8 +271,8 @@ func configureHA(options *JoinOptions, cj *ignition.ClusterJoin) ([]string, erro
 		bindPortAlt = cj.KubeAPIBindPortAlt
 	}
 
-	// get the network interface and optional proxy config from the node we are migrating
-	bootstrapConfFile, proxyConfFile, err := getFilesFromMigratingNode(options, tmpDir)
+	// get the network interface from node we are migrating
+	bootstrapConfFile, err := getFilesFromMigratingNode(options, tmpDir)
 	if err != nil {
 		return nil, err
 	}
@@ -293,13 +281,9 @@ func configureHA(options *JoinOptions, cj *ignition.ClusterJoin) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	proxy, err := parseProxyConfig(proxyConfFile)
-	if err != nil {
-		return nil, err
-	}
 
 	// we have collected all the data, now generate the keepalive files and copy them to the node we are migrating
-	return copyHAFilesToNode(options, bindPort, bindPortAlt, vip, proxy, netInterface)
+	return copyHAFilesToNode(options, bindPort, bindPortAlt, vip, netInterface)
 }
 
 // getFilesFromDestCluster copies files from a control plane node on the destination cluster.
@@ -320,10 +304,10 @@ func getFilesFromDestCluster(options *JoinOptions, tmpDir string) (string, error
 	}
 
 	cc, err := startAdminPod(restConfig, kubeClient, options.DestKubeConfigPath, nodes.Items[0].Name)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 	if err != nil {
 		return "", err
 	}
+	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 
 	localTemplatePath := filepath.Join(tmpDir, filepath.Base(ignition.KeepAlivedConfigTemplatePath))
 	cc.FilePaths = append(cc.FilePaths, kubectl.FilePath{RemotePath: "/hostroot" + ignition.KeepAlivedConfigTemplatePath, LocalPath: localTemplatePath})
@@ -336,31 +320,28 @@ func getFilesFromDestCluster(options *JoinOptions, tmpDir string) (string, error
 }
 
 // getFilesFromMigratingNode copies files from the node we are migrating.
-func getFilesFromMigratingNode(options *JoinOptions, tmpDir string) (string, string, error) {
+func getFilesFromMigratingNode(options *JoinOptions, tmpDir string) (string, error) {
 	restConfig, kubeClient, err := client.GetKubeClient(options.KubeConfigPath)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	cc, err := startAdminPod(restConfig, kubeClient, options.KubeConfigPath, options.Node)
-	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
+	defer k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, cc.PodName)
 
 	const bootstrapConfPath = "/etc/systemd/system/ocne.service.d/bootstrap.conf"
-	const proxyConfPath = "/etc/systemd/system/ocne-update.service.d/proxy.conf"
 
 	localBootstrapConfPath := filepath.Join(tmpDir, filepath.Base(bootstrapConfPath))
 	cc.FilePaths = append(cc.FilePaths, kubectl.FilePath{RemotePath: "/hostroot" + bootstrapConfPath, LocalPath: localBootstrapConfPath})
-	localProxyConfPath := filepath.Join(tmpDir, filepath.Base(proxyConfPath))
-	cc.FilePaths = append(cc.FilePaths, kubectl.FilePath{RemotePath: "/hostroot" + proxyConfPath, LocalPath: localProxyConfPath})
 
 	if err = kubectl.CopyFilesFromPod(cc, "Copying files from migrating node"); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return localBootstrapConfPath, localProxyConfPath, nil
+	return localBootstrapConfPath, nil
 }
 
 // parseVirtualIP parses the virtual IP from the keepalived template.
@@ -399,46 +380,16 @@ func parseNetworkInterface(file string) (string, error) {
 	return match[1], nil
 }
 
-// parseProxyConfig parses the optional proxy configuration (taken from optional proxy configuration
-// on the ocne-update service).
-func parseProxyConfig(file string) (*types.Proxy, error) {
-	b, err := os.ReadFile(file)
-	if err != nil {
-		// if the file does not exist, then the user has not configured a proxy
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	proxy := &types.Proxy{}
-
-	regex := regexp.MustCompile(`HTTPS_PROXY=(.*)\s*$`)
-	match := regex.FindStringSubmatch(string(b))
-	if len(match) > 1 {
-		proxy.HttpsProxy = match[1]
-	}
-
-	regex = regexp.MustCompile(`HTTP_PROXY=(.*)\s*$`)
-	match = regex.FindStringSubmatch(string(b))
-	if len(match) > 1 {
-		proxy.HttpProxy = match[1]
-	}
-
-	regex = regexp.MustCompile(`no_proxy=(.*)\s*$`)
-	match = regex.FindStringSubmatch(string(b))
-	if len(match) > 1 {
-		proxy.NoProxy = match[1]
-	}
-	proxy.NoProxy = match[1]
-
-	return proxy, nil
-}
-
 // startAdminPod starts an admin pod on a node so we can copy files.
 func startAdminPod(restConfig *rest.Config, kubeClient kubernetes.Interface, kubeConfigPath string, nodeName string) (*kubectl.CopyConfig, error) {
 	// first delete the pod in case there's an old one running
-	k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, copyPodPrefix+"-"+nodeName)
+	k8s.DeleteAdminPod(kubeClient, nodeName, constants.OCNESystemNamespace, copyPodPrefix)
+
+
+	err := k8s.CreateNamespaceIfNotExists(kubeClient, constants.OCNESystemNamespace)
+	if err != nil {
+		return nil, err
+	}
 
 	pod, err := k8s.StartAdminPodOnNode(kubeClient, nodeName, constants.OCNESystemNamespace, copyPodPrefix, false)
 	if err != nil {
@@ -454,7 +405,7 @@ func startAdminPod(restConfig *rest.Config, kubeClient kubernetes.Interface, kub
 }
 
 // copyHAFilesToNode copies keepalived and nginx configuration files to the migrating node.
-func copyHAFilesToNode(options *JoinOptions, bindPort uint16, altPort uint16, virtualIP string, proxy *types.Proxy, netInterface string) ([]string, error) {
+func copyHAFilesToNode(options *JoinOptions, bindPort uint16, altPort uint16, virtualIP string, netInterface string) ([]string, error) {
 	restConfig, kubeClient, err := client.GetKubeClient(options.KubeConfigPath)
 	if err != nil {
 		return nil, err
@@ -467,7 +418,7 @@ func copyHAFilesToNode(options *JoinOptions, bindPort uint16, altPort uint16, vi
 	}
 
 	// generate all of the files and systemd units needed to configure HA
-	assets, err := ignition.GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, proxy, netInterface)
+	assets, err := ignition.GenerateAssetsForVirtualIp(bindPort, altPort, virtualIP, nil, netInterface)
 	if err != nil {
 		return nil, err
 	}

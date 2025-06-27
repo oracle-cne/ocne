@@ -79,20 +79,9 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		cdi = string(cdiBytes)
 	}
 
-	// Unlike other cluster drivers, it is not feasible to have zero
-	// worker nodes.  Cluster API will not create control plane nodes
-	// with taints removed, and it can get upset if they are removed.
-	// Require at least one.
-	//
-	// If someone really wants to have no workers, then they are free
-	// to pass in a cluster definition.
-	if clusterConfig.WorkerNodes == 0 {
-		clusterConfig.WorkerNodes = 1
-	}
-
-	// It's also not feasible to have zero control plane nodes.
-	if clusterConfig.ControlPlaneNodes == 0 {
-		clusterConfig.ControlPlaneNodes = 1
+	// Validate config
+	if err = validateConfig(clusterConfig); err != nil {
+		return nil, err
 	}
 
 	cad := &OlvmDriver{

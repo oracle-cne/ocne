@@ -24,9 +24,6 @@ const (
 	csiDriverUsernameKey = "ovirt_username"
 	csiDriverPasswordKey = "ovirt_password"
 	csiDriverURLKey      = "ovirt_url"
-
-	// keys for csi driver ca.crt
-	csiDriverCaKey = "ca.crt"
 )
 
 // getApplications gets the applications that are needed for the OLVM provider.
@@ -115,7 +112,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	olvm := &cad.ClusterConfig.Providers.Olvm
 
 	// Append /api to ovirt URL
-	parsedURL, err := url.Parse(olvm.OlvmCluster.OVirtAPI.ServerURL)
+	parsedURL, err := url.Parse(olvm.OlvmAPIServer.ServerURL)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +126,7 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 	}
 
 	// create chart overrides
-	chartOverrides := getOverrides(olvm)
+	chartOverrides := getOvirtCsiOverrides(olvm)
 
 	// Specify pre-install function to create secret and configmap, then
 	// Also specify function to install the csi driver chart
@@ -152,20 +149,22 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 				}
 
 				// create the CA.CRT configmap
-				ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
-				if err != nil {
-					return err
+				if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+					caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
+					if err != nil {
+						return err
+					}
+					k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
+					if len(caMap) > 0 {
+						err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      olvm.CSIDriver.ConfigMapName,
+								Namespace: namespace,
+							},
+							Data: caMap,
+						})
+					}
 				}
-				k8s.DeleteConfigmap(kubeClient, namespace, olvm.CSIDriver.ConfigMapName)
-				err = k8s.CreateConfigmap(kubeClient, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      olvm.CSIDriver.ConfigMapName,
-						Namespace: namespace,
-					},
-					Data: map[string]string{
-						csiDriverCaKey: ca,
-					},
-				})
 				return err
 			},
 			// install ovirt-csi-driver chart
@@ -202,12 +201,13 @@ func (cad *OlvmDriver) getWorkloadClusterApplications(restConfig *rest.Config, k
 //		csiNode:
 //			ovirtNode:
 //				name: ovirt-csi-node-plugin
-func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
+func getOvirtCsiOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	const (
 		caProvidedKey = "caProvided"
 		cmNameKey     = "caConfigMapName"
 		nameKey       = "name"
 		secretNameKey = "secretName"
+		insecureKey   = "insecure"
 
 		driverPath          = "driver"
 		ovirtPath           = "ovirt"
@@ -218,8 +218,10 @@ func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	// Create override structure required by the ovirt-csi-driver Helm chart.
 	ov := make(map[string]interface{})
 
-	if olvm.CSIDriver.CaProvidedPtr != nil {
-		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = olvm.CSIDriver.CaProvided
+	if !olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		if len(olvm.OlvmAPIServer.ServerCA) > 0 || len(olvm.OlvmAPIServer.ServerCAPath) > 0 {
+			util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = true
+		}
 	}
 	if olvm.CSIDriver.ConfigMapName != "" {
 		util.EnsureNestedMap(ov, ovirtPath)[cmNameKey] = olvm.CSIDriver.ConfigMapName
@@ -235,6 +237,10 @@ func getOverrides(olvm *types.OlvmProvider) map[string]interface{} {
 	}
 	if olvm.CSIDriver.SecretName != "" {
 		util.EnsureNestedMap(ov, ovirtPath)[secretNameKey] = olvm.CSIDriver.SecretName
+	}
+	if olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		util.EnsureNestedMap(ov, ovirtPath)[insecureKey] = olvm.OlvmAPIServer.InsecureSkipTLSVerify
+		util.EnsureNestedMap(ov, ovirtPath)[caProvidedKey] = false
 	}
 
 	return ov

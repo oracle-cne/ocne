@@ -6,6 +6,11 @@ package olvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -16,20 +21,19 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/oracle-cne/ocne/pkg/util/olvmutil"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
 	capiclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"strings"
-	"time"
 )
 
 const (
 	credsUsernameKey = "username"
 	credsPasswordKey = "password"
 	credsScopeKey    = "scope"
+	caCrtBaseKey     = "ca.crt"
 )
 
 // Start creates an OLVM CAPI cluster which includes a set of control plane nodes and worker nodes.
@@ -74,6 +78,32 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 	if err != nil {
 		return false, false, err
 	}
+
+	// Get logs for the OLVM controller
+	pods, err := application.PodsForApplication(constants.OLVMCAPIRelease, constants.OLVMCAPIOperatorNamespace, cad.BootstrapKubeConfig)
+	log.Debugf("Have %d OLVM CAPI pods", len(pods))
+	if err != nil {
+		return false, false, err
+	}
+	podLogs := []*util.ScanCloser{}
+	for _, op := range pods {
+		podLog, err := k8s.GetPodLogs(clientIface, op, "")
+		if err != nil {
+			return false, false, err
+		}
+		re := "^.*\\s+(ERROR)\\s+.*$"
+		md, err := util.NewMessageDispatcher(re, NewLogHandler())
+		if err != nil {
+			err = fmt.Errorf("Internal error: regex \"%s\" does not compile: %v", re, err)
+			return false, false, err
+		}
+		podLogs = append(podLogs, util.Scan(podLog, md))
+	}
+	defer func(toClose []*util.ScanCloser) {
+		for _, tc := range toClose {
+			tc.Close()
+		}
+	}(podLogs)
 
 	// create all the CAPI resources
 	log.Info("Applying Cluster API resources")
@@ -137,7 +167,7 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 func (cad *OlvmDriver) PostStart() error {
 	// If the cluster is not self-managed, then the configuration is
 	// complete.
-	if !cad.ClusterConfig.Providers.Oci.SelfManaged {
+	if !cad.ClusterConfig.Providers.Olvm.SelfManaged {
 		return nil
 	}
 
@@ -237,12 +267,12 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 		return err
 	}
 
-	secretName := cad.credSecretName()
-	k8s.DeleteSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, secretName)
-	err = k8s.CreateSecret(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, &v1.Secret{
+	secretNsn := cad.credSecretNsn()
+	k8s.DeleteSecret(kubeClient, secretNsn.Namespace, secretNsn.Name)
+	err = k8s.CreateSecret(kubeClient, secretNsn.Namespace, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
+			Name:      secretNsn.Name,
+			Namespace: secretNsn.Namespace,
 		},
 		Data: credmap,
 		Type: "Opaque",
@@ -252,50 +282,63 @@ func (cad *OlvmDriver) createRequiredResources(kubeClient kubernetes.Interface) 
 	}
 
 	// get the CA
-	ca, err := GetCA(&cad.ClusterConfig.Providers.Olvm)
-	if err != nil {
-		return err
-	}
+	if !cad.ClusterConfig.Providers.Olvm.OlvmAPIServer.InsecureSkipTLSVerify {
+		caMap, err := GetCAMap(&cad.ClusterConfig.Providers.Olvm)
+		if err != nil {
+			return err
+		}
 
-	cmName := cad.caConfigMapName()
-	k8s.DeleteConfigmap(kubeClient, cad.ClusterConfig.Providers.Olvm.Namespace, cmName)
-	err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: cad.ClusterConfig.Providers.Olvm.Namespace,
-		},
-		Data: map[string]string{
-			"ca.crt": ca,
-		},
-	})
-	if err != nil {
-		return err
+		cmNsn := cad.caConfigMapNsn()
+		k8s.DeleteConfigmap(kubeClient, cmNsn.Namespace, cmNsn.Name)
+		if len(caMap) > 0 {
+			err = k8s.CreateConfigmap(kubeClient, &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cmNsn.Name,
+					Namespace: cmNsn.Namespace,
+				},
+				Data: caMap,
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-// GetCA gets the oVirt CA string from the config, either inline or from a file.
-func GetCA(prov *types.OlvmProvider) (string, error) {
-	if prov.OlvmCluster.OVirtAPI.ServerCA != "" && prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
-		return "", fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
+// GetCAMap gets a map of oVirt CA strings from the config, either inline or from a file.
+func GetCAMap(prov *types.OlvmProvider) (map[string]string, error) {
+	caMap := map[string]string{}
+	if prov.OlvmAPIServer.ServerCA != "" && prov.OlvmAPIServer.ServerCAPath != "" {
+		return caMap, fmt.Errorf("The OLVM Provider cannot specify both ovirtApiCA and ovirtApiCAPath")
 	}
-	if prov.OlvmCluster.OVirtAPI.ServerCA != "" {
-		return prov.OlvmCluster.OVirtAPI.ServerCA, nil
+	if prov.OlvmAPIServer.ServerCA != "" {
+		caMap[caCrtBaseKey] = prov.OlvmAPIServer.ServerCA
+		return caMap, nil
 	}
 
-	if prov.OlvmCluster.OVirtAPI.ServerCAPath != "" {
-		f, err := file.AbsDir(prov.OlvmCluster.OVirtAPI.ServerCAPath)
-		if err != nil {
-			return "", err
+	if prov.OlvmAPIServer.ServerCAPath != "" {
+		caFiles := strings.Split(prov.OlvmAPIServer.ServerCAPath, ",")
+		baseKey := caCrtBaseKey
+		for i, caFile := range caFiles {
+			f, err := file.AbsDir(strings.TrimSpace(caFile))
+			if err != nil {
+				return caMap, err
+			}
+			by, err := os.ReadFile(f)
+			if err != nil {
+				return caMap, fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
+			}
+			caMap[baseKey] = string(by)
+
+			// Update the key for the next time through the loop
+			baseKey = fmt.Sprintf("%s%d", caCrtBaseKey, i+1)
 		}
-		by, err := os.ReadFile(f)
-		if err != nil {
-			return "", fmt.Errorf("Error reading OLVM Provider oVirt CA file: %v", err)
-		}
-		return string(by), nil
+		return caMap, nil
 	}
-	return "", fmt.Errorf("The OLVM Provider must specify ovirtApiCA or ovirtApiCAPath")
+	log.Info("The OLVM Provider was not configured with ovirtApiCA or ovirtApiCAPath, assuming the CA is already in the trust store")
+	return caMap, nil
 }
 
 // getCreds gets the oVirt creds from a set of ENV vars.
@@ -321,18 +364,10 @@ func getCreds() (map[string][]byte, error) {
 
 }
 
-func (cad *OlvmDriver) credSecretName() string {
-	return CredSecretName(cad.ClusterConfig)
+func (cad *OlvmDriver) credSecretNsn() *types.NamespacedName {
+	return olvmutil.CredSecretNsn(cad.ClusterConfig)
 }
 
-func (cad *OlvmDriver) caConfigMapName() string {
-	return CaConfigMapName(cad.ClusterConfig)
-}
-
-func CredSecretName(cc *types.ClusterConfig) string {
-	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCredSecretSuffix)
-}
-
-func CaConfigMapName(cc *types.ClusterConfig) string {
-	return fmt.Sprintf("%s-%s", cc.Name, constants.OLVMOVirtCAConfigMapSuffix)
+func (cad *OlvmDriver) caConfigMapNsn() *types.NamespacedName {
+	return olvmutil.CaConfigMapNsn(cad.ClusterConfig)
 }
