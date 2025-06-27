@@ -48,7 +48,7 @@ const (
 	OciCcmChart         = "oci-ccm"
 	OciCcmNamespace     = "kube-system"
 	OciCcmRelease       = "oci-ccm"
-	OciCcmVersion       = "1.30.0"
+	OciCcmVersion       = ""
 	OciCcmSecretName    = "oci-cloud-controller-manager"
 	OciCcmCsiSecretName = "oci-volume-provisioner"
 )
@@ -194,7 +194,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 	ret := []install.ApplicationDescription{
 		{
 			PreInstall: func() error {
-				err := k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
+				err := k8s.CreateSecretIfNotExists(kubeClient, OciCcmNamespace, &v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: OciCcmSecretName,
 					},
@@ -205,7 +205,7 @@ func (cad *ClusterApiDriver) getWorkloadClusterApplications(restConfig *rest.Con
 					return err
 				}
 
-				err = k8s.CreateSecret(kubeClient, OciCcmNamespace, &v1.Secret{
+				err = k8s.CreateSecretIfNotExists(kubeClient, OciCcmNamespace, &v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: OciCcmCsiSecretName,
 					},
