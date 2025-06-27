@@ -85,7 +85,7 @@ const (
 	UIDeployment     = "ui"
 	UIImage          = "container-registry.oracle.com/olcne/ui"
 	UIInitContainer  = "ui-plugins"
-	UIPluginsVersion = "v2.0.0"
+	UIPluginsVersion = "v2.1.0"
 	UILegacyTag      = "v0.23.2"
 
 	CoreDNSRelease    = "core-dns"
