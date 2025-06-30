@@ -7,10 +7,59 @@ const (
 	// This script deploys the new OCK, stops the update service, then clears the update annotation.
 	updateNodeScript = `#! /bin/bash
 set -e
+set -o pipefail
 
 chroot /hostroot /bin/bash <<"EOF"
   ostree admin deploy ock:ock
   systemctl stop ocne-update.service
+
+  # Get the OSTree commits
+  #
+  # Figure out the various arch suffices
+  PKG_ARCH=x64
+  RPM_ARCH=x86_64
+  if [ $(uname -m) = "aarch64" ]; then
+    PKG_ARCH=aa64
+    RPM_ARCH=aarch64
+  fi
+
+  # For each commit, get the version of shim-$PKG_ARCH
+  #
+  # Get all commit.version pairs
+  COMMITS=$(ostree admin status | grep ' ock [0-9a-z]\+\.[0-9]\+' | sed 's/.*ock \([a-z0-9]\+\.[0-9]\+\).*/\1/')
+  CURRENT_COMMIT=$(ostree admin status | grep '\* ock [0-9a-z]\+\.[0-9]\+' | sed 's/.*ock \([a-z0-9]\+\.[0-9]\+\).*/\1/')
+  PKGS=
+  for commit in $COMMITS; do
+    echo "Checking commit $commit"
+    COMMIT_HASH=$(echo "$commit" | sed 's/\([a-z0-9]\+\)\.[0-9]\+/\1/')
+    PKG_VER=$(rpm-ostree db list "$COMMIT_HASH" "shim-$PKG_ARCH" | grep "shim-$PKG_ARCH" | sed "s/^ shim-x64-\([0-9.-]*\).el8[_0-9]*.$RPM_ARCH/\1/")
+    PKGS=$(echo "${PKGS}${PKG_VER} $commit|")
+  done
+  PKGS=$(echo $PKGS | tr '|' '\n')
+  echo Packages
+  echo "$PKGS"
+
+  # Sort the packages by version
+  SORTED=$(echo "$PKGS" | sort -rV)
+  echo Sorted
+  echo "$SORTED"
+
+  # Get the latest
+  LATEST=$(echo "$SORTED" | head -1)
+  echo "Latest: $LATEST"
+
+  LATEST_COMMIT=$(echo "$LATEST" | cut -d' ' -f2)
+  echo "Commit: $LATEST_COMMIT"
+
+  # Back up the previous EFI content, creating a persistent backup from
+  # this boot as well as one indicating the latest working version
+  cp -rf /boot/efi/EFI "/boot/efi/EFI.${CURRENT_COMMIT}"
+  rm -rf /boot/efi/EFI.latest_working
+  cp -rf /boot/efi/EFI /boot/efi/EFI.latest_working
+
+  # Copy over EFI content
+  cp -r /ostree/deploy/ock/deploy/$LATEST_COMMIT/usr/lib/ostree-boot/efi/EFI/* /boot/efi/EFI
+
 
   rpm-ostree kargs --delete-if-present=ignition.firstboot=1
   KUBECONFIG=/etc/kubernetes/kubelet.conf kubectl annotate node ${NODE_NAME} ocne.oracle.com/update-available-
