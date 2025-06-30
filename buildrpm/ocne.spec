@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.1.2
-Release: 5%{dist}
+Version: 2.2.0
+Release: 1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -71,6 +71,10 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Sat Jun 28 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.2.0
+- Support for Kubernetes 1.32
+- Native support for Oracle Linux Virtualization Manager via the olvm provider
+
 * Wed Apr 02 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.1.2-5
 - Add a retry for fetching the kubelet-config during cluster start to account for slow controllers
 
