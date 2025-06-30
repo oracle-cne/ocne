@@ -26,6 +26,16 @@ func CreateSecret(client kubernetes.Interface, namespace string, secret *v1.Secr
 	return err
 }
 
+// CreateSecretIfNotExists creates a secret if it does not already exist
+func CreateSecretIfNotExists(client kubernetes.Interface, namespace string, secret *v1.Secret) error {
+	_, err := GetSecret(client, namespace, secret.ObjectMeta.Name)
+	if err == nil {
+		return nil
+	}
+
+	return CreateSecret(client, namespace, secret)
+}
+
 // DeleteSecret deletes a Secret
 func DeleteSecret(client kubernetes.Interface, namespace string, name string) error {
 	if err := client.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {

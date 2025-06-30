@@ -18,7 +18,7 @@ CHART_GIT_DIR:=build/charts
 
 CHART_EMBED:=pkg/catalog/embedded/charts
 
-CATALOG_BRANCH?=release/2.1
+CATALOG_BRANCH?=release/2.2
 
 DEVELOPER_CHART_BUILD_DIR:=${BUILD_DIR}/developer-catalog
 DEVELOPER_CATALOG_BRANCH?=developer
