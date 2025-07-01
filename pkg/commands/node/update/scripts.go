@@ -34,7 +34,7 @@ chroot /hostroot /bin/bash <<"EOF"
   for commit in $COMMITS; do
     echo "Checking commit $commit"
     COMMIT_HASH=$(echo "$commit" | sed 's/\([a-z0-9]\+\)\.[0-9]\+/\1/')
-    PKG_VER=$(rpm-ostree db list "$COMMIT_HASH" "shim-$PKG_ARCH" | grep "shim-$PKG_ARCH" | sed "s/^ shim-x64-\([0-9.-]*\).el8[_0-9]*.$RPM_ARCH/\1/")
+    PKG_VER=$(rpm-ostree db list "$COMMIT_HASH" "shim-$PKG_ARCH" | grep "shim-$PKG_ARCH" | sed "s/^ shim-${PKG_ARCH}-\([0-9.-]*\).el8[_0-9]*.${RPM_ARCH}/\1/")
     PKGS=$(echo "${PKGS}${PKG_VER} $commit|")
 
     if [ "$commit" = "$CURRENT_COMMIT" ]; then
