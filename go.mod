@@ -18,6 +18,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.1
 	github.com/go-git/go-git/v5 v5.13.1
 	github.com/go-logr/logr v1.4.2
+	github.com/goccy/go-yaml v1.18.0
 	github.com/gosuri/uitable v0.0.4
 	github.com/korylprince/ipnetgen v1.0.1
 	github.com/oracle/oci-go-sdk/v65 v65.78.1
