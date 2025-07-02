@@ -13,6 +13,10 @@ type LibvirtProvider struct {
 	BootVolumeName               string `yaml:"bootVolumeName"`
 	BootVolumeContainerImagePath string `yaml:"bootVolumeContainerImagePath"`
 	SlirpSubnet                  string `yaml:"slirpSubnet"`
+	SecureBoot                   bool   `yaml:"-"`
+	SecureBootPtr                *bool  `yaml:"secureBoot"`
+	Smm                          bool   `yaml:"-"`
+	SmmPtr                       *bool  `yaml:"smm"`
 }
 
 type OciInstanceShape struct {
@@ -423,6 +427,10 @@ func MergeLibvirtProvider(def *LibvirtProvider, ovr *LibvirtProvider) LibvirtPro
 		WorkerNode:                   MergeNode(&def.WorkerNode, &ovr.WorkerNode),
 		BootVolumeName:               ies(def.BootVolumeName, ovr.BootVolumeName),
 		BootVolumeContainerImagePath: ies(def.BootVolumeContainerImagePath, ovr.BootVolumeContainerImagePath),
+		Smm:                          iebp(def.SmmPtr, ovr.SmmPtr, false),
+		SmmPtr:                       iebpp(def.SmmPtr, ovr.SmmPtr),
+		SecureBoot:                   iebp(def.SecureBootPtr, ovr.SecureBootPtr, false),
+		SecureBootPtr:                iebpp(def.SecureBootPtr, ovr.SecureBootPtr),
 	}
 }
 

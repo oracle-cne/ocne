@@ -12,14 +12,14 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
-	"gopkg.in/yaml.v3"
+	yaml "github.com/goccy/go-yaml"
 )
 
 // ParseConfig takes a yaml-encoded string and parses it
 // into a Config structure.
 func ParseConfig(in string) (*types.Config, error) {
 	ret := &types.Config{}
-	err := yaml.Unmarshal([]byte(in), ret)
+	err := yaml.UnmarshalOptions([]byte(in), ret, yaml.Strict())
 	if err != nil {
 		return nil, err
 	}
