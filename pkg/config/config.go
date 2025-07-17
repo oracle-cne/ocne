@@ -19,7 +19,7 @@ import (
 // into a Config structure.
 func ParseConfig(in string) (*types.Config, error) {
 	ret := &types.Config{}
-	err := yaml.UnmarshalOptions([]byte(in), ret, yaml.Strict())
+	err := yaml.UnmarshalWithOptions([]byte(in), ret, yaml.Strict())
 	if err != nil {
 		return nil, err
 	}
