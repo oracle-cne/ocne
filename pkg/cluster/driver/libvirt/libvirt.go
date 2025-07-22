@@ -95,6 +95,8 @@ type Domain struct {
 	MemoryCapacityUnit string
 	CPUs               int
 	CPUArch            string
+	Smm                bool
+	SecureBoot         bool
 }
 
 // Pool defines a libvirt Pool
@@ -548,6 +550,8 @@ func (ld *LibvirtDriver) addNode(role types.NodeRole, num int, join bool, tokenS
 		IgnitionPath: ignitionPath,
 		Hypervisor:   hypervisor,
 		Networks:     domNets,
+		Smm:          ld.Config.Providers.Libvirt.Smm,
+		SecureBoot:   ld.Config.Providers.Libvirt.SecureBoot,
 	}
 	if role == types.ControlPlaneRole {
 		err = createDomainFromTemplate(ld.Config.Providers.Libvirt.ControlPlaneNode, ld.Connection, &domainInformation)

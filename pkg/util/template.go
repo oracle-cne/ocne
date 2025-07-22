@@ -14,6 +14,13 @@ func yesno(in bool) string {
 	return "no"
 }
 
+func onoff(in bool) string {
+	if in {
+		return "on"
+	}
+	return "off"
+}
+
 func TemplateToString(templateString string, contents interface{}) (string, error) {
 	return TemplateToStringWithFuncs(templateString, contents, nil)
 }
@@ -23,6 +30,7 @@ func TemplateToStringWithFuncs(templateString string, contents interface{}, func
 		funcs = map[string]any{}
 	}
 	funcs["yesno"] = yesno
+	funcs["onoff"] = onoff
 	tmpl := template.New("template").Funcs(funcs)
 	tmpl, err := tmpl.Parse(templateString)
 	if err != nil {

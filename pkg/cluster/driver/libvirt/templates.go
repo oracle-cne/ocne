@@ -67,18 +67,16 @@ const (
   <resource>
     <partition>/machine</partition>
   </resource>
+  <os firmware="efi">
+    <firmware>
+      <feature enabled="{{yesno .SecureBoot}}" name="enrolled-keys"/>
+      <feature enabled="{{yesno .SecureBoot}}" name="secure-boot"/>
+    </firmware>
+    <boot dev='hd'/>
   {{if eq .CPUArch "aarch64"}}
-	<os firmware="efi">
-		<firmware>
-			<feature enabled="no" name="enrolled-keys"/>
-			<feature enabled="no" name="secure-boot"/>
-		</firmware>
-		<type arch='{{.CPUArch}}' machine='virt'>hvm</type>
-		<boot dev='hd'/>
+      <type arch='{{.CPUArch}}' machine='virt'>hvm</type>
   {{else}}
-		<os firmware='efi'>
-		<type arch='{{.CPUArch}}' machine='q35'>hvm</type>
-		<boot dev='hd'/>
+      <type arch='{{.CPUArch}}' machine='q35'>hvm</type>
   {{end}}
   </os>
   {{if eq .CPUArch "aarch64"}}
@@ -91,7 +89,7 @@ const (
 	    <feature policy='disable' name='pdpe1gb'/>
 	</cpu>
     <features>
-		<smm state="off"/>
+		<smm state="{{onoff .Smm}}"/>
   {{end}}
 	<acpi/>
     <apic/>

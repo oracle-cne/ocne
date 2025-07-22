@@ -185,6 +185,10 @@ providers:
     bootVolumeName: boot.qcow2
     # Boot volume container image path
     bootVolumeContainerImagePath: disk/boot.qcow2
+    # Enable or disable SMM for all domains
+    smm: false
+    # Enable or disable UEFI Secure Boot for all domains
+    secureBoot: false
     # Configuration options for control plane and worker nodes.
     # For values that have units of bytes, suffixes like M
     # or G are in megabytes and gigabytes while suffixes like
