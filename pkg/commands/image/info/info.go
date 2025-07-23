@@ -4,6 +4,7 @@
 package info
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,6 +27,7 @@ import (
 
 type InfoOptions struct {
 	Architecture string
+	File         string
 }
 
 type qcowFileInfo struct {
@@ -134,22 +136,28 @@ func (qf *qcowFile) Writable() (backend.WritableFile, error) {
 }
 
 func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options InfoOptions) error {
-	tmpPath, err := file.CreateOcneTempDir("image-info")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpPath)
+	var imgPath string
 
-	tarStream, closer, err := contimg.EnsureBaseQcow2Image(clusterConfig.BootVolumeContainerImage, options.Architecture)
-	if err != nil {
-		return err
-	}
-	defer closer()
+	if options.File == "" {
+		tmpPath, err := file.CreateOcneTempDir("image-info")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmpPath)
 
-	imgPath := filepath.Join(tmpPath, "boot.qcow2")
-	err = writeFile(tarStream, imgPath)
-	if err != nil {
-		return err
+		tarStream, closer, err := contimg.EnsureBaseQcow2Image(clusterConfig.BootVolumeContainerImage, options.Architecture)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		imgPath := filepath.Join(tmpPath, "boot.qcow2")
+		err = writeFile(tarStream, imgPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		imgPath = options.File
 	}
 
 	qcowImg, err := qcow2.Blk_Open(imgPath,
@@ -167,6 +175,15 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 	}
 
 	log.Infof("Info: %s", qcow2.Blk_Info(qcowImg, true, true))
+
+	// TODO: remove
+	data := make([]uint8, 512)
+	_, err = qcow2.Blk_Pread(qcowImg, 0, data, 512)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Dump:\n%s", hex.Dump(data))
 
 	disk, err := diskfs.OpenBackend(diskImgFile)
 	if err != nil {
@@ -187,7 +204,12 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		if !ok {
 			return fmt.Errorf("Parition %d is not a GPT partition", i)
 		}
-		log.Infof("\t%d (%s): %s %s %d %d %d", gptPart.Name, gptPart.GUID, gptPart.Type, gptPart.Size, gptPart.Start, gptPart.End)
+		log.Infof("\t%d", i)
+		log.Infof("\t\tName: %s", gptPart.Name)
+		log.Infof("\t\tGUID: %s", gptPart.GUID)
+		log.Infof("\t\tType: %s", gptPart.Type)
+		log.Infof("\t\tSize: %s", util.HumanReadableSize(gptPart.Size))
+		log.Infof("\t\tExtents: %d to %d", gptPart.Start, gptPart.End)
 	}
 
 	return nil

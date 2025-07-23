@@ -240,7 +240,11 @@ func qcow2_get_host_offset(bs *BlockDriverState, offset uint64, bytes *uint32,
 	case QCOW2_SUBCLUSTER_INVALID:
 		//do nothing
 	case QCOW2_SUBCLUSTER_COMPRESSED:
-		//do nothing
+		if has_data_file(bs) {
+			err = ERR_EIO
+			goto fail
+		}
+		*hostOffset = l2Entry
 	case QCOW2_SUBCLUSTER_ZERO_PLAIN, QCOW2_SUBCLUSTER_UNALLOCATED_PLAIN:
 		//do nothing
 	case QCOW2_SUBCLUSTER_ZERO_ALLOC, QCOW2_SUBCLUSTER_NORMAL, QCOW2_SUBCLUSTER_UNALLOCATED_ALLOC:

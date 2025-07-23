@@ -24,6 +24,10 @@ const (
 	flagImageShort = "i"
 	flagImageHelp = "A container image containing OCK boot media"
 
+	flagFile = "file"
+	flagFileShort = "f"
+	flagFileHelp = "The path to a qcow2 image to inspect"
+
 	helpShort = "Display information about OCK boot media"
 	helpLong = "Display information about OCK boot media"
 	helpExample = "ocne image info --image container-registry.oracle.com/olcne/ock"
@@ -51,7 +55,8 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&infoOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
-	cmd.Flags().StringVarP(&clusterConfig.BootVolumeContainerImage, flagImage, flagImageShort, "", helpShort)
+	cmd.Flags().StringVarP(&clusterConfig.BootVolumeContainerImage, flagImage, flagImageShort, "", flagImageHelp)
+	cmd.Flags().StringVarP(&infoOptions.File, flagFile, flagFileShort, "", flagFileShort)
 
 	return cmd
 }
