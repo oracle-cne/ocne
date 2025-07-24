@@ -28,6 +28,18 @@ const (
 	flagFileShort = "f"
 	flagFileHelp = "The path to a qcow2 image to inspect"
 
+	flagPath = "path"
+	flagPathShort = "p"
+	flagPathHelp = "The path of a file on a filesystem to inspect"
+
+	flagRecursive = "recursive"
+	flagRecursiveShort = "r"
+	flagRecursiveHelp = "If the inspected path is a directory, recursively list any child directories"
+
+	flagLabel = "label"
+	flagLabelShort = "L"
+	flagLabelHelp = "A partition label to inspect"
+
 	helpShort = "Display information about OCK boot media"
 	helpLong = "Display information about OCK boot media"
 	helpExample = "ocne image info --image container-registry.oracle.com/olcne/ock"
@@ -56,7 +68,10 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&infoOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
 	cmd.Flags().StringVarP(&clusterConfig.BootVolumeContainerImage, flagImage, flagImageShort, "", flagImageHelp)
-	cmd.Flags().StringVarP(&infoOptions.File, flagFile, flagFileShort, "", flagFileShort)
+	cmd.Flags().StringVarP(&infoOptions.File, flagFile, flagFileShort, "", flagFileHelp)
+	cmd.Flags().StringVarP(&infoOptions.Label, flagLabel, flagLabelShort, "", flagLabelHelp)
+	cmd.Flags().StringVarP(&infoOptions.Path, flagPath, flagPathShort, "", flagPathHelp)
+	cmd.Flags().BoolVarP(&infoOptions.Recursive, flagRecursive, flagRecursiveShort, false, flagRecursiveHelp)
 
 	return cmd
 }
