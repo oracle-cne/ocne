@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/masahiro331/go-xfs-filesystem/xfs"
@@ -72,6 +73,8 @@ func (fs *XfsFilesystem) ReadDir(pathname string) ([]os.FileInfo, error) {
 }
 
 func (fs *XfsFilesystem) OpenFile(pathname string, flag int) (filesystem.File, error) {
+	pathname = strings.TrimLeft(pathname, "/")
+
 	file, err := fs.xfsfs.Open(pathname)
 	if err != nil {
 		return nil, err
