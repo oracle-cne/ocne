@@ -26,7 +26,6 @@ import (
 	"container/list"
 	"context"
 	"encoding/binary"
-	//"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -649,13 +648,6 @@ func qcow2_zlib_decompress(bs *BlockDriverState, dest *[]byte, src []byte) error
 	srcBuf := bytes.NewReader(src)
 
 
-	//fmt.Println("decompress")
-	//fmt.Println(hex.Dump(src))
-
-	//r, err := zlib.NewReader(srcBuf)
-	//if err != nil {
-	//	return err
-	//}
 	r := flate.NewReader(srcBuf)
 
 	_, err := io.Copy(destBuf, r)
@@ -664,8 +656,6 @@ func qcow2_zlib_decompress(bs *BlockDriverState, dest *[]byte, src []byte) error
 		return err
 	}
 	*dest = destBuf.Bytes()
-	//fmt.Println("decompressed:")
-	//fmt.Println(hex.Dump(*dest))
 	return nil
 }
 
@@ -678,7 +668,7 @@ func qcow2_readv_compressed(bs *BlockDriverState, l2Entry uint64, offset uint64,
 
 	qcow2_parse_compressed_l2_entry(bs, l2Entry, &cOffset,  &cSize)
 
-	bufBytes := make([]byte, cSize, cSize)
+	bufBytes := make([]byte, cSize * 2, cSize * 2)
 	buf := unsafe.Pointer(&bufBytes[0])
 
 	err := bdrv_pread(bs.current, cOffset, buf, uint64(cSize))

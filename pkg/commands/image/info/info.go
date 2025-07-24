@@ -4,18 +4,19 @@
 package info
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	qcow2 "github.com/dypflying/go-qcow2lib/qcow2"
 	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/partition/gpt"
+	"github.com/masahiro331/go-xfs-filesystem/xfs"
 
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/file"
@@ -83,8 +84,9 @@ func (qf *qcowFile) Sys() (*os.File, error) {
 }
 
 func (qf *qcowFile) Read(out []byte) (int, error) {
+	log.Debugf("Reading %d bytes from %d", len(out), qf.read)
 	read, err := qcow2.Blk_Pread(qf.disk, qf.read, out, uint64(len(out)))
-	log.Debugf("Reading %d bytes from %d: %d", len(out), qf.read, read)
+	log.Debugf("  read %d", read)
 	if err != nil {
 		return -1, nil
 	}
@@ -95,6 +97,7 @@ func (qf *qcowFile) Read(out []byte) (int, error) {
 func (qf *qcowFile) ReadAt(out []byte, at int64) (int, error) {
 	log.Debugf("Reading %d bytes at %d", len(out), at)
 	read, err := qcow2.Blk_Pread(qf.disk, uint64(at), out, uint64(len(out)))
+	log.Debugf("  read %d", read)
 	return int(read), err
 }
 
@@ -133,6 +136,16 @@ func (qf *qcowFile) Close() error {
 
 func (qf *qcowFile) Writable() (backend.WritableFile, error) {
 	return qf, nil
+}
+
+type partitionReader struct {
+	qf *qcowFile
+	start uint64
+	end uint64
+}
+
+func (pr *partitionReader) ReadAt(out []byte, offset int64) (int, error) {
+	return pr.qf.ReadAt(out, int64(pr.start) + offset)
 }
 
 func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options InfoOptions) error {
@@ -174,16 +187,7 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		disk: qcowImg,
 	}
 
-	log.Infof("Info: %s", qcow2.Blk_Info(qcowImg, true, true))
-
-	// TODO: remove
-	data := make([]uint8, 512)
-	_, err = qcow2.Blk_Pread(qcowImg, 0, data, 512)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Dump:\n%s", hex.Dump(data))
+	log.Debugf("Info: %s", qcow2.Blk_Info(qcowImg, true, true))
 
 	disk, err := diskfs.OpenBackend(diskImgFile)
 	if err != nil {
@@ -198,6 +202,8 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 	stat, _ := diskImgFile.Stat()
 	log.Infof("Image: %s", clusterConfig.BootVolumeContainerImage)
 	log.Infof("Size: %s", util.HumanReadableSize(uint64(stat.Size())))
+	log.Infof("Logical Block Size: %d", disk.LogicalBlocksize)
+	log.Infof("PhysicalBlockSize: %d", disk.PhysicalBlocksize)
 	log.Infof("Partition Table: %s", partTable.UUID())
 	for i, pt := range partTable.GetPartitions() {
 		gptPart, ok := pt.(*gpt.Partition)
@@ -210,10 +216,52 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		log.Infof("\t\tType: %s", gptPart.Type)
 		log.Infof("\t\tSize: %s", util.HumanReadableSize(gptPart.Size))
 		log.Infof("\t\tExtents: %d to %d", gptPart.Start, gptPart.End)
+
+		// If this in an EFI-shaped object, try to load it as fat32 and get some basic info
+		if strings.Contains(gptPart.Name, "EFI") {
+			fatfs, err := disk.GetFilesystem(i+1)
+			if err != nil {
+				log.Warnf("EFI partition %s was not a FAT32 filesystem: %v", gptPart.Name, err)
+				continue
+			}
+
+			dir, err := fatfs.ReadDir("/")
+			if err != nil {
+				log.Warnf("Could not read root directory: %v", err)
+				continue
+			}
+			log.Infof("\t\tFiles:")
+			for _, fi := range dir {
+				log.Infof("\t\t\t%s", fi.Name())
+			}
+		} else {
+			// If not, assume it's xfs shaped
+			pr := &partitionReader{
+				qf: diskImgFile,
+				start: gptPart.Start * 512,
+				end: gptPart.End * 512,
+			}
+
+			xfsfs, err := xfs.NewFS(*io.NewSectionReader(pr, 0, int64(gptPart.Size)), nil)
+			if err != nil {
+				log.Warnf("Parition %s does not contain an XFS filesystem: %v", gptPart.Name, err)
+				continue
+			}
+
+			dir, err := xfsfs.ReadDir("/")
+			if err != nil {
+				log.Warnf("Could not read root directory: %v", err)
+				continue
+			}
+			log.Infof("\t\tFiles:")
+			for _, fi := range dir {
+				log.Infof("\t\t\t%s", fi.Name())
+			}
+		}
+
 	}
 
 	return nil
-
 }
 
 func writeFile(reader io.Reader, filePath string) error {
