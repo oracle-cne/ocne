@@ -7,6 +7,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/common"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/image/create"
+	"github.com/oracle-cne/ocne/cmd/image/info"
 	"github.com/oracle-cne/ocne/cmd/image/upload"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -41,6 +42,7 @@ func NewCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.AddCommand(create.NewCmd())
 	cmd.AddCommand(upload.NewCmd())
+	cmd.AddCommand(info.NewCmd())
 
 	return cmd
 }

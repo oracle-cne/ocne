@@ -185,6 +185,139 @@ $ curl http://localhost:8080/ostree/refs/heads/ock
 789672394f9c0242ec602191cc6f2f808bf8476686256aa71556a11bdf6695db
 ```
 
+## Inspecting Boot Media
+
+Information about the disk geometry, partition table, and filesystem contents
+can be inspected directly without the need for an ephemeral cluster.  There
+are some limitations.  Only qcow2 disk images can be loaded.  The set of
+supported filesystems is limited to fat, xfs, ext4, and iso-9660.
+
+### Inspecting a Container Image
+
+Boot media from a container registry can be viewed.  By default, the boot media
+is sourced from the default container image and Kubernetes version for the
+architecture of the machine where the command is executed.
+
+```
+$ ocne image info --version 1.31
+INFO[2025-07-24T17:09:11Z] Downloading image docker://container-registry.oracle.com/olcne/ock:1.31 
+Getting image source signatures
+Copying blob 35cf0ab20d21 done   | 
+Copying config 7eaebc9406 done   | 
+Writing manifest to image destination
+INFO[2025-07-24T17:09:35Z] Image: docker://container-registry.oracle.com/olcne/ock:1.31 
+INFO[2025-07-24T17:09:35Z] Size: 15.00 GiB                              
+INFO[2025-07-24T17:09:35Z] Logical Block Size: 512                      
+INFO[2025-07-24T17:09:35Z] PhysicalBlockSize: 512                       
+INFO[2025-07-24T17:09:35Z] Partition Table: 0B75549B-18C0-4F44-B3BD-A92B5A241580 
+INFO[2025-07-24T17:09:35Z] 	Partition 0                                 
+INFO[2025-07-24T17:09:35Z] 		Label: EFI-SYSTEM                          
+INFO[2025-07-24T17:09:35Z] 		GUID: 17482E29-DEF4-4633-808F-E849A8A838B1 
+INFO[2025-07-24T17:09:35Z] 		Type: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 
+INFO[2025-07-24T17:09:35Z] 		Size: 249856.00 KiB                        
+INFO[2025-07-24T17:09:35Z] 		Extents: 2048 to 501759                    
+INFO[2025-07-24T17:09:35Z] 	Partition 1                                 
+INFO[2025-07-24T17:09:35Z] 		Label: boot                                
+INFO[2025-07-24T17:09:35Z] 		GUID: 86E35E8D-8D2F-4F3E-B739-EBEE10FE3ED3 
+INFO[2025-07-24T17:09:35Z] 		Type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 
+INFO[2025-07-24T17:09:35Z] 		Size: 499712.00 KiB                        
+INFO[2025-07-24T17:09:35Z] 		Extents: 503808 to 1503231                 
+INFO[2025-07-24T17:09:35Z] 	Partition 2                                 
+INFO[2025-07-24T17:09:35Z] 		Label: root                                
+INFO[2025-07-24T17:09:35Z] 		GUID: FA9D01DE-9CEF-4B93-963A-54963B99D32F 
+INFO[2025-07-24T17:09:35Z] 		Type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 
+INFO[2025-07-24T17:09:35Z] 		Size: 14.28 GiB                            
+INFO[2025-07-24T17:09:35Z] 		Extents: 1505280 to 31455231
+```
+
+### Inspecting a File
+
+Boot media from the local filesystem can be viewed.
+
+```
+$ ocne image info --file boot.qcow2-1.32
+INFO[2025-07-24T17:22:32Z] Image: boot.qcow2-1.32                       
+INFO[2025-07-24T17:22:32Z] Size: 15.00 GiB                              
+INFO[2025-07-24T17:22:32Z] Logical Block Size: 512                      
+INFO[2025-07-24T17:22:32Z] PhysicalBlockSize: 512                       
+INFO[2025-07-24T17:22:32Z] Partition Table: 7B35A308-07B0-4AF6-8C8C-2FB3740C3D35 
+INFO[2025-07-24T17:22:32Z] 	Partition 0                                 
+INFO[2025-07-24T17:22:32Z] 		Label: EFI-SYSTEM                          
+INFO[2025-07-24T17:22:32Z] 		GUID: 1093510D-C6F3-4C8C-9540-1C22C682A8BF 
+INFO[2025-07-24T17:22:32Z] 		Type: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 
+INFO[2025-07-24T17:22:32Z] 		Size: 249856.00 KiB                        
+INFO[2025-07-24T17:22:32Z] 		Extents: 2048 to 501759                    
+INFO[2025-07-24T17:22:32Z] 	Partition 1                                 
+INFO[2025-07-24T17:22:32Z] 		Label: boot                                
+INFO[2025-07-24T17:22:32Z] 		GUID: 0CCE769C-94A5-4AE0-984F-092B93DBB52D 
+INFO[2025-07-24T17:22:32Z] 		Type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 
+INFO[2025-07-24T17:22:32Z] 		Size: 499712.00 KiB                        
+INFO[2025-07-24T17:22:32Z] 		Extents: 503808 to 1503231                 
+INFO[2025-07-24T17:22:32Z] 	Partition 2                                 
+INFO[2025-07-24T17:22:32Z] 		Label: root                                
+INFO[2025-07-24T17:22:32Z] 		GUID: EE8A47E4-5D36-44BC-8888-A22CA1F6AB64 
+INFO[2025-07-24T17:22:32Z] 		Type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 
+INFO[2025-07-24T17:22:32Z] 		Size: 14.28 GiB                            
+INFO[2025-07-24T17:22:32Z] 		Extents: 1505280 to 31455231
+```
+
+### Inspecting a Partition
+
+Details for a single partition can be displayed.
+
+```
+$ ocne image info --file boot.qcow2-1.32 --label EFI-SYSTEM
+INFO[2025-07-24T17:23:30Z] Partition 0                                  
+INFO[2025-07-24T17:23:30Z] 	Label: EFI-SYSTEM                           
+INFO[2025-07-24T17:23:30Z] 	GUID: 1093510D-C6F3-4C8C-9540-1C22C682A8BF  
+INFO[2025-07-24T17:23:30Z] 	Type: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7  
+INFO[2025-07-24T17:23:30Z] 	Size: 249856.00 KiB                         
+INFO[2025-07-24T17:23:30Z] 	Extents: 2048 to 501759
+```
+
+### Listing Directories on a Filesystem
+
+The contents of a single directory can be listed.
+
+```
+$ ocne image info --file boot.qcow2-1.32 --label EFI-SYSTEM --path /
+/EFI
+```
+
+It is also possible to list a directory recursively.
+
+```
+$ ocne image info --file boot.qcow2-1.32 --label EFI-SYSTEM --path / --recursive
+/EFI
+/EFI/BOOT
+/EFI/BOOT/BOOTX64.EFI
+/EFI/BOOT/fbx64.efi
+/EFI/redhat
+/EFI/redhat/fonts
+/EFI/redhat/shimx64.efi
+/EFI/redhat/BOOTX64.CSV
+/EFI/redhat/grubx64.efi
+/EFI/redhat/mmx64.efi
+/EFI/redhat/shimx64-oracle.efi
+/EFI/redhat/grub.cfg
+```
+
+###  Viewing Files
+
+If the path to a file is provided, the contents of that file are printed.
+
+
+```
+$ ocne image info --file boot.qcow2-1.32 --label boot --path /loader.1/entries/ostree-1-ock.conf
+title Oracle Linux Server 8.10 1.31 (ostree:0)
+version 1
+options rw ip=dhcp rd.neednet=1 ignition.platform.id=qemu ignition.firstboot=1 systemd.firstboot=off crashkernel=auto console=ttyS0 root=UUID=a5d4fccb-a66c-42c9-a0a3-7d5046274825 rd.timeout=120 ostree=/ostree/boot.1/ock/3c8d6f07171d8bc29872e3a7bdc609164fb8dbf72343c106cfeb341c8af4c266/0
+linux /ostree/ock-3c8d6f07171d8bc29872e3a7bdc609164fb8dbf72343c106cfeb341c8af4c266/vmlinuz-5.15.0-310.184.5.2.el8uek.x86_64
+initrd /ostree/ock-3c8d6f07171d8bc29872e3a7bdc609164fb8dbf72343c106cfeb341c8af4c266/initramfs-5.15.0-310.184.5.2.el8uek.x86_64.img
+aboot /ostree/deploy/ock/deploy/4d8213df76c1f1fc5d5bb27d3747e59351ef76e4abbd9bc0899e4de31494868f.0/usr/lib/ostree-boot/aboot.img
+abootcfg /ostree/deploy/ock/deploy/4d8213df76c1f1fc5d5bb27d3747e59351ef76e4abbd9bc0899e4de31494868f.0/usr/lib/ostree-boot/aboot.cfg
+```
+
 ## Customizing Boot Media
 
 There are several options for generating boot media for platforms other than
