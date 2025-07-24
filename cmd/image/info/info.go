@@ -76,7 +76,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-// RunCmd runs the "ocne image create" command
+// RunCmd runs the "ocne image info" command
 func RunCmd(cmd *cobra.Command) error {
 	if err := flags.ValidateArchitecture(infoOptions.Architecture); err != nil {
 		return err
@@ -93,10 +93,7 @@ func RunCmd(cmd *cobra.Command) error {
 		cc.BootVolumeContainerImage = "docker://" + cc.BootVolumeContainerImage
 	}
 
-	// Make sure we create the new image using the base image that goes with the requested version of k8s.
-	// Note that c.BootVolumeContainerImage has the image that will be used to create the ephemeral cluster where
-	// we spin up a pod to create the custom image (which might be different than the base image we use to
-	// create the custom image).
+	// Fix up the container image name based on the configuration.
 	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
 	if err != nil {
 		return err
