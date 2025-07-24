@@ -97,6 +97,32 @@ SUBCOMMANDS
     copied to this location.  See `containers-transports(5)` for a complete
     list of transports and formats.  Only applies to "ostree" images.
 
+`info` [OPTIONS]...
+  Print information about boot media from files or container images.
+
+`-a`, `--arch` *architecture*
+    The architecture of the image to create. One of "arm64" or "amd64".
+
+`-v`, `--version` *version*
+    The version of Kubernetes embedded in the image.  Only applies to "oci"
+    images.
+
+`-f`, `--files` *path*
+    The path to a qcow2 formatted disk image.  If present, this file will be
+    used and all arguments relating to container images, architecture, and
+    versions are ignored.
+
+`-L`, `--label` *label*
+    The label of a partition to inspect.
+
+`-p`, `--path` *path*
+    A path within a filesystem.  When combined with `--label`, it prints the
+    contents of a directory or file on the corresponding filesystem.
+
+`-r`, `--recursive`
+    When listing directories, traverse the tree and print the names of all
+    files and directories.
+
 SEE ALSO
 --------
 

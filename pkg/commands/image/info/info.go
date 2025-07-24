@@ -24,6 +24,7 @@ import (
 
 type InfoOptions struct {
 	Architecture string
+	Version      string
 	File         string
 	Label        string
 	Recursive    bool
@@ -46,7 +47,7 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		}
 		defer closer()
 
-		imgPath := filepath.Join(tmpPath, "boot.qcow2")
+		imgPath = filepath.Join(tmpPath, "boot.qcow2")
 		err = writeFile(tarStream, imgPath)
 		if err != nil {
 			return err
@@ -55,6 +56,7 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		imgPath = options.File
 	}
 
+	log.Debugf("Opening image %s", imgPath)
 	qcowImg, err := disk.OpenQcow2(imgPath)
 	if err != nil {
 		return err
@@ -72,7 +74,11 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 	indent := ""
 	if options.Path == ""  && options.Label == "" {
 		stat, _ := qcowImg.Stat()
-		log.Infof("Image: %s", clusterConfig.BootVolumeContainerImage)
+		img := clusterConfig.BootVolumeContainerImage
+		if options.File != "" {
+			img = options.File
+		}
+		log.Infof("Image: %s", img)
 		log.Infof("Size: %s", util.HumanReadableSize(uint64(stat.Size())))
 		log.Infof("Logical Block Size: %d", disk.LogicalBlocksize)
 		log.Infof("PhysicalBlockSize: %d", disk.PhysicalBlocksize)
