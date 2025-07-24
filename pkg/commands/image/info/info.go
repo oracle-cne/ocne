@@ -69,13 +69,15 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 		return err
 	}
 
-	if options.Path == "" {
+	indent := ""
+	if options.Path == ""  && options.Label == "" {
 		stat, _ := qcowImg.Stat()
 		log.Infof("Image: %s", clusterConfig.BootVolumeContainerImage)
 		log.Infof("Size: %s", util.HumanReadableSize(uint64(stat.Size())))
 		log.Infof("Logical Block Size: %d", disk.LogicalBlocksize)
 		log.Infof("PhysicalBlockSize: %d", disk.PhysicalBlocksize)
 		log.Infof("Partition Table: %s", partTable.UUID())
+		indent = "\t"
 	}
 
 	for i, pt := range partTable.GetPartitions() {
@@ -90,12 +92,12 @@ func Info(startConfig *types.Config, clusterConfig *types.ClusterConfig, options
 
 
 		if options.Path == "" {
-			log.Infof("\t%d", i)
-			log.Infof("\t\tLabel: %s", gptPart.Name)
-			log.Infof("\t\tGUID: %s", gptPart.GUID)
-			log.Infof("\t\tType: %s", gptPart.Type)
-			log.Infof("\t\tSize: %s", util.HumanReadableSize(gptPart.Size))
-			log.Infof("\t\tExtents: %d to %d", gptPart.Start, gptPart.End)
+			log.Infof("%sPartition %d", indent, i)
+			log.Infof("%s\tLabel: %s", indent, gptPart.Name)
+			log.Infof("%s\tGUID: %s", indent, gptPart.GUID)
+			log.Infof("%s\tType: %s", indent, gptPart.Type)
+			log.Infof("%s\tSize: %s", indent, util.HumanReadableSize(gptPart.Size))
+			log.Infof("%s\tExtents: %d to %d", indent, gptPart.Start, gptPart.End)
 			continue
 		}
 
