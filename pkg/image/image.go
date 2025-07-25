@@ -8,9 +8,11 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/containers/common/pkg/auth"
@@ -266,6 +268,35 @@ func GetTarFromLayerById(imgRef types.ImageReference, layerId string) (*tar.Read
 		nil
 }
 
+// AdvanceTarToNext searches a tar stream utnil it finds the header
+// for the first of a set of files.  If a file is found, the tar
+// stream is advanced to that file and the name of that file is
+// returned.  If no files are found, the empty string is returned.
+// It is not an error to not find a file.  Errors are only returned
+// when they occur while processing the archive.
+func AdvanceTarToNext(tarReader *tar.Reader, files []string) (string, error) {
+	fileSet := map[string]bool{}
+
+	for _, f := range files {
+		fileSet[f] = true
+	}
+
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil {
+			if err == io.EOF {
+				return "", nil
+			}
+			return "", err
+		}
+
+		if _, ok := fileSet[hdr.Name]; ok {
+			return hdr.Name, nil
+		}
+	}
+	return "", nil
+}
+
 // AdvanceTarToPath searches a tar stream until it finds the header for
 // the given file.  If the file is not found, the tar stream is advanced
 // to the end, and it is no longer possible to read from it.
@@ -273,18 +304,73 @@ func GetTarFromLayerById(imgRef types.ImageReference, layerId string) (*tar.Read
 // For large archives, this can take a while.  The archive is usually
 // read from disk, and is usually compressed.
 func AdvanceTarToPath(tarReader *tar.Reader, filePath string) error {
-	for {
-		hdr, err := tarReader.Next()
+	f, err := AdvanceTarToNext(tarReader, []string{filePath})
+	if err != nil {
+		return err
+	} else if f == "" {
+		return fmt.Errorf("Reached unreachable code in AdvanceTarToPath")
+	}
+
+	return nil
+}
+
+// FindInImage roots around in container image layers for a set of files.  Each
+// layer of the image is extracted in-memory in descending order and searched
+// for the desired files.  Once a file is found, it is not looked for in lower
+// layers.
+func FindInImage(imgRef types.ImageReference, arch string, files []string) (map[string][]byte, error) {
+	layers, err := GetImageLayers(imgRef, arch)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate backwards through the layers so that special image-isms like whiteout
+	// devices can be ignored.
+	ret := map[string][]byte{}
+	for _, layer := range slices.Backward(layers) {
+		tarStream, closer, err := GetTarFromLayerById(imgRef, layer.Digest.Encoded())
 		if err != nil {
-			return err
+			if closer != nil {
+				closer()
+			}
+			return nil, err
 		}
 
-		if filePath == hdr.Name {
-			return nil
+		for {
+			found, err := AdvanceTarToNext(tarStream, files)
+			if err != nil {
+				closer()
+				return nil, err
+			}
+
+			// If no files in the set have been found, then
+			// the end of the archive has been reached and
+			// it's time to move on to the next one.
+			if found == "" {
+				break
+			}
+
+			contents, err := io.ReadAll(tarStream)
+			ret[found] = contents
+			files = slices.DeleteFunc(files, func(elem string) bool {
+				return elem == found
+			})
+		}
+		closer()
+
+		// Iterating over arbitrary tarballs can be expensive.
+		// Don't bother iterating over any extra layers if
+		// everything has been found.
+		if len(files) == 0 {
+			break
 		}
 	}
 
-	return fmt.Errorf("Reached unreachable code in AdvanceTarToPath")
+	if len(files) > 0 {
+		return nil, fmt.Errorf("could not find these files: %s", strings.Join(files, ", "))
+	}
+
+	return ret, nil
 }
 
 // Login logs in to a container registry

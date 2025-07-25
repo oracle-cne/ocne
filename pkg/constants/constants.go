@@ -34,6 +34,9 @@ const (
 	EphemeralClusterPreserve     = true
 	SlirpSubnet                  = "192.18.255.0/24"
 
+	// BYO defaults
+	IsoUtilityImage = "docker://container-registry.oracle.com/olcne/ock:utility"
+
 	// Kubernetes defaults`
 	KubeAPIServerBindPort    = uint16(6443)
 	KubeAPIServerBindPortAlt = uint16(6444)

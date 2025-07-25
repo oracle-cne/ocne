@@ -108,6 +108,11 @@ func GetDefaultConfig() (*types.Config, error) {
 					ConfigMapName: constants.OvirtCsiConfigMapName,
 				},
 			},
+			Byo: types.ByoProvider{
+				Iso: types.Iso {
+					UtilityImage: constants.IsoUtilityImage,
+				},
+			},
 		},
 		PodSubnet:                constants.PodSubnet,
 		ServiceSubnet:            constants.ServiceSubnet,

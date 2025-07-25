@@ -5,6 +5,7 @@ package disk
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 
 	log "github.com/sirupsen/logrus"
@@ -80,4 +81,25 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem) error {
 func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem) error {
 	walkFs := filesystem.FS(inFs)
 	return CopyFS(walkFs, outFs)
+}
+
+
+func FindFilesInFilesystem(src filesystem.FileSystem, files []string) (map[string][]byte, error) {
+	ret := map[string][]byte{}
+
+	for _, file := range files {
+		f, err := src.OpenFile(file, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		contents, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+
+		ret[file] = contents
+	}
+
+	return ret, nil
 }

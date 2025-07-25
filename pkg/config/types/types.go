@@ -151,10 +151,15 @@ type OlvmLocalAPIEndpoint struct {
 	AdvertiseAddress string `yaml:"advertiseAddress,omitempty"`
 }
 
+type Iso struct {
+	UtilityImage string `yaml:"utilityImage"`
+}
+
 type ByoProvider struct {
 	AutomaticTokenCreation    bool   `yaml:"automaticTokenCreationfake"`
 	AutomaticTokenCreationPtr *bool  `yaml:"automaticTokenCreation"`
 	NetworkInterface          string `yaml:"networkInterface"`
+	Iso                       Iso    `yaml:"iso"`
 }
 
 type Node struct {
@@ -674,6 +679,15 @@ func MergeOlvmLocalAPIEndpoint(def *OlvmLocalAPIEndpoint, ovr *OlvmLocalAPIEndpo
 	}
 }
 
+// MergeIso takes to Isos and merges them into a third.  The default values
+// for the result crom from the first argument.  If a value is set in the
+// second argument, that values takes precedence.
+func MergeIso(def *Iso, ovr *Iso) Iso {
+	return Iso{
+		UtilityImage: ies(def.UtilityImage, ovr.UtilityImage),
+	}
+}
+
 // MergeByoProvider takes two ByoProviders and merged them into a
 // third.  The default values for the result come from the first
 // argument.  If a value is set in the second argument, that value
@@ -683,6 +697,7 @@ func MergeByoProvider(def *ByoProvider, ovr *ByoProvider) ByoProvider {
 		AutomaticTokenCreation:    iebp(def.AutomaticTokenCreationPtr, ovr.AutomaticTokenCreationPtr, false),
 		AutomaticTokenCreationPtr: iebpp(def.AutomaticTokenCreationPtr, ovr.AutomaticTokenCreationPtr),
 		NetworkInterface:          ies(def.NetworkInterface, ovr.NetworkInterface),
+		Iso:                       MergeIso(&def.Iso, &ovr.Iso),
 	}
 }
 

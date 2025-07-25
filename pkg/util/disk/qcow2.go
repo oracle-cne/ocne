@@ -98,9 +98,9 @@ func (qd *Qcow2Disk) Sys() (*os.File, error) {
 }
 
 func (qd *Qcow2Disk) Read(out []byte) (int, error) {
-	log.Debugf("Reading %d bytes from %d", len(out), qd.read)
+	log.Tracef("Reading %d bytes from %d", len(out), qd.read)
 	read, err := qcow2.Blk_Pread(qd.disk, qd.read, out, uint64(len(out)))
-	log.Debugf("  read %d", read)
+	log.Tracef("  read %d", read)
 	if err != nil {
 		return -1, nil
 	}
@@ -109,9 +109,9 @@ func (qd *Qcow2Disk) Read(out []byte) (int, error) {
 }
 
 func (qd *Qcow2Disk) ReadAt(out []byte, at int64) (int, error) {
-	log.Debugf("Reading %d bytes at %d", len(out), at)
+	log.Tracef("Reading %d bytes at %d", len(out), at)
 	read, err := qcow2.Blk_Pread(qd.disk, uint64(at), out, uint64(len(out)))
-	log.Debugf("  read %d", read)
+	log.Tracef("  read %d", read)
 	return int(read), err
 }
 
