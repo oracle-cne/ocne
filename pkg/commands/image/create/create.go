@@ -61,6 +61,9 @@ type CreateOptions struct {
 
 	// Destination
 	Destination string
+
+	// Iso
+	Iso bool
 }
 
 type providerFuncs struct {
@@ -72,6 +75,11 @@ type providerFuncs struct {
 // Create creates a qcow2 image for the specified provider type
 func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
 	namespace := constants.OCNESystemNamespace
+
+	// If an ISO is desired, there is no need for an ephemeral cluster.
+	if options.Iso {
+		return CreateIso(startConfig, clusterConfig, options)
+	}
 
 	kubeConfig, isEphemeral, err := start.EnsureCluster(startConfig.KubeConfig, startConfig, clusterConfig)
 	if err != nil {
