@@ -17,6 +17,7 @@ import (
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/disk"
+	"github.com/oracle-cne/ocne/pkg/util/linux"
 	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 )
@@ -47,7 +48,7 @@ const (
 
 
 	// Files from Boot partition
-	GrubConfigPattern = `/loader.\d+/entries/.*`
+	GrubConfig = "/loader.1/entries/ostree-1-ock.conf"
 
 	EfiGrubConfigDest = "/EFI/BOOT/grub.cfg"
 	GrubConfigDest = "/isolinux/grub.conf"
@@ -186,6 +187,31 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 
 	// Get the grub configuration.  Once that is found, sniff around in it
 	// to find a reasonable kernel and initrd to use.
+	grubConf, err := disk.GetFileInFilesystem(bootFs, GrubConfig)
+	if err != nil {
+		return err
+	}
+
+	menuEntry, err := linux.ParseMenuEntry(string(grubConf))
+	if err != nil {
+		return err
+	}
+
+	// Get the ostree that is the source of the content going
+	// into the squashfs
+	ostreeArgs := linux.GetKernelArg(menuEntry.KernelArgs, "ostree")
+	if len(ostreeArgs) == 0 {
+		return fmt.Errorf("grub menu entry did not specify an ostree deployment")
+	}
+	ostreePath, err := disk.RealPath(rootFs, ostreeArgs[0])
+	if err != nil {
+		return err
+	}
+
+	kernelPath := menuEntry.Kernel
+	initrdPath := menuEntry.Initrd
+	log.Debugf("Kernel: %s", kernelPath)
+	log.Debugf("Initrd: %s", initrdPath)
 
 	// Embed an ignition file into the initrd.
 
@@ -204,11 +230,11 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// the only filesystem implementation that can do this.  Thankfully
 	// it is the only realistic option for the root filesystem.
 	rootXfsFs, ok := rootFs.(*disk.XfsFilesystem)
-	var rootFree uint64
+	var rootUsed uint64
 	if ok {
 		rootPartSize := rootPart.Size
-		rootFree = rootPartSize - rootXfsFs.Free()
-		log.Debugf("Root filesystem size: %s", util.HumanReadableSize(rootFree))
+		rootUsed = rootPartSize - rootXfsFs.Free()
+		log.Debugf("Root filesystem size: %s", util.HumanReadableSize(rootUsed))
 	}
 
 	defer os.RemoveAll(tmpDir)
@@ -217,7 +243,13 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		return err
 	}
 
-	err = disk.CopyFilesystem(rootFs, rootSquashFs, rootFree)
+	// Copy in the checked out ostree.  This is a read-only filesystem, so
+	// retaining the actual ostree commits is not relevant.  Use the total
+	// used space as an estimate for how data needs to be copied.  ostree
+	// checkouts are done with hard links, so there is roughly twice as
+	// much apparent disk use as actual disk use.  Given that only half
+	// of that apparent data is required, it's a reasonable estimate.
+	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
 	if err != nil {
 		return nil
 	}

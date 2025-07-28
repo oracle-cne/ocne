@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 
 	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/backend/file"
@@ -74,9 +76,81 @@ type fsCopy struct {
 	lastError    error
 }
 
-func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, bytes uint64) error {
+// AbsolutePath takes a path and converts it to the true
+// path by resolving and traversing any symlinks.  If the
+// target of a symlink does not exist, an error is returned.
+//
+// Loops are not handled, and will result in infinite recursion.
+func RealPath(in filesystem.FileSystem, path string) (string, error) {
+	path = filepath.Clean(path)
+	if !filepath.IsAbs(path) {
+		return "", fmt.Errorf("searching virtual disk filesystems requires an absolute path")
+	}
+
+	realPath := string(filepath.Separator)
+	for _, d := range strings.Split(path, string(filepath.Separator)) {
+		if d == "" {
+			continue
+		}
+
+		ents, err := in.ReadDir(realPath)
+		if err != nil {
+			return "", err
+		}
+
+		var fi fs.FileInfo
+		for _, e := range ents {
+			if e.Name() == d {
+				fi = e
+				break
+			}
+		}
+
+		if fi == nil {
+			return "", fmt.Errorf("Could not find %s", filepath.Join(realPath, d))
+		}
+
+		if (fi.Mode() & fs.ModeSymlink) != 0 {
+			xfs, ok := in.(*XfsFilesystem)
+			if !ok {
+				return "", fmt.Errorf("symlink resolution is only supported for xfs filesystems")
+			}
+
+			// Resolve symlink.
+			tgt, err := xfs.GetSymlinkTarget(fi)
+			fmt.Println("Symlink at", realPath, tgt, fi.IsDir(),  fi)
+			if err != nil {
+				return "", err
+			}
+
+			if filepath.IsAbs(tgt) {
+				realPath = tgt
+			} else {
+				realPath = filepath.Join(realPath, tgt)
+			}
+			realPath = filepath.Clean(realPath)
+
+			// There may be symlinks in the resolved target path.
+			realPath, err = RealPath(in, realPath)
+			if err != nil {
+				return "", err
+			}
+			//return "", fmt.Errorf("symlink")
+		} else {
+			realPath = filepath.Join(realPath, d)
+		}
+	}
+
+	return realPath, nil
+}
+
+func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, root string, bytes uint64) error {
 	var waitFunc func(interface{})string
 	var waitMsg string
+
+	if root == "" {
+		root = "/"
+	}
 
 	if bytes == 0 {
 		waitMsg = "Copying filesystem"
@@ -97,6 +171,8 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, bytes uint64) error {
 		return err
 	}
 
+	fmt.Println("Walking filesystem from", root)
+
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		&logutils.Waiter{
 			Message: waitMsg,
@@ -104,7 +180,7 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, bytes uint64) error {
 			Args: fsc,
 			WaitFunction: func(fIface interface{})error{
 				f, _ := fIface.(*fsCopy)
-				return fs.WalkDir(inFs, "/", func(path string, d fs.DirEntry, err error)error{
+				return fs.WalkDir(inFs, root, func(path string, d fs.DirEntry, err error)error{
 					if err != nil {
 						f.lastError = err
 						return err
@@ -132,9 +208,9 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, bytes uint64) error {
 	return nil
 }
 
-func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem, bytes uint64) error {
+func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem, root string, bytes uint64) error {
 	walkFs := filesystem.FS(inFs)
-	return CopyFS(walkFs, outFs, bytes)
+	return CopyFS(walkFs, outFs, root, bytes)
 }
 
 
@@ -156,4 +232,13 @@ func FindFilesInFilesystem(src filesystem.FileSystem, files []string) (map[strin
 	}
 
 	return ret, nil
+}
+
+func GetFileInFilesystem(src filesystem.FileSystem, file string) ([]byte, error) {
+	res, err := FindFilesInFilesystem(src, []string{file})
+	if err != nil {
+		return nil, err
+	}
+
+	return res[file], err
 }

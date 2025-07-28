@@ -393,6 +393,18 @@ func (xfs *FileSystem) listEntries(ino uint64) ([]Entry, error) {
 	return entries, nil
 }
 
+func (xfs *FileSystem) GetSymlinkTarget(in fs.FileInfo) (string, error) {
+	fi, ok := in.(FileInfo)
+	if !ok {
+		return "", xerrors.New("unexpected type")
+	}
+	if fi.inode.symlinkString == nil {
+		return "", xerrors.New("not a symlink")
+	}
+
+	return fi.inode.symlinkString.Name, nil
+}
+
 // FileInfo is implemented io/fs FileInfo interface
 type FileInfo struct {
 	name  string

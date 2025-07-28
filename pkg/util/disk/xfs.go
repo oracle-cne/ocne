@@ -27,6 +27,10 @@ func GetXfsFilesystem(rdr io.ReaderAt, size int64) (filesystem.FileSystem, error
 	}, nil
 }
 
+func (fs *XfsFilesystem) GetSymlinkTarget(fi fs.FileInfo) (string, error) {
+	return fs.xfsfs.GetSymlinkTarget(fi)
+}
+
 func (fs *XfsFilesystem) Free() uint64 {
 	return uint64(fs.xfsfs.PrimaryAG.SuperBlock.BlockSize) * fs.xfsfs.PrimaryAG.SuperBlock.Fdblocks
 }
