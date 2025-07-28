@@ -27,6 +27,10 @@ func GetXfsFilesystem(rdr io.ReaderAt, size int64) (filesystem.FileSystem, error
 	}, nil
 }
 
+func (fs *XfsFilesystem) Free() uint64 {
+	return uint64(fs.xfsfs.PrimaryAG.SuperBlock.BlockSize) * fs.xfsfs.PrimaryAG.SuperBlock.Fdblocks
+}
+
 func (fs *XfsFilesystem) Type() filesystem.Type {
 	return 999
 }

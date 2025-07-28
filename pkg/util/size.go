@@ -30,6 +30,8 @@ func HumanReadableSize(size uint64) string {
 		base = tebibytes
 	case size >= gibibytes:
 		base = gibibytes
+	case size >= mebibytes:
+		base = mebibytes
 	case size >= kibibytes:
 		base = kibibytes
 	default:

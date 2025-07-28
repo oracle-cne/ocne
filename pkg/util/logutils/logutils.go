@@ -98,6 +98,7 @@ func waitWithStatus(waiter *Waiter) {
 	waiter.mutex.Lock()
 	waiter.done = true
 	waiter.Error = err
+	log.Debugf("Wait done")
 	waiter.mutex.Unlock()
 }
 

@@ -7,14 +7,16 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-
-	log "github.com/sirupsen/logrus"
+	"os"
 
 	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/disk"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/squashfs"
+
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 func MakeISO9660(path string, size int64) (*disk.Disk, filesystem.FileSystem, error) {
@@ -66,21 +68,73 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 	return oDisk, oSquash, nil
 }
 
-func CopyFS(inFs fs.FS, outFs filesystem.FileSystem) error {
-	err := fs.WalkDir(inFs, "/", func(path string, d fs.DirEntry, err error) error {
-		// Propagate any error that has occurred
-		if err != nil {
-			return err
-		}
-		log.Debugf("Processing %s", path)
-		return nil
-	})
-	return err
+type fsCopy struct {
+	totalBytes   uint64
+	writtenBytes uint64
+	lastError    error
 }
 
-func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem) error {
+func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, bytes uint64) error {
+	var waitFunc func(interface{})string
+	var waitMsg string
+
+	if bytes == 0 {
+		waitMsg = "Copying filesystem"
+	} else {
+		waitFunc = func(fIface interface{})string{
+			f, _ := fIface.(*fsCopy)
+			percentComplete := float32(f.writtenBytes * 100) / float32(f.totalBytes)
+			return fmt.Sprintf("Copying filesystem: %s/%s %s", util.HumanReadableSize(f.writtenBytes), util.HumanReadableSize(f.totalBytes), logutils.ProgressBar(percentComplete))
+		}
+	}
+
+	fsc := &fsCopy{
+		totalBytes: bytes,
+	}
+
+	debugFile, err := os.Create("debug.txt")
+	if err != nil {
+		return err
+	}
+
+	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Message: waitMsg,
+			MessageFunction: waitFunc,
+			Args: fsc,
+			WaitFunction: func(fIface interface{})error{
+				f, _ := fIface.(*fsCopy)
+				return fs.WalkDir(inFs, "/", func(path string, d fs.DirEntry, err error)error{
+					if err != nil {
+						f.lastError = err
+						return err
+					}
+
+					inf, err := d.Info()
+					if err != nil {
+						return nil
+					}
+
+					fmt.Fprintf(debugFile, "%d %s -- %v -- %v\n", inf.Size(), path, inf.Mode(), inf.ModTime())
+
+					f.writtenBytes = f.writtenBytes + uint64(inf.Size())
+					return nil
+				})
+			},
+		},
+	})
+
+	debugFile.Close()
+
+	if failed {
+		return fsc.lastError
+	}
+	return nil
+}
+
+func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem, bytes uint64) error {
 	walkFs := filesystem.FS(inFs)
-	return CopyFS(walkFs, outFs)
+	return CopyFS(walkFs, outFs, bytes)
 }
 
 

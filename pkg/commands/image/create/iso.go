@@ -61,6 +61,17 @@ const (
 	RootDest = "/images/ock.img"
 )
 
+var fileMapping = map[string]string{
+	IsoLinux: IsoLinuxDest,
+	LdLinux: LdLinuxDest,
+	Libcom: LibcomDest,
+	Libutil: LibutilDest,
+	Vesamenu: VesamenuDest,
+	BootX64: BootX64Dest,
+	GrubX64: GrubX64Dest,
+	MMX64: MMX64Dest,
+}
+
 func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
 	// Do the work to balance time vs certainty.  Short, uncertain things go
 	// first.  Long, uncertain things go next.  Short, mostly certain things
@@ -122,6 +133,8 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	var rootFs filesystem.FileSystem
 	var bootFs filesystem.FileSystem
 
+	var rootPart *gpt.Partition
+
 	partTable, err := qcowImg.GetPartitionTable()
 	if err != nil {
 		return err
@@ -142,6 +155,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 			efiFs = thefs
 		} else if gptPart.Name == "root" {
 			rootFs = thefs
+			rootPart = gptPart
 		} else if gptPart.Name == "boot" {
 			bootFs = thefs
 		}
@@ -177,8 +191,6 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 
 	// Generate a reasonable grub configuration.
 
-	return nil
-
 	// Dump the root filesystem into a squashfs
 	tmpDir, err := os.MkdirTemp("", "ocneIso")
 	if err != nil {
@@ -187,13 +199,25 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 
 	rootSquashDiskPath := filepath.Join(tmpDir, "rootSquash")
 
+	// If this is an xfs partition, get the amount of data being
+	// copied to use for a progress bar.  At present, this is
+	// the only filesystem implementation that can do this.  Thankfully
+	// it is the only realistic option for the root filesystem.
+	rootXfsFs, ok := rootFs.(*disk.XfsFilesystem)
+	var rootFree uint64
+	if ok {
+		rootPartSize := rootPart.Size
+		rootFree = rootPartSize - rootXfsFs.Free()
+		log.Debugf("Root filesystem size: %s", util.HumanReadableSize(rootFree))
+	}
+
 	defer os.RemoveAll(tmpDir)
 	rootSquashDisk, rootSquashFs, err := disk.MakeSquashfs(rootSquashDiskPath, 8 * 1024 * 1024 * 1024)
 	if err != nil {
 		return err
 	}
 
-	err = disk.CopyFilesystem(rootFs, rootSquashFs)
+	err = disk.CopyFilesystem(rootFs, rootSquashFs, rootFree)
 	if err != nil {
 		return nil
 	}
