@@ -283,14 +283,14 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// checkouts are done with hard links, so there is roughly twice as
 	// much apparent disk use as actual disk use.  Given that only half
 	// of that apparent data is required, it's a reasonable estimate.
-//	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
+	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
 	if err != nil {
 		// TODO remove this
 		rootSquashFs.Finalize(squashfs.FinalizeOptions{})
 		return err
 	}
 
-	//err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
+	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
 	if err != nil {
 		return err
 	}

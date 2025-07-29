@@ -20,6 +20,12 @@ const (
 	defaultCacheSize  = 128 * MB
 )
 
+type fileMetadata struct {
+	uid  *int
+	gid  *int
+	mode *os.FileMode
+}
+
 // FileSystem implements the FileSystem interface
 type FileSystem struct {
 	workspace  string
@@ -34,6 +40,7 @@ type FileSystem struct {
 	xattrs     *xAttrTable
 	rootDir    inode
 	cache      *lru
+	fileMetadata map[string]*fileMetadata
 }
 
 // Equal compare if two filesystems are equal
@@ -96,6 +103,7 @@ func Create(b backend.Storage, size, start, blocksize int64) (*FileSystem, error
 		size:      size,
 		backend:   b,
 		blocksize: blocksize,
+		fileMetadata: map[string]*fileMetadata{},
 	}, nil
 }
 
@@ -319,7 +327,16 @@ func (fs *FileSystem) Symlink(oldpath, newpath string) error {
 //nolint:revive // parameters will be used eventually
 func (fs *FileSystem) Chmod(name string, mode os.FileMode) error {
 	// https://dr-emann.github.io/squashfs/squashfs.html#_common_inode_header
-	return filesystem.ErrNotImplemented
+	if fs.workspace == "" {
+		return filesystem.ErrNotImplemented
+	}
+	fmd, ok := fs.fileMetadata[name]
+	if !ok {
+		fmd = &fileMetadata{}
+		fs.fileMetadata[name] = fmd
+	}
+	fmd.mode = &mode
+	return nil
 }
 
 // Chown changes the numeric uid and gid of the named file. If the file is a symbolic link,
@@ -328,7 +345,17 @@ func (fs *FileSystem) Chmod(name string, mode os.FileMode) error {
 //nolint:revive // parameters will be used eventually
 func (fs *FileSystem) Chown(name string, uid, gid int) error {
 	// https://dr-emann.github.io/squashfs/squashfs.html#_id_table
-	return filesystem.ErrNotImplemented
+	if fs.workspace == "" {
+		return filesystem.ErrNotImplemented
+	}
+	fmd, ok := fs.fileMetadata[name]
+	if !ok {
+		fmd = &fileMetadata{}
+		fs.fileMetadata[name] = fmd
+	}
+	fmd.uid = &uid
+	fmd.gid = &gid
+	return nil
 }
 
 // ReadDir return the contents of a given directory in a given filesystem.

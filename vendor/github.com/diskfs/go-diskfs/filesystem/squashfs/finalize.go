@@ -100,7 +100,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 	// build out file and directory tree
 	// this returns a slice of *finalizeFileInfo, each of which represents a directory
 	// or file
-	fileList, err := walkTree(fs.Workspace())
+	fileList, err := walkTree(fs.Workspace(), fs)
 	if err != nil {
 		return fmt.Errorf("error walking tree: %v", err)
 	}
@@ -419,7 +419,7 @@ func finalizeFragment(buf []byte, to backend.WritableFile, toOffset int64, c Com
 // differently on disk (file data and fragments vs directory table), and
 // because the inode data is different.
 // The first entry in the return always will be the root
-func walkTree(workspace string) ([]*finalizeFileInfo, error) {
+func walkTree(workspace string, fs *FileSystem) ([]*finalizeFileInfo, error) {
 	dirMap := make(map[string]*finalizeFileInfo)
 	fileList := make([]*finalizeFileInfo, 0)
 	var entry *finalizeFileInfo
@@ -456,19 +456,33 @@ func walkTree(workspace string) ([]*finalizeFileInfo, error) {
 		default:
 			fType = fileRegular
 		}
+
 		xattrNames, err := xattr.List(actualPath)
 		if err != nil {
 			return fmt.Errorf("unable to list xattrs for %s: %v", fp, err)
 		}
 		xattrs := map[string]string{}
 		for _, name := range xattrNames {
-			val, err := xattr.Get(fp, name)
+			val, err := xattr.Get(actualPath, name)
 			if err != nil {
 				return fmt.Errorf("unable to get xattr %s for %s: %v", name, fp, err)
 			}
 			xattrs[name] = string(val)
 		}
 		nlink, uid, gid := getFileProperties(fi)
+
+		fmd, ok := fs.fileMetadata[fp]
+		if ok {
+			if fmd.uid != nil {
+				uid = uint32(*fmd.uid)
+			}
+			if fmd.gid != nil {
+				gid = uint32(*fmd.gid)
+			}
+			if fmd.mode != nil {
+				m = *fmd.mode
+			}
+		}
 
 		entry = &finalizeFileInfo{
 			path:     fp,
@@ -1020,8 +1034,8 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 
 	// write the lookupTable - this too is stored as metadata blocks
 	var i int
-	for i = 0; i < len(lookupTable); i += maxSize {
-		written, err := writeMetadataBlock(lookupTable[i*maxSize:i*maxSize+maxSize], f, compressor, location)
+	for i = maxSize; i < len(lookupTable); i += maxSize {
+		written, err := writeMetadataBlock(lookupTable[i-maxSize:i], f, compressor, location)
 		if err != nil {
 			return xattrsWritten, 0, err
 		}
