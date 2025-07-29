@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/diskfs/go-diskfs/filesystem/squashfs"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/partition/gpt"
@@ -31,35 +32,43 @@ const (
 	Libutil = "usr/share/syslinux/libutil.c32"
 	Vesamenu = "usr/share/syslinux/vesamenu.c32"
 
-	IsoLinuxDest = "/isolinux/isolinux.bin"
-	LdLinuxDest = "/isolinux/ldlinux.c32"
-	LibcomDest = "/isolinux/libcom32.c32"
-	LibutilDest = "/isolinux/libutil.c32"
-	VesamenuDest = "/isolinux/vesamenu.c32"
+	IsoLinuxDest = "isolinux/isolinux.bin"
+	LdLinuxDest = "isolinux/ldlinux.c32"
+	LibcomDest = "isolinux/libcom32.c32"
+	LibutilDest = "isolinux/libutil.c32"
+	VesamenuDest = "isolinux/vesamenu.c32"
 
 	// Files from the EFI partition
 	BootX64 = "/EFI/BOOT/BOOTX64.EFI"
 	GrubX64 = "/EFI/redhat/grubx64.efi"
 	MMX64 = "/EFI/redhat/mmx64.efi"
 
-	BootX64Dest = "/EFI/BOOT/BOOTX64.EFI"
-	GrubX64Dest = "/EFI/BOOT/grubx64.efi"
-	MMX64Dest = "/EFI/BOOT/mmx64.efi"
+	BootX64Dest = "EFI/BOOT/BOOTX64.EFI"
+	GrubX64Dest = "EFI/BOOT/grubx64.efi"
+	MMX64Dest = "EFI/BOOT/mmx64.efi"
 
 
 	// Files from Boot partition
 	GrubConfig = "/loader.1/entries/ostree-1-ock.conf"
 
-	EfiGrubConfigDest = "/EFI/BOOT/grub.cfg"
-	GrubConfigDest = "/isolinux/grub.conf"
-	KernelDest = "/isolinux/vmlinuz"
-	InitrdDest = "/isolinux/initrd.img"
+	EfiGrubConfigDest = "EFI/BOOT/grub.cfg"
+	GrubConfigDest = "isolinux/grub.conf"
+	KernelDest = "isolinux/vmlinuz"
+	InitrdDest = "isolinux/initrd.img"
 
-	ImagesKernelDest = "/images/pxeboot/vmlinuz"
-	ImagesInitrdDest = "/images/pxeboot/initrd.img"
+	ImagesKernelDest = "images/pxeboot/vmlinuz"
+	ImagesInitrdDest = "images/pxeboot/initrd.img"
 
 	// Files from Root filesystem
-	RootDest = "/images/ock.img"
+	RootDest = "images/ock.img"
+
+	DefaultDirUid = 0
+	DefaultDirGid = 0
+	DefaultDirMode = 0755
+
+	DefaultFileUid = 0
+	DefaultFileGid = 0
+	DefaultFileMode = 0644
 )
 
 var fileMapping = map[string]string{
@@ -92,7 +101,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	}
 
 	// Get all the files out of the syslinux image
-	files, err := image.FindInImage(syslinuxRef, options.Architecture, []string{
+	isoFiles, err := image.FindInImage(syslinuxRef, options.Architecture, []string{
 		IsoLinux,
 		LdLinux,
 		Libcom,
@@ -104,7 +113,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	}
 
 	log.Debugf("Found all syslinux files")
-	for f, c := range files {
+	for f, c := range isoFiles {
 		log.Debugf("  %s contains %s", f, util.HumanReadableSize(uint64(len(c))))
 	}
 
@@ -210,8 +219,32 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 
 	kernelPath := menuEntry.Kernel
 	initrdPath := menuEntry.Initrd
+	log.Debugf("ostree: %s", ostreePath)
 	log.Debugf("Kernel: %s", kernelPath)
 	log.Debugf("Initrd: %s", initrdPath)
+
+	bootFiles, err := disk.FindFilesInFilesystem(bootFs, []string{
+		kernelPath,
+		initrdPath,
+	})
+	if err != nil {
+		return err
+	}
+
+	bootTree := &disk.File{}
+	bootTree.AddFile(ImagesKernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+	bootTree.AddFile(ImagesInitrdDest, bootFiles[initrdPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+	bootTree.AddFile(KernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+	bootTree.AddFile(InitrdDest, bootFiles[initrdPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+
+	for f, c := range efiFiles {
+		bootTree.AddFile(fileMapping[f], c, DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+	}
+	for f, c := range isoFiles {
+		bootTree.AddFile(fileMapping[f], c, DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
+	}
+
+	
 
 	// Embed an ignition file into the initrd.
 
@@ -249,9 +282,9 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// checkouts are done with hard links, so there is roughly twice as
 	// much apparent disk use as actual disk use.  Given that only half
 	// of that apparent data is required, it's a reasonable estimate.
-	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
+//	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
@@ -263,6 +296,48 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	if err != nil {
 		return err
 	}
+
+	// Stuff the whole thing into an iso
+	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024)
+	if err != nil {
+		return err
+	}
+
+	err = disk.CopyFiles(isoFs, bootTree.Entries, "/")
+	if err != nil {
+		return err
+	}
+
+	err = isoFs.Finalize(iso9660.FinalizeOptions{
+		VolumeIdentifier: "OCK-1",
+		ElTorito: &iso9660.ElTorito{
+			BootCatalog: "isolinux/boot.cat",
+			Entries: []*iso9660.ElToritoEntry{
+				{
+					Platform:  iso9660.BIOS,
+					Emulation: iso9660.NoEmulation,
+					BootFile:  IsoLinuxDest,
+					BootTable: true,
+					LoadSize:  4,
+				},
+				{
+					Platform:  iso9660.EFI,
+					Emulation: iso9660.NoEmulation,
+					BootFile:  BootX64Dest,
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = isoDisk.Close()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Wrote image to %s", options.Destination)
 
 	return nil
 }

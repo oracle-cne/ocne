@@ -4,6 +4,7 @@
 package disk
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -16,12 +17,59 @@ import (
 	"github.com/diskfs/go-diskfs/disk"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/squashfs"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
-func MakeISO9660(path string, size int64) (*disk.Disk, filesystem.FileSystem, error) {
+type File struct {
+	IsDir bool
+	IsSymlink bool
+	IsHardlink bool
+	LinkTarget string
+	Entries map[string]*File
+	UID int
+	GID int
+	Mode os.FileMode
+	Contents []byte
+}
+
+func (f *File) AddFile(path string, content []byte, fileUid int, fileGid int, fileMode os.FileMode, dirUid int, dirGid int, dirMode os.FileMode) *File {
+	dirs := strings.Split(path, string(filepath.Separator))
+
+	if f.Entries == nil {
+		f.Entries = map[string]*File{}
+	}
+
+	// The last element of the path must be a file
+	if len(dirs) == 1 {
+		f.Entries[path] = &File{
+			UID: fileUid,
+			GID: fileGid,
+			Mode: fileMode,
+			Contents: content,
+		}
+		return f.Entries[path]
+	}
+
+	// If it's not a file, then it's a directory
+	dir := dirs[0]
+	d, ok := f.Entries[dir]
+	if !ok {
+		f.Entries[dir] = &File{
+			IsDir: true,
+			UID: dirUid,
+			GID: dirGid,
+			Mode: dirMode,
+		}
+		d = f.Entries[dir]
+	}
+
+	return d.AddFile(filepath.Join(dirs[1:]...), content, fileUid, fileGid, fileMode, dirUid, dirGid, dirMode)
+}
+
+func MakeISO9660(path string, size int64) (*disk.Disk, *iso9660.FileSystem, error) {
 	bkend, err := file.CreateFromPath(path, size)
 	if err != nil {
 		return nil, nil, err
@@ -32,6 +80,8 @@ func MakeISO9660(path string, size int64) (*disk.Disk, filesystem.FileSystem, er
 		return nil, nil, err
 	}
 
+	oDisk.LogicalBlocksize = 4096
+
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 0,
 		FSType: filesystem.TypeISO9660,
@@ -40,7 +90,11 @@ func MakeISO9660(path string, size int64) (*disk.Disk, filesystem.FileSystem, er
 	if err != nil {
 		return nil, nil, err
 	}
-	return oDisk, ofs, nil
+	oIso, ok := ofs.(*iso9660.FileSystem)
+	if !ok {
+		return nil, nil, fmt.Errorf("ISO-9660 filesystem is not an ISO-9660 filesystem")
+	}
+	return oDisk, oIso, nil
 }
 
 func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, error) {
@@ -118,7 +172,6 @@ func RealPath(in filesystem.FileSystem, path string) (string, error) {
 
 			// Resolve symlink.
 			tgt, err := xfs.GetSymlinkTarget(fi)
-			fmt.Println("Symlink at", realPath, tgt, fi.IsDir(),  fi)
 			if err != nil {
 				return "", err
 			}
@@ -213,6 +266,50 @@ func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem, roo
 	return CopyFS(walkFs, outFs, root, bytes)
 }
 
+func CopyFiles(outFs filesystem.FileSystem, tree map[string]*File, root string) error {
+	for name, dst := range tree {
+		path := filepath.Join(root, name)
+
+		if dst.IsDir {
+			err := outFs.Mkdir(path)
+			if err != nil {
+				return err
+			}
+		} else if dst.IsSymlink {
+			err := outFs.Symlink(path, dst.LinkTarget)
+			if err != nil {
+				return err
+			}
+		} else if dst.IsHardlink {
+			err := outFs.Link(path, dst.LinkTarget)
+			if err != nil {
+				return err
+			}
+		} else {
+			f, err := outFs.OpenFile(path, os.O_CREATE | os.O_RDWR)
+			if err != nil {
+				return err
+			}
+
+			_, err = io.Copy(f, bytes.NewBuffer(dst.Contents))
+			if err  != nil {
+				return err
+			}
+
+			f.Close()
+		}
+
+		outFs.Chmod(path, dst.Mode)
+		outFs.Chown(path, dst.UID, dst.GID)
+
+		err := CopyFiles(outFs, dst.Entries, path)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
 
 func FindFilesInFilesystem(src filesystem.FileSystem, files []string) (map[string][]byte, error) {
 	ret := map[string][]byte{}
