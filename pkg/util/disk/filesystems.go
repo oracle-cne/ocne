@@ -69,6 +69,39 @@ func (f *File) AddFile(path string, content []byte, fileUid int, fileGid int, fi
 	return d.AddFile(filepath.Join(dirs[1:]...), content, fileUid, fileGid, fileMode, dirUid, dirGid, dirMode)
 }
 
+func dirChar(d bool) string {
+	if d {
+		return "D"
+	}
+	return "F"
+}
+
+func fileSuffix(d bool) string {
+	if d {
+		return ""
+	}
+	return ";1"
+}
+
+func (f *File) AddISO9660TransTbl() {
+	if !f.IsDir {
+		return
+	}
+
+	// See https://handwiki.org/wiki/TRANS.TBL
+	entries := []string{}
+	for n, e := range f.Entries {
+		line := fmt.Sprintf("%s %s %s%s\n", dirChar(e.IsDir), strings.ToUpper(n), n, fileSuffix(e.IsDir))
+		entries = append(entries, line)
+
+		e.AddISO9660TransTbl()
+	}
+
+	f.Entries["TRANS.TBL"] = &File{
+		Contents: []byte(strings.Join(entries, "")),
+	}
+}
+
 func MakeISO9660(path string, size int64) (*disk.Disk, *iso9660.FileSystem, error) {
 	bkend, err := file.CreateFromPath(path, size)
 	if err != nil {
@@ -80,12 +113,12 @@ func MakeISO9660(path string, size int64) (*disk.Disk, *iso9660.FileSystem, erro
 		return nil, nil, err
 	}
 
-	oDisk.LogicalBlocksize = 4096
+	oDisk.LogicalBlocksize = 2048
 
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 0,
 		FSType: filesystem.TypeISO9660,
-		VolumeLabel: "OCK",
+		VolumeLabel: "ock",
 	})
 	if err != nil {
 		return nil, nil, err

@@ -231,7 +231,9 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		return err
 	}
 
-	bootTree := &disk.File{}
+	bootTree := &disk.File{
+		IsDir: true,
+	}
 	bootTree.AddFile(ImagesKernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
 	bootTree.AddFile(ImagesInitrdDest, bootFiles[initrdPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
 	bootTree.AddFile(KernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
@@ -243,8 +245,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	for f, c := range isoFiles {
 		bootTree.AddFile(fileMapping[f], c, DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
 	}
-
-	
+	bootTree.AddISO9660TransTbl()
 
 	// Embed an ignition file into the initrd.
 
@@ -284,10 +285,12 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// of that apparent data is required, it's a reasonable estimate.
 //	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
 	if err != nil {
+		// TODO remove this
+		rootSquashFs.Finalize(squashfs.FinalizeOptions{})
 		return err
 	}
 
-	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
+	//err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
 	if err != nil {
 		return err
 	}
@@ -309,7 +312,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	}
 
 	err = isoFs.Finalize(iso9660.FinalizeOptions{
-		VolumeIdentifier: "OCK-1",
+		VolumeIdentifier: "ock",
 		ElTorito: &iso9660.ElTorito{
 			BootCatalog: "isolinux/boot.cat",
 			Entries: []*iso9660.ElToritoEntry{
