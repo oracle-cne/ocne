@@ -1047,7 +1047,7 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 	// was there any left?
 	remainder := len(lookupTable) % maxSize
 	if remainder > 0 {
-		written, err := writeMetadataBlock(lookupTable[remainder:], f, compressor, location)
+		written, err := writeMetadataBlock(lookupTable[len(lookupTable)-remainder:], f, compressor, location)
 		if err != nil {
 			return xattrsWritten, 0, err
 		}
