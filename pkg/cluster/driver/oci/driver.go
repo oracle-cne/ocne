@@ -80,6 +80,68 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 		"noProxy":    cad.ClusterConfig.Providers.Oci.Proxy.NoProxy,
 	}
 
+	initContainerValues := []map[string]interface{}{
+		{
+			"name":  "update-ca-trust-store",
+			"image": "os/oraclelinux:8-slim",
+			"command": []string{
+				"/scripts/update-ca-trust-store.sh",
+			},
+			"args": []string{
+				"/etc/oci/pcaCerts",
+				"/certs",
+			},
+			"volumeMounts": []map[string]interface{}{
+				{
+					"name":      "auth-config-dir",
+					"mountPath": "/etc/oci",
+					"readOnly":  true,
+				},
+				{
+					"name":      "certificates",
+					"mountPath": "/certs",
+					"readOnly":  false,
+				},
+				{
+					"name":      "scripts",
+					"mountPath": "/scripts",
+				},
+			},
+			"securityContext": map[string]interface{}{
+				"runAsNonRoot": false,
+			},
+		},
+	}
+
+	volumeMounts := []map[string]interface{}{
+		{
+			"name":      "certificates",
+			"mountPath": "/etc/pki/ca-trust/extracted/openssl",
+			"subPath":   "etc/pki/ca-trust/extracted/openssl",
+			"readOnly":  false,
+		},
+		{
+			"name":      "certificates",
+			"mountPath": "/etc/pki/ca-trust/extracted/pem",
+			"subPath":   "etc/pki/ca-trust/extracted/pem",
+			"readOnly":  false,
+		},
+	}
+
+	volumes := []map[string]interface{}{
+		{
+			"name":     "certificates",
+			"emptyDir": map[string]interface{}{},
+		},
+		{
+			"name": "scripts",
+			"configMap": map[string]interface{}{
+				"name":        "capoci-scripts",
+				"defaultMode": 0500,
+			},
+		},
+	}
+
 	return []install.ApplicationDescription{
 		{
 			Application: &types.Application{
@@ -118,8 +180,12 @@ func (cad *ClusterApiDriver) getApplications() ([]install.ApplicationDescription
 						"tenancy":              ociConfig.Tenancy,
 						"useInstancePrincipal": fmt.Sprintf("%t", ociConfig.UseInstancePrincipal),
 						"user":                 ociConfig.User,
+						"pcaCerts":             ociConfig.PCACerts,
 					},
-					"proxy": proxyValues,
+					"proxy":          proxyValues,
+					"initContainers": initContainerValues,
+					"volumes":        volumes,
+					"volumeMounts":   volumeMounts,
 				},
 			},
 		},
