@@ -436,6 +436,7 @@ github.com/diskfs/go-diskfs
 github.com/diskfs/go-diskfs/backend
 github.com/diskfs/go-diskfs/backend/file
 github.com/diskfs/go-diskfs/disk
+github.com/diskfs/go-diskfs/examples
 github.com/diskfs/go-diskfs/filesystem
 github.com/diskfs/go-diskfs/filesystem/ext4
 github.com/diskfs/go-diskfs/filesystem/ext4/crc

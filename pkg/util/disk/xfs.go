@@ -13,12 +13,32 @@ import (
 	"github.com/masahiro331/go-xfs-filesystem/xfs"
 )
 
+type cache[K string, V any] struct {
+	cache map[K]V
+}
+
+func newCache() *cache[string, any] {
+	return &cache[string, any]{
+		cache: map[string]any{},
+	}
+}
+
+func (c *cache[K, V]) Add(k K, v V) bool {
+	c.cache[k] = v
+	return false
+}
+
+func (c *cache[K, V]) Get(k K) (V, bool) {
+	v, ok := c.cache[k]
+	return v, ok
+}
+
 type XfsFilesystem struct {
 	xfsfs *xfs.FileSystem
 }
 
 func GetXfsFilesystem(rdr io.ReaderAt, size int64) (filesystem.FileSystem, error) {
-	xfsfs, err := xfs.NewFS(*io.NewSectionReader(rdr, 0, size), nil)
+	xfsfs, err := xfs.NewFS(*io.NewSectionReader(rdr, 0, size), newCache())
 	if err != nil {
 		return nil, err
 	}

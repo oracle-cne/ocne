@@ -318,7 +318,14 @@ func (fs *FileSystem) Link(oldpath, newpath string) error {
 //nolint:revive // parameters will be used eventually
 func (fs *FileSystem) Symlink(oldpath, newpath string) error {
 	// https://dr-emann.github.io/squashfs/squashfs.html#_symbolic_links
-	return filesystem.ErrNotImplemented
+	if fs.workspace == "" {
+		return filesystem.ErrReadonlyFilesystem
+	}
+	err := os.Symlink(oldpath, newpath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Chmod changes the mode of the named file to mode. If the file is a symbolic link,

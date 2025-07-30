@@ -163,6 +163,15 @@ type fsCopy struct {
 	lastError    error
 }
 
+func GetSymlinkTarget(in filesystem.FileSystem, fi fs.FileInfo) (string, error) {
+	xfs, ok := in.(*XfsFilesystem)
+	if !ok {
+		return "", fmt.Errorf("symlinks not supported")
+	}
+
+	return xfs.GetSymlinkTarget(fi)
+}
+
 // AbsolutePath takes a path and converts it to the true
 // path by resolving and traversing any symlinks.  If the
 // target of a symlink does not exist, an error is returned.
@@ -198,13 +207,8 @@ func RealPath(in filesystem.FileSystem, path string) (string, error) {
 		}
 
 		if (fi.Mode() & fs.ModeSymlink) != 0 {
-			xfs, ok := in.(*XfsFilesystem)
-			if !ok {
-				return "", fmt.Errorf("symlink resolution is only supported for xfs filesystems")
-			}
-
 			// Resolve symlink.
-			tgt, err := xfs.GetSymlinkTarget(fi)
+			tgt, err := GetSymlinkTarget(in, fi)
 			if err != nil {
 				return "", err
 			}
@@ -230,7 +234,7 @@ func RealPath(in filesystem.FileSystem, path string) (string, error) {
 	return realPath, nil
 }
 
-func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, root string, bytes uint64) error {
+func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, root string, bytes uint64) error {
 	var waitFunc func(interface{})string
 	var waitMsg string
 
@@ -266,7 +270,7 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, root string, bytes uint64) 
 			Args: fsc,
 			WaitFunction: func(fIface interface{})error{
 				f, _ := fIface.(*fsCopy)
-				return fs.WalkDir(inFs, root, func(path string, d fs.DirEntry, err error)error{
+				return fs.WalkDir(in, root, func(path string, d fs.DirEntry, err error)error{
 					if err != nil {
 						f.lastError = err
 						return err
@@ -278,6 +282,51 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, root string, bytes uint64) 
 					}
 
 					fmt.Fprintf(debugFile, "%d %s -- %v -- %v\n", inf.Size(), path, inf.Mode(), inf.ModTime())
+
+					if (d.Type() & fs.ModeSymlink) != 0{
+						fi, err := d.Info()
+						if err != nil {
+							return err
+						}
+
+						tgt, err := GetSymlinkTarget(inFs, fi)
+						if err != nil {
+							return err
+						}
+
+						err = outFs.Symlink(path, tgt)
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+
+					if d.IsDir() {
+						err = outFs.Mkdir(path)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					}
+
+					inFile, err := in.Open(path)
+					if err != nil {
+						return err
+					}
+
+					outFile, err := outFs.OpenFile(path, os.O_CREATE | os.O_RDWR)
+					if err != nil {
+						return err
+					}
+
+					_, err = io.Copy(outFile, inFile)
+					if err != nil {
+						return nil
+					}
+
+					outFile.Close()
+					inFile.Close()
 
 					f.writtenBytes = f.writtenBytes + uint64(inf.Size())
 					return nil
@@ -296,7 +345,7 @@ func CopyFS(inFs fs.FS, outFs filesystem.FileSystem, root string, bytes uint64) 
 
 func CopyFilesystem(inFs filesystem.FileSystem, outFs filesystem.FileSystem, root string, bytes uint64) error {
 	walkFs := filesystem.FS(inFs)
-	return CopyFS(walkFs, outFs, root, bytes)
+	return CopyFS(walkFs, inFs, outFs, root, bytes)
 }
 
 func CopyFiles(outFs filesystem.FileSystem, tree map[string]*File, root string) error {

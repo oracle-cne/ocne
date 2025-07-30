@@ -216,7 +216,7 @@ func (xfs *FileSystem) Open(name string) (fs.File, error) {
 
 				f, err := xfs.newFile(dir)
 				if err != nil {
-					return nil, xerrors.Errorf("failed to new file: %w", err)
+					return nil, xerrors.Errorf("failed to new file %s: %w", name, err)
 				}
 
 				return f, nil
