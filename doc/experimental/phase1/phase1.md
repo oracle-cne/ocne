@@ -273,10 +273,10 @@ No resources found
 
 Follow these [instructions](../phase1/oauth2-proxy.md) to migrate from Verrazznao auth-proxy to OAuth2 Proxy
 
-## Migrate to OpenSearch and OpenSearch Dashboard to OAuth2 Proxy
+## Migrate OpenSearch and OpenSearch Dashboard to OAuth2 Proxy
 
 In the special case where you did not follow the Phase 1 migration steps in sequence, but migrated OpenSearch and OpenSearch Dashboard after
-you migrated to OAuth2 proxy, follow these [instructions](../phase1/oauth2-proxy.md).
+you migrated to OAuth2 proxy, then follow these [instructions](../phase1/oauth2-proxy-opensearch.md).
 
 ## Perform another Cluster Dump
 
