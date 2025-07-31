@@ -91,7 +91,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpPath)
+	//defer os.RemoveAll(tmpPath)
 
 	//  Get the syslinux image.
 	log.Infof("Getting syslinux container image for architecture: %s", options.Architecture)
@@ -271,7 +271,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		log.Debugf("Root filesystem size: %s", util.HumanReadableSize(rootUsed))
 	}
 
-	defer os.RemoveAll(tmpDir)
+	//defer os.RemoveAll(tmpDir)
 	rootSquashDisk, rootSquashFs, err := disk.MakeSquashfs(rootSquashDiskPath, 8 * 1024 * 1024 * 1024)
 	if err != nil {
 		return err
@@ -299,6 +299,8 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	if err != nil {
 		return err
 	}
+
+	log.Infof("Wrote squashfs to %s", rootSquashDiskPath)
 
 	// Stuff the whole thing into an iso
 	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024)

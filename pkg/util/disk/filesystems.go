@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/backend/file"
@@ -21,6 +23,8 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type File struct {
@@ -144,7 +148,7 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 0,
 		FSType: filesystem.TypeSquashfs,
-		VolumeLabel: "OCK",
+		VolumeLabel: "ock",
 	})
 	if err != nil {
 		return nil, nil, err
@@ -234,6 +238,44 @@ func RealPath(in filesystem.FileSystem, path string) (string, error) {
 	return realPath, nil
 }
 
+func copySingleFile(inFile fs.File, outFile filesystem.File, inFlight *int32, writtenBytes *uint64, outErr *atomic.Pointer[error]) {
+	for {
+		buf := make([]byte, 4096)
+		read, err := inFile.Read(buf)
+
+		if err != nil && err != io.EOF {
+			outErr.CompareAndSwap(nil, &err)
+			atomic.AddInt32(inFlight, -1)
+			log.Debugf("Could not read file")
+			return
+		}
+
+		totalWritten := 0
+		for totalWritten < read {
+			written, writeErr := outFile.Write(buf[:read])
+
+			if writeErr != nil {
+				outErr.CompareAndSwap(nil, &err)
+				atomic.AddInt32(inFlight, -1)
+				log.Debugf("Could not write file")
+				return
+			}
+
+			totalWritten = totalWritten + written
+			atomic.AddUint64(writtenBytes, uint64(written))
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+	}
+
+	outFile.Close()
+	inFile.Close()
+	atomic.AddInt32(inFlight, -1)
+}
+
 func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, root string, bytes uint64) error {
 	var waitFunc func(interface{})string
 	var waitMsg string
@@ -256,34 +298,41 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 		totalBytes: bytes,
 	}
 
-	debugFile, err := os.Create("debug.txt")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Walking filesystem from", root)
-
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		&logutils.Waiter{
 			Message: waitMsg,
 			MessageFunction: waitFunc,
 			Args: fsc,
 			WaitFunction: func(fIface interface{})error{
+				//var inFlightMax int32 = 1
+				var inFlight int32 = 0
 				f, _ := fIface.(*fsCopy)
-				return fs.WalkDir(in, root, func(path string, d fs.DirEntry, err error)error{
+
+				atomicErr := atomic.Pointer[error]{}
+				//var readTime time.Duration = 0
+				//var writeTime time.Duration = 0
+
+				err := fs.WalkDir(in, root, func(path string, d fs.DirEntry, err error)error{
+					if err == nil {
+						errPtr := atomicErr.Load()
+						if errPtr != nil {
+							err = *atomicErr.Load()
+						}
+					}
 					if err != nil {
 						f.lastError = err
 						return err
 					}
 
-					inf, err := d.Info()
-					if err != nil {
-						return nil
-					}
+					// Strip off the root prefix to get the
+					// path within the target filesystem.
+					// Also remove any leading slashes b/c
+					// that's what the FileSystem interfaces
+					// expect.
+					tgtPath := strings.TrimPrefix(path, root)
+					tgtPath = strings.TrimPrefix(tgtPath, string(filepath.Separator))
 
-					fmt.Fprintf(debugFile, "%d %s -- %v -- %v\n", inf.Size(), path, inf.Mode(), inf.ModTime())
-
-					if (d.Type() & fs.ModeSymlink) != 0{
+					if (d.Type() & fs.ModeSymlink) != 0 {
 						fi, err := d.Info()
 						if err != nil {
 							return err
@@ -294,7 +343,7 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 							return err
 						}
 
-						err = outFs.Symlink(path, tgt)
+						err = outFs.Symlink(tgt, tgtPath)
 						if err != nil {
 							return err
 						}
@@ -302,7 +351,7 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 					}
 
 					if d.IsDir() {
-						err = outFs.Mkdir(path)
+						err = outFs.Mkdir(tgtPath)
 						if err != nil {
 							return err
 						}
@@ -312,30 +361,92 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 
 					inFile, err := in.Open(path)
 					if err != nil {
+						log.Debugf("Could not open source %s", path)
 						return err
 					}
 
-					outFile, err := outFs.OpenFile(path, os.O_CREATE | os.O_RDWR)
+					outFile, err := outFs.OpenFile(tgtPath, os.O_CREATE | os.O_RDWR)
 					if err != nil {
+						log.Debugf("Could not open target %s", tgtPath)
 						return err
 					}
 
-					_, err = io.Copy(outFile, inFile)
-					if err != nil {
-						return nil
+					// Copying files is relatively expensive.
+					// Thread this out so that a couple can
+					// be done at once.
+
+					// If there is too much in flight, wait for
+					// some to complete.
+//					for {
+//						curr := atomic.LoadInt32(&inFlight)
+//						if curr < inFlightMax {
+//							break
+//						}
+//					}
+
+					// Once that is done, start another.
+//					atomic.AddInt32(&inFlight, 1)
+//					go copySingleFile(inFile, outFile, &inFlight, &f.writtenBytes, &atomicErr)
+
+
+					var readFile time.Duration = 0
+					var writeFile time.Duration = 0
+					for {
+						buf := make([]byte, 4096)
+						rt := time.Now()
+						read, err := inFile.Read(buf)
+						readFile = readFile + (time.Now().Sub(rt))
+
+						if err != nil && err != io.EOF {
+							return err
+						}
+
+						totalWritten := 0
+						for totalWritten < read {
+							wt := time.Now()
+							written, writeErr := outFile.Write(buf[:read])
+							writeFile = writeFile + (time.Now().Sub(wt))
+
+							if writeErr != nil {
+								return writeErr
+							}
+
+							totalWritten = totalWritten + written
+							f.writtenBytes = f.writtenBytes + uint64(written)
+						}
+
+						if err == io.EOF {
+							break
+						}
+
 					}
 
 					outFile.Close()
 					inFile.Close()
 
-					f.writtenBytes = f.writtenBytes + uint64(inf.Size())
 					return nil
 				})
+
+				// Wait for all in-flight copies to finish
+				for {
+					curr := atomic.LoadInt32(&inFlight)
+					if curr == 0 {
+						break
+					}
+				}
+				if err == nil {
+					errPtr := atomicErr.Load()
+					if errPtr != nil {
+						err = *errPtr
+					}
+				}
+				if err != nil {
+					f.lastError = err
+				}
+				return err
 			},
 		},
 	})
-
-	debugFile.Close()
 
 	if failed {
 		return fsc.lastError

@@ -194,7 +194,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 	// build up a table of uids/gids we can store later
 	idtable := map[uint32]uint16{}
 	// get the inodes in order as a slice
-	if err := createInodes(fileList, idtable, options); err != nil {
+	if err := createInodes(fileList, idtable, fs.workspace, options); err != nil {
 		return fmt.Errorf("error creating file inodes: %v", err)
 	}
 
@@ -457,13 +457,19 @@ func walkTree(workspace string, fs *FileSystem) ([]*finalizeFileInfo, error) {
 			fType = fileRegular
 		}
 
-		xattrNames, err := xattr.List(actualPath)
+		xattrList := xattr.List
+		xattrGet := xattr.Get
+		if fType == fileSymlink {
+			xattrList = xattr.LList
+			xattrGet = xattr.LGet
+		}
+		xattrNames, err := xattrList(actualPath)
 		if err != nil {
 			return fmt.Errorf("unable to list xattrs for %s: %v", fp, err)
 		}
 		xattrs := map[string]string{}
 		for _, name := range xattrNames {
-			val, err := xattr.Get(actualPath, name)
+			val, err := xattrGet(actualPath, name)
 			if err != nil {
 				return fmt.Errorf("unable to get xattr %s for %s: %v", name, fp, err)
 			}
@@ -515,6 +521,7 @@ func walkTree(workspace string, fs *FileSystem) ([]*finalizeFileInfo, error) {
 			dirMap[parentDir] = parentDirInfo
 		}
 		fileList = append(fileList, entry)
+		fmt.Printf("Adding %s to file list\n", fp)
 		return nil
 	})
 	if err != nil {
@@ -540,6 +547,7 @@ func writeFileDataBlocks(e *finalizeFileInfo, to backend.WritableFile, ws string
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open file for reading %s: %v", e.path, err)
 	}
+	fmt.Printf("Writing to %s\n", path.Join(ws, e.path))
 	defer from.Close()
 	raw, compressed, blocks, err := copyFileData(from, to, 0, location, int64(blocksize), compressor)
 	if err != nil {
@@ -1096,7 +1104,7 @@ func xAttrKeyConvert(key string) (prefixID uint16, prefix string, err error) {
 }
 
 // createInodes create an inode of appropriate type for each file, and attach it to the finalizeFileInfo
-func createInodes(fileList []*finalizeFileInfo, idtable map[uint32]uint16, options FinalizeOptions) error {
+func createInodes(fileList []*finalizeFileInfo, idtable map[uint32]uint16, ws string, options FinalizeOptions) error {
 	// get the inodes
 	var inodeIndex uint32 = 1
 
@@ -1157,7 +1165,7 @@ func createInodes(fileList []*finalizeFileInfo, idtable map[uint32]uint16, optio
 				- it has extended attributes
 				- it has hard links
 			*/
-			target, err := os.Readlink(e.path)
+			target, err := os.Readlink(path.Join(ws, e.path))
 			if err != nil {
 				return fmt.Errorf("unable to read target for symlink at %s: %v", e.path, err)
 			}

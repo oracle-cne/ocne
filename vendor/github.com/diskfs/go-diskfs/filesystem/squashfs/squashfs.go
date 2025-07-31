@@ -321,7 +321,7 @@ func (fs *FileSystem) Symlink(oldpath, newpath string) error {
 	if fs.workspace == "" {
 		return filesystem.ErrReadonlyFilesystem
 	}
-	err := os.Symlink(oldpath, newpath)
+	err := os.Symlink(oldpath, path.Join(fs.workspace, newpath))
 	if err != nil {
 		return err
 	}
