@@ -202,7 +202,7 @@ config:
     set_authorization_header = true
     pass_user_headers = true
     pass_access_token = true
-EOF    
+EOF
 ```
 
 ## 2. Install outh2-proxy from the Catalog
