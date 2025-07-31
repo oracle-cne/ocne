@@ -56,7 +56,7 @@ endif
 
 DIST_DIR:=dist
 ENV_NAME=ocne
-GO=GOTOOLCHAIN=local GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
+GO=GO111MODULE=on GOPRIVATE=github.com/oracle-cne/ocne go
 
 CLI_GO_LDFLAGS=-X '${INFO_DIR}.gitCommit=${GIT_COMMIT}' -X '${INFO_DIR}.buildDate=${BUILD_DATE}' -X '${INFO_DIR}.cliVersion=${CLI_VERSION}'
 CLI_BUILD_TAGS=

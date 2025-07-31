@@ -1,6 +1,6 @@
 # Phase One: Verrazzano Migration
 
-### Version: v0.0.24-draft
+### Version: v0.0.25-draft
 
 The instructions must be performed in the sequence outlined in this document.
 
@@ -272,6 +272,11 @@ No resources found
 ## Migrate to OAuth2 Proxy
 
 Follow these [instructions](../phase1/oauth2-proxy.md) to migrate from Verrazznao auth-proxy to OAuth2 Proxy
+
+## Migrate to OpenSearch and OpenSearch Dashboard to OAuth2 Proxy
+
+In the special case where you did not follow the Phase 1 migration steps in sequence, but migrated OpenSearch and OpenSearch Dashboard after
+you migrated to OAuth2 proxy, follow these [instructions](../phase1/oauth2-proxy.md).
 
 ## Perform another Cluster Dump
 
