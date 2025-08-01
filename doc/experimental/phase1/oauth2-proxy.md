@@ -133,9 +133,7 @@ oauth2-proxy   Opaque   3      11s
 ```
 
 ### Add email to the Keycloak verrazzano user
-Log into the Keycloak console and add an email to the client.  Get the password from the secret:
-
-Get the `keycloakadmin` password:
+Log into the Keycloak console and add an email to the client.  Get the `keycloakadmin` password from the secret as follows:
 ```
 kubectl get secret \
     --namespace keycloak keycloak-http \
