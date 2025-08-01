@@ -80,9 +80,6 @@ type BDRVQcow2State struct {
 	RefcountBlockBits uint32
 	RefcountBlockSize uint32
 
-	CsizeShift uint32
-	CsizeMask  uint32
-
 	ClusterOffsetMask uint64
 	L1TableOffset     uint64
 	L1Table           []uint64

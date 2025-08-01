@@ -20,14 +20,10 @@ SOFTWARE.
 */
 
 import (
-	"bytes"
-	//"compress/zlib"
-	"compress/flate"
 	"container/list"
 	"context"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +70,7 @@ func qcow2_close(bs *BlockDriverState) {
 		bdrv_close(s.DataFile.bs)
 		s.DataFile = nil
 	}
+
 }
 
 func qcow2_create(filename string, options map[string]any) error {
@@ -408,9 +405,6 @@ func initiate_qcow2_state(header *QCowHeader, enableSC bool) *BDRVQcow2State {
 		IncompatibleFeatures: header.IncompatibleFeatures,
 		CompatibleFeatures:   header.CompatibleFeatures,
 	}
-
-	s.CsizeShift = (62 - (header.ClusterBits - 8))
-	s.CsizeMask = (uint32(1) << s.CsizeShift) - 1
 	//subcluster related
 	if enableSC {
 		s.IncompatibleFeatures |= QCOW2_INCOMPAT_EXTL2
@@ -634,60 +628,6 @@ out:
 	return err
 }
 
-func qcow2_parse_compressed_l2_entry(bs *BlockDriverState, l2Entry uint64, cOffset *uint64, cSize *int) {
-	s := bs.opaque.(*BDRVQcow2State)
-
-	*cOffset = l2Entry & s.ClusterOffsetMask
-
-	nbCsectors := uint64((uint32(l2Entry >> s.CsizeShift) & s.CsizeMask) + 1)
-	*cSize = int((nbCsectors * QCOW2_COMPRESSED_SECTOR_SIZE) - (*cOffset & (QCOW2_COMPRESSED_SECTOR_SIZE - 1)))
-}
-
-func qcow2_zlib_decompress(bs *BlockDriverState, dest *[]byte, src []byte) error {
-	destBuf := bytes.NewBuffer(*dest)
-	srcBuf := bytes.NewReader(src)
-
-
-	r := flate.NewReader(srcBuf)
-
-	_, err := io.Copy(destBuf, r)
-	r.Close()
-	if err != nil {
-		return err
-	}
-	*dest = destBuf.Bytes()
-	return nil
-}
-
-func qcow2_readv_compressed(bs *BlockDriverState, l2Entry uint64, offset uint64, bytes uint64, qiov *QEMUIOVector, qiovOffset uint64) error {
-
-	s := bs.opaque.(*BDRVQcow2State)
-	offsetInCluster := offset_into_cluster(s, offset)
-	var cOffset uint64
-	var cSize int
-
-	qcow2_parse_compressed_l2_entry(bs, l2Entry, &cOffset,  &cSize)
-
-	bufBytes := make([]byte, cSize * 2, cSize * 2)
-	buf := unsafe.Pointer(&bufBytes[0])
-
-	err := bdrv_pread(bs.current, cOffset, buf, uint64(cSize))
-	if err != nil {
-		return err
-	}
-
-	// Only try zlib for now
-	buf_out := make([]byte, 0, cSize)
-	err = qcow2_zlib_decompress(bs, &buf_out, bufBytes)
-	if err != nil {
-		return err
-	}
-
-	qemu_iovec_from_buf(qiov, qiovOffset, unsafe.Pointer(&buf_out[offsetInCluster]), uint64(len(buf_out)))
-
-	return nil
-}
-
 func qcow2_preadv_task(bs *BlockDriverState, scType QCow2SubclusterType,
 	hostOffset uint64, offset uint64, bytes uint64, qiov *QEMUIOVector, qiovOffset uint64) error {
 
@@ -700,7 +640,6 @@ func qcow2_preadv_task(bs *BlockDriverState, scType QCow2SubclusterType,
 		return bdrv_preadv_part(bs.backing, offset, bytes, qiov, qiovOffset, 0)
 	case QCOW2_SUBCLUSTER_COMPRESSED:
 		//do nothing
-		return qcow2_readv_compressed(bs, hostOffset, offset, bytes, qiov, qiovOffset)
 	case QCOW2_SUBCLUSTER_NORMAL:
 		return bdrv_preadv_part(s.DataFile, hostOffset,
 			bytes, qiov, qiovOffset, 0)

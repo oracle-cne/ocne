@@ -134,19 +134,8 @@ func bdrv_pad_request(bs *BlockDriverState, qiov **QEMUIOVector, qiovOffset *uin
 		return nil
 	}
 
-	// If there was padding done, but the end of the read
-	// is aligned then there is no tail.  If tail is zero
-	// then the index into the array will be the length of
-	// the array and thus out of range.  In that case, avoid
-	// indexing and send in a nil.  The value is ignored
-	// in this case anyway.
-	var tailBuf unsafe.Pointer = nil
-	if pad.Tail > 0 {
-		tailBuf = unsafe.Pointer(&pad.Buf[pad.BufLen-pad.Tail])
-	}
-
 	if err = qemu_iovec_init_extended(&pad.LocalQiov, unsafe.Pointer(&pad.Buf[0]), pad.Head,
-		*qiov, *qiovOffset, *bytes, tailBuf, pad.Tail); err != nil {
+		*qiov, *qiovOffset, *bytes, unsafe.Pointer(&pad.Buf[pad.BufLen-pad.Tail]), pad.Tail); err != nil {
 		bdrv_padding_destroy(pad)
 		return err
 	}
