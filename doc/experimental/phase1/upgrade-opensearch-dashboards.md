@@ -1,6 +1,6 @@
 # Upgrade OpenSearch Dashboards
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 Upgrade OpenSearch Dashboards 2.3.0 to 2.15.0.
 
