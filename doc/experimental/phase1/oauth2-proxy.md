@@ -133,22 +133,9 @@ oauth2-proxy   Opaque   3      11s
 ```
 
 ### Add email to the Keycloak verrazzano user
-Log into the Keycloak admin console and add an email to the client using the following steps.
+Log into the Keycloak console and add an email to the client.  Get the password from the secret:
 
-1. Get the Keycloak URL:
-```
-vz status
-```
-Output:
-```
-Verrazzano Status
-...
-  Access Endpoints:
-...
-    keyCloakUrl: <keycloak-url>
-```
-
-2. Get the `keycloakadmin` password:
+Get the `keycloakadmin` password:
 ```
 kubectl get secret \
     --namespace keycloak keycloak-http \
@@ -156,10 +143,9 @@ kubectl get secret \
     --decode; echo
 ```
 
-3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
+Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
 by Verrazzano.  Then select **Users** in the left navigation pane and the list of users will be shown in the middle pane.  
 Select the `verrazzano` user, then update the email with a valid email and click the Save button.
-
 
 ### Create OAuth2 Proxy overrides file
 Create an overrides file to be used when installing oauth2-proxy from the catalog.
