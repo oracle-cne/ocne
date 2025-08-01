@@ -1,6 +1,6 @@
 # Upgrade OpenSearch Dashboards
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 
 Upgrade OpenSearch Dashboards 2.3.0 to 2.15.0.
 
@@ -28,6 +28,12 @@ Set some environment variables to be used in the upgrade steps.
  ```text
  export INGRESS_IP=$(kubectl get ingress -n verrazzano-system vmi-system-osd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
  ```
+
+## Shutdown OpenSearch Dashboard
+
+```text
+kubectl scale deployment -n verrazzano-system vmi-system-osd --replicas 0
+```
 
 ## Generate the values override file for the Helm deployment
  ```text
@@ -72,6 +78,41 @@ ingress:
           number: 8775
     tls:
       secretName: system-tls-osd
+livenessProbe:
+  failureThreshold: 10
+  initialDelaySeconds: 120
+  periodSeconds: 20
+  successThreshold: 1
+  timeoutSeconds: 5
+  httpGet:
+    path: /api/status
+    port: 5601
+    scheme: HTTP
+  tcpSocket: null
+
+readinessProbe:
+  failureThreshold: 10
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  successThreshold: 1
+  timeoutSeconds: 5
+  httpGet:
+    path: /api/status
+    port: 5601
+    scheme: HTTP
+  tcpSocket: null
+
+startupProbe:
+  failureThreshold: 20
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+  httpGet:
+    path: /api/status
+    port: 5601
+    scheme: HTTP
+  tcpSocket: null      
 EOF
 ```
 

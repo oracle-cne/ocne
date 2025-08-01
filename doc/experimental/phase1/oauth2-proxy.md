@@ -1,6 +1,6 @@
 # Migration from Verrazzano Auth Proxy to OAuth2 Proxy
 
-### Version: v0.0.2-draft
+### Version: v0.0.3-draft
 This document explains how to migrate from the Verrazzano Auth Proxy to the [OAuth2 Proxy](https://github.com/oauth2-proxy/oauth2-proxy) in a
 system that had Verrazzano installed. The OAuth2 Proxy implements the OAuth 2.0 PKCE protocol using Keycloak
 as the identity provider. After following all the steps outlined in this document, the Verrazzano Auth Proxy
@@ -133,22 +133,7 @@ oauth2-proxy   Opaque   3      11s
 ```
 
 ### Add email to the Keycloak verrazzano user
-Log into the Keycloak admin console and add an email to the client using the following steps.
-
-1. Get the Keycloak URL:
-```
-vz status
-```
-Output:
-```
-Verrazzano Status
-...
-  Access Endpoints:
-...
-    keyCloakUrl: <keycloak-url>
-```
-
-2. Get the `keycloakadmin` password:
+Log into the Keycloak console and add an email to the client.  Get the `keycloakadmin` password from the secret as follows:
 ```
 kubectl get secret \
     --namespace keycloak keycloak-http \
@@ -156,10 +141,9 @@ kubectl get secret \
     --decode; echo
 ```
 
-3. Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
+Navigate to the keycloak URL in a browser, and log into Keycloak as user `keycloakadmin`. Select the correct realm used
 by Verrazzano.  Then select **Users** in the left navigation pane and the list of users will be shown in the middle pane.  
 Select the `verrazzano` user, then update the email with a valid email and click the Save button.
-
 
 ### Create OAuth2 Proxy overrides file
 Create an overrides file to be used when installing oauth2-proxy from the catalog.
@@ -202,7 +186,7 @@ config:
     set_authorization_header = true
     pass_user_headers = true
     pass_access_token = true
-EOF    
+EOF
 ```
 
 ## 2. Install outh2-proxy from the Catalog
