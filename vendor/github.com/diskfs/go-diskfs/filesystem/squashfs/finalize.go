@@ -223,6 +223,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing inode data blocks: %v", err)
 	}
 	location += int64(inodesWritten)
+	fmt.Printf("Wrote %d inodes, now at %d\n", inodesWritten, location)
 
 	// write directory data
 	dirsWritten, dirTableLocation, err := writeDirectories(directories, f, compressor, location)
@@ -230,6 +231,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing directory data blocks: %v", err)
 	}
 	location += int64(dirsWritten)
+	fmt.Printf("Wrote %d directories, now at %d\n", dirsWritten, location)
 
 	// write fragment table
 
@@ -276,6 +278,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing fragment table: %v", err)
 	}
 	location += int64(fragmentTableWritten)
+	fmt.Printf("Wrote %d fragments, now at %d\n", fragmentTableWritten, location)
 
 	// write the export table
 	var (
@@ -296,6 +299,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing uidgid table: %v", err)
 	}
 	location += int64(idTableWritten)
+	fmt.Printf("Wrote %d ids, now at %d\n", idTableWritten, location)
 
 	// write the xattrs
 	var xAttrsLocation uint64
@@ -308,6 +312,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 			return fmt.Errorf("error writing xattrs table: %v", err)
 		}
 		location += int64(xAttrsWritten)
+		fmt.Printf("Wrote %d xattrs, now at %d, location %d\n", xAttrsWritten, location, xAttrsLocation)
 	}
 
 	// update and write the superblock
@@ -375,6 +380,7 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 
 		// compress the block if needed
 		isCompressed := false
+		toWrite := buf
 		if c != nil {
 			out, err := c.compress(buf)
 			if err != nil {
@@ -382,11 +388,12 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 			}
 			if len(out) < len(buf) {
 				isCompressed = true
-				buf = out
+				toWrite = out
+				n = len(out)
 			}
 		}
-		blocks = append(blocks, &blockData{size: uint32(len(buf)), compressed: isCompressed})
-		if _, err := to.WriteAt(buf[:n], toOffset+int64(compressed)); err != nil {
+		blocks = append(blocks, &blockData{size: uint32(len(toWrite)), compressed: isCompressed})
+		if _, err := to.WriteAt(toWrite[:n], toOffset+int64(compressed)); err != nil {
 			return raw, compressed, blocks, err
 		}
 		compressed += len(buf)
@@ -547,7 +554,6 @@ func writeFileDataBlocks(e *finalizeFileInfo, to backend.WritableFile, ws string
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open file for reading %s: %v", e.path, err)
 	}
-	fmt.Printf("Writing to %s\n", path.Join(ws, e.path))
 	defer from.Close()
 	raw, compressed, blocks, err := copyFileData(from, to, 0, location, int64(blocksize), compressor)
 	if err != nil {
@@ -980,6 +986,7 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 		// process one xattr key-value map
 		var single []byte
 		for k, v := range m {
+			fmt.Printf("Handling xattr %s -> %s\n", k, v)
 			// convert it to the proper type
 			// the entry
 			prefix, name, err := xAttrKeyConvert(k)

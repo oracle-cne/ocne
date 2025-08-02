@@ -291,6 +291,16 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	}
 
 	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{})
+//	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{
+//		Compression: &squashfs.CompressorGzip{
+//			CompressionLevel: 9,
+//			WindowSize: 65535,
+//			Strategies: map[squashfs.GzipStrategy]bool{
+//				squashfs.GzipDefault: true,
+//			},
+//		},
+//		Xattrs: true,
+//	})
 	if err != nil {
 		return err
 	}
