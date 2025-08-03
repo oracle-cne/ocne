@@ -223,6 +223,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing inode data blocks: %v", err)
 	}
 	location += int64(inodesWritten)
+	fmt.Printf("Wrote %d inodes, now at %d\n", inodesWritten, location)
 
 	// write directory data
 	dirsWritten, dirTableLocation, err := writeDirectories(directories, f, compressor, location)
@@ -230,6 +231,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing directory data blocks: %v", err)
 	}
 	location += int64(dirsWritten)
+	fmt.Printf("Wrote %d directories, now at %d\n", dirsWritten, location)
 
 	// write fragment table
 
@@ -276,6 +278,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing fragment table: %v", err)
 	}
 	location += int64(fragmentTableWritten)
+	fmt.Printf("Wrote %d fragments, now at %d\n", fragmentTableWritten, location)
 
 	// write the export table
 	var (
@@ -296,6 +299,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing uidgid table: %v", err)
 	}
 	location += int64(idTableWritten)
+	fmt.Printf("Wrote %d ids, now at %d\n", idTableWritten, location)
 
 	// write the xattrs
 	var xAttrsLocation uint64
@@ -308,6 +312,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 			return fmt.Errorf("error writing xattrs table: %v", err)
 		}
 		location += int64(xAttrsWritten)
+		fmt.Printf("Wrote %d xattrs, now at %d, location %d\n", xAttrsWritten, location, xAttrsLocation)
 	}
 
 	// update and write the superblock
@@ -375,6 +380,7 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 
 		// compress the block if needed
 		isCompressed := false
+		toWrite := buf
 		if c != nil {
 			out, err := c.compress(buf)
 			if err != nil {
@@ -382,11 +388,12 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 			}
 			if len(out) < len(buf) {
 				isCompressed = true
-				buf = out
+				toWrite = out
+				n = len(out)
 			}
 		}
-		blocks = append(blocks, &blockData{size: uint32(len(buf)), compressed: isCompressed})
-		if _, err := to.WriteAt(buf[:n], toOffset+int64(compressed)); err != nil {
+		blocks = append(blocks, &blockData{size: uint32(len(toWrite)), compressed: isCompressed})
+		if _, err := to.WriteAt(toWrite[:n], toOffset+int64(compressed)); err != nil {
 			return raw, compressed, blocks, err
 		}
 		compressed += len(buf)
@@ -547,7 +554,6 @@ func writeFileDataBlocks(e *finalizeFileInfo, to backend.WritableFile, ws string
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open file for reading %s: %v", e.path, err)
 	}
-	fmt.Printf("Writing to %s\n", path.Join(ws, e.path))
 	defer from.Close()
 	raw, compressed, blocks, err := copyFileData(from, to, 0, location, int64(blocksize), compressor)
 	if err != nil {
@@ -974,12 +980,15 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 		buf         []byte
 	)
 
+	tableStart := location
+
 	// each entry in the xattrs slice is a unique key-value map. It may be referenced by one or more inodes.
 	// first convert them to key-value written pairs, and save where they are
 	for _, m := range xattrs {
 		// process one xattr key-value map
 		var single []byte
 		for k, v := range m {
+			fmt.Printf("Handling xattr %s -> %s\n", k, v)
 			// convert it to the proper type
 			// the entry
 			prefix, name, err := xAttrKeyConvert(k)
@@ -988,7 +997,7 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 			}
 			b := make([]byte, 4)
 			binary.LittleEndian.PutUint16(b[0:2], prefix)
-			binary.LittleEndian.PutUint16(b[2:4], uint16(len(k)))
+			binary.LittleEndian.PutUint16(b[2:4], uint16(len(name)))
 			b = append(b, []byte(name)...)
 			single = append(single, b...)
 
@@ -1066,7 +1075,7 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 	}
 	// finally, we need the ID table
 	b := make([]byte, 16+8*len(indexEntries))
-	binary.LittleEndian.PutUint64(b[0:8], uint64(location))
+	binary.LittleEndian.PutUint64(b[0:8], uint64(tableStart))
 	binary.LittleEndian.PutUint32(b[8:12], uint32(len(lookupTable)))
 	for _, e := range indexEntries {
 		b2 := make([]byte, 8)
@@ -1080,8 +1089,9 @@ func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor 
 		return xattrsWritten, 0, fmt.Errorf("error writing xattrs id index: %v", err)
 	}
 	xattrsWritten += written
+	fmt.Println("xattr table", tableStart, len(lookupTable), location)
 
-	return xattrsWritten, uint64(location), nil
+	return xattrsWritten, uint64(tableStart), nil
 }
 
 func xAttrKeyConvert(key string) (prefixID uint16, prefix string, err error) {

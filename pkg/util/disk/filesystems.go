@@ -145,6 +145,8 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 		return nil, nil, err
 	}
 
+	oDisk.LogicalBlocksize = 128 * 1024
+
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 0,
 		FSType: filesystem.TypeSquashfs,
