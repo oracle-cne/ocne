@@ -435,6 +435,10 @@ func (i FileInfo) Sys() interface{} {
 	return nil
 }
 
+func (i FileInfo) Xattrs() []*ExtendedAttribute{
+	return i.inode.extendedAttributes
+}
+
 func (i FileInfo) Mode() fs.FileMode {
 	m := i.inode.inodeCore.Mode
 	// Bottom 9 bits are same in fs.FileMode and XFS inode (unix permission bits)

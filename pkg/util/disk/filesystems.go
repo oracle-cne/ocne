@@ -240,42 +240,30 @@ func RealPath(in filesystem.FileSystem, path string) (string, error) {
 	return realPath, nil
 }
 
-func copySingleFile(inFile fs.File, outFile filesystem.File, inFlight *int32, writtenBytes *uint64, outErr *atomic.Pointer[error]) {
-	for {
-		buf := make([]byte, 4096)
-		read, err := inFile.Read(buf)
-
-		if err != nil && err != io.EOF {
-			outErr.CompareAndSwap(nil, &err)
-			atomic.AddInt32(inFlight, -1)
-			log.Debugf("Could not read file")
-			return
-		}
-
-		totalWritten := 0
-		for totalWritten < read {
-			written, writeErr := outFile.Write(buf[:read])
-
-			if writeErr != nil {
-				outErr.CompareAndSwap(nil, &err)
-				atomic.AddInt32(inFlight, -1)
-				log.Debugf("Could not write file")
-				return
-			}
-
-			totalWritten = totalWritten + written
-			atomic.AddUint64(writtenBytes, uint64(written))
-		}
-
-		if err == io.EOF {
-			break
-		}
-
+func copyXattrs(inFile fs.File, path string, outFs filesystem.FileSystem) error {
+	xFile, ok := inFile.(*xfsFile)
+	if !ok {
+		// If copying from a filesystem that does not support
+		// xattrs to one that does not, silently succeed.
+		return nil
 	}
 
-	outFile.Close()
-	inFile.Close()
-	atomic.AddInt32(inFlight, -1)
+	// And vice-versa
+	sqFs, ok := outFs.(*squashfs.FileSystem)
+	if !ok {
+		return nil
+	}
+
+	xAttrs := map[string][]byte{}
+	inXAttrs, err := xFile.Xattrs()
+	if err != nil {
+		return err
+	}
+	for _, x := range inXAttrs {
+		xAttrs[x.Name()] = x.Value()
+	}
+
+	return sqFs.SetXattrs(path, xAttrs)
 }
 
 func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, root string, bytes uint64) error {
@@ -306,8 +294,6 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 			MessageFunction: waitFunc,
 			Args: fsc,
 			WaitFunction: func(fIface interface{})error{
-				//var inFlightMax int32 = 1
-				var inFlight int32 = 0
 				f, _ := fIface.(*fsCopy)
 
 				atomicErr := atomic.Pointer[error]{}
@@ -373,24 +359,6 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 						return err
 					}
 
-					// Copying files is relatively expensive.
-					// Thread this out so that a couple can
-					// be done at once.
-
-					// If there is too much in flight, wait for
-					// some to complete.
-//					for {
-//						curr := atomic.LoadInt32(&inFlight)
-//						if curr < inFlightMax {
-//							break
-//						}
-//					}
-
-					// Once that is done, start another.
-//					atomic.AddInt32(&inFlight, 1)
-//					go copySingleFile(inFile, outFile, &inFlight, &f.writtenBytes, &atomicErr)
-
-
 					var readFile time.Duration = 0
 					var writeFile time.Duration = 0
 					for {
@@ -423,25 +391,17 @@ func CopyFS(in fs.FS, inFs filesystem.FileSystem, outFs filesystem.FileSystem, r
 
 					}
 
+					err = copyXattrs(inFile, tgtPath, outFs)
+					if err != nil {
+						return nil
+					}
+
 					outFile.Close()
 					inFile.Close()
 
 					return nil
 				})
 
-				// Wait for all in-flight copies to finish
-				for {
-					curr := atomic.LoadInt32(&inFlight)
-					if curr == 0 {
-						break
-					}
-				}
-				if err == nil {
-					errPtr := atomicErr.Load()
-					if errPtr != nil {
-						err = *errPtr
-					}
-				}
 				if err != nil {
 					f.lastError = err
 				}

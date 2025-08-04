@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"unsafe"
 
@@ -1029,4 +1030,13 @@ func (e Dir2SfEntry) InodeNumber() uint64 {
 
 func (e Dir2DataEntry) InodeNumber() uint64 {
 	return e.Inumber
+}
+
+func (e *ExtendedAttribute) Name() string {
+	return fmt.Sprintf("%s.%s", xattrTypes[e.category], e.name)
+}
+
+
+func (e *ExtendedAttribute) Value() []byte {
+	return e.value
 }

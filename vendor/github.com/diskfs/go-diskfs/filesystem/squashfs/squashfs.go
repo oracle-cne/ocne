@@ -24,6 +24,7 @@ type fileMetadata struct {
 	uid  *int
 	gid  *int
 	mode *os.FileMode
+	xAttrs map[string][]byte
 }
 
 // FileSystem implements the FileSystem interface
@@ -325,6 +326,20 @@ func (fs *FileSystem) Symlink(oldpath, newpath string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// SetXattrs sets the extended attributes for a file
+func (fs *FileSystem) SetXattrs(name string, xAttrs map[string][]byte) error {
+	if fs.workspace == "" {
+		return filesystem.ErrNotImplemented
+	}
+	fmd, ok := fs.fileMetadata[name]
+	if !ok {
+		fmd = &fileMetadata{}
+		fs.fileMetadata[name] = fmd
+	}
+	fmd.xAttrs = xAttrs
 	return nil
 }
 

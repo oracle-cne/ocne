@@ -4,6 +4,7 @@
 package disk
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -155,4 +156,12 @@ func (xf *xfsFile) Write(buf []byte) (int, error) {
 
 func (xf *xfsFile) Seek(offset int64, whence int) (int64, error) {
 	return -1, filesystem.ErrNotImplemented
+}
+
+func (xf *xfsFile) Xattrs() ([]*xfs.ExtendedAttribute, error) {
+	xFile, ok := xf.file.(*xfs.File)
+	if !ok {
+		return nil, fmt.Errorf("file is not an xfs.File")
+	}
+	return xFile.Xattrs(), nil
 }
