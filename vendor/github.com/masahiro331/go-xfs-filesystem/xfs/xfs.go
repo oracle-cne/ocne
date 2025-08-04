@@ -226,6 +226,10 @@ func (xfs *FileSystem) Open(name string) (fs.File, error) {
 	return nil, fs.ErrNotExist
 }
 
+func (xfs *FileSystem) readSection(n uint64, l uint64) *io.SectionReader {
+	return io.NewSectionReader(xfs.r, int64(n), int64(l))
+}
+
 func (xfs *FileSystem) seekInode(n uint64) (int64, error) {
 	offset := int64(xfs.PrimaryAG.SuperBlock.InodeAbsOffset(n))
 	off, err := xfs.r.Seek(offset, io.SeekStart)

@@ -23,7 +23,24 @@ var (
 
 	_ Entry = &Dir2DataEntry{}
 	_ Entry = &Dir2SfEntry{}
+
+	CATEGORY_USER=0
+	CATEGORY_USER_FLAG=byte(0x0)
+	CATEGORY_USER_NAME="user"
+	CATEGORY_SECURITY=1
+	CATEGORY_SECURITY_FLAG=byte(0x4)
+	CATEGORY_SECURITY_NAME="security"
+	CATEGORY_TRUSTED=2
+	CATEGORY_TRUSTED_FLAG=byte(0x2)
+	CATEGORY_TRUSTED_NAME="trusted"
+
 )
+
+var xattrTypes map[int]string =  map[int]string{
+	CATEGORY_USER: CATEGORY_USER_NAME,
+	CATEGORY_SECURITY: CATEGORY_SECURITY_NAME,
+	CATEGORY_TRUSTED: CATEGORY_TRUSTED_NAME,
+}
 
 type Inode struct {
 	inodeCore InodeCore
@@ -41,6 +58,21 @@ type Inode struct {
 
 	// S_IFLNK
 	symlinkString *SymlinkString
+
+	extendedAttributes []*ExtendedAttribute
+	extendedAttributeHeader *ExtendedAttributeHeader
+}
+
+type ExtendedAttribute struct {
+	category int
+	name string
+	value []byte
+}
+
+type ExtendedAttributeHeader struct {
+	length uint16
+	count byte
+	pad byte
 }
 
 type RegularExtent struct {
@@ -471,13 +503,14 @@ func (xfs *FileSystem) ParseInode(ino uint64) (*Inode, error) {
 
 	_, err := xfs.seekInode(ino)
 	if err != nil {
+		log.Logger.Errorf("Error reading inode: %v", err)
 		return nil, xerrors.Errorf("failed to seek inode: %w", err)
 	}
-
 	sectorReader, err := utils.NewSectorReader(int(xfs.PrimaryAG.SuperBlock.Inodesize))
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create sector reader: %w", err)
 	}
+
 	buf, err := sectorReader.ReadSector(xfs.r)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to read sector: %w", err)
@@ -529,9 +562,117 @@ func (xfs *FileSystem) ParseInode(ino uint64) (*Inode, error) {
 	// if inode.inodeCore.Forkoff != 0 {
 	// 	panic("has extend attribute fork")
 	// }
+	if inode.inodeCore.Aformat == 1 {
+		err = xfs.parseXattrs(ino, &inode)
+		if err != nil {
+			log.Logger.Error(err)
+			return nil, err
+		}
+	}
 
 	xfs.cache.Add(inodeCacheKey(ino), inode)
 	return &inode, nil
+}
+
+func (xfs *FileSystem) parseXattrs(ino uint64, inode *Inode) error {
+	// Read the header
+	// - 2 bytes of length
+	// - 1 byte of count
+	// - 1 byte of pad that must be 0
+	inoLoc := uint64(xfs.PrimaryAG.SuperBlock.InodeAbsOffset(ino))
+	xHdrLen := uint64(4)
+	xHdr := &ExtendedAttributeHeader{}
+
+	r := xfs.readSection(inoLoc + uint64(inode.AttributeOffset()), xHdrLen)
+
+	err := binary.Read(r, binary.BigEndian, &xHdr.length)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Read(r, binary.BigEndian, &xHdr.count)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Read(r, binary.BigEndian, &xHdr.pad)
+	if err != nil {
+		return err
+	}
+
+	// The pad should be zero. If it's not, then there is
+	// some corruption.
+	if xHdr.pad != 0 {
+		return xerrors.Errorf("attribute header had non-zero padding of %s", xHdr.pad)
+	}
+
+	inode.extendedAttributeHeader = xHdr
+
+	// Seek past the attribute section header and
+	// into the attributes themselves.
+	r = xfs.readSection(inoLoc + uint64(inode.AttributeOffset()) + xHdrLen, uint64(xHdr.length))
+
+	var i byte
+	for i = 0; i < xHdr.count; i++ {
+		var nameLen byte
+		var valLen byte
+		var flags byte
+
+		// The first three bytes of the xattr record are
+		// - length of the attribute name
+		// - length of the attribute value
+		// - status flags
+		err = binary.Read(r, binary.BigEndian, &nameLen)
+		if err != nil {
+			return err
+		}
+
+		err = binary.Read(r, binary.BigEndian, &valLen)
+		if err != nil {
+			return err
+		}
+
+		err = binary.Read(r, binary.BigEndian, &flags)
+		if err != nil {
+			return err
+		}
+
+		// After the header, there is the name followed by
+		// the value.  The values are not delimited.  The
+		// lengths used in the header are how to determine
+		// what bytes go with what.  The strings do not
+		// have to be null terminated, but they can be.
+		var name []byte = make([]byte, nameLen)
+		var val []byte = make([]byte, valLen)
+		read, err := r.Read(name)
+		if err != nil {
+			return err
+		} else if read != len(name) {
+			return xerrors.Errorf("could not read %d bytes for xattr name: %d", nameLen, read)
+		}
+
+		read, err = r.Read(val)
+		if err != nil {
+			return err
+		} else if read != len(val) {
+			return xerrors.Errorf("could not read %d bytes for xattr value: %d", valLen, read)
+		}
+
+		var category int = CATEGORY_USER
+		if (flags & CATEGORY_SECURITY_FLAG) != 0 {
+			category = CATEGORY_SECURITY
+		} else if (flags & CATEGORY_TRUSTED_FLAG) != 0 {
+			category = CATEGORY_TRUSTED
+		}
+
+		inode.extendedAttributes = append(inode.extendedAttributes, &ExtendedAttribute{
+			name: string(name),
+			value: val,
+			category: category,
+		})
+	}
+
+	return nil
 }
 
 func (xfs *FileSystem) parseBtreeBlock(r io.Reader) (*BtreeBlock, error) {
