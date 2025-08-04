@@ -474,13 +474,13 @@ func walkTree(workspace string, fs *FileSystem) ([]*finalizeFileInfo, error) {
 		if err != nil {
 			return fmt.Errorf("unable to list xattrs for %s: %v", fp, err)
 		}
-		xattrs := map[string]string{}
+		xattrs := map[string][]byte{}
 		for _, name := range xattrNames {
 			val, err := xattrGet(actualPath, name)
 			if err != nil {
 				return fmt.Errorf("unable to get xattr %s for %s: %v", name, fp, err)
 			}
-			xattrs[name] = string(val)
+			xattrs[name] = val
 		}
 		nlink, uid, gid := getFileProperties(fi)
 
@@ -494,6 +494,9 @@ func walkTree(workspace string, fs *FileSystem) ([]*finalizeFileInfo, error) {
 			}
 			if fmd.mode != nil {
 				m = *fmd.mode
+			}
+			if fmd.xAttrs != nil {
+				xattrs = fmd.xAttrs
 			}
 		}
 
@@ -972,7 +975,7 @@ func writeIDTable(idtable map[uint32]uint16, f backend.WritableFile, compressor 
 }
 
 // writeXattrs write the xattrs and its lookup table at the given location.
-func writeXattrs(xattrs []map[string]string, f backend.WritableFile, compressor Compressor, location int64) (xattrsWritten int, finalLocation uint64, err error) {
+func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor Compressor, location int64) (xattrsWritten int, finalLocation uint64, err error) {
 	var (
 		maxSize     = int(metadataBlockSize)
 		offset      int
@@ -1334,9 +1337,9 @@ func createInodes(fileList []*finalizeFileInfo, idtable map[uint32]uint16, ws st
 
 // extractXattrs take all of the extended attributes on the finalizeFileInfo
 // and write them out. Returns a slice of all unique xattr key-value pairs.
-func extractXattrs(list []*finalizeFileInfo) []map[string]string {
+func extractXattrs(list []*finalizeFileInfo) []map[string][]byte {
 	var (
-		xattrs   []map[string]string
+		xattrs   []map[string][]byte
 		indexMap = map[string]int{}
 	)
 	for _, e := range list {
@@ -1363,7 +1366,7 @@ func extractXattrs(list []*finalizeFileInfo) []map[string]string {
 }
 
 // hashStringMap make a unique hash out of a string map, to make it easy to compare
-func hashStringMap(m map[string]string) string {
+func hashStringMap(m map[string][]byte) string {
 	// simple algorithm is good enough for this
 	// just join all of the key-value pairs with =, and separate with ;, so you get
 	//  key1=value1;key2=value2;...

@@ -34,7 +34,7 @@ type finalizeFileInfo struct {
 	fileType          fileType
 	inode             inode
 	inodeLocation     blockPosition
-	xattrs            map[string]string
+	xattrs            map[string][]byte
 	xAttrIndex        uint32
 	links             uint32
 	blocks            []*blockData
