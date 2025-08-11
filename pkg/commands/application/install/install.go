@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
@@ -57,8 +58,25 @@ func Install(opt application.InstallOptions) error {
 			FileOverride: opt.Values,
 		})
 	}
+	chart, err := helm.GetChartFromArchive(chartReader)
+	if err != nil {
+		return err
+	}
+
+	err = helm.ValidateCRDs(kubeInfo, chart, overrides)
+	if err != nil {
+		log.Errorf("%v", err)
+
+		var answer string
+		fmt.Printf("\nSome existing custom resources are not supported by the new custom resource definitions.  Install anyway?\n")
+		fmt.Scanln(&answer)
+		if !strings.HasPrefix(strings.ToLower(answer), "y") {
+			return err
+		}
+	}
+
 	// Upload the helm chart stored at the temporary directory
-	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues, opt.Force)
+	_, err = helm.UpgradeChart(kubeInfo, opt.ReleaseName, opt.Namespace, true, chart, false, false, overrides, opt.ResetValues, opt.Force)
 	return err
 }
 
