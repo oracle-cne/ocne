@@ -401,6 +401,9 @@ func (i basicFile) toBytes() []byte {
 	binary.LittleEndian.PutUint32(b[8:12], i.fragmentOffset)
 	binary.LittleEndian.PutUint32(b[12:16], i.fileSize)
 	for j, e := range i.blockSizes {
+		if e.toUint32() > 8192 {
+			fmt.Println("tried to write block of size", e.toUint32)
+		}
 		binary.LittleEndian.PutUint32(b[16+j*4:16+j*4+4], e.toUint32())
 	}
 	return b

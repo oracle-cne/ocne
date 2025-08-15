@@ -2,12 +2,14 @@ package squashfs
 
 import (
 	"encoding/binary"
+	//"encoding/hex"
 	"fmt"
 	"io"
 	iofs "io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -132,6 +134,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing file data blocks: %v", err)
 	}
 	location += int64(dataWritten)
+	fmt.Printf("Wrote %d data bytes, now at %d\n", dataWritten, location)
 
 	//
 	// write file fragments
@@ -142,6 +145,7 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error writing file fragment blocks: %v", err)
 	}
 	location += int64(len(fragmentBlocks) * blocksize)
+	fmt.Printf("Wrote %d fragment bytes, now at %d\n", int64(len(fragmentBlocks) * blocksize), location)
 
 	// extract extended attributes, and save them for later; these are written at the very end
 	// this must be done *before* creating inodes, as inodes reference these
@@ -200,7 +204,9 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 
 	// convert the inodes to data, while keeping track of where each
 	// one is, so we can update the directory entries
-	updateInodeLocations(fileList)
+	// updateInodeLocations(fileList)
+	inodeBytes := uint32(len(fileList[0].inode.toBytes()))
+	calculateInodeTable(fileList[0], &inodeBytes)
 
 	// create the directory table. We already have every inode and its position,
 	// so we do not need to dip back into the inodes. The only changes will be
@@ -217,21 +223,40 @@ func (fs *FileSystem) Finalize(options FinalizeOptions) error {
 		return fmt.Errorf("error updating inodes with final directory data: %v", err)
 	}
 
-	// write the inodes to the file
-	inodesWritten, inodeTableLocation, err := writeInodes(fileList, f, compressor, location)
+	// generate inode and directory content
+	inodesBuf, dirBuf, err := generateInodeAndDirectoryData(fileList, directories, compressor)
 	if err != nil {
-		return fmt.Errorf("error writing inode data blocks: %v", err)
+		return err
 	}
-	location += int64(inodesWritten)
-	fmt.Printf("Wrote %d inodes, now at %d\n", inodesWritten, location)
 
-	// write directory data
-	dirsWritten, dirTableLocation, err := writeDirectories(directories, f, compressor, location)
+	inodeTableLocation := uint64(location)
+	_, err = f.WriteAt(inodesBuf, location)
 	if err != nil {
-		return fmt.Errorf("error writing directory data blocks: %v", err)
+		return err
 	}
-	location += int64(dirsWritten)
-	fmt.Printf("Wrote %d directories, now at %d\n", dirsWritten, location)
+	location += int64(len(inodesBuf))
+	fmt.Printf("Wrote %d inode bytes, now at %d\n", len(inodesBuf), location)
+
+	dirTableLocation := uint64(location)
+	_, err = f.WriteAt(dirBuf, location)
+	location += int64(len(dirBuf))
+	fmt.Printf("Wrote %d dir index bytes, now at %d\n", len(dirBuf), location)
+
+//	// write the inodes to the file
+//	inodesWritten, inodeTableLocation, err := writeInodes(fileList, f, compressor, location)
+//	if err != nil {
+//		return fmt.Errorf("error writing inode data blocks: %v", err)
+//	}
+//	location += int64(inodesWritten)
+//	fmt.Printf("Wrote %d inodes, now at %d\n", inodesWritten, location)
+//
+//	// write directory data
+//	dirsWritten, dirTableLocation, err := writeDirectories(directories, f, compressor, location)
+//	if err != nil {
+//		return fmt.Errorf("error writing directory data blocks: %v", err)
+//	}
+//	location += int64(dirsWritten)
+//	fmt.Printf("Wrote %d directories, now at %d\n", dirsWritten, location)
 
 	// write fragment table
 
@@ -393,6 +418,7 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 			}
 		}
 		blocks = append(blocks, &blockData{size: uint32(len(toWrite)), compressed: isCompressed})
+		fmt.Println("Wrote file block of size", len(toWrite), blocksize)
 		if _, err := to.WriteAt(toWrite[:n], toOffset+int64(compressed)); err != nil {
 			return raw, compressed, blocks, err
 		}
@@ -576,13 +602,13 @@ func writeFileDataBlocks(e *finalizeFileInfo, to backend.WritableFile, ws string
 	return blockCount, compressed, nil
 }
 
-func writeMetadataBlock(buf []byte, to backend.WritableFile, c Compressor, location int64) (int, error) {
+func createMetadataBlock(buf []byte, c Compressor) (uint16, []byte, error) {
 	// compress the block if needed
 	isCompressed := false
 	if c != nil {
 		out, err := c.compress(buf)
 		if err != nil {
-			return 0, fmt.Errorf("error compressing block: %v", err)
+			return 0, buf, fmt.Errorf("error compressing block: %v", err)
 		}
 		if len(out) < len(buf) {
 			isCompressed = true
@@ -598,6 +624,16 @@ func writeMetadataBlock(buf []byte, to backend.WritableFile, c Compressor, locat
 	header := make([]byte, 2)
 	binary.LittleEndian.PutUint16(header, size)
 	buf = append(header, buf...)
+
+	return size, buf, nil
+}
+
+func writeMetadataBlock(buf []byte, to backend.WritableFile, c Compressor, location int64, why string) (int, error) {
+	size, buf, err := createMetadataBlock(buf, c)
+	if err != nil {
+		return 0, fmt.Errorf("error compressing block: %v", err)
+	}
+	fmt.Printf("Writing block of size %d (%d) at %d: %s\n", len(buf), size, location, why)
 	if _, err := to.WriteAt(buf, location); err != nil {
 		return 0, err
 	}
@@ -730,7 +766,7 @@ func writeInodes(files []*finalizeFileInfo, f backend.WritableFile, compressor C
 		// keep writing until we run out, or we hit 8KB
 		buf = append(buf, e.inode.toBytes()...)
 		if len(buf) > maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write inodes")
 			if err != nil {
 				return inodesWritten, 0, err
 			}
@@ -744,7 +780,7 @@ func writeInodes(files []*finalizeFileInfo, f backend.WritableFile, compressor C
 	}
 	// was there anything left?
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write inodes leftover")
 		if err != nil {
 			return inodesWritten, 0, err
 		}
@@ -767,7 +803,7 @@ func writeDirectories(dirs []*finalizeFileInfo, f backend.WritableFile, compress
 		// keep writing until we run out, or we hit metadata maxSize of 8KB
 		buf = append(buf, d.directory.toBytes(d.directory.inodeIndex)...)
 		if len(buf) > maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write directories")
 			if err != nil {
 				return directoriesWritten, 0, err
 			}
@@ -781,7 +817,7 @@ func writeDirectories(dirs []*finalizeFileInfo, f backend.WritableFile, compress
 	}
 	// was there anything left?
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write directories leftover")
 		if err != nil {
 			return directoriesWritten, 0, err
 		}
@@ -814,7 +850,7 @@ func writeFragmentTable(fragmentBlocks []fragmentBlock, fragmentBlocksStart int6
 
 		buf = append(buf, b...)
 		if len(buf) >= maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write fragments")
 			if err != nil {
 				return fragmentsWritten, 0, err
 			}
@@ -829,7 +865,7 @@ func writeFragmentTable(fragmentBlocks []fragmentBlock, fragmentBlocksStart int6
 		}
 	}
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write fragments leftover")
 		if err != nil {
 			return fragmentsWritten, 0, err
 		}
@@ -877,7 +913,7 @@ func writeExportTable(files []*finalizeFileInfo, f backend.WritableFile, compres
 		binary.LittleEndian.PutUint16(entry[6:8], e.inodeLocation.offset)
 		buf = append(buf, entry...)
 		if len(buf) >= maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write export tables")
 			if err != nil {
 				return entriesWritten, 0, err
 			}
@@ -890,7 +926,7 @@ func writeExportTable(files []*finalizeFileInfo, f backend.WritableFile, compres
 	}
 	// any leftover?
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write export tables leftover")
 		if err != nil {
 			return entriesWritten, 0, err
 		}
@@ -937,7 +973,7 @@ func writeIDTable(idtable map[uint32]uint16, f backend.WritableFile, compressor 
 		binary.LittleEndian.PutUint32(entry, id)
 		buf = append(buf, entry...)
 		if len(buf) >= maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write id table")
 			if err != nil {
 				return entriesWritten, 0, err
 			}
@@ -950,7 +986,7 @@ func writeIDTable(idtable map[uint32]uint16, f backend.WritableFile, compressor 
 	}
 	// any leftover?
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write id table leftover")
 		if err != nil {
 			return entriesWritten, 0, err
 		}
@@ -1022,12 +1058,13 @@ func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor 
 
 		// add the lookupTable bytes
 		lookupTable = append(lookupTable, b...)
+		fmt.Println("lookup table now", len(lookupTable), "bytes")
 		// add the actual metadata bytes
 		buf = append(buf, single...)
 		// the offset is moved forward
 		offset += len(single)
 		if len(buf) > maxSize {
-			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location)
+			written, err := writeMetadataBlock(buf[:maxSize], f, compressor, location, "write xattr table")
 			if err != nil {
 				return xattrsWritten, 0, err
 			}
@@ -1040,7 +1077,7 @@ func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor 
 	}
 	// if there is anything left at the end
 	if len(buf) > 0 {
-		written, err := writeMetadataBlock(buf, f, compressor, location)
+		written, err := writeMetadataBlock(buf, f, compressor, location, "write xattr table leftover")
 		if err != nil {
 			return xattrsWritten, 0, err
 		}
@@ -1055,10 +1092,11 @@ func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor 
 	// write the lookupTable - this too is stored as metadata blocks
 	var i int
 	for i = maxSize; i < len(lookupTable); i += maxSize {
-		written, err := writeMetadataBlock(lookupTable[i-maxSize:i], f, compressor, location)
+		written, err := writeMetadataBlock(lookupTable[i-maxSize:i], f, compressor, location, "write lookup table")
 		if err != nil {
 			return xattrsWritten, 0, err
 		}
+		fmt.Println("Adding indexEntry", location)
 		indexEntries = append(indexEntries, uint64(location))
 		// count all we have written
 		xattrsWritten += written
@@ -1067,20 +1105,28 @@ func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor 
 	// was there any left?
 	remainder := len(lookupTable) % maxSize
 	if remainder > 0 {
-		written, err := writeMetadataBlock(lookupTable[len(lookupTable)-remainder:], f, compressor, location)
+		written, err := writeMetadataBlock(lookupTable[len(lookupTable)-remainder:], f, compressor, location, "write lookup table leftover")
 		if err != nil {
 			return xattrsWritten, 0, err
 		}
+		fmt.Println("Adding indexEntry", location, remainder, written, len(lookupTable))
 		indexEntries = append(indexEntries, uint64(location))
 		// count all we have written
 		xattrsWritten += written
 		location += int64(written)
 	}
+	// The superblock needs to know where the ID table starts.
+	finalLocation = uint64(location)
+
 	// finally, we need the ID table
-	b := make([]byte, 16+8*len(indexEntries))
+	//b := make([]byte, 16+8*len(indexEntries))
+	b := make([]byte, 16)
 	binary.LittleEndian.PutUint64(b[0:8], uint64(tableStart))
-	binary.LittleEndian.PutUint32(b[8:12], uint32(len(lookupTable)))
+	binary.LittleEndian.PutUint32(b[8:12], uint32(len(xattrs)))
+	binary.LittleEndian.PutUint32(b[12:16], uint32(0))
+	fmt.Println("writing xaddr table header", tableStart, len(indexEntries))
 	for _, e := range indexEntries {
+		fmt.Println("writing index", e)
 		b2 := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b2, e)
 		b = append(b, b2...)
@@ -1092,9 +1138,9 @@ func writeXattrs(xattrs []map[string][]byte, f backend.WritableFile, compressor 
 		return xattrsWritten, 0, fmt.Errorf("error writing xattrs id index: %v", err)
 	}
 	xattrsWritten += written
-	fmt.Println("xattr table", tableStart, len(lookupTable), location)
+	fmt.Println("xattr table", tableStart, finalLocation, len(lookupTable), location)
 
-	return xattrsWritten, uint64(tableStart), nil
+	return xattrsWritten, finalLocation, nil
 }
 
 func xAttrKeyConvert(key string) (prefixID uint16, prefix string, err error) {
@@ -1375,6 +1421,7 @@ func hashStringMap(m map[string][]byte) string {
 	for k, v := range m {
 		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 	}
+	slices.Sort(pairs)
 	return strings.Join(pairs, ";")
 }
 
@@ -1465,6 +1512,7 @@ func updateInodeLocations(files []*finalizeFileInfo) {
 			size:   len(b),
 		}
 		pos += int64(len(b))
+		fmt.Println("update inode:", f.path, blockPos, offset, len(b))
 	}
 }
 
@@ -1489,6 +1537,7 @@ func populateDirectoryLocations(directories []*finalizeFileInfo) {
 			offset: uint16(pos % int(metadataBlockSize)),
 			size:   len(b) + 3,
 		}
+		fmt.Println("populate directory:", d.path, d.directoryLocation.block, d.directoryLocation.offset, d.directoryLocation.size)
 		pos += len(b)
 	}
 }
@@ -1519,4 +1568,144 @@ func updateInodesFromDirectories(files []*finalizeFileInfo) error {
 		}
 	}
 	return nil
+}
+
+// calculateInodeTable calculates the block number and offset into that block
+// for the inode tables.  It uses the inodeLocation field to store the
+// *block number* (not block offset!) and offset into that block.  These values
+// are used later on to populate the block offset when as the
+// tables are being written.
+func calculateInodeTable(f *finalizeFileInfo, inodeBytes *uint32) {
+	// Walk the children breadth first so that the inodes are aligned for
+	// faster access.
+	for _, c := range f.children {
+		if c.processed {
+			continue
+		}
+
+		b := c.inode.toBytes()
+		c.inodeLocation = blockPosition{
+			block: uint32(int64((*inodeBytes))/metadataBlockSize),
+			offset: uint16(int64((*inodeBytes))%metadataBlockSize),
+			size: len(b),
+		}
+		*inodeBytes += uint32(len(b))
+		c.processed = true
+	}
+
+	for _, c := range f.children {
+		calculateInodeTable(c, inodeBytes)
+	}
+}
+
+func generateInodeAndDirectoryData(files []*finalizeFileInfo, directories []*finalizeFileInfo, c Compressor) (inodesBuf []byte, dirBuf []byte, err error) {
+	filesIdx := 0
+	dirIdx := 0
+
+	// Maps the block number to a block offset.  Given that the first
+	// block is known to start at zero, the list can be seeded with
+	// that value.  As blocks are finished and written, these lists are
+	// extended with the location where the next block will start.
+	inodeOffsets := []uint32{0}
+	dirOffsets := []uint32{0}
+
+	inodesBlockBuf := make([]byte, 0)
+	dirBlockBuf := make([]byte, 0)
+	for filesIdx < len(files) || dirIdx < len(directories) {
+		origFilesIdx := filesIdx
+		origDirIdx := dirIdx
+
+	FilesLoop:
+		for filesIdx < len(files) {
+			f := files[filesIdx]
+
+			fmt.Println("Checking file", fmt.Sprintf("%+v", f))
+
+			// If the inode is a directory, adjust the
+			// directory location to the block offset
+			if f.isDir {
+				// If the loop has progressed to a directory that
+				// does not have an entry in the directory index,
+				// wait until it does.
+				for _, de := range f.directory.entries {
+					if de.startBlock >= uint32(len(dirOffsets)) {
+						fmt.Println("Stopping file iteration:", de.startBlock, len(dirOffsets))
+						break FilesLoop
+					}
+
+					sb := de.startBlock
+					de.startBlock = dirOffsets[de.startBlock]
+					fmt.Printf("Shifted %d to %d:%d\n", sb, de.startBlock, de.offset)
+				}
+			}
+
+			fmt.Println("inodes pre-write", len(inodesBlockBuf))
+			inodesBlockBuf = append(inodesBlockBuf, f.inode.toBytes()...)
+			fmt.Println("inodes post-write", len(inodesBlockBuf))
+			if int64(len(inodesBlockBuf)) >= metadataBlockSize {
+				_, buf, err := createMetadataBlock(inodesBlockBuf, c)
+				if err != nil {
+					return inodesBuf, dirBuf, err
+				}
+
+				inodesBlockBuf = inodesBlockBuf[metadataBlockSize:]
+				inodesBuf = append(inodesBuf, buf...)
+				inodeOffsets = append(inodeOffsets, inodeOffsets[len(inodeOffsets)]+uint32(len(buf)))
+			}
+
+			filesIdx++
+		}
+
+		for dirIdx < len(directories) {
+			d := directories[dirIdx]
+
+			fmt.Println("Checking directory", fmt.Sprintf("%+v", d))
+
+			// If the loop has progressed to a directory that
+			// does not have an inode written, wait until it does.
+			if d.inodeLocation.block >= uint32(len(inodeOffsets)) {
+				fmt.Println("Stopping directory iteration:", d.inodeLocation, len(inodeOffsets))
+				break
+			}
+
+			d.inodeLocation.block = inodeOffsets[d.inodeLocation.block]
+
+			dirBlockBuf = append(dirBlockBuf, d.directory.toBytes(d.directory.inodeIndex)...)
+			if int64(len(dirBlockBuf)) >= metadataBlockSize {
+				_, buf, err := createMetadataBlock(dirBlockBuf, c)
+				if err != nil {
+					return inodesBuf, dirBuf, nil
+				}
+
+				dirBlockBuf = dirBlockBuf[metadataBlockSize:]
+				dirBuf = append(dirBuf, buf...)
+				dirOffsets = append(dirOffsets, dirOffsets[len(dirOffsets)]+uint32(len(buf)))
+			}
+
+			dirIdx++
+		}
+
+		if origFilesIdx == filesIdx && origDirIdx == dirIdx {
+			fmt.Println("no progress was made:", filesIdx, dirIdx, inodeOffsets, dirOffsets)
+			return inodesBuf, dirBuf, fmt.Errorf("no progress was made")
+		}
+	}
+
+	// Write any extra
+	if len(inodesBlockBuf) > 0 {
+		_, buf, err := createMetadataBlock(inodesBlockBuf, c)
+		if err != nil {
+			return inodesBuf, dirBuf, err
+		}
+		inodesBuf = append(inodesBuf, buf...)
+	}
+	if len(dirBlockBuf) > 0 {
+		_, buf, err := createMetadataBlock(dirBlockBuf, c)
+		if err != nil {
+			return inodesBuf, dirBuf, err
+		}
+		dirBuf = append(dirBuf, buf...)
+	}
+
+	return inodesBuf, dirBuf, nil
 }

@@ -44,6 +44,7 @@ type finalizeFileInfo struct {
 	gid               uint32
 	directory         *directory
 	directoryLocation blockPosition
+	processed         bool
 }
 
 func (fi *finalizeFileInfo) Name() string {
