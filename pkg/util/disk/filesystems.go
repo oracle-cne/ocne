@@ -15,12 +15,15 @@ import (
 	"time"
 
 	diskfs "github.com/diskfs/go-diskfs"
+	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/disk"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/diskfs/go-diskfs/filesystem/squashfs"
 	"github.com/diskfs/go-diskfs/filesystem/fat32"
+	//"github.com/diskfs/go-diskfs/partition/mbr"
+	"github.com/diskfs/go-diskfs/partition/gpt"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -164,8 +167,22 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 	return oDisk, oSquash, nil
 }
 
+// MakeFat32 creates a Fat32 filesystem of the given size.  If the input path
+// is the empty string, the filesystem is created in memory.
 func MakeFat32(path string, size int64) (*disk.Disk, *fat32.FileSystem, error) {
-	bkend, err := file.CreateFromPath(path, size)
+	var bkend backend.Storage
+	var err error
+	if path == "" {
+		mf := util.NewMemoryFile(0644, size)
+		bkend = file.New(mf, false)
+	} else {
+		_, err = os.Stat(path)
+		if err == nil {
+			bkend, err = file.OpenFromPath(path, false)
+		} else {
+			bkend, err = file.CreateFromPath(path, size)
+		}
+	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,12 +194,27 @@ func MakeFat32(path string, size int64) (*disk.Disk, *fat32.FileSystem, error) {
 
 	oDisk.LogicalBlocksize = 512
 
+	err = oDisk.Partition(&gpt.Table{
+		LogicalSectorSize: 2048,
+		PhysicalSectorSize: 2048,
+		Partitions: []*gpt.Partition{
+			{
+				Type: gpt.MicrosoftBasicData,
+			},
+		},
+	})
+	if err != nil {
+		log.Infof("partition failed")
+		return nil, nil, err
+	}
+
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 1,
 		FSType: filesystem.TypeFat32,
 		VolumeLabel: "EFI-SYSTEM",
 	})
 	if err != nil {
+		log.Infof("create filesystem failed")
 		return nil, nil, err
 	}
 

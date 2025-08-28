@@ -7,15 +7,18 @@ import (
 	"bytes"
 	"debug/elf"
 	"fmt"
-//	"os"
+	"io"
+	"maps"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	ctypes "github.com/containers/image/v5/types"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	log "github.com/sirupsen/logrus"
 
-//	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem"
 //	"github.com/diskfs/go-diskfs/partition/gpt"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -40,26 +43,31 @@ const (
 	LibutilDest = "isolinux/libutil.c32"
 	VesamenuDest = "isolinux/vesamenu.c32"
 
-	// Files from the EFI partition
-	BootX64 = "/EFI/BOOT/BOOTX64.EFI"
-	GrubX64 = "/EFI/redhat/grubx64.efi"
-	MMX64 = "/EFI/redhat/mmx64.efi"
+	// Files for the EFI directory
+	BootX64 = "usr/lib/ostree-boot/efi/EFI/BOOT/BOOTX64.EFI"
+	BootCSV = "usr/lib/ostree-boot/efi/EFI/redhat/BOOTX64.CSV"
+	GrubX64 = "usr/lib/ostree-boot/efi/EFI/redhat/grubx64.efi"
+	MMX64 = "usr/lib/ostree-boot/efi/EFI/redhat/mmx64.efi"
+	FbX64 = "usr/lib/ostree-boot/efi/EFI/BOOT/fbx64.efi"
+	UnicodePf2 = "usr/share/grub/unicode.pf2"
 
 	BootX64Dest = "EFI/BOOT/BOOTX64.EFI"
+	BootCSVDest = "EFI/BOOT/BOOTX64.CSV"
 	GrubX64Dest = "EFI/BOOT/grubx64.efi"
 	MMX64Dest = "EFI/BOOT/mmx64.efi"
-
-
-	// Files from Boot partition
-	GrubConfig = "/loader.1/entries/ostree-1-ock.conf"
+	FbX64Dest = "EFI/BOOT/fbx64.efi"
+	UnicodePf2Dest = "EFI/BOOT/fonts/unicode.pf2"
 
 	EfiGrubConfigDest = "EFI/BOOT/grub.cfg"
+	EfiBootConfigDest = "EFI/BOOT/BOOT.conf"
 	GrubConfigDest = "isolinux/grub.conf"
 	KernelDest = "isolinux/vmlinuz"
 	InitrdDest = "isolinux/initrd.img"
+	IsolinuxConfigDest = "isolinux/isolinux.cfg"
 
 	ImagesKernelDest = "images/pxeboot/vmlinuz"
 	ImagesInitrdDest = "images/pxeboot/initrd.img"
+	ImagesEfibootImgDest = "images/efiboot.img"
 
 	// Files from Root filesystem
 	RootDest = "images/ock.img"
@@ -88,17 +96,6 @@ const (
 	// Special destinations
 	OstreeContainerPath = "usr/bin/ostree-container"
 )
-
-var fileMapping = map[string]string{
-	IsoLinux: IsoLinuxDest,
-	LdLinux: LdLinuxDest,
-	Libcom: LibcomDest,
-	Libutil: LibutilDest,
-	Vesamenu: VesamenuDest,
-	BootX64: BootX64Dest,
-	GrubX64: GrubX64Dest,
-	MMX64: MMX64Dest,
-}
 
 var executables = []string{
 	SkopeoPath,
@@ -209,10 +206,296 @@ func addFiles(files map[*util.CpioHeader][]byte, newFiles map[string][]byte) {
 	}
 }
 
+func makeInitramfsAppendix(knownFiles map[string][]byte, fileMap map[string]*image.FileInfo, ref ctypes.ImageReference, extraFiles map[string][]byte, arch string) ([]byte, error) {
+	execMap := map[string][]byte{}
+	for _, e := range executables {
+		c, ok := knownFiles[e]
+		if !ok {
+			return nil, fmt.Errorf("could not find %s in known files set", e)
+		}
+		execMap[e] = c
+	}
+
+
+	depsMap := map[string][]byte{}
+	err := librariesFromObjects(execMap, fileMap, depsMap, ref, arch)
+	if err != nil {
+		return nil, err
+	}
+
+	newInitramfsContent := defaultInitramfsContent()
+	addFiles(newInitramfsContent, depsMap)
+	addFiles(newInitramfsContent, extraFiles)
+	out, err := util.MakeCpio(newInitramfsContent, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func writeFsFile(theFs filesystem.FileSystem, path string, contents []byte) error {
+	// make the directories
+	err := theFs.Mkdir(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+
+	f, err := theFs.OpenFile(path, os.O_CREATE | os.O_RDWR)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(contents)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func makeEfiFatWad(files map[string][]byte, pathMap map[string]string) ([]byte, error) {
+	// The filesystem needs to be allocated with enough space
+	// before populating it.  Calculate a reasonable size.
+	// Call it 110% of the total file size.
+	var size int64
+	for p, _ := range pathMap {
+		c, ok := files[p]
+		if !ok {
+			return nil, fmt.Errorf("could not find required EFI firmware file %s", p)
+		}
+		size = size + int64(len(c))
+	}
+	size = size + (size / 10)
+	fatFile, err := os.CreateTemp("", "ocne-fatfs-")
+	if err != nil {
+		return nil, err
+	}
+	defer fatFile.Close()
+	defer os.Remove(fatFile.Name())
+
+	err = fatFile.Truncate(size)
+	if err != nil {
+		return nil, err
+	}
+
+	fatDisk, fatFs, err := disk.MakeFat32(fatFile.Name(), size)
+	if err != nil {
+		return nil, err
+	}
+	defer fatFs.Close()
+	defer fatDisk.Close()
+
+	for src, dest := range pathMap {
+		// The existence of the file contents was proven
+		// at the start of this function when calculating
+		// the filesystem size.
+		//
+		// Unlike other parts of the diskfs library,
+		// an absolute path is required.
+		err = writeFsFile(fatFs, fmt.Sprintf("/%s", dest), files[src])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	out, err := io.ReadAll(fatFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func makeBootloaderConfigs(options *CreateOptions) ([]byte, []byte, map[string][]byte, error) {
+	configs := map[string][]byte{}
+	grubConfig := fmt.Sprintf("%s", grubConfigPreamble)
+	isolinuxConfig := fmt.Sprintf("%s", isolinuxConfigPreamble)
+
+	for name, ign := range options.Byo.Configurations {
+		if ign.Contents == nil {
+			cnts, err := os.ReadFile(ign.Path)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			ign.Contents = cnts
+		}
+
+		if strings.Contains(name, "\n") {
+			return nil, nil, nil, fmt.Errorf("configuration names cannot have endlines")
+		}
+		if strings.Contains(name, "\t") {
+			return nil, nil, nil, fmt.Errorf("configuration names cannot have tabs")
+		}
+
+		// Yes, technically it's cheesy to say something is
+		// "too similar".  In reality a caller has to go out of
+		// their way to hit this.
+		ignPath := strings.ReplaceAll(name, " ", "-")
+		_, ok := configs[ignPath]
+		if ok {
+			return nil, nil, nil, fmt.Errorf("configuration \"%s\" has a name to similar to another", name)
+		}
+
+		configs[ignPath] = ign.Contents
+		grubStanza := fmt.Sprintf(grubConfigPattern, name, ignPath)
+		isolinuxStanza := fmt.Sprintf(isolinuxConfigPattern, name, ignPath)
+
+		grubConfig = fmt.Sprintf("%s%s", grubStanza)
+		isolinuxConfig = fmt.Sprintf("%s%s", isolinuxStanza)
+	}
+
+	grubConfig = fmt.Sprintf("%s%s", grubConfig, grubConfigEpilogue)
+	isolinuxConfig = fmt.Sprintf("%s%s", isolinuxConfig, isolinuxConfigEpilogue)
+
+	return []byte(grubConfig), []byte(isolinuxConfig), configs, nil
+}
+
+func makeIsoContent(isoFs *iso9660.FileSystem, kernelPath string, initramfsPath string, initramfsAppendix []byte, ostreeRef ctypes.ImageReference, fileMap map[string]*image.FileInfo, isolinuxFiles map[string][]byte, grubConfig []byte, isolinuxConfig []byte, arch string) error {
+	// To support BIOS and EFI booting, some of the files need to go in a
+	// handful of places.  images/efiboot.img contains a copy of the EFI
+	// directory on a Fat32 filesystem.  ostree.tar is an OCI archive of
+	// the ostree image.
+	//
+	// The layout for x86 looks like this:
+	//   EFI/BOOT/BOOT.conf
+	//   EFI/BOOT/BOOTX64.CSV
+	//   EFI/BOOT/BOOTX64.EFI
+	//   EFI/BOOT/fbx64.efi
+	//   EFI/BOOT/fonts/unicode.pf2
+	//   EFI/BOOT/grub.cfg
+	//   EFI/BOOT/grubx64.efi
+	//   EFI/BOOT/mmx64.efi
+	//   EFI/BOOT/shimx64.efi
+	//   EFI/BOOT/shimx64-oracle.efi
+	//   images/efiboot.img
+	//   images/pxeboot/initrd.img
+	//   images/pxeboot/vmlinuz
+	//   isolinux/boot.cat
+	//   isolinux/initrd.img
+	//   isolinux/isolinux.bin
+	//   isolinux/isolinux.cfg
+	//   isolinux/ldlinux.c32
+	//   isolinux/libcom32.c32
+	//   isolinux/libutil.c32
+	//   isolinux/vesamenu.c32
+	//   isolinux/vmlinuz
+	//   ostree.tar
+
+	efiFiles := map[string]string{
+		BootX64: BootX64Dest,
+		BootCSV: BootCSVDest,
+		GrubX64: GrubX64Dest,
+		MMX64: MMX64Dest,
+		FbX64: FbX64Dest,
+		UnicodePf2: UnicodePf2Dest,
+	}
+	efiFatFiles := map[string]string{
+		BootX64: BootX64Dest,
+		GrubX64: GrubX64Dest,
+		MMX64: MMX64Dest,
+		UnicodePf2: UnicodePf2Dest,
+	}
+	pxeBootFiles := map[string]string{
+		kernelPath: ImagesKernelDest,
+		initramfsPath: ImagesInitrdDest,
+	}
+	biosIsolinuxFiles := map[string]string{
+		IsoLinux: IsoLinuxDest,
+		LdLinux: LdLinuxDest,
+		Libcom: LibcomDest,
+		Libutil: LibutilDest,
+		Vesamenu: VesamenuDest,
+	}
+	biosOstreeFiles := map[string]string{
+		kernelPath: KernelDest,
+		initramfsPath: InitrdDest,
+	}
+
+	// Gather all the files that come from the ostree image
+	ostreeFiles := slices.Collect(maps.Keys(efiFiles))
+	ostreeFiles = slices.AppendSeq(ostreeFiles, maps.Keys(pxeBootFiles))
+	ostreeFiles = slices.AppendSeq(ostreeFiles, maps.Keys(biosOstreeFiles))
+	slices.Sort(ostreeFiles)
+	ostreeFiles = slices.Compact(ostreeFiles)
+	log.Infof("Looking for: %+v", ostreeFiles)
+
+	ostreeContents, err := image.FindInImageFollowLinks(ostreeRef, arch, ostreeFiles, fileMap)
+	if err != nil {
+		return err
+	}
+	log.Infof("Found: %+v", slices.Collect(maps.Keys(ostreeContents)))
+
+	// The initramfs needs a cpio archive appended to it with the stuff
+	// required to install.
+	initramfsContent := ostreeContents[initramfsPath]
+	ostreeContents[initramfsPath] = slices.Concat(initramfsContent, initramfsAppendix)
+
+	// Make the Fat32 EFI image.
+	efibootImg, err := makeEfiFatWad(ostreeContents, efiFatFiles)
+	if err != nil {
+		return err
+	}
+
+	additionalFiles := map[string][]byte{
+		ImagesEfibootImgDest: efibootImg,
+		EfiGrubConfigDest: grubConfig,
+		EfiBootConfigDest: grubConfig,
+		GrubConfigDest: grubConfig,
+		IsolinuxConfigDest: isolinuxConfig,
+
+	}
+
+	// Write it all down
+	sets := []map[string]string{
+		efiFiles,
+		pxeBootFiles,
+		biosOstreeFiles,
+	}
+	for _, s := range sets {
+		for src, dest := range s {
+			c, ok := ostreeContents[src]
+			if !ok {
+				return fmt.Errorf("could not find %s when writing boot media", src)
+			}
+			err = writeFsFile(isoFs, dest, c)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for src, dest := range biosIsolinuxFiles {
+		c, ok := isolinuxFiles[src]
+		if !ok {
+			return fmt.Errorf("could not find %s when writing boot media", src)
+		}
+		err = writeFsFile(isoFs, dest, c)
+		if err != nil {
+			return err
+		}
+	}
+	for p, c := range additionalFiles {
+		err = writeFsFile(isoFs, p, c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
 	// Do the work to balance time vs certainty.  Short, uncertain things go
 	// first.  Long, uncertain things go next.  Short, mostly certain things
 	// are after that.  Finally, long mostly certain tasks are at the end.
+	grubConfig, isolinuxConfig, ignitionConfigs, err := makeBootloaderConfigs(&options)
+	if err != nil {
+		return err
+	}
+
 	osRegistry, err := image.MakeFullOstreeReference(clusterConfig.OsRegistry, clusterConfig.OsTag)
 	if err != nil {
 		return err
@@ -320,22 +603,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		log.Debugf("%s has %d bytes", p, len(c))
 	}
 
-	execMap := map[string][]byte{}
-	for _, e := range executables {
-		execMap[e] = ostreeContents[e]
-	}
-	depsMap := map[string][]byte{}
-	err = librariesFromObjects(execMap, fileMap, depsMap, ostreeRef, options.Architecture)
-	if err != nil {
-		return err
-	}
-
-	newInitramfsContent := defaultInitramfsContent()
-	addFiles(newInitramfsContent, depsMap)
-	newInitramfsCpio, err := util.MakeCpio(newInitramfsContent, true)
-	if err != nil {
-		return err
-	}
+	newInitramfsCpio, err := makeInitramfsAppendix(ostreeContents, fileMap, ostreeRef, ignitionConfigs, options.Architecture)
 
 	log.Debugf("New initramfs cpio compressed size: %s", util.HumanReadableSize(uint64(len(newInitramfsCpio))))
 
@@ -344,6 +612,12 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	if err != nil {
 		return err
 	}
+
+	err = makeIsoContent(isoFs, kernelPath, initramfsPath, newInitramfsCpio, ostreeRef, fileMap, isoFiles, grubConfig, isolinuxConfig, options.Architecture)
+	if err != nil {
+		return err
+	}
+
 
 	err = isoFs.Finalize(iso9660.FinalizeOptions{
 		VolumeIdentifier: "ock",

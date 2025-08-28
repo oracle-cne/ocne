@@ -45,10 +45,6 @@ const (
 	flagKargs      = "kernel-args"
 	flagKargsShort = "K"
 	flagKargsHelp  = "Additional kernel command line arguments to append to the end of the argument list"
-
-	flagIso = "iso"
-	flagIsoShort = "I"
-	flagIsoHelp = "Create a bootable ISO"
 )
 
 func NewCmd() *cobra.Command {
@@ -71,7 +67,6 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
 	cmd.Flags().StringVarP(&createOptions.KernelArguments, flagKargs, flagKargsShort, "", flagKargsHelp)
 	cmd.Flags().StringVarP(&clusterConfig.KubeVersion, constants.FlagVersionName, constants.FlagVersionShort, "", constants.FlagKubernetesVersionHelp)
-	cmd.Flags().BoolVarP(&createOptions.Iso, flagIso, flagIsoShort, false, flagIsoHelp)
 
 	return cmd
 }
@@ -106,10 +101,6 @@ func RunCmd(cmd *cobra.Command) error {
 	// match the k8s version
 	if cc.OsTag == pkgconst.KubeVersion && cc.KubeVersion != pkgconst.KubeVersion {
 		cc.OsTag = cc.KubeVersion
-	}
-
-	if createOptions.Iso {
-		createOptions.Destination = "test.iso"
 	}
 
 	log.Info("Creating Image")

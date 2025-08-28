@@ -24,6 +24,7 @@ import (
 
 const (
 	DriverName = "byo"
+	DefaultProfile = ""
 )
 
 type ByoDriver struct {
@@ -54,7 +55,7 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}, nil
 }
 
-func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string) ([]byte, error) {
+func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string, profile string) ([]byte, error) {
 	var ign *igntypes.Config
 	var err error
 
@@ -171,6 +172,41 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 	return ignition.MarshalIgnition(ign)
 }
 
+func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string) error {
+	configs := map[string][]byte{}
+	tokenCreate := bd.Config.Providers.Byo.AutomaticTokenCreation
+
+	// The init configuration always comes from the primary
+	if doInit {
+		initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes, DefaultProfile)
+		if err != nil {
+			return err
+		}
+
+		configs["Initialize Cluster"] = initIgn
+
+		// Can't create a token without one
+		tokenCreate = false
+	}
+
+	joinToken, err := k8s.CreateJoinToken(bd.GetKubeconfigPath(), tokenCreate)
+
+	// Generate a control plane and worker node configuration for each profile
+	joinIgn, err := bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, DefaultProfile)
+	if err != nil {
+		return err
+	}
+	configs["Worker Node"] = joinIgn
+
+	joinIgn, err = bd.ignitionForNode(types.ControlPlaneRole, true, joinToken, caCertHashes, DefaultProfile)
+	if err != nil {
+		return err
+	}
+	configs["Control Plane Node"] = joinIgn
+
+	return nil
+}
+
 func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	// Generate the key material required for the cluster.  This includes
 	// a PKI for the Kubernetes components as well as the admin kubeconfig.
@@ -196,7 +232,12 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 
 	caCertHashes, err := k8s.CertHashesFromKubeconfig(bd.KubeconfigPath)
 
-	initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes)
+	if bd.Config.Providers.Byo.GenerateIso {
+		err = bd.generateIso(true, caCertHashes)
+		return nil, err
+	}
+
+	initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes, DefaultProfile)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +264,10 @@ func (bd *ByoDriver) Start() (bool, bool, error) {
 		return false, false, err
 	}
 
-	fmt.Println(string(initIgn))
+	// If an ISO was made, don't bother printing out the init ignition
+	if !bd.Config.Providers.Byo.GenerateIso {
+		fmt.Println(string(initIgn))
+	}
 
 	// Unlike providers that have infrastructure provisioning APIs, the BYO
 	// provider just spits out some ignition.  It can take any amount of time
@@ -285,7 +329,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 	}
 
 	log.Debugf("Cert hashes for %s are: %+v", kubeconfigPath, caCertHashes)
-	ign, err := bd.ignitionForNode(role, true, joinToken, caCertHashes)
+	ign, err := bd.ignitionForNode(role, true, joinToken, caCertHashes, DefaultProfile)
 	if err != nil {
 		return err
 	}

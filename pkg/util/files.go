@@ -4,7 +4,10 @@
 package util
 
 import (
+	"bytes"
+	"io/fs"
 	"os"
+	"time"
 )
 
 func FilesFromPath(path string) ([]string, error) {
@@ -35,4 +38,48 @@ func FilesFromPath(path string) ([]string, error) {
 	}
 
 	return ret, nil
+}
+
+type MemoryFile struct {
+	bytes.Buffer
+	FileMode fs.FileMode
+}
+
+func NewMemoryFile(fileMode fs.FileMode, size int64) *MemoryFile {
+	return &MemoryFile{
+		Buffer: *bytes.NewBuffer(make([]byte, size)),
+		FileMode: fileMode,
+	}
+}
+
+func (mf *MemoryFile) Stat() (fs.FileInfo, error) {
+	return mf, nil
+}
+
+func (mf *MemoryFile) Name() string {
+	return "in-memory-file"
+}
+
+func (mf *MemoryFile) Size() int64{
+	return int64(mf.Buffer.Cap())
+}
+
+func (mf *MemoryFile) Mode() fs.FileMode {
+	return mf.FileMode
+}
+
+func (mf *MemoryFile) ModTime() time.Time {
+	return time.Now()
+}
+
+func (mf *MemoryFile) IsDir() bool {
+	return false
+}
+
+func (mf *MemoryFile) Sys() interface{} {
+	return mf
+}
+
+func (mf *MemoryFile) Close() error {
+	return nil
 }

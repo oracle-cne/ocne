@@ -155,11 +155,20 @@ type Iso struct {
 	UtilityImage string `yaml:"utilityImage"`
 }
 
+type ByoProfile struct {
+	Name string `yaml:"name"`
+	ExtraIgnition string `yaml:"extraIgnition"`
+	ExtraIgnitionInline string `yaml:"extraIgnitionInline"`
+}
+
 type ByoProvider struct {
 	AutomaticTokenCreation    bool   `yaml:"automaticTokenCreationfake"`
 	AutomaticTokenCreationPtr *bool  `yaml:"automaticTokenCreation"`
 	NetworkInterface          string `yaml:"networkInterface"`
 	Iso                       Iso    `yaml:"iso"`
+	Profiles                  []*ByoProfile `yaml:"profiles"`
+	GenerateIso               bool `yaml:"-"`
+	GenerateIsoPtr            *bool `yaml:"generateIso"`
 }
 
 type Node struct {
@@ -688,6 +697,55 @@ func MergeIso(def *Iso, ovr *Iso) Iso {
 	}
 }
 
+// MergeByoProfile takes two ByoProfiles and merges them int a third.
+func MergeByoProfile(def *ByoProfile, ovr *ByoProfile) ByoProfile{
+	ret := ByoProfile{
+		Name: ies(def.Name, ovr.Name),
+		ExtraIgnition: def.ExtraIgnition,
+		ExtraIgnitionInline: def.ExtraIgnitionInline,
+	}
+	if ovr.ExtraIgnition != "" {
+		// File-based configuration wins because reasons.
+		ret.ExtraIgnition = ovr.ExtraIgnition
+		ret.ExtraIgnitionInline = ""
+	} else {
+		// This handles the case where there is additional
+		// inline configuration as well as the case where
+		// both values are empty.  In the latter case, it
+		// is effectively eliminating any custom config.
+		ret.ExtraIgnitionInline = ovr.ExtraIgnitionInline
+		ret.ExtraIgnition = ""
+	}
+	return ret
+}
+
+// MergeByoProfiles takes two ByoProfile slices and merged them together.
+// If the two slices share an element with the same name, the ignition values
+// from the override are used.  If an element from the override slice
+// does not share a name, it is appended.
+func MergeByoProfiles(def []*ByoProfile, ovr []*ByoProfile) []*ByoProfile {
+	ret := append([]*ByoProfile{}, def...)
+
+	for i, op := range ovr {
+		present := false
+		for _, dp := range ret {
+			if op.Name == dp.Name {
+				np := MergeByoProfile(dp, op)
+				ovr[i] = &np
+				present = true
+				break
+			}
+		}
+		if !present {
+			np := MergeByoProfile(&ByoProfile{}, op)
+			ovr = append(ovr, &np)
+		}
+	}
+
+	return ret
+}
+
+
 // MergeByoProvider takes two ByoProviders and merged them into a
 // third.  The default values for the result come from the first
 // argument.  If a value is set in the second argument, that value
@@ -698,6 +756,9 @@ func MergeByoProvider(def *ByoProvider, ovr *ByoProvider) ByoProvider {
 		AutomaticTokenCreationPtr: iebpp(def.AutomaticTokenCreationPtr, ovr.AutomaticTokenCreationPtr),
 		NetworkInterface:          ies(def.NetworkInterface, ovr.NetworkInterface),
 		Iso:                       MergeIso(&def.Iso, &ovr.Iso),
+		Profiles:                  MergeByoProfiles(def.Profiles, ovr.Profiles),
+		GenerateIsoPtr:            iebpp(def.GenerateIsoPtr, ovr.GenerateIsoPtr),
+		GenerateIso:                iebp(def.GenerateIsoPtr, ovr.GenerateIsoPtr, false),
 	}
 }
 

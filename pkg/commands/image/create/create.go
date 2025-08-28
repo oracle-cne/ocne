@@ -26,6 +26,7 @@ import (
 const ProviderTypeOCI = "oci"
 const ProviderTypeOstree = "ostree"
 const ProviderTypeOlvm = "olvm"
+const ProviderTypeByo = "byo"
 
 const (
 	podName         = "ocne-image-builder"
@@ -41,6 +42,17 @@ const (
 	olvmDefaultIgnition = "openstack"
 	qemuDefaultIgnition = "qemu"
 )
+
+// ByoIgnition holds ignition content for use with the byo provider
+type ByoIgnition struct {
+	Contents []byte // The raw ignition content
+	Path string // The path to a file containing the igntion content
+}
+
+// ByoOptions contains configuration specific to the byo provider
+type ByoOptions struct {
+	Configurations map[string]*ByoIgnition // Configurations holds each possible node configuration
+}
 
 // CreateOptions are the options for the create image command
 type CreateOptions struct {
@@ -62,8 +74,8 @@ type CreateOptions struct {
 	// Destination
 	Destination string
 
-	// Iso
-	Iso bool
+	// Byo is the BYO provider specific options
+	Byo ByoOptions
 }
 
 type providerFuncs struct {
@@ -77,7 +89,8 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 	namespace := constants.OCNESystemNamespace
 
 	// If an ISO is desired, there is no need for an ephemeral cluster.
-	if options.Iso {
+	if options.ProviderType == ProviderTypeByo {
+		options.Destination = "test.iso"
 		return CreateIso(startConfig, clusterConfig, options)
 	}
 

@@ -557,4 +557,121 @@ fi
 
 blscfg
 `
+
+	grubConfigPreamble = `
+set default="1"
+
+function load_video {
+  insmod efi_gop
+  insmod efi_uga
+  insmod video_bochs
+  insmod video_cirrus
+  insmod all_video
+}
+
+load_video
+set gfxpayload=keep
+insmod gzio
+insmod part_gpt
+insmod ext2
+
+set timeout=30
+### END /etc/grub.d/00_header ###
+
+search --no-floppy --set=root -l 'OCK'
+
+`
+
+	grubConfigEpilogue = `
+
+`
+
+
+	isolinuxConfigPreamble = `
+serial 0 115200
+console 0
+default vesamenu.c32
+timeout 600
+
+#display boot.msg
+
+# Clear the screen when exiting the menu, instead of leaving the menu displayed.
+# For vesamenu, this means the graphical background is still displayed without
+# the menu itself for as long as the screen remains in graphics mode.
+menu clear
+menu title Oracle Container Host for Kubernetes
+menu vshift 8
+menu rows 18
+menu margin 8
+#menu hidden
+menu helpmsgrow 15
+menu tabmsgrow 13
+
+# Background
+menu color screen 30,40 #000000ff #000000ff none
+
+# Border Area
+menu color border 0 #00000000 #00000000 none
+
+# Selected item
+menu color sel 0 #ffffffff #00000000 none
+
+# Title bar
+menu color title 0 #ff7ba3d0 #00000000 none
+
+# Press [Tab] message
+menu color tabmsg 0 #ff3a6496 #00000000 none
+
+# Unselected menu item
+menu color unsel 0 #84b8ffff #00000000 none
+
+# Selected hotkey
+menu color hotsel 0 #84b8ffff #00000000 none
+
+# Unselected hotkey
+menu color hotkey 0 #ffffffff #00000000 none
+
+# Help text
+menu color help 0 #ffffffff #00000000 none
+
+# A scrollbar of some type? Not sure.
+menu color scrollbar 0 #ffffffff #ff355594 none
+
+# Timeout msg
+menu color timeout 0 #ffffffff #00000000 none
+menu color timeout_msg 0 #ffffffff #00000000 none
+
+# Command prompt text
+menu color cmdmark 0 #84b8ffff #00000000 none
+menu color cmdline 0 #ffffffff #00000000 none
+
+# Do not display the actual menu unless the user presses a key. All that is displayed is a timeout message.
+
+menu tabmsg Press Tab for full configuration options on menu items.
+
+menu separator # insert an empty line
+menu separator # insert an empty line
+
+menu end
+
+`
+
+	isolinuxConfigEpilogue = `
+menu end
+`
+
+	grubConfigPattern = `
+menuentry 'Install Oracle Container Host for Kubernetes (%s)' --class fedora --class gnu-linux --class gnu --class os {
+	linuxefi /images/pxeboot/vmlinuz rw rd.neednet=1 ignition.platform.id=file ignition.firstboot=1 systemd.firstboot=off rd.timeout=120 %s ock.config=%s
+	initrdefi /images/pxeboot/initrd.img
+
+`
+
+	isolinuxConfigPattern = `
+label linux
+  menu label ^Install Oracle Container Host for Kubernetes (%s)
+  kernel vmlinuz
+  append initrd=initrd.img rw rd.neednet=1 ignition.platform.id=file ignition.firstboot=1 systemd.firstboot=off rd.timeout=120 %s ock.config=%s
+
+`
 )
