@@ -9,6 +9,7 @@ toolchain go1.23.9
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/cavaliergopher/cpio v1.0.1
 	github.com/containers/common v0.61.0
 	github.com/containers/image/v5 v5.33.0
 	github.com/coreos/butane v0.0.0-00010101000000-000000000000

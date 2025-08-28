@@ -4,22 +4,24 @@
 package create
 
 import (
+	"bytes"
+	"debug/elf"
 	"fmt"
-	"os"
+//	"os"
 	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/diskfs/go-diskfs/filesystem/squashfs"
+	ctypes "github.com/containers/image/v5/types"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/diskfs/go-diskfs/filesystem"
-	"github.com/diskfs/go-diskfs/partition/gpt"
+//	"github.com/diskfs/go-diskfs/filesystem"
+//	"github.com/diskfs/go-diskfs/partition/gpt"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/disk"
-	"github.com/oracle-cne/ocne/pkg/util/linux"
-	"github.com/oracle-cne/ocne/pkg/file"
+//	"github.com/oracle-cne/ocne/pkg/util/linux"
+//	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 )
 
@@ -69,6 +71,22 @@ const (
 	DefaultFileUid = 0
 	DefaultFileGid = 0
 	DefaultFileMode = 0644
+
+	// Executables that need to be copied from the OCK image
+	// into the initramfs
+	SkopeoPath = "usr/bin/skopeo"
+	OstreePath = "usr/bin/ostree"
+	RpmOstreePath = "usr/bin/rpm-ostree"
+	CutPath = "usr/bin/cut"
+	ExtOstreeContainerPath = "usr/libexec/libostree/ext/ostree-container"
+	BwrapPath = "usr/bin/bwrap"
+	CpioPath = "usr/bin/cpio"
+
+	// Files necessary to use a container runtime
+	PolicyPath = "etc/containers/policy.json"
+
+	// Special destinations
+	OstreeContainerPath = "usr/bin/ostree-container"
 )
 
 var fileMapping = map[string]string{
@@ -82,16 +100,128 @@ var fileMapping = map[string]string{
 	MMX64: MMX64Dest,
 }
 
-func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
-	// Do the work to balance time vs certainty.  Short, uncertain things go
-	// first.  Long, uncertain things go next.  Short, mostly certain things
-	// are after than.  Finally, long mostly certain tasks are at the end.
+var executables = []string{
+	SkopeoPath,
+	OstreePath,
+	RpmOstreePath,
+	CutPath,
+	ExtOstreeContainerPath,
+	BwrapPath,
+	CpioPath,
+}
 
-	tmpPath, err := file.CreateOcneTempDir(tempDir)
+func defaultInitramfsContent() map[*util.CpioHeader][]byte {
+	return  map[*util.CpioHeader][]byte{
+		util.CpioFile("usr/lib/systemd/system/deploy-ock.service", 0755): []byte(deployOckService),
+		util.CpioFile("usr/lib/systemd/system/set-config.service", 0755): []byte(setConfigService),
+		util.CpioFile("usr/sbin/deploy-ock", 0755): []byte(deployOckScript),
+		util.CpioFile("usr/sbin/set-config", 0755): []byte(setConfigScript),
+		util.CpioFile("etc/grub.cfg", 0644): []byte(grubCfgFile),
+		util.CpioSymlink("etc/systemd/system/ignition-complete.target.requires/deploy-ock.service", "/usr/lib/systemd/system/deploy-ock.service", 0644): nil,
+		util.CpioSymlink("etc/systemd/system/ignition-complete.target.requires/set-config.service", "/usr/lib/systemd/system/set-config.service", 0644): nil,
+	}
+}
+
+// librariesFromObjects recursively finds the dependencies
+// for a set of elf objects.
+func librariesFromObjects(objs map[string][]byte, fileMap map[string]*image.FileInfo, out map[string][]byte, ref ctypes.ImageReference, arch string) error {
+	found := map[string]bool{}
+
+	for path, contents := range objs {
+		_, ok := out[path]
+		if ok {
+			continue
+		}
+		out[path] = contents
+
+		log.Debugf("Reading ELF objects %s", path)
+		elfObj, err := elf.NewFile(bytes.NewReader(contents))
+		if err != nil {
+			return err
+		}
+
+		dvns, err := elfObj.DynamicVersionNeeds()
+		if err != nil {
+			return err
+		}
+
+		//  All libraries for a default install are in /usr/lib64
+		prefix := "usr/lib64"
+		for _, dvn := range dvns {
+			depPath := filepath.Join(prefix, dvn.Name)
+			log.Debugf(" has dependency %s", depPath)
+			_, ok := found[depPath]
+			if ok {
+				continue
+			}
+
+			_, ok = fileMap[depPath]
+			if !ok {
+				return fmt.Errorf("%s has unsatisfiable dependency %s", path, depPath)
+			}
+
+			found[depPath] = true
+		}
+
+		deps, err := elfObj.ImportedLibraries()
+		if err != nil {
+			return err
+		}
+		for _, dep := range deps {
+			depPath := filepath.Join(prefix, dep)
+			log.Debugf(" has dependency %s", depPath)
+			_, ok := found[depPath]
+			if ok {
+				continue
+			}
+
+			_, ok = fileMap[depPath]
+			if !ok {
+				return fmt.Errorf("%s has unsatisfiable dependency %s", path, depPath)
+			}
+
+			found[depPath] = true
+		}
+	}
+
+	log.Debugf("there are now %d dependencies", len(out))
+
+	paths := []string{}
+	for o, _ := range found {
+		paths = append(paths, o)
+	}
+
+	if len(paths) == 0 {
+		return nil
+	}
+
+	depContents, err := image.FindInImageFollowLinks(ref, arch, paths, fileMap)
 	if err != nil {
 		return err
 	}
-	//defer os.RemoveAll(tmpPath)
+
+	return librariesFromObjects(depContents, fileMap, out, ref, arch)
+}
+
+func addFiles(files map[*util.CpioHeader][]byte, newFiles map[string][]byte) {
+	for p, c := range newFiles {
+		files[util.CpioFile(p, 0755)] = c
+	}
+}
+
+func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, options CreateOptions) error {
+	// Do the work to balance time vs certainty.  Short, uncertain things go
+	// first.  Long, uncertain things go next.  Short, mostly certain things
+	// are after that.  Finally, long mostly certain tasks are at the end.
+	osRegistry, err := image.MakeFullOstreeReference(clusterConfig.OsRegistry, clusterConfig.OsTag)
+	if err != nil {
+		return err
+	}
+
+	ostreeRegistry, err := image.MakeReferenceFromOstree(osRegistry)
+	if err != nil {
+		return err
+	}
 
 	//  Get the syslinux image.
 	log.Infof("Getting syslinux container image for architecture: %s", options.Architecture)
@@ -117,211 +247,100 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		log.Debugf("  %s contains %s", f, util.HumanReadableSize(uint64(len(c))))
 	}
 
-	// Get the OCK image
-	// Get the tarstream of the boot qcow2 image
-	log.Infof("Getting local boot image for architecture: %s", options.Architecture)
-	tarStream, closer, err := image.EnsureBaseQcow2Image(clusterConfig.BootVolumeContainerImage, options.Architecture)
-	if err != nil {
-		return err
-	}
-	defer closer()
-
-	// Write the local image. e.g. ~/.ocne/tmp/create-images.xyz/boot.oci
-	localImagePath := filepath.Join(tmpPath, localVMImage+".oci")
-	err = writeFile(tarStream, localImagePath)
+	// Get the OCK OSTree image
+	log.Debugf("Checking ostree registry %s", ostreeRegistry)
+	log.Infof("Getting ostree image for architecture: %s", options.Architecture)
+	ostreeRef, err := image.GetOrPull(ostreeRegistry, options.Architecture)
 	if err != nil {
 		return err
 	}
 
-	qcowImg, err := disk.OpenQcow2(localImagePath)
+	log.Debugf("Finished copying ostree image")
+
+	// There is lots to find in the ostree image that can be spread
+	// all over the 100 or so layers that it has.  Keep a cache of
+	// where files live to avoid having to re-read layers over and
+	// over again.
+	fileMap, err := image.GetFileLayerMap(ostreeRef, options.Architecture)
 	if err != nil {
 		return err
 	}
 
-	// Get filesystems
-	var efiFs filesystem.FileSystem
-	var rootFs filesystem.FileSystem
-	var bootFs filesystem.FileSystem
+	log.Debugf("have %d files", len(fileMap))
 
-	var rootPart *gpt.Partition
-
-	partTable, err := qcowImg.GetPartitionTable()
-	if err != nil {
-		return err
-	}
-
-	for i, pt := range partTable.GetPartitions() {
-		gptPart, ok := pt.(*gpt.Partition)
-		if !ok {
-			return fmt.Errorf("Partition %d is not a GPT partition", i)
+	// A kernel and initramfs are required to actually boot the image. Go
+	// find them.  The kernel version changes regularly and is not annotated
+	// anywhere useful, so it is necessary to go rummaging around.
+	//
+	// They live in "/usr/lib/modules/<version>/<file>"
+	kernelPrefix := "usr/lib/modules/"
+	kernelSuffix := "/vmlinuz"
+	initramfsSuffix := "/initramfs.img"
+	kernelPath := ""
+	initramfsPath := ""
+	for p, _ := range fileMap {
+		if !strings.HasPrefix(p, kernelPrefix) {
+			continue
 		}
 
-		thefs, err := qcowImg.GetFilesystem(i)
-		if err != nil {
-			return err
+		if strings.HasSuffix(p, kernelSuffix) {
+			kernelPath = p
+		} else if strings.HasSuffix(p, initramfsSuffix) {
+			initramfsPath = p
 		}
 
-		if strings.Contains(gptPart.Name, "EFI") {
-			efiFs = thefs
-		} else if gptPart.Name == "root" {
-			rootFs = thefs
-			rootPart = gptPart
-		} else if gptPart.Name == "boot" {
-			bootFs = thefs
+		// Stop early if both have been found.  There's
+		// a lot of files in the pile.
+		if initramfsPath != "" && kernelPath != "" {
+			break
 		}
 	}
 
-	if efiFs == nil {
-		return fmt.Errorf("Could not find EFI filesystem")
-	} else if rootFs == nil {
-		return fmt.Errorf("Could not find root filesystem")
-	} else if bootFs == nil {
-		return fmt.Errorf("Could not find boot filesystem")
+	if kernelPath == "" {
+		return fmt.Errorf("could not find kernel in %s", ostreeRegistry)
 	}
-
-	// Get the EFI files
-	efiFiles, err := disk.FindFilesInFilesystem(efiFs, []string{
-		BootX64,
-		GrubX64,
-		MMX64,
-	})
-	if err != nil {
+	if initramfsPath == "" {
+		return fmt.Errorf("could not find initramfs in %s", ostreeRegistry)
 	}
+	log.Debugf("Kernel is %s", kernelPath)
+	log.Debugf("Initramfs is %s", initramfsPath)
 
-	log.Debugf("Found all EFI files")
-	for f, c := range efiFiles {
-		log.Debugf("  %s has %s", f, util.HumanReadableSize(uint64(len(c))))
-	}
-
-
-	// Get the grub configuration.  Once that is found, sniff around in it
-	// to find a reasonable kernel and initrd to use.
-	grubConf, err := disk.GetFileInFilesystem(bootFs, GrubConfig)
+	// Get some of the required files out of ostree images.  Some more are
+	// needed to satisify the dependencies of dynamically linked
+	// executables, but that set of files won't be know until they are
+	// discovered by resolving all the linkages in the elf objects.
+	ostreeFiles := append([]string{}, kernelPath, initramfsPath)
+	ostreeFiles = append(ostreeFiles, executables...)
+	ostreeContents, err := image.FindInImageFollowLinks(ostreeRef, options.Architecture, ostreeFiles, fileMap)
 	if err != nil {
 		return err
 	}
 
-	menuEntry, err := linux.ParseMenuEntry(string(grubConf))
+	for p, c := range ostreeContents {
+		log.Debugf("%s has %d bytes", p, len(c))
+	}
+
+	execMap := map[string][]byte{}
+	for _, e := range executables {
+		execMap[e] = ostreeContents[e]
+	}
+	depsMap := map[string][]byte{}
+	err = librariesFromObjects(execMap, fileMap, depsMap, ostreeRef, options.Architecture)
 	if err != nil {
 		return err
 	}
 
-	// Get the ostree that is the source of the content going
-	// into the squashfs
-	ostreeArgs := linux.GetKernelArg(menuEntry.KernelArgs, "ostree")
-	if len(ostreeArgs) == 0 {
-		return fmt.Errorf("grub menu entry did not specify an ostree deployment")
-	}
-	ostreePath, err := disk.RealPath(rootFs, ostreeArgs[0])
+	newInitramfsContent := defaultInitramfsContent()
+	addFiles(newInitramfsContent, depsMap)
+	newInitramfsCpio, err := util.MakeCpio(newInitramfsContent, true)
 	if err != nil {
 		return err
 	}
 
-	kernelPath := menuEntry.Kernel
-	initrdPath := menuEntry.Initrd
-	log.Debugf("ostree: %s", ostreePath)
-	log.Debugf("Kernel: %s", kernelPath)
-	log.Debugf("Initrd: %s", initrdPath)
-
-	bootFiles, err := disk.FindFilesInFilesystem(bootFs, []string{
-		kernelPath,
-		initrdPath,
-	})
-	if err != nil {
-		return err
-	}
-
-	bootTree := &disk.File{
-		IsDir: true,
-	}
-	bootTree.AddFile(ImagesKernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-	bootTree.AddFile(ImagesInitrdDest, bootFiles[initrdPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-	bootTree.AddFile(KernelDest, bootFiles[kernelPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-	bootTree.AddFile(InitrdDest, bootFiles[initrdPath], DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-
-	for f, c := range efiFiles {
-		bootTree.AddFile(fileMapping[f], c, DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-	}
-	for f, c := range isoFiles {
-		bootTree.AddFile(fileMapping[f], c, DefaultFileUid, DefaultFileGid, DefaultFileMode, DefaultDirUid, DefaultDirGid, DefaultDirMode)
-	}
-	bootTree.AddISO9660TransTbl()
-
-	// Embed an ignition file into the initrd.
-
-	// Generate a reasonable grub configuration.
-
-	// Dump the root filesystem into a squashfs
-	tmpDir, err := os.MkdirTemp("", "ocneIso")
-	if err != nil {
-		return err
-	}
-
-	rootSquashDiskPath := filepath.Join(tmpDir, "rootSquash")
-
-	// If this is an xfs partition, get the amount of data being
-	// copied to use for a progress bar.  At present, this is
-	// the only filesystem implementation that can do this.  Thankfully
-	// it is the only realistic option for the root filesystem.
-	rootXfsFs, ok := rootFs.(*disk.XfsFilesystem)
-	var rootUsed uint64
-	if ok {
-		rootPartSize := rootPart.Size
-		rootUsed = rootPartSize - rootXfsFs.Free()
-		log.Debugf("Root filesystem size: %s", util.HumanReadableSize(rootUsed))
-	}
-
-	//defer os.RemoveAll(tmpDir)
-	rootSquashDisk, rootSquashFs, err := disk.MakeSquashfs(rootSquashDiskPath, 8 * 1024 * 1024 * 1024)
-	if err != nil {
-		return err
-	}
-
-	// Copy in the checked out ostree.  This is a read-only filesystem, so
-	// retaining the actual ostree commits is not relevant.  Use the total
-	// used space as an estimate for how data needs to be copied.  ostree
-	// checkouts are done with hard links, so there is roughly twice as
-	// much apparent disk use as actual disk use.  Given that only half
-	// of that apparent data is required, it's a reasonable estimate.
-	err = disk.CopyFilesystem(rootFs, rootSquashFs, ostreePath, rootUsed)
-	if err != nil {
-		// TODO remove this
-		rootSquashFs.Finalize(squashfs.FinalizeOptions{})
-		return err
-	}
-
-//	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{
-//		Xattrs: true,
-//	})
-	err = rootSquashFs.Finalize(squashfs.FinalizeOptions{
-		Compression: &squashfs.CompressorGzip{
-			CompressionLevel: 9,
-			WindowSize: 65535,
-			Strategies: map[squashfs.GzipStrategy]bool{
-				squashfs.GzipDefault: true,
-			},
-		},
-		Xattrs: true,
-		NoCompressInodes: true,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = rootSquashDisk.Close()
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Wrote squashfs to %s", rootSquashDiskPath)
+	log.Debugf("New initramfs cpio compressed size: %s", util.HumanReadableSize(uint64(len(newInitramfsCpio))))
 
 	// Stuff the whole thing into an iso
 	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024)
-	if err != nil {
-		return err
-	}
-
-	err = disk.CopyFiles(isoFs, bootTree.Entries, "/")
 	if err != nil {
 		return err
 	}

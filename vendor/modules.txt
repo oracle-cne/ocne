@@ -116,6 +116,9 @@ github.com/beorn7/perks/quantile
 # github.com/blang/semver/v4 v4.0.0
 ## explicit; go 1.14
 github.com/blang/semver/v4
+# github.com/cavaliergopher/cpio v1.0.1
+## explicit; go 1.17
+github.com/cavaliergopher/cpio
 # github.com/cenkalti/backoff/v4 v4.3.0
 ## explicit; go 1.18
 github.com/cenkalti/backoff/v4
@@ -436,7 +439,6 @@ github.com/diskfs/go-diskfs
 github.com/diskfs/go-diskfs/backend
 github.com/diskfs/go-diskfs/backend/file
 github.com/diskfs/go-diskfs/disk
-github.com/diskfs/go-diskfs/examples
 github.com/diskfs/go-diskfs/filesystem
 github.com/diskfs/go-diskfs/filesystem/ext4
 github.com/diskfs/go-diskfs/filesystem/ext4/crc

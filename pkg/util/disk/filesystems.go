@@ -18,8 +18,9 @@ import (
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/disk"
 	"github.com/diskfs/go-diskfs/filesystem"
-	"github.com/diskfs/go-diskfs/filesystem/squashfs"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/diskfs/go-diskfs/filesystem/squashfs"
+	"github.com/diskfs/go-diskfs/filesystem/fat32"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -161,6 +162,36 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 		return nil, nil, fmt.Errorf("Squashfs isn't a squashfs")
 	}
 	return oDisk, oSquash, nil
+}
+
+func MakeFat32(path string, size int64) (*disk.Disk, *fat32.FileSystem, error) {
+	bkend, err := file.CreateFromPath(path, size)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oDisk, err := diskfs.OpenBackend(bkend)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oDisk.LogicalBlocksize = 512
+
+	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
+		Partition: 1,
+		FSType: filesystem.TypeFat32,
+		VolumeLabel: "EFI-SYSTEM",
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oFat, ok := ofs.(*fat32.FileSystem)
+	if !ok {
+		return nil, nil, fmt.Errorf("FAT32 filesystem is not a FAT32 filesystem")
+	}
+
+	return oDisk, oFat, nil
 }
 
 type fsCopy struct {

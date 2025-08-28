@@ -42,6 +42,28 @@ func AddDefaultRegistry(imageToChange string, registry string) (string, error) {
 	return toAdd, nil
 }
 
+// TranposrtIsArchive returns true if the transport
+// refers to an archive, and false otherwise.  The
+// behavior if the transport is not valid is undefined.
+func OstreeTransportIsArchive(xport string) bool {
+	fields := strings.Split(xport, ":")
+	if len(fields) != 2 {
+		return false
+	}
+
+	switch fields[0] {
+	case "ostree-unverified-image", "ostree-image-signed":
+		break
+	default:
+	}
+
+	switch fields[1] {
+	case "docker-archive", "oci", "oci-archive":
+		return true
+	}
+	return false
+}
+
 // ParseOstreeReference returns three strings: the ostree transport, registry,
 // and tag for an ostree container image.  For example,
 // "ostree-unverified-image:container-registry.oracle.com/olcne/ock-ostree:1.30"
@@ -58,7 +80,6 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 	}
 
 	ostreeTransport := fields[0]
-	isArchive := false
 	switch ostreeTransport {
 	case "ostree-unverified-image", "ostree-image-signed":
 		fields = fields[1:]
@@ -68,7 +89,6 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 			fields = fields[1:]
 		case  "docker-archive", "oci", "oci-archive":
 			fields = fields[1:]
-			isArchive = true
 		case "docker":
 			// strip off the "//"
 			ostreeTransport = fmt.Sprintf("%s://", ostreeTransport)
@@ -106,7 +126,7 @@ func ParseOstreeReference(img string) (string, string, string, error) {
 
 	// Archives don't look like container images, so there's no reason
 	// to treat them like one.
-	if isArchive {
+	if OstreeTransportIsArchive(ostreeTransport) {
 		return ostreeTransport, registry, "", nil
 	}
 
@@ -132,4 +152,92 @@ func MakeOstreeReference(img string) (string, error) {
 	_, _, _, err = ParseOstreeReference(img)
 	log.Debugf("Making reference %s", img)
 	return img, err
+}
+
+// TransportFromOstreeTransport converts an ostree image transport
+// to a container image transport.
+func TransportFromOstreeTransport(xport string) (string, error) {
+	if xport == "ostree-unverified-registry" {
+		return "docker://", nil
+	}
+
+	fields := strings.Split(xport, ":")
+	if len(fields) < 2 {
+		return "", fmt.Errorf("%s is not a valid ostree transport", xport)
+	}
+
+	switch fields[0] {
+	case "ostree-remote-registry":
+		if len(fields) != 2 {
+			return "", fmt.Errorf("%s is not a valid ostree transport", xport)
+		}
+		fields = []string{"docker://"}
+	case "ostree-unverified-image", "ostree-image-signed":
+		if len(fields) != 2 {
+			return "", fmt.Errorf("%s is not a valid ostree transport", xport)
+		}
+		fields = fields[1:]
+	case "ostree-remote-image":
+		if len(fields) != 3 {
+			return "", fmt.Errorf("%s is not a valid ostree transport", xport)
+		}
+		fields = fields[2:]
+	default:
+		return "", fmt.Errorf("%s is not a valid ostree transport", xport)
+	}
+
+	return strings.Join(fields, ":"), nil
+}
+
+// MakeReferenceFromOstree does its level best to take an ostree image
+// reference and turn into a container image reference.
+func MakeReferenceFromOstree(ostree string) (string, error) {
+	ostreeXport, img, tag, err := ParseOstreeReference(ostree)
+	if err != nil {
+		return "", err
+	}
+
+	xport, err := TransportFromOstreeTransport(ostreeXport)
+	if err != nil {
+		return "", err
+	}
+
+	imgRef := ""
+	if xport == "docker://" {
+		imgRef = fmt.Sprintf("%s%s", xport, img)
+	} else {
+		imgRef = fmt.Sprintf("%s:%s", xport, img)
+	}
+	if tag != "" {
+		imgRef = fmt.Sprintf("%s:%s", imgRef, tag)
+	}
+
+	return imgRef, nil
+}
+
+// MakeOstreeReference takes something vaguely shaped like as ostree reference
+// as well as a tag and coerces it into something reasonable.  If the original
+// reference has a tag, that tag is preferred over the argument.
+func MakeFullOstreeReference(ostree string, tag string) (string, error) {
+	xport, img, existingTag, err := ParseOstreeReference(ostree)
+	if err != nil {
+		return "", err
+	}
+
+	if OstreeTransportIsArchive(xport) {
+		return fmt.Sprintf("%s:%s", xport, img), nil
+	}
+
+	if existingTag != "" {
+		tag = existingTag
+	}
+
+	if tag == "" {
+		tag = "latest"
+	}
+
+	if xport == "docker://" {
+		return fmt.Sprintf("%s%s:%s", xport, img, tag), nil
+	}
+	return fmt.Sprintf("%s:%s:%s", xport, img, tag), nil
 }

@@ -248,4 +248,313 @@ EOF
 export CONTAINERS_STORAGE_CONF=/tmp/ostree-image/storage.conf
 chroot /hostroot podman build --no-cache --isolation chroot -t ock-ostree:latest --build-arg OSTREE_IMG='%s' --build-arg PODMAN_IMG=%s --build-arg ARCH=%s /tmp/ostree-image/build
 `
+
+	deployOckService = `
+[Unit]
+Description=Deploy OCK
+DefaultDependencies=false
+
+# Go between disks being partitioned and any file or mounting
+# activity.
+After=ignition-disks.service
+Before=ignition-mount.service
+Requires=systemd-udevd.service
+
+
+# A bunch of stuff needs to be interrupted if install succeeds
+Before=make-rootfs.service
+Before=grow-rootfs.service
+Before=ignition-files.service
+
+# Go after devices are enumerating
+After=systemd-udevd.service
+
+# Don't get stuck in a loop if things go sideways
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+# If install succeeds, shut down immediately
+OnSuccess=shutdown.target
+OnSuccessJobMode=isolate
+
+# Don't run if there is already a deployed ostree
+ConditionKernelCommandLine=!ostree
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+MountFlags=slave
+ExecStart=/usr/sbin/deploy-ock
+`
+	deployOckScript = `
+#! /bin/bash
+set -e
+set -x
+
+SYSROOT="/sysroot-alt"
+BOOT="${SYSROOT}/boot"
+EFI="${BOOT}/efi"
+
+ROOT_LABEL="root"
+BOOT_LABEL="boot"
+ROOT_FILESYSTEM="xfs"
+BOOT_FILESYSTEM="xfs"
+
+pushd /dev/disk/by-partlabel
+EFI_LABEL=$(ls | grep EFI)
+popd
+
+OSTREE="${SYSROOT}/ostree"
+OSTREE_REPO="${OSTREE}/repo"
+OS_NAME=ock
+
+# Disable ignition-files.  This can write stuff to /etc and
+# break selinux
+systemctl disable ignition-files.service
+
+# Mount the root, boot, and efi partitions so
+# they can be installed to
+mkdir -p "$SYSROOT"
+mount "/dev/disk/by-partlabel/$ROOT_LABEL" "$SYSROOT"
+mkdir -p "$BOOT"
+mount "/dev/disk/by-partlabel/$BOOT_LABEL" "$BOOT"
+mkdir -p "$EFI"
+mount "/dev/disk/by-partlabel/$EFI_LABEL" "$EFI"
+
+mkdir -p /media
+mount /dev/cdrom /media
+
+# make a temp directory so that ostree is writing to
+# disk instead of memory
+rm -rf /var/tmp
+mkdir -p "$SYSROOT/tmp"
+ln -s "$SYSROOT/tmp" /var/tmp
+
+# Get disk details to fill things like grub entries and fstab
+ROOT_PATH="${SYSROOT}"
+BOOT_PATH="${ROOT_PATH}/boot"
+EFI_PATH="${BOOT_PATH}/efi"
+ROOT_DETAILS=$(findmnt --output SOURCE,FSTYPE,FS-OPTIONS -n --target "${ROOT_PATH}")
+BOOT_DETAILS=$(findmnt --output SOURCE,TARGET -n --target "${BOOT_PATH}")
+EFI_DETAILS=$(findmnt --output SOURCE,TARGET -n --target "${EFI_PATH}")
+ROOT_DEVICE=$(echo "$ROOT_DETAILS" | cut -d' ' -f1)
+BOOT_DEVICE=$(echo "$BOOT_DETAILS" | cut -d' ' -f1)
+EFI_DEVICE=$(echo "$EFI_DETAILS" | cut -d' ' -f1)
+
+ROOT_UUID=$(blkid -o value -s UUID "$ROOT_DEVICE")
+BOOT_UUID=$(blkid -o value -s UUID "$BOOT_DEVICE")
+EFI_UUID=$(blkid -o value -s UUID "$EFI_DEVICE")
+
+# Deploy the ostree
+ostree admin init-fs --modern "$SYSROOT"
+ostree config --repo "$OSTREE_REPO" set sysroot.readonly true
+ostree admin os-init "$OS_NAME" --sysroot "$SYSROOT"
+
+IMAGE=
+if ! IMAGE="$(grep -o -e 'ostree-source=[^ ]*' /proc/cmdline)"; then
+	IMAGE="ostree-unverified-image:oci-archive:/media/ostree.tar"
+fi
+
+# A policy.json is required to unencapulsate the container.  There is
+# an issue with creating files under directories with additional cpios
+# so copy one from a known location.
+mkdir -p /etc/containers
+cp /etc/policy.json /etc/containers/policy.json
+ostree container unencapsulate --repo="$OSTREE_REPO" --write-ref "$OS_NAME" "$IMAGE"
+
+ostree admin deploy --sysroot "$SYSROOT" --os "$OS_NAME" \
+	--karg-proc-cmdline \
+	--karg ignition.firstboot=1 \
+	--karg root=UUID=${ROOT_UUID} \
+	"$OS_NAME"
+
+# Set up the fstab based on the current mount points
+# - get current mount points
+# - get UUID from device
+# - get fs type and options from mount table
+
+
+# Configure /etc/fstab for later ignition steps as well as the
+# boot process
+
+COMMIT=$(ostree log --repo="$OSTREE_REPO" ${OS_NAME} | grep commit | cut -d' ' -f2)
+DEPLOY_DIR="${OSTREE}/deploy/${OS_NAME}/deploy/${COMMIT}.0"
+cat > "${DEPLOY_DIR}/etc/fstab" << EOF
+UUID=$ROOT_UUID / $ROOT_FILESYSTEM defaults 0 0
+UUID=$BOOT_UUID /boot $BOOT_FILESYSTEM defaults,sync 0 0
+UUID=$EFI_UUID /boot/efi vfat defaults,uid=0,gid=0,umask=077,shortname=winnt 0 2
+EOF
+
+cp -rn "${DEPLOY_DIR}/usr/lib/ostree-boot/efi" "${BOOT}"
+cp -rn "${DEPLOY_DIR}/usr/lib/ostree-boot/grub2" "${BOOT}"
+cp /etc/grub.cfg "${EFI}/EFI/redhat/grub.cfg"
+
+# Add the ignition to the initramfs for the new install
+TMP_INITRD="/etc/initrd.tmp"
+FULL_INITRD="/etc/initrd.full.tmp"
+REAL_INITRD=${BOOT}/ostree/${OS_NAME}-*/initramfs-*.img
+pushd /
+echo "config.ign" | cpio -oc | gzip -c > "$TMP_INITRD"
+popd
+cp $REAL_INITRD "$FULL_INITRD"
+cat "$FULL_INITRD" "$TMP_INITRD" > $REAL_INITRD
+rm -f "$TMP_INITRD" "$FULL_INITRD"
+
+umount -R "$SYSROOT"
+`
+
+	setConfigService = `
+[Unit]
+Description=Set Ignition Configuration
+DefaultDependencies=false
+
+# Go before any ignition files are fetched so that the
+# chosen one is actually used.
+Before=ignition-fetch.service
+Before=ignition-fetch-offline.service
+
+
+# Don't get stuck in a loop if things go sideways
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+# Don't run if there is already a deployed ostree
+ConditionKernelCommandLine=ock.config
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+MountFlags=slave
+ExecStart=/usr/sbin/set-config
+`
+	setConfigScript = `
+#! /bin/bash
+set -e
+set -x
+
+# Get the config from the kernel command line
+CONF=$(cat /proc/cmdline | grep -o 'ock.config=[^ ]*' | cut -d= -f2)
+if [ -z "$CONF" ]; then
+	# A configuration was not specified.  Odd, but not impossible.
+	echo "No configuration found"
+	exit 0
+fi
+
+# The configuration file does not exist.  Fail.
+if [ ! -f "/$CONF" ]; then
+	echo "The configuration files /$CONFG does not exist"
+	exit 1
+fi
+
+cp "/$CONF" /config.ign
+`
+
+	grubCfgFile = `
+# This file is copied from https://github.com/coreos/coreos-assembler/blob/0eb25d1c718c88414c0b9aedd19dc56c09afbda8/src/grub.cfg
+# Changes:
+#   - Dropped Ignition glue, that can be injected into platform.cfg
+# petitboot doesn't support -e and doesn't support an empty path part
+if [ -d (md/md-boot)/grub2 ]; then
+  # fcct currently creates /boot RAID with superblock 1.0, which allows
+  # component partitions to be read directly as filesystems.  This is
+  # necessary because transposefs doesn't yet rerun grub2-install on BIOS,
+  # so GRUB still expects /boot to be a partition on the first disk.
+  #
+  # There are two consequences:
+  # 1. On BIOS and UEFI, the search command might pick an individual RAID
+  #    component, but we want it to use the full RAID in case there are bad
+  #    sectors etc.  The undocumented --hint option is supposed to support
+  #    this sort of override, but it doesn't seem to work, so we set $boot
+  #    directly.
+  # 2. On BIOS, the "normal" module has already been loaded from an
+  #    individual RAID component, and $prefix still points there.  We want
+  #    future module loads to come from the RAID, so we reset $prefix.
+  #    (On UEFI, the stub grub.cfg has already set $prefix properly.)
+  set boot=md/md-boot
+  set prefix=($boot)/grub2
+else
+  if [ -f ${config_directory}/bootuuid.cfg ]; then
+    source ${config_directory}/bootuuid.cfg
+  fi
+  if [ -n "${BOOT_UUID}" ]; then
+    search --fs-uuid "${BOOT_UUID}" --set boot --no-floppy
+  else
+    search --label boot --set boot --no-floppy
+  fi
+fi
+set root=$boot
+
+if [ -f ${config_directory}/grubenv ]; then
+  load_env -f ${config_directory}/grubenv
+elif [ -s $prefix/grubenv ]; then
+  load_env
+fi
+
+if [ -f $prefix/console.cfg ]; then
+  # Source in any GRUB console settings if provided by the user/platform
+  source $prefix/console.cfg
+fi
+
+if [ x"${feature_menuentry_id}" = xy ]; then
+  menuentry_id_option="--id"
+else
+  menuentry_id_option=""
+fi
+
+function load_video {
+  if [ x$feature_all_video_module = xy ]; then
+    insmod all_video
+  else
+    insmod efi_gop
+    insmod efi_uga
+    insmod ieee1275_fb
+    insmod vbe
+    insmod vga
+    insmod video_bochs
+    insmod video_cirrus
+  fi
+}
+
+# Other package code will be injected from here
+if [ -e (md/md-boot) ]; then
+  # The search command might pick a RAID component rather than the RAID,
+  # since the /boot RAID currently uses superblock 1.0.  See the comment in
+  # the main grub.cfg.
+  set prefix=md/md-boot
+else
+  if [ -f ${config_directory}/bootuuid.cfg ]; then
+    source ${config_directory}/bootuuid.cfg
+  fi
+  if [ -n "${BOOT_UUID}" ]; then
+    search --fs-uuid "${BOOT_UUID}" --set prefix --no-floppy
+  else
+    search --label boot --set prefix --no-floppy
+  fi
+fi
+if [ -d ($prefix)/grub2 ]; then
+  set prefix=($prefix)/grub2
+  configfile $prefix/grub.cfg
+else
+  set prefix=($prefix)/boot/grub2
+  configfile $prefix/grub.cfg
+fi
+boot
+
+if [ x$feature_timeout_style = xy ] ; then
+  set timeout_style=menu
+  set timeout=1
+# Fallback normal timeout code in case the timeout_style feature is
+# unavailable.
+else
+  set timeout=1
+fi
+
+# Import user defined configuration
+# tracker: https://github.com/coreos/fedora-coreos-tracker/issues/805
+if [ -f $prefix/user.cfg ]; then
+  source $prefix/user.cfg
+fi
+
+blscfg
+`
 )

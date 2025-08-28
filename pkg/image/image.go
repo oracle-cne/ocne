@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -37,6 +38,12 @@ var archMap = map[string]string{
 	"amd64":   "amd64",
 	"":        "",
 }
+
+type FileInfo struct {
+	Header *tar.Header
+	LayerId string
+}
+
 
 // EnsureBaseQcow2Image ensures that the base image is downloaded. Return a tar stream of the image.
 func EnsureBaseQcow2Image(imageName string, arch string) (*tar.Reader, func(), error) {
@@ -268,6 +275,81 @@ func GetTarFromLayerById(imgRef types.ImageReference, layerId string) (*tar.Read
 		nil
 }
 
+
+func GetFilesFromLayer(imgRef types.ImageReference, layerId string, files []string) (map[string][]byte, error) {
+	tarStream, closer, err := GetTarFromLayerById(imgRef, layerId)
+	if err != nil {
+		return nil, err
+	}
+	defer closer()
+
+	ret := map[string][]byte{}
+	for {
+		found, err := AdvanceTarToNext(tarStream, files)
+		if err != nil {
+			return nil, err
+		}
+
+		if found == "" {
+			break
+		}
+
+		contents, err := io.ReadAll(tarStream)
+		ret[found] = contents
+		files = slices.DeleteFunc(files, func(elem string) bool {
+			return elem == found
+		})
+	}
+
+	if len(files) > 0 {
+		return nil, fmt.Errorf("could not find these files: %s", strings.Join(files, ", "))
+	}
+
+	return ret, nil
+}
+
+func GetFileLayerMap(imgRef types.ImageReference, arch string) (map[string]*FileInfo, error) {
+	layers, err := GetImageLayers(imgRef, arch)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := map[string]*FileInfo{}
+	for _, layer := range slices.Backward(layers) {
+		tarStream, closer, err := GetTarFromLayerById(imgRef, layer.Digest.Encoded())
+		if err != nil {
+			if closer != nil {
+				closer()
+			}
+			return nil, err
+		}
+
+		for {
+			hdr, err := tarStream.Next()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return nil, err
+			}
+
+
+			// If this is a whiteout, delete the entry
+			if hdr.Typeflag == tar.TypeBlock && hdr.Devmajor == 0 && hdr.Devminor == 0 {
+				delete(ret, hdr.Name)
+			}
+
+			ret[hdr.Name] = &FileInfo{
+				Header: hdr,
+				LayerId: layer.Digest.Encoded(),
+			}
+		}
+		closer()
+	}
+
+	return ret, nil
+}
+
 // AdvanceTarToNext searches a tar stream utnil it finds the header
 // for the first of a set of files.  If a file is found, the tar
 // stream is advanced to that file and the name of that file is
@@ -368,6 +450,111 @@ func FindInImage(imgRef types.ImageReference, arch string, files []string) (map[
 
 	if len(files) > 0 {
 		return nil, fmt.Errorf("could not find these files: %s", strings.Join(files, ", "))
+	}
+
+	return ret, nil
+}
+
+func resolveFile(path string, wd string, fileMap map[string]*FileInfo, visited map[string]bool) (string, error) {
+	fi, ok := fileMap[path]
+	if !ok {
+		return "", fmt.Errorf("could not find %s in container image", path)
+	}
+
+	if visited == nil {
+		visited = map[string]bool{}
+	}
+
+	if wd == "" {
+		wd = filepath.Dir(path)
+	}
+
+	// If this has been visited already, there must a cycle.
+	_, ok = visited[path]
+	if ok {
+		return "", fmt.Errorf("link cycle that includes %s detected", path)
+	}
+	visited[path] = true
+
+	// If this is a link of some sort, follow it
+	if fi.Header.Typeflag == tar.TypeLink {
+		log.Debugf("Resolving hard link %s -> %s", path, fi.Header.Linkname)
+		return resolveFile(fi.Header.Linkname, wd, fileMap, visited)
+	} else if fi.Header.Typeflag == tar.TypeSymlink {
+		var err error
+		log.Debugf("Resolving symlink %s (%s) -> %s", wd, path, fi.Header.Linkname)
+		if !filepath.IsAbs(fi.Header.Linkname) {
+			path = filepath.Clean(filepath.Join(wd, fi.Header.Linkname))
+			if err != nil {
+				return "", err
+			}
+		} else {
+			path = fi.Header.Linkname
+		}
+		return resolveFile(path, filepath.Dir(path), fileMap, visited)
+	}
+
+	// Otherwise, the path actually refers to the file so echo it back
+	return path, nil
+}
+
+func FindInImageFollowLinks(imgRef types.ImageReference, arch string, files []string, fileMap map[string]*FileInfo) (map[string][]byte, error) {
+	var err error
+	layers := map[string][]string{}
+
+	if fileMap == nil {
+		fileMap, err = GetFileLayerMap(imgRef, arch)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// map the input path to the actual path on the filesystem.
+	truePaths := map[string]string{}
+
+	// Map files to layers so that they are easy to read.  Resolve symlinks
+	// now for the same reason.
+	for _, f := range files {
+		p, err := resolveFile(f, "", fileMap, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		// Keep tabs on where the links resolved to so the
+		// actual contents can be found quickly after all
+		// the files have been read.
+		truePaths[f] = p
+
+		// Get the layer of the file that is at the end of
+		// the link path.  That is the contents that are
+		// actually required.
+		fi := fileMap[p]
+		l, ok := layers[fi.LayerId]
+		if !ok {
+			l = []string{}
+			layers[fi.LayerId] = l
+		}
+		layers[fi.LayerId] = append(l, p)
+	}
+
+	// Go read all the layers
+	contents := map[string][]byte{}
+	for layerId, layerFiles := range layers {
+		log.Debugf("reading from %s: %v", layerId, layerFiles)
+		layerContents, err := GetFilesFromLayer(imgRef, layerId, layerFiles)
+		if err != nil {
+			return nil, err
+		}
+		for p, c := range layerContents {
+			contents[p] = c
+			log.Debugf("%s contains %d bytes", p, len(c))
+		}
+	}
+
+	// Resolve all the input files to their linked content
+	ret := map[string][]byte{}
+	for _, f := range files {
+		ret[f] = contents[truePaths[f]]
 	}
 
 	return ret, nil
