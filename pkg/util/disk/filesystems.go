@@ -110,7 +110,7 @@ func (f *File) AddISO9660TransTbl() {
 	}
 }
 
-func MakeISO9660(path string, size int64) (*disk.Disk, *iso9660.FileSystem, error) {
+func MakeISO9660(path string, size int64, label string) (*disk.Disk, *iso9660.FileSystem, error) {
 	bkend, err := file.CreateFromPath(path, size)
 	if err != nil {
 		return nil, nil, err
@@ -126,7 +126,7 @@ func MakeISO9660(path string, size int64) (*disk.Disk, *iso9660.FileSystem, erro
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
 		Partition: 0,
 		FSType: filesystem.TypeISO9660,
-		VolumeLabel: "ock",
+		VolumeLabel: label,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -169,17 +169,27 @@ func MakeSquashfs(path string, size int64) (*disk.Disk, *squashfs.FileSystem, er
 
 // MakeFat32 creates a Fat32 filesystem of the given size.  If the input path
 // is the empty string, the filesystem is created in memory.
-func MakeFat32(path string, size int64) (*disk.Disk, *fat32.FileSystem, error) {
+func MakeFat32(path string, size int64, label string) (*disk.Disk, *fat32.FileSystem, error) {
 	var bkend backend.Storage
 	var err error
+
+	// The smallest possible FAT32 disk is 32MiB.  Force a
+	// minimum of 35MiB for safety.
+	thirtyFiveMiB := int64(35 * 1024 * 1024)
+	if size < thirtyFiveMiB {
+		size = thirtyFiveMiB
+	}
 	if path == "" {
 		mf := util.NewMemoryFile(0644, size)
 		bkend = file.New(mf, false)
 	} else {
 		_, err = os.Stat(path)
 		if err == nil {
+
+			log.Debugf("Opening Fat32 disk at %s", path)
 			bkend, err = file.OpenFromPath(path, false)
 		} else {
+			log.Debugf("Creating Fat32 disk at %s: %v", path, err)
 			bkend, err = file.CreateFromPath(path, size)
 		}
 	}
@@ -209,9 +219,9 @@ func MakeFat32(path string, size int64) (*disk.Disk, *fat32.FileSystem, error) {
 	}
 
 	ofs, err := oDisk.CreateFilesystem(disk.FilesystemSpec{
-		Partition: 1,
+		Partition: 0,
 		FSType: filesystem.TypeFat32,
-		VolumeLabel: "EFI-SYSTEM",
+		VolumeLabel: label,
 	})
 	if err != nil {
 		log.Infof("create filesystem failed")

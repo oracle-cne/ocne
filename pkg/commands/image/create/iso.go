@@ -95,6 +95,7 @@ const (
 
 	// Special destinations
 	OstreeContainerPath = "usr/bin/ostree-container"
+	Label = "OCK"
 )
 
 var executables = []string{
@@ -258,7 +259,7 @@ func writeFsFile(theFs filesystem.FileSystem, path string, contents []byte) erro
 	return nil
 }
 
-func makeEfiFatWad(files map[string][]byte, pathMap map[string]string) ([]byte, error) {
+func makeEfiFatWad(files map[string][]byte, pathMap map[string]string, additionalFiles map[string][]byte) ([]byte, error) {
 	// The filesystem needs to be allocated with enough space
 	// before populating it.  Calculate a reasonable size.
 	// Call it 110% of the total file size.
@@ -283,7 +284,7 @@ func makeEfiFatWad(files map[string][]byte, pathMap map[string]string) ([]byte, 
 		return nil, err
 	}
 
-	fatDisk, fatFs, err := disk.MakeFat32(fatFile.Name(), size)
+	fatDisk, fatFs, err := disk.MakeFat32(fatFile.Name(), size, Label)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +299,14 @@ func makeEfiFatWad(files map[string][]byte, pathMap map[string]string) ([]byte, 
 		// Unlike other parts of the diskfs library,
 		// an absolute path is required.
 		err = writeFsFile(fatFs, fmt.Sprintf("/%s", dest), files[src])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+
+	for p, c := range additionalFiles {
+		err = writeFsFile(fatFs, fmt.Sprintf("/%s", p), c)
 		if err != nil {
 			return nil, err
 		}
@@ -342,8 +351,8 @@ func makeBootloaderConfigs(options *CreateOptions) ([]byte, []byte, map[string][
 		}
 
 		configs[ignPath] = ign.Contents
-		grubStanza := fmt.Sprintf(grubConfigPattern, name, ignPath)
-		isolinuxStanza := fmt.Sprintf(isolinuxConfigPattern, name, ignPath)
+		grubStanza := fmt.Sprintf(grubConfigPattern, name, options.KernelArguments, ignPath)
+		isolinuxStanza := fmt.Sprintf(isolinuxConfigPattern, name, options.KernelArguments, ignPath)
 
 		grubConfig = fmt.Sprintf("%s%s", grubStanza)
 		isolinuxConfig = fmt.Sprintf("%s%s", isolinuxStanza)
@@ -435,20 +444,21 @@ func makeIsoContent(isoFs *iso9660.FileSystem, kernelPath string, initramfsPath 
 	initramfsContent := ostreeContents[initramfsPath]
 	ostreeContents[initramfsPath] = slices.Concat(initramfsContent, initramfsAppendix)
 
+	additionalFiles := map[string][]byte{
+		EfiGrubConfigDest: grubConfig,
+		EfiBootConfigDest: grubConfig,
+	}
+
 	// Make the Fat32 EFI image.
-	efibootImg, err := makeEfiFatWad(ostreeContents, efiFatFiles)
+	efibootImg, err := makeEfiFatWad(ostreeContents, efiFatFiles, additionalFiles)
 	if err != nil {
 		return err
 	}
 
-	additionalFiles := map[string][]byte{
-		ImagesEfibootImgDest: efibootImg,
-		EfiGrubConfigDest: grubConfig,
-		EfiBootConfigDest: grubConfig,
-		GrubConfigDest: grubConfig,
-		IsolinuxConfigDest: isolinuxConfig,
-
-	}
+	// The ISO needs to know about a few extra things
+	additionalFiles[ImagesEfibootImgDest] = efibootImg
+	additionalFiles[GrubConfigDest] = grubConfig
+	additionalFiles[IsolinuxConfigDest] = isolinuxConfig
 
 	// Write it all down
 	sets := []map[string]string{
@@ -608,7 +618,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	log.Debugf("New initramfs cpio compressed size: %s", util.HumanReadableSize(uint64(len(newInitramfsCpio))))
 
 	// Stuff the whole thing into an iso
-	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024)
+	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024, Label)
 	if err != nil {
 		return err
 	}
@@ -620,7 +630,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 
 
 	err = isoFs.Finalize(iso9660.FinalizeOptions{
-		VolumeIdentifier: "ock",
+		VolumeIdentifier: Label,
 		ElTorito: &iso9660.ElTorito{
 			BootCatalog: "isolinux/boot.cat",
 			Entries: []*iso9660.ElToritoEntry{
@@ -634,7 +644,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 				{
 					Platform:  iso9660.EFI,
 					Emulation: iso9660.NoEmulation,
-					BootFile:  BootX64Dest,
+					BootFile:  ImagesEfibootImgDest,
 				},
 			},
 		},

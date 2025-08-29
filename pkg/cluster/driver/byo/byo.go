@@ -15,6 +15,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/commands/image/create"
 	conftypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -24,8 +25,9 @@ import (
 
 const (
 	DriverName = "byo"
-	DefaultProfile = ""
 )
+
+var DefaultProfile *conftypes.ByoProfile = nil
 
 type ByoDriver struct {
 	Name                 string
@@ -55,9 +57,18 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}, nil
 }
 
-func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string, profile string) ([]byte, error) {
+func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string, profile *conftypes.ByoProfile) ([]byte, error) {
 	var ign *igntypes.Config
 	var err error
+
+	if profile == DefaultProfile {
+		// The default profiles uses the primary extra ignition values.
+		profile = &conftypes.ByoProfile{
+			Name: "",
+			ExtraIgnition: bd.Config.ExtraIgnition,
+			ExtraIgnitionInline: bd.Config.ExtraIgnitionInline,
+		}
+	}
 
 	internalLB := bd.Config.VirtualIp != ""
 	kubeAPIServerIP := bd.getKubeAPIServerIP()
@@ -203,6 +214,40 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string) error {
 		return err
 	}
 	configs["Control Plane Node"] = joinIgn
+
+	// Generate the rest
+	for _, profile := range bd.Config.Providers.Byo.Profiles {
+		joinIgn, err = bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, profile)
+		if err != nil {
+			return err
+		}
+		configs[fmt.Sprintf("%s - Worker Node", profile.Name)] = joinIgn
+
+		joinIgn, err = bd.ignitionForNode(types.ControlPlaneRole, true, joinToken, caCertHashes, profile)
+		if err != nil {
+			return err
+		}
+		configs[fmt.Sprintf("%s - Control Plane Node", profile.Name)] = joinIgn
+	}
+
+	byoIgnitions := map[string]*create.ByoIgnition{}
+	for n, i := range configs {
+		byoIgnitions[n] = &create.ByoIgnition{
+			Contents: i,
+		}
+	}
+
+	err = create.CreateIso(nil, &bd.Config, create.CreateOptions{
+		ProviderType: create.ProviderTypeByo,
+		Architecture: "amd64",
+		Destination: fmt.Sprintf("%s-amd64.iso", bd.Config.Name),
+		Byo: create.ByoOptions{
+			Configurations: byoIgnitions,
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

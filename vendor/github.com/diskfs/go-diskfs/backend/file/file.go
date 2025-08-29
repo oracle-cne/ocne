@@ -57,7 +57,7 @@ func OpenFromPath(pathName string, readOnly bool) (backend.Storage, error) {
 // The provided file must not exist at the time you call CreateFromPath()
 func CreateFromPath(pathName string, size int64) (backend.Storage, error) {
 	if pathName == "" {
-		return nil, errors.New("must pass device name")
+		return nil, errors.New("file-backend CreateFromPath - must pass device name")
 	}
 	if size <= 0 {
 		return nil, errors.New("must pass valid device size to create")

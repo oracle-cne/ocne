@@ -164,7 +164,7 @@ func initDisk(b backend.Storage, sectorSize SectorSize) (*disk.Disk, error) {
 
 func checkDevice(device string) error {
 	if device == "" {
-		return errors.New("must pass device name")
+		return errors.New("go-diskfs checkDevice - must pass device name")
 	}
 	if _, err := os.Stat(device); os.IsNotExist(err) {
 		return fmt.Errorf("provided device %s does not exist", device)
