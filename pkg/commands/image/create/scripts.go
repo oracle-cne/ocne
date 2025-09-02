@@ -400,6 +400,7 @@ cat "$FULL_INITRD" "$TMP_INITRD" > $REAL_INITRD
 rm -f "$TMP_INITRD" "$FULL_INITRD"
 
 umount -R "$SYSROOT"
+systemctl halt
 `
 
 	setConfigService = `
