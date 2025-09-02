@@ -22,8 +22,8 @@ import (
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/diskfs/go-diskfs/filesystem/squashfs"
 	"github.com/diskfs/go-diskfs/filesystem/fat32"
-	//"github.com/diskfs/go-diskfs/partition/mbr"
-	"github.com/diskfs/go-diskfs/partition/gpt"
+	"github.com/diskfs/go-diskfs/partition/mbr"
+	//"github.com/diskfs/go-diskfs/partition/gpt"
 
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -179,6 +179,10 @@ func MakeFat32(path string, size int64, label string) (*disk.Disk, *fat32.FileSy
 	if size < thirtyFiveMiB {
 		size = thirtyFiveMiB
 	}
+
+	// Fat32 wants 512 byte blocks
+	size += (size % int64(fat32.SectorSize512))
+
 	if path == "" {
 		mf := util.NewMemoryFile(0644, size)
 		bkend = file.New(mf, false)
@@ -187,6 +191,11 @@ func MakeFat32(path string, size int64, label string) (*disk.Disk, *fat32.FileSy
 		if err == nil {
 
 			log.Debugf("Opening Fat32 disk at %s", path)
+			err = os.Truncate(path, size)
+			if err != nil {
+				return nil, nil, err
+			}
+
 			bkend, err = file.OpenFromPath(path, false)
 		} else {
 			log.Debugf("Creating Fat32 disk at %s: %v", path, err)
@@ -202,14 +211,14 @@ func MakeFat32(path string, size int64, label string) (*disk.Disk, *fat32.FileSy
 		return nil, nil, err
 	}
 
-	oDisk.LogicalBlocksize = 512
+	oDisk.LogicalBlocksize = int64(fat32.SectorSize512)
 
-	err = oDisk.Partition(&gpt.Table{
+	err = oDisk.Partition(&mbr.Table{
 		LogicalSectorSize: 2048,
 		PhysicalSectorSize: 2048,
-		Partitions: []*gpt.Partition{
+		Partitions: []*mbr.Partition{
 			{
-				Type: gpt.MicrosoftBasicData,
+				Type: mbr.Fat32LBA,
 			},
 		},
 	})
@@ -235,6 +244,8 @@ func MakeFat32(path string, size int64, label string) (*disk.Disk, *fat32.FileSy
 
 	return oDisk, oFat, nil
 }
+
+//func MakeBootableImage(path string, isoSize int64, efiSize int64, 
 
 type fsCopy struct {
 	totalBytes   uint64

@@ -286,8 +286,7 @@ RemainAfterExit=yes
 MountFlags=slave
 ExecStart=/usr/sbin/deploy-ock
 `
-	deployOckScript = `
-#! /bin/bash
+	deployOckScript = `#! /bin/bash
 set -e
 set -x
 
@@ -427,8 +426,7 @@ RemainAfterExit=yes
 MountFlags=slave
 ExecStart=/usr/sbin/set-config
 `
-	setConfigScript = `
-#! /bin/bash
+	setConfigScript = `#! /bin/bash
 set -e
 set -x
 
@@ -558,8 +556,7 @@ fi
 blscfg
 `
 
-	grubConfigPreamble = `
-set default="1"
+	grubConfigPreamble = `set default="1"
 
 function load_video {
   insmod efi_gop
@@ -582,13 +579,10 @@ search --no-floppy --set=root -l 'OCK'
 
 `
 
-	grubConfigEpilogue = `
-
-`
+	grubConfigEpilogue = ""
 
 
-	isolinuxConfigPreamble = `
-serial 0 115200
+	isolinuxConfigPreamble = `serial 0 115200
 console 0
 default vesamenu.c32
 timeout 600
@@ -660,15 +654,14 @@ menu end
 menu end
 `
 
-	grubConfigPattern = `
-menuentry 'Install Oracle Container Host for Kubernetes (%s)' --class fedora --class gnu-linux --class gnu --class os {
-	linuxefi /images/pxeboot/vmlinuz rw rd.neednet=1 ignition.platform.id=file ignition.firstboot=1 systemd.firstboot=off rd.timeout=120 %s ock.config=%s
+	grubConfigPattern = `menuentry 'Install Oracle Container Host for Kubernetes (%s)' --class fedora --class gnu-linux --class gnu --class os {
+	linuxefi /images/pxeboot/vmlinuz rw rd.neednet=1 ignition.platform.id=file ignition.firstboot=1 systemd.firstboot=off rd.timeout=120 %s ock.config=%s loglevel=8
 	initrdefi /images/pxeboot/initrd.img
+}
 
 `
 
-	isolinuxConfigPattern = `
-label linux
+	isolinuxConfigPattern = `label linux
   menu label ^Install Oracle Container Host for Kubernetes (%s)
   kernel vmlinuz
   append initrd=initrd.img rw rd.neednet=1 ignition.platform.id=file ignition.firstboot=1 systemd.firstboot=off rd.timeout=120 %s ock.config=%s

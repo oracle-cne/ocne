@@ -113,7 +113,7 @@ func CpioDirectory(path string, mode cpio.FileMode) *CpioHeader {
 }
 
 func CpioSymlink(path string, target string, mode cpio.FileMode) *CpioHeader {
-	hdr := CpioEntry(path, (mode & cpio.TypeSymlink))
+	hdr := CpioEntry(path, (mode | cpio.TypeSymlink))
 	hdr.Linkname = target
 	return hdr
 }

@@ -232,6 +232,12 @@ func makeInitramfsAppendix(knownFiles map[string][]byte, fileMap map[string]*ima
 		return nil, err
 	}
 
+	err = os.WriteFile("initramfsAppendix.gz", out, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+
 	return out, nil
 }
 
@@ -354,8 +360,8 @@ func makeBootloaderConfigs(options *CreateOptions) ([]byte, []byte, map[string][
 		grubStanza := fmt.Sprintf(grubConfigPattern, name, options.KernelArguments, ignPath)
 		isolinuxStanza := fmt.Sprintf(isolinuxConfigPattern, name, options.KernelArguments, ignPath)
 
-		grubConfig = fmt.Sprintf("%s%s", grubStanza)
-		isolinuxConfig = fmt.Sprintf("%s%s", isolinuxStanza)
+		grubConfig = fmt.Sprintf("%s%s", grubConfig, grubStanza)
+		isolinuxConfig = fmt.Sprintf("%s%s", isolinuxConfig, isolinuxStanza)
 	}
 
 	grubConfig = fmt.Sprintf("%s%s", grubConfig, grubConfigEpilogue)
