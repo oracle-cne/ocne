@@ -576,12 +576,19 @@ func Copy(src string, dest string, arch string, imageSelection copy.ImageListSel
 	if err != nil {
 		return err
 	}
+	return CopyBySrcRef(srcRef, dest, arch, imageSelection)
+}
 
+func CopyBySrcRef(srcRef types.ImageReference, dest string, arch string, imageSelection copy.ImageListSelection) error {
 	destRef, err := alltransports.ParseImageName(dest)
 	if err != nil {
 		return err
 	}
 
+	return CopyByRef(srcRef, destRef, arch, imageSelection)
+}
+
+func CopyByRef(srcRef types.ImageReference, destRef types.ImageReference, arch string, imageSelection copy.ImageListSelection) error {
 	systemCtx := GetSystemContext(arch)
 	policy, err := signature.DefaultPolicy(systemCtx)
 	if err != nil {

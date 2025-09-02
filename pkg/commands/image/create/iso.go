@@ -15,16 +15,14 @@ import (
 	"strings"
 
 	ctypes "github.com/containers/image/v5/types"
+	"github.com/containers/image/v5/copy"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/diskfs/go-diskfs/filesystem"
-//	"github.com/diskfs/go-diskfs/partition/gpt"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/disk"
-//	"github.com/oracle-cne/ocne/pkg/util/linux"
-//	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 )
 
@@ -95,6 +93,7 @@ const (
 
 	// Special destinations
 	OstreeContainerPath = "usr/bin/ostree-container"
+	PolicyDest = "etc/policy.json"
 	Label = "OCK"
 )
 
@@ -227,6 +226,12 @@ func makeInitramfsAppendix(knownFiles map[string][]byte, fileMap map[string]*ima
 	newInitramfsContent := defaultInitramfsContent()
 	addFiles(newInitramfsContent, depsMap)
 	addFiles(newInitramfsContent, extraFiles)
+
+	// Some files have to be relocated from their sources
+	addFiles(newInitramfsContent, map[string][]byte{
+		PolicyDest: knownFiles[PolicyPath],
+		OstreeContainerPath: knownFiles[ExtOstreeContainerPath],
+	})
 	out, err := util.MakeCpio(newInitramfsContent, true)
 	if err != nil {
 		return nil, err
@@ -500,6 +505,13 @@ func makeIsoContent(isoFs *iso9660.FileSystem, kernelPath string, initramfsPath 
 			return err
 		}
 	}
+
+	// Finally add the ostree archive itself.  This is big, so be a bit
+	// cheesy and write it directly to the workspace of the iso.
+	ostreeArchive := fmt.Sprintf("oci-archive:%s/ostree.tar", isoFs.Workspace())
+	err = image.CopyBySrcRef(ostreeRef, ostreeArchive, arch, copy.CopySystemImage)
+	if err != nil {
+	}
 	return nil
 }
 
@@ -608,7 +620,7 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// needed to satisify the dependencies of dynamically linked
 	// executables, but that set of files won't be know until they are
 	// discovered by resolving all the linkages in the elf objects.
-	ostreeFiles := append([]string{}, kernelPath, initramfsPath)
+	ostreeFiles := append([]string{}, kernelPath, initramfsPath, PolicyPath)
 	ostreeFiles = append(ostreeFiles, executables...)
 	ostreeContents, err := image.FindInImageFollowLinks(ostreeRef, options.Architecture, ostreeFiles, fileMap)
 	if err != nil {
