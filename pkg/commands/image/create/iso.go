@@ -21,8 +21,10 @@ import (
 
 	"github.com/diskfs/go-diskfs/filesystem"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/disk"
+	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/image"
 )
 
@@ -43,17 +45,29 @@ const (
 
 	// Files for the EFI directory
 	BootX64 = "usr/lib/ostree-boot/efi/EFI/BOOT/BOOTX64.EFI"
-	BootCSV = "usr/lib/ostree-boot/efi/EFI/redhat/BOOTX64.CSV"
+	BootX64CSV = "usr/lib/ostree-boot/efi/EFI/redhat/BOOTX64.CSV"
 	GrubX64 = "usr/lib/ostree-boot/efi/EFI/redhat/grubx64.efi"
 	MMX64 = "usr/lib/ostree-boot/efi/EFI/redhat/mmx64.efi"
 	FbX64 = "usr/lib/ostree-boot/efi/EFI/BOOT/fbx64.efi"
-	UnicodePf2 = "usr/share/grub/unicode.pf2"
 
 	BootX64Dest = "EFI/BOOT/BOOTX64.EFI"
-	BootCSVDest = "EFI/BOOT/BOOTX64.CSV"
+	BootX64CSVDest = "EFI/BOOT/BOOTX64.CSV"
 	GrubX64Dest = "EFI/BOOT/grubx64.efi"
 	MMX64Dest = "EFI/BOOT/mmx64.efi"
 	FbX64Dest = "EFI/BOOT/fbx64.efi"
+
+	BootArm64 = "usr/lib/ostree-boot/efi/EFI/BOOT/BOOTX64.EFI"
+	GrubArm64 = "usr/lib/ostree-boot/efi/EFI/redhat/grubaa64.efi"
+	MMArm64 = "usr/lib/ostree-boot/efi/EFI/redhat/mmaa64.efi"
+
+	BootArm64Dest = "EFI/BOOT/BOOTX64.EFI"
+	GrubArm64Dest = "EFI/BOOT/grubx64.efi"
+	MMArm64Dest = "EFI/BOOT/mmx64.efi"
+
+
+
+	// Files common between architectures
+	UnicodePf2 = "usr/share/grub/unicode.pf2"
 	UnicodePf2Dest = "EFI/BOOT/fonts/unicode.pf2"
 
 	EfiGrubConfigDest = "EFI/BOOT/grub.cfg"
@@ -218,9 +232,22 @@ func makeInitramfsAppendix(knownFiles map[string][]byte, fileMap map[string]*ima
 
 
 	depsMap := map[string][]byte{}
-	err := librariesFromObjects(execMap, fileMap, depsMap, ref, arch)
-	if err != nil {
-		return nil, err
+	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Args: depsMap,
+			WaitFunction: func(wIface interface{})error{
+				dm, _ := wIface.(map[string][]byte)
+				cbErr := librariesFromObjects(execMap, fileMap, dm, ref, arch)
+				if cbErr != nil {
+					return cbErr
+				}
+				return nil
+			},
+			Message: "Finding initramfs required files",
+		},
+	})
+	if failed {
+		return nil, fmt.Errorf("Failed to find libraries for initramfs")
 	}
 
 	newInitramfsContent := defaultInitramfsContent()
@@ -232,12 +259,24 @@ func makeInitramfsAppendix(knownFiles map[string][]byte, fileMap map[string]*ima
 		PolicyDest: knownFiles[PolicyPath],
 		OstreeContainerPath: knownFiles[ExtOstreeContainerPath],
 	})
-	out, err := util.MakeCpio(newInitramfsContent, true)
-	if err != nil {
-		return nil, err
-	}
+	var out []byte
+	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Args: &out,
+			WaitFunction: func(wIface interface{})error{
+				outPtr, _ := wIface.(*[]byte)
+				o, cbErr := util.MakeCpio(newInitramfsContent, true)
+				if cbErr != nil {
+					return cbErr
+				}
+				*outPtr = o
+				return nil
+			},
+			Message: "Writing initramfs",
+		},
+	})
 
-	err = os.WriteFile("initramfsAppendix.gz", out, 0644)
+	err := os.WriteFile("initramfsAppendix.gz", out, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -405,35 +444,78 @@ func makeIsoContent(isoFs *iso9660.FileSystem, kernelPath string, initramfsPath 
 	//   isolinux/vesamenu.c32
 	//   isolinux/vmlinuz
 	//   ostree.tar
+	//
+	// For arm it is this:
+	//   boot.catalog
+	//   EFI/BOOT/BOOTAA64.EFI
+	//   EFI/BOOT/fonts/TRANS.TBL
+	//   EFI/BOOT/fonts/unicode.pf2
+	//   EFI/BOOT/grub.cfg
+	//   EFI/BOOT/grubaa64.efi
+	//   EFI/BOOT/mmaa64.efi
+	//   EFI/BOOT/TRANS.TBL
+	//   images/efiboot.img
+	//   images/install.img
+	//   images/pxeboot/initrd.img
+	//   images/pxeboot/TRANS.TBL
+	//   images/pxeboot/vmlinuz
+	//   images/TRANS.TBL
+	//   TRANS.TBL
 
-	efiFiles := map[string]string{
-		BootX64: BootX64Dest,
-		BootCSV: BootCSVDest,
-		GrubX64: GrubX64Dest,
-		MMX64: MMX64Dest,
-		FbX64: FbX64Dest,
-		UnicodePf2: UnicodePf2Dest,
+	var efiFiles map[string]string
+	var efiFatFiles map[string]string
+	var biosOstreeFiles map[string]string
+	var biosIsolinuxFiles map[string]string
+
+	// Get architecture specific files
+	if arch == constants.Amd64 {
+		efiFiles = map[string]string{
+			BootX64: BootX64Dest,
+			BootX64CSV: BootX64CSVDest,
+			GrubX64: GrubX64Dest,
+			MMX64: MMX64Dest,
+			FbX64: FbX64Dest,
+		}
+		efiFatFiles = map[string]string{
+			BootX64: BootX64Dest,
+			GrubX64: GrubX64Dest,
+			MMX64: MMX64Dest,
+		}
+		biosIsolinuxFiles = map[string]string{
+			IsoLinux: IsoLinuxDest,
+			LdLinux: LdLinuxDest,
+			Libcom: LibcomDest,
+			Libutil: LibutilDest,
+			Vesamenu: VesamenuDest,
+		}
+		biosOstreeFiles = map[string]string{
+			kernelPath: KernelDest,
+			initramfsPath: InitrdDest,
+		}
+	} else if arch == constants.Arm64 {
+		efiFiles = map[string]string{
+			BootArm64: BootArm64Dest,
+			GrubArm64: GrubArm64Dest,
+			MMArm64: MMArm64Dest,
+		}
+		efiFatFiles = map[string]string{
+			BootX64: BootX64Dest,
+			GrubX64: GrubX64Dest,
+			MMX64: MMX64Dest,
+		}
+		biosIsolinuxFiles = map[string]string{}
+		biosOstreeFiles = map[string]string{}
+	} else {
+		return fmt.Errorf("%s is not a valid architecture", arch)
 	}
-	efiFatFiles := map[string]string{
-		BootX64: BootX64Dest,
-		GrubX64: GrubX64Dest,
-		MMX64: MMX64Dest,
-		UnicodePf2: UnicodePf2Dest,
-	}
+
+	// Add any common files
+	efiFiles[UnicodePf2] = UnicodePf2Dest
+	efiFatFiles[UnicodePf2] = UnicodePf2Dest
+
 	pxeBootFiles := map[string]string{
 		kernelPath: ImagesKernelDest,
 		initramfsPath: ImagesInitrdDest,
-	}
-	biosIsolinuxFiles := map[string]string{
-		IsoLinux: IsoLinuxDest,
-		LdLinux: LdLinuxDest,
-		Libcom: LibcomDest,
-		Libutil: LibutilDest,
-		Vesamenu: VesamenuDest,
-	}
-	biosOstreeFiles := map[string]string{
-		kernelPath: KernelDest,
-		initramfsPath: InitrdDest,
 	}
 
 	// Gather all the files that come from the ostree image
@@ -442,13 +524,11 @@ func makeIsoContent(isoFs *iso9660.FileSystem, kernelPath string, initramfsPath 
 	ostreeFiles = slices.AppendSeq(ostreeFiles, maps.Keys(biosOstreeFiles))
 	slices.Sort(ostreeFiles)
 	ostreeFiles = slices.Compact(ostreeFiles)
-	log.Infof("Looking for: %+v", ostreeFiles)
 
 	ostreeContents, err := image.FindInImageFollowLinks(ostreeRef, arch, ostreeFiles, fileMap)
 	if err != nil {
 		return err
 	}
-	log.Infof("Found: %+v", slices.Collect(maps.Keys(ostreeContents)))
 
 	// The initramfs needs a cpio archive appended to it with the stuff
 	// required to install.
@@ -541,16 +621,20 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		return err
 	}
 
-	// Get all the files out of the syslinux image
-	isoFiles, err := image.FindInImage(syslinuxRef, options.Architecture, []string{
-		IsoLinux,
-		LdLinux,
-		Libcom,
-		Libutil,
-		Vesamenu,
-	})
-	if err != nil {
-		return err
+	// Get all the files out of the syslinux image.  This is
+	// only relevant for x86.
+	var isoFiles map[string][]byte
+	if options.Architecture == constants.Amd64 {
+		isoFiles, err = image.FindInImage(syslinuxRef, options.Architecture, []string{
+			IsoLinux,
+			LdLinux,
+			Libcom,
+			Libutil,
+			Vesamenu,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Debugf("Found all syslinux files")
@@ -572,9 +656,24 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// all over the 100 or so layers that it has.  Keep a cache of
 	// where files live to avoid having to re-read layers over and
 	// over again.
-	fileMap, err := image.GetFileLayerMap(ostreeRef, options.Architecture)
-	if err != nil {
-		return err
+	var fileMap map[string]*image.FileInfo
+	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Args: &fileMap,
+			WaitFunction: func(wIface interface{})error{
+				fileMapPtr, _ := wIface.(*map[string]*image.FileInfo)
+				fm, cbErr := image.GetFileLayerMap(ostreeRef, options.Architecture)
+				if cbErr != nil {
+					return cbErr
+				}
+				*fileMapPtr = fm
+				return nil
+			},
+			Message: "Indexing Ostree image",
+		},
+	})
+	if failed {
+		return fmt.Errorf("Failed to index Ostree image")
 	}
 
 	log.Debugf("have %d files", len(fileMap))
@@ -622,13 +721,24 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	// discovered by resolving all the linkages in the elf objects.
 	ostreeFiles := append([]string{}, kernelPath, initramfsPath, PolicyPath)
 	ostreeFiles = append(ostreeFiles, executables...)
-	ostreeContents, err := image.FindInImageFollowLinks(ostreeRef, options.Architecture, ostreeFiles, fileMap)
-	if err != nil {
-		return err
-	}
-
-	for p, c := range ostreeContents {
-		log.Debugf("%s has %d bytes", p, len(c))
+	var ostreeContents map[string][]byte
+	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Args: &ostreeContents,
+			WaitFunction: func(wIface interface{})error{
+				ostreeContentsPtr, _ := wIface.(*map[string][]byte)
+				of, cbErr := image.FindInImageFollowLinks(ostreeRef, options.Architecture, ostreeFiles, fileMap)
+				if cbErr != nil {
+					return cbErr
+				}
+				*ostreeContentsPtr = of
+				return nil
+			},
+			Message: "Finding files in Ostree image",
+		},
+	})
+	if failed {
+		return fmt.Errorf("Failed to index Ostree image")
 	}
 
 	newInitramfsCpio, err := makeInitramfsAppendix(ostreeContents, fileMap, ostreeRef, ignitionConfigs, options.Architecture)
@@ -646,29 +756,36 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 		return err
 	}
 
-
-	err = isoFs.Finalize(iso9660.FinalizeOptions{
-		VolumeIdentifier: Label,
-		ElTorito: &iso9660.ElTorito{
-			BootCatalog: "isolinux/boot.cat",
-			Entries: []*iso9660.ElToritoEntry{
-				{
-					Platform:  iso9660.BIOS,
-					Emulation: iso9660.NoEmulation,
-					BootFile:  IsoLinuxDest,
-					BootTable: true,
-					LoadSize:  4,
-				},
-				{
-					Platform:  iso9660.EFI,
-					Emulation: iso9660.NoEmulation,
-					BootFile:  ImagesEfibootImgDest,
-				},
+	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		&logutils.Waiter{
+			Args: nil,
+			WaitFunction: func(wIface interface{})error {
+				return isoFs.Finalize(iso9660.FinalizeOptions{
+					VolumeIdentifier: Label,
+					ElTorito: &iso9660.ElTorito{
+						BootCatalog: "isolinux/boot.cat",
+						Entries: []*iso9660.ElToritoEntry{
+							{
+								Platform:  iso9660.BIOS,
+								Emulation: iso9660.NoEmulation,
+								BootFile:  IsoLinuxDest,
+								BootTable: true,
+								LoadSize:  4,
+							},
+							{
+								Platform:  iso9660.EFI,
+								Emulation: iso9660.NoEmulation,
+								BootFile:  ImagesEfibootImgDest,
+							},
+						},
+					},
+				})
 			},
+			Message:"Writing ISO",
 		},
 	})
-	if err != nil {
-		return err
+	if failed {
+		return fmt.Errorf("Failed to write ISO")
 	}
 
 	err = isoDisk.Close()

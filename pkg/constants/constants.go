@@ -83,6 +83,9 @@ const (
 	ProviderTypeNone    = "none"
 
 	CatalogMirror = "ocne.oracle.com/mirror"
+
+	Arm64 = "arm64"
+	Amd64 = "amd64"
 )
 
 var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160, OciVmStandardA2Flex}
