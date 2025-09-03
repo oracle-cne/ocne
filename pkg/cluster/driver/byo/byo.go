@@ -57,6 +57,30 @@ func CreateDriver(config *conftypes.Config, clusterConfig *conftypes.ClusterConf
 	}, nil
 }
 
+func (bd *ByoDriver) ignitionFromExtra(extraIgnition string, extraIgnitionInline string) (*igntypes.Config, error) {
+	ret := &igntypes.Config{}
+	var err error
+	if extraIgnition != "" {
+		ei := extraIgnition
+		if !filepath.IsAbs(ei) {
+			ei, err = filepath.Abs(filepath.Join(bd.Config.WorkingDirectory, ei))
+			if err != nil {
+				return nil, err
+			}
+		}
+		ret, err = ignition.FromPath(ei)
+		if err != nil {
+			return nil, err
+		}
+	} else if extraIgnitionInline != "" {
+		ret, err = ignition.FromString(extraIgnitionInline)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ret, err
+}
+
 func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken string, caCertHashes []string, profile *conftypes.ByoProfile) ([]byte, error) {
 	var ign *igntypes.Config
 	var err error
@@ -69,6 +93,8 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 			ExtraIgnitionInline: bd.Config.ExtraIgnitionInline,
 		}
 	}
+
+	// Overlay the extraIgnition if applicable
 
 	internalLB := bd.Config.VirtualIp != ""
 	kubeAPIServerIP := bd.getKubeAPIServerIP()
@@ -110,6 +136,7 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 			ImageRegistry:        bd.Config.Registry,
 			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
 			UploadCertificateKey: bd.UploadCertificateKey,
+			JoinToken:            joinToken,
 			KubeVersion:          bd.Config.KubeVersion,
 			TLSCipherSuites:      bd.Config.CipherSuites,
 		})
@@ -157,39 +184,51 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 	}
 	ign = ignition.Merge(ign, usrIgn)
 
-	// Add any additional configuration
-	if bd.Config.ExtraIgnition != "" {
-		ei := bd.Config.ExtraIgnition
-		if !filepath.IsAbs(ei) {
-			ei, err = filepath.Abs(filepath.Join(bd.Config.WorkingDirectory, ei))
-			if err != nil {
-				return nil, err
-			}
-		}
-		fromExtra, err := ignition.FromPath(ei)
+	// If the ignition for the profile is to be overlaid on top
+	// of the default profile, merge it in.
+	if profile.Overlay {
+		fromExtra, err := bd.ignitionFromExtra(bd.Config.ExtraIgnition, bd.Config.ExtraIgnitionInline)
 		if err != nil {
 			return nil, err
 		}
 		ign = ignition.Merge(ign, fromExtra)
 	}
-	if bd.Config.ExtraIgnitionInline != "" {
-		fromExtra, err := ignition.FromString(bd.Config.ExtraIgnitionInline)
-		if err != nil {
-			return nil, err
-		}
-		ign = ignition.Merge(ign, fromExtra)
+
+	fromExtra, err := bd.ignitionFromExtra(profile.ExtraIgnition, profile.ExtraIgnitionInline)
+	if err != nil {
+		return nil, err
 	}
+	ign = ignition.Merge(ign, fromExtra)
 
 	return ignition.MarshalIgnition(ign)
 }
 
-func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string) error {
+func (bd *ByoDriver) printJoinCommands(joinToken string, uploadCerts bool) {
+	// Print the commands to stderr so they are visible even if stdout
+	// is redirected to a file.
+	//
+	// If a control plane node is being joined, print instructions
+	// for uploading the certificate key as well.
+	if uploadCerts {
+		fmt.Fprintf(os.Stderr, "Run these commands before booting the new node to allow it to join the cluster:\n\t%s\n", k8s.UploadCertificateStanza(bd.UploadCertificateKey))
+	} else {
+		fmt.Fprintf(os.Stderr, "Run this command before booting the new node to allow it to join the cluster:\n")
+	}
+
+	fmt.Fprintf(os.Stderr, "\t%s\n", k8s.JoinTokenStanza(joinToken))
+}
+
+func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string, joinToken string) error {
 	configs := map[string][]byte{}
 	tokenCreate := bd.Config.Providers.Byo.AutomaticTokenCreation
 
 	// The init configuration always comes from the primary
 	if doInit {
-		initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes, DefaultProfile)
+		jt := ""
+		if tokenCreate {
+			jt = joinToken
+		}
+		initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, jt, caCertHashes, DefaultProfile)
 		if err != nil {
 			return err
 		}
@@ -199,8 +238,6 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string) error {
 		// Can't create a token without one
 		tokenCreate = false
 	}
-
-	joinToken, err := k8s.CreateJoinToken(bd.GetKubeconfigPath(), tokenCreate)
 
 	// Generate a control plane and worker node configuration for each profile
 	joinIgn, err := bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, DefaultProfile)
@@ -249,6 +286,11 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string) error {
 		return err
 	}
 
+	// Print the join commands no matter what.  There's no telling when
+	// this image might be used or re-used.  There are control plane
+	// configurations in the image, so print the cert command.
+	bd.printJoinCommands(joinToken, true)
+
 	return nil
 }
 
@@ -278,7 +320,16 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	caCertHashes, err := k8s.CertHashesFromKubeconfig(bd.KubeconfigPath)
 
 	if bd.Config.Providers.Byo.GenerateIso {
-		err = bd.generateIso(true, caCertHashes)
+		// The join token needs to be embedded into the image.  The cluster
+		// might not exist yet, so don't try to create the token.
+		joinToken, err := k8s.CreateJoinToken(bd.GetKubeconfigPath(), true)
+		if err != nil {
+			return nil, err
+		}
+
+		err = bd.generateIso(true, caCertHashes, joinToken)
+
+		// Print the commands to 
 		return nil, err
 	}
 
@@ -381,23 +432,8 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 
 	fmt.Println(string(ign))
 
-	// If the token is not being created in the cluster automatically,
-	// print instructions on how to add it to stderr.  Stderr is used
-	// so that any CLI calls can be safely redirected to a file while
-	// preserving the ability of the caller to see the help.
 	if !bd.Config.Providers.Byo.AutomaticTokenCreation {
-		// If a control plane node is being joined, print instructions
-		// for uploading the certificate key as well.
-		if role == types.ControlPlaneRole {
-			uploadStanza, err := k8s.UploadCertificateStanza(bd.KubeconfigPath, bd.UploadCertificateKey)
-			if err != nil {
-				return err
-			}
-
-			fmt.Fprintf(os.Stderr, "Run these commands before booting the new node to allow it to join the cluster:\n\t%s\n\tkubeadm token create %s\n", uploadStanza, joinToken)
-		} else {
-			fmt.Fprintf(os.Stderr, "Run this command before booting the new node to allow it to join the cluster: kubeadm token create %s\n", joinToken)
-		}
+		bd.printJoinCommands(joinToken, role == types.ControlPlaneRole)
 	} else if role == types.ControlPlaneRole {
 		// If the expectation is that secrets are uploaded to the
 		// cluster automatically and a control plane node is being

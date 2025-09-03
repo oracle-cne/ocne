@@ -177,6 +177,7 @@ type ClusterInit struct {
 	ProxyMode            string
 	NetInterface         string
 	UploadCertificateKey string
+	JoinToken            string
 	KubeVersion          string
 	TLSCipherSuites      string
 }

@@ -159,6 +159,8 @@ type ByoProfile struct {
 	Name string `yaml:"name"`
 	ExtraIgnition string `yaml:"extraIgnition"`
 	ExtraIgnitionInline string `yaml:"extraIgnitionInline"`
+	Overlay bool `yaml:"-"`
+	OverlayPtr *bool `yaml:"overlay"`
 }
 
 type ByoProvider struct {
@@ -703,6 +705,8 @@ func MergeByoProfile(def *ByoProfile, ovr *ByoProfile) ByoProfile{
 		Name: ies(def.Name, ovr.Name),
 		ExtraIgnition: def.ExtraIgnition,
 		ExtraIgnitionInline: def.ExtraIgnitionInline,
+		Overlay: iebp(def.OverlayPtr, ovr.OverlayPtr, ovr.Overlay),
+		OverlayPtr: iebpp(def.OverlayPtr, ovr.OverlayPtr),
 	}
 	if ovr.ExtraIgnition != "" {
 		// File-based configuration wins because reasons.
@@ -726,19 +730,19 @@ func MergeByoProfile(def *ByoProfile, ovr *ByoProfile) ByoProfile{
 func MergeByoProfiles(def []*ByoProfile, ovr []*ByoProfile) []*ByoProfile {
 	ret := append([]*ByoProfile{}, def...)
 
-	for i, op := range ovr {
+	for _, op := range ovr {
 		present := false
-		for _, dp := range ret {
+		for i, dp := range ret {
 			if op.Name == dp.Name {
 				np := MergeByoProfile(dp, op)
-				ovr[i] = &np
+				ret[i] = &np
 				present = true
 				break
 			}
 		}
 		if !present {
 			np := MergeByoProfile(&ByoProfile{}, op)
-			ovr = append(ovr, &np)
+			ret = append(ret, &np)
 		}
 	}
 

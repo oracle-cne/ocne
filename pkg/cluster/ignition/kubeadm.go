@@ -29,6 +29,7 @@ type InitConfig struct {
 	LocalAPIEndpoint LocalAPIEndpoint `yaml:"localAPIEndpoint,omitempty"`
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
+	BootstrapTokens  []BootstrapToken `yaml:"bootstrapTokens"`
 	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
 	Patches          *Patches          `yaml:"patches,omitempty"`
 }
@@ -40,6 +41,11 @@ type Patches struct {
 type LocalAPIEndpoint struct {
 	AdvertiseAddress string `yaml:"advertiseAddress,omitempty"`
 	BindPort         uint16 `yaml:"bindPort,omitempty"`
+}
+
+type BootstrapToken struct {
+	Token string `yaml:"token"`
+	Description string `yaml:"description"`
 }
 
 // https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/control-plane-flags/
@@ -200,6 +206,14 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 	}
 	if !ci.ExpectingWorkerNodes {
 		ret.NodeRegistration.Taints = &[]string{}
+	}
+	if ci.JoinToken != "" {
+		ret.BootstrapTokens = []BootstrapToken{
+			BootstrapToken{
+				Token: ci.JoinToken,
+				Description: "Initial join token",
+			},
+		}
 	}
 	return ret
 }

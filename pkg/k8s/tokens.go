@@ -113,26 +113,14 @@ func CreateJoin(kubeconfigPath string) (string, []string, error) {
 
 // UploadCertificateStanza returns a command to run that will upload
 // certificates to the cluster to enable joining new control plane nodes.
-func UploadCertificateStanza(kubeconfigPath string, key string) (string, error) {
-	clientset, err := client.GetKubernetesClientset(kubeconfigPath)
-	if err != nil {
-		return "", err
-	}
+func UploadCertificateStanza(key string) string {
+	return fmt.Sprintf("ocne cluster console --direct --node $(kubectl get node -o jsonpath='{.items[0].metadata.name}') -- kubeadm init phase upload-certs --certificate-key %s --upload-certs", key)
+}
 
-	// Get a list of control plane nodes
-	nodes, err := GetControlPlaneNodes(clientset)
-	if err != nil {
-		return "", err
-	}
-
-	// There needs to be at least one.  There always should be.
-	if len(nodes.Items) == 0 {
-		return "", fmt.Errorf("Did not find any control plane nodes")
-	}
-
-	// Choose the first node in the list.
-	nodeName := nodes.Items[0].ObjectMeta.Name
-	return fmt.Sprintf("echo \"chroot /hostroot kubeadm init phase upload-certs --certificate-key %s --upload-certs\" | ocne cluster console --node %s", key, nodeName), nil
+// JoinTokenStanza returns a command to run that will create a join
+// token in the cluster to enable joining new nodes.
+func JoinTokenStanza(joinToken string) string {
+	return fmt.Sprintf("ocne cluster console --direct --node $(kubectl get node -o jsonpath='{.items[0].metadata.name}') -- kubeadm token create %s", joinToken)
 }
 
 // UploadCertificates uploads the key material required for control
