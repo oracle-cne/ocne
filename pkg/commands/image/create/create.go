@@ -45,13 +45,14 @@ const (
 
 // ByoIgnition holds ignition content for use with the byo provider
 type ByoIgnition struct {
+	Name string // The name of the ignition content
 	Contents []byte // The raw ignition content
 	Path string // The path to a file containing the igntion content
 }
 
 // ByoOptions contains configuration specific to the byo provider
 type ByoOptions struct {
-	Configurations map[string]*ByoIgnition // Configurations holds each possible node configuration
+	Configurations []*ByoIgnition // Configurations holds each possible node configuration
 }
 
 // CreateOptions are the options for the create image command

@@ -219,7 +219,7 @@ func (bd *ByoDriver) printJoinCommands(joinToken string, uploadCerts bool) {
 }
 
 func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string, joinToken string) error {
-	configs := map[string][]byte{}
+	byoIgnitions := []*create.ByoIgnition{}
 	tokenCreate := bd.Config.Providers.Byo.AutomaticTokenCreation
 
 	// The init configuration always comes from the primary
@@ -233,45 +233,55 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string, joinToken s
 			return err
 		}
 
-		configs["Initialize Cluster"] = initIgn
+		byoIgnitions = append(byoIgnitions, &create.ByoIgnition{
+			Name: "Initialize Cluster",
+			Contents: initIgn,
+		})
 
 		// Can't create a token without one
 		tokenCreate = false
 	}
 
-	// Generate a control plane and worker node configuration for each profile
-	joinIgn, err := bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, DefaultProfile)
+	joinIgn, err := bd.ignitionForNode(types.ControlPlaneRole, true, joinToken, caCertHashes, DefaultProfile)
 	if err != nil {
 		return err
 	}
-	configs["Worker Node"] = joinIgn
+	byoIgnitions = append(byoIgnitions, &create.ByoIgnition{
+		Name: "Control Plane Node",
+		Contents: joinIgn,
+	})
 
-	joinIgn, err = bd.ignitionForNode(types.ControlPlaneRole, true, joinToken, caCertHashes, DefaultProfile)
+	// Generate a control plane and worker node configuration for each profile
+	joinIgn, err = bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, DefaultProfile)
 	if err != nil {
 		return err
 	}
-	configs["Control Plane Node"] = joinIgn
+	byoIgnitions = append(byoIgnitions, &create.ByoIgnition{
+		Name: "Worker Node",
+		Contents: joinIgn,
+	})
+
 
 	// Generate the rest
 	for _, profile := range bd.Config.Providers.Byo.Profiles {
-		joinIgn, err = bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, profile)
-		if err != nil {
-			return err
-		}
-		configs[fmt.Sprintf("%s - Worker Node", profile.Name)] = joinIgn
-
 		joinIgn, err = bd.ignitionForNode(types.ControlPlaneRole, true, joinToken, caCertHashes, profile)
 		if err != nil {
 			return err
 		}
-		configs[fmt.Sprintf("%s - Control Plane Node", profile.Name)] = joinIgn
-	}
+		byoIgnitions = append(byoIgnitions, &create.ByoIgnition{
+			Name: fmt.Sprintf("%s - Control Plane Node", profile.Name),
+			Contents: joinIgn,
+		})
 
-	byoIgnitions := map[string]*create.ByoIgnition{}
-	for n, i := range configs {
-		byoIgnitions[n] = &create.ByoIgnition{
-			Contents: i,
+		joinIgn, err = bd.ignitionForNode(types.WorkerRole, true, joinToken, caCertHashes, profile)
+		if err != nil {
+			return err
 		}
+
+		byoIgnitions = append(byoIgnitions, &create.ByoIgnition{
+			Name: fmt.Sprintf("%s - Worker Node", profile.Name),
+			Contents: joinIgn,
+		})
 	}
 
 	err = create.CreateIso(nil, &bd.Config, create.CreateOptions{

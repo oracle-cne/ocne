@@ -375,7 +375,7 @@ func makeBootloaderConfigs(options *CreateOptions) ([]byte, []byte, map[string][
 	grubConfig := fmt.Sprintf("%s", grubConfigPreamble)
 	isolinuxConfig := fmt.Sprintf("%s", isolinuxConfigPreamble)
 
-	for name, ign := range options.Byo.Configurations {
+	for _, ign := range options.Byo.Configurations {
 		if ign.Contents == nil {
 			cnts, err := os.ReadFile(ign.Path)
 			if err != nil {
@@ -384,6 +384,7 @@ func makeBootloaderConfigs(options *CreateOptions) ([]byte, []byte, map[string][
 			ign.Contents = cnts
 		}
 
+		name := ign.Name
 		if strings.Contains(name, "\n") {
 			return nil, nil, nil, fmt.Errorf("configuration names cannot have endlines")
 		}
@@ -742,8 +743,10 @@ func CreateIso(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, 
 	}
 
 	newInitramfsCpio, err := makeInitramfsAppendix(ostreeContents, fileMap, ostreeRef, ignitionConfigs, options.Architecture)
+	if err != nil {
+		return err
+	}
 
-	log.Debugf("New initramfs cpio compressed size: %s", util.HumanReadableSize(uint64(len(newInitramfsCpio))))
 
 	// Stuff the whole thing into an iso
 	isoDisk, isoFs, err := disk.MakeISO9660(options.Destination, 8 * 1024 * 1024 * 1024, Label)
