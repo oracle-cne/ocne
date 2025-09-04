@@ -321,7 +321,7 @@ mkdir -p "$EFI"
 mount "/dev/disk/by-partlabel/$EFI_LABEL" "$EFI"
 
 mkdir -p /media
-mount /dev/cdrom /media
+mount /dev/disk/by-label/OCK /media
 
 # make a temp directory so that ostree is writing to
 # disk instead of memory

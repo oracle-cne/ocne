@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
@@ -284,10 +285,11 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string, joinToken s
 		})
 	}
 
+	arch := runtime.GOARCH
 	err = create.CreateIso(nil, &bd.Config, create.CreateOptions{
 		ProviderType: create.ProviderTypeByo,
-		Architecture: "amd64",
-		Destination: fmt.Sprintf("%s-amd64.iso", bd.Config.Name),
+		Architecture: arch,
+		Destination: fmt.Sprintf("%s-%s.iso", bd.Config.Name, arch),
 		Byo: create.ByoOptions{
 			Configurations: byoIgnitions,
 		},
@@ -295,11 +297,6 @@ func (bd *ByoDriver) generateIso(doInit bool, caCertHashes []string, joinToken s
 	if err != nil {
 		return err
 	}
-
-	// Print the join commands no matter what.  There's no telling when
-	// this image might be used or re-used.  There are control plane
-	// configurations in the image, so print the cert command.
-	bd.printJoinCommands(joinToken, true)
 
 	return nil
 }
@@ -338,9 +335,16 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 		}
 
 		err = bd.generateIso(true, caCertHashes, joinToken)
+		if err != nil {
+			return nil, err
+		}
 
-		// Print the commands to 
-		return nil, err
+		// Print the join commands no matter what.  There's no telling when
+		// this image might be used or re-used.  There are control plane
+		// configurations in the image, so print the cert command.
+		bd.printJoinCommands(joinToken, true)
+
+		return nil, nil
 	}
 
 	initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes, DefaultProfile)
@@ -433,18 +437,31 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 	if err != nil {
 		return err
 	}
-
 	log.Debugf("Cert hashes for %s are: %+v", kubeconfigPath, caCertHashes)
-	ign, err := bd.ignitionForNode(role, true, joinToken, caCertHashes, DefaultProfile)
-	if err != nil {
-		return err
+
+	doUploadCerts := (role == types.ControlPlaneRole)
+	if bd.Config.Providers.Byo.GenerateIso {
+		err = bd.generateIso(false, caCertHashes, joinToken)
+		if err != nil {
+			return err
+		}
+
+		// Generating the ISO creates profiles for both control
+		// plane and worker nodes.  To account for this, always
+		// do both the certificate upload and the join token stuff.
+		doUploadCerts = true
+	} else {
+		ign, err := bd.ignitionForNode(role, true, joinToken, caCertHashes, DefaultProfile)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(ign))
 	}
 
-	fmt.Println(string(ign))
-
 	if !bd.Config.Providers.Byo.AutomaticTokenCreation {
-		bd.printJoinCommands(joinToken, role == types.ControlPlaneRole)
-	} else if role == types.ControlPlaneRole {
+		bd.printJoinCommands(joinToken, doUploadCerts)
+	} else if doUploadCerts {
 		// If the expectation is that secrets are uploaded to the
 		// cluster automatically and a control plane node is being
 		// joined, then upload the certificates with the matching
