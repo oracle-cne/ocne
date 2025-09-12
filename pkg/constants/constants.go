@@ -35,7 +35,7 @@ const (
 	SlirpSubnet                  = "192.18.255.0/24"
 
 	// BYO defaults
-	IsoUtilityImage = "docker://container-registry.oracle.com/olcne/ock:utility"
+	IsoUtilityImage = "docker://container-registry.oracle.com/olcne/ock:syslinux"
 
 	// Kubernetes defaults`
 	KubeAPIServerBindPort    = uint16(6443)
