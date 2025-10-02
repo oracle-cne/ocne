@@ -5,7 +5,7 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.2.0
+Version: 2.3.0
 Release: 1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
