@@ -38,7 +38,7 @@ require (
 	k8s.io/apimachinery v0.33.5
 	k8s.io/cli-runtime v0.33.5
 	k8s.io/client-go v0.33.5
-	k8s.io/cluster-bootstrap v0.30.3
+	k8s.io/cluster-bootstrap v0.33.5
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.33.5
 	k8s.io/kubernetes v1.33.5
@@ -292,8 +292,8 @@ require (
 replace (
 	github.com/coreos/butane => github.com/coreos/butane v0.20.0
 	github.com/digitalocean/go-libvirt => github.com/digitalocean/go-libvirt v0.0.0-20240229222500-83343b985513
-	k8s.io/cri-client => k8s.io/cri-client v0.32.2
-	k8s.io/externaljwt => k8s.io/externaljwt v0.32.2
+	k8s.io/cri-client => k8s.io/cri-client v0.33.5
+	k8s.io/externaljwt => k8s.io/externaljwt v0.33.5
 	k8s.io/klog/v2 => k8s.io/klog/v2 v2.120.1
 )
 
