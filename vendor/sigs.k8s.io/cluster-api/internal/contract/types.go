@@ -102,6 +102,38 @@ func (i *Int64) Set(obj *unstructured.Unstructured, value int64) error {
 	return nil
 }
 
+// Int32 represents an accessor to an int32 path value.
+type Int32 struct {
+	path Path
+}
+
+// Path returns the path to the int32 value.
+func (i *Int32) Path() Path {
+	return i.path
+}
+
+// Get gets the int32 value.
+func (i *Int32) Get(obj *unstructured.Unstructured) (*int32, error) {
+	value, ok, err := unstructured.NestedInt64(obj.UnstructuredContent(), i.path...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get %s from object", "."+strings.Join(i.path, "."))
+	}
+	if !ok {
+		return nil, errors.Wrapf(ErrFieldNotFound, "path %s", "."+strings.Join(i.path, "."))
+	}
+	int32Value := int32(value)
+	return &int32Value, nil
+}
+
+// Set sets the int32 value in the path.
+// Note: Cluster API should never Set values on external objects owner by providers; however this method is useful for writing tests.
+func (i *Int32) Set(obj *unstructured.Unstructured, value int32) error {
+	if err := unstructured.SetNestedField(obj.UnstructuredContent(), int64(value), i.path...); err != nil {
+		return errors.Wrapf(err, "failed to set path %s of object %v", "."+strings.Join(i.path, "."), obj.GroupVersionKind())
+	}
+	return nil
+}
+
 // Bool represents an accessor to an bool path value.
 type Bool struct {
 	path Path

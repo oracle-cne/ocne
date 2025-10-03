@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // InfrastructureMachineContract encodes information about the Cluster API contract for InfrastructureMachine objects
@@ -42,14 +42,27 @@ func InfrastructureMachine() *InfrastructureMachineContract {
 	return infrastructureMachine
 }
 
-// Ready provides access to status.ready field in an InfrastructureMachine object.
-func (m *InfrastructureMachineContract) Ready() *Bool {
+// Provisioned returns if the InfrastructureMachine is provisioned.
+func (m *InfrastructureMachineContract) Provisioned(contractVersion string) *Bool {
+	if contractVersion == "v1beta1" {
+		return &Bool{
+			path: []string{"status", "ready"},
+		}
+	}
+
 	return &Bool{
-		path: []string{"status", "ready"},
+		path: []string{"status", "initialization", "provisioned"},
 	}
 }
 
+// ReadyConditionType returns the type of the ready condition.
+func (m *InfrastructureMachineContract) ReadyConditionType() string {
+	return "Ready"
+}
+
 // FailureReason provides access to the status.failureReason field in an InfrastructureMachine object. Note that this field is optional.
+//
+// Deprecated: This function is deprecated and is going to be removed. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
 func (m *InfrastructureMachineContract) FailureReason() *String {
 	return &String{
 		path: []string{"status", "failureReason"},
@@ -57,6 +70,8 @@ func (m *InfrastructureMachineContract) FailureReason() *String {
 }
 
 // FailureMessage provides access to the status.failureMessage field in an InfrastructureMachine object. Note that this field is optional.
+//
+// Deprecated: This function is deprecated and is going to be removed. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
 func (m *InfrastructureMachineContract) FailureMessage() *String {
 	return &String{
 		path: []string{"status", "failureMessage"},
