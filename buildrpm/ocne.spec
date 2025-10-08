@@ -32,8 +32,6 @@ clusters and the application in them.
 %prep
 %setup -q
 
-%patch0
-
 %build
 export GOPATH=`pwd`/go
 export GOTOOLCHAIN=local
@@ -58,6 +56,7 @@ if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
   exit 1
 fi
 
+%patch0
 # Build the CLI
 make CATALOG_REPO=%{catalog_repo} cli
 
