@@ -1,0 +1,12 @@
+diff --git pkg/catalog/embedded/embedded.go pkg/catalog/embedded/embedded.go
+index 0314d23c..57b08a9d 100644
+--- pkg/catalog/embedded/embedded.go
++++ pkg/catalog/embedded/embedded.go
+@@ -13,6 +13,7 @@ import (
+ 	log "github.com/sirupsen/logrus"
+ )
+ 
++//go:embed all:charts
+ var charts embed.FS
+ 
+ func FindCandidates(prefix string) ([]string, error) {

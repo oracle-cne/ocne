@@ -23,6 +23,7 @@ BuildRequires: yq
 BuildRequires: rpm-build
 Requires: bash-completion
 Requires: containers-common
+Patch0: embedded.go.patch 
 
 %description
 The Oracle Cloud Native Environment command line interface manages Kubernetes
@@ -30,6 +31,8 @@ clusters and the application in them.
 
 %prep
 %setup -q
+
+%patch0
 
 %build
 export GOPATH=`pwd`/go
