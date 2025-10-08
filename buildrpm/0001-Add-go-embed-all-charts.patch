@@ -1,0 +1,25 @@
+From b623518eca0f58462e76ec83f70c0325eb41ded0 Mon Sep 17 00:00:00 2001
+From: Thomas Tanaka <thomas.tanaka@oracle.com>
+Date: Wed, 8 Oct 2025 10:13:02 -0700
+Subject: [PATCH] Add //go:embed all:charts
+
+Signed-off-by: Thomas Tanaka <thomas.tanaka@oracle.com>
+---
+ pkg/catalog/embedded/embedded.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/pkg/catalog/embedded/embedded.go b/pkg/catalog/embedded/embedded.go
+index 0314d23c..57b08a9d 100644
+--- a/pkg/catalog/embedded/embedded.go
++++ b/pkg/catalog/embedded/embedded.go
+@@ -13,6 +13,7 @@ import (
+ 	log "github.com/sirupsen/logrus"
+ )
+ 
++//go:embed all:charts
+ var charts embed.FS
+ 
+ func FindCandidates(prefix string) ([]string, error) {
+-- 
+2.39.5 (Apple Git-154)
+
