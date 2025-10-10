@@ -1,0 +1,3 @@
+This file is present to satisfy the "go:embed" in the file embedded.go when executing
+the command "go list -mod=readonly -json -deps ./..." prior to building the cli.
+

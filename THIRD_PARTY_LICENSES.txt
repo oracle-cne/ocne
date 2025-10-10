@@ -34,7 +34,9 @@ cel.dev/expr
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2022 Google LLC
+Copyright 2023 Google LLC
+Copyright 2024 Google LLC
 
 --------------------------------- (separator) ----------------------------------
 
@@ -475,7 +477,8 @@ github.com/containerd/errdefs
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright The containerd Authors
+Copyright The containerd Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -486,7 +489,8 @@ github.com/containerd/log
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright The containerd Authors
+Copyright The containerd Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -497,7 +501,19 @@ github.com/containerd/platforms
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright The containerd Authors
+Copyright The containerd Authors.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/containerd/stargz-snapshotter/estargz
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2019 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -554,7 +570,8 @@ github.com/containers/ocicrypt
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright The containerd Authors.
+Copyright The ocicrypt Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -835,13 +852,37 @@ Copyright 20[[:digit:]]{2} The go-libvirt Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/diskfs/go-diskfs
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2017 Avi Deitcher
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/distribution/reference
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+Copyright The containerd Authors.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/djherbis/times
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2015 Dustin H
+Copyright 2009 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1004,6 +1045,29 @@ SPDX:MIT
 == Copyright
 Copyright (c) 2017 drone.io
 Copyright 2010 The Go Authors. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/dypflying/go-qcow2lib
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2023 Yunpeng Deng
+Copyright (c) Yunpeng Deng(dypflying)
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/elliotwutingfeng/asciiset
+
+== License Type
+SPDX:BSD-3-Clause
+
+== Copyright
+Copyright (c) 2022, Wu Tingfeng
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1480,6 +1544,18 @@ SPDX:MIT
 
 == Copyright
 Copyright (c) 2016 Sergey Kamardin
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/goccy/go-yaml
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2019 Masaaki Goshima
+Copyright 2009 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2087,7 +2163,14 @@ github.com/hashicorp/errwrap
 SPDX:MPL-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2014 Andrew Martin andrew.martin@lovestockleaf.com
+Copyright 2014 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2014 Mitchell Hashimoto xmitchx@gmail.com
+Copyright 2018 GitHub noreply@github.com
+Copyright 2018 Matthew Leon ml@matthewleon.com
+Copyright 2018 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2020 Daniel Nephin dnephin@gmail.com
+Copyright 2020 GitHub noreply@github.com
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2109,7 +2192,32 @@ github.com/hashicorp/hcl
 SPDX:MPL-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2014 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2015 Max Nordlund max.nordlund@gmail.com
+Copyright 2015 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2015 Mitchell Hashimoto xmitchx@gmail.com
+Copyright 2015 Paul Hinze phinze@phinze.com
+Copyright 2015 Ryan Uber ru@ryanuber.com
+Copyright 2016 David Tolnay dtolnay@gmail.com
+Copyright 2016 GitHub noreply@github.com
+Copyright 2016 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2016 Seth Vargo sethvargo@gmail.com
+Copyright 2017 GitHub noreply@github.com
+Copyright 2018 Brian Flad bflad417@gmail.com
+Copyright 2018 French Ben frenchben@docker.com
+Copyright 2018 GitHub noreply@github.com
+Copyright 2018 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2019 GitHub noreply@github.com
+Copyright 2019 Matthew Hooker mwhooker@gmail.com
+Copyright 2019 Michele mdeggies@gmail.com
+Copyright 2019 Nick Ethier nethier@hashicorp.com
+Copyright 2020 GitHub noreply@github.com
+Copyright 2020 Michael Golowka 72365+pcman312@users.noreply.github.com
+Copyright 2020 Mitchell Hashimoto mitchell.hashimoto@gmail.com
+Copyright 2021 GitHub noreply@github.com
+Copyright 2021 Matthew Hooker mwhooker@gmail.com
+Copyright 2021 Michele mdeggies@gmail.com
+Copyright 2021 Seth Vargo seth@sethvargo.com
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2697,6 +2805,17 @@ Copyright (c) 2016 Mail.Ru Group
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/masahiro331/go-xfs-filesystem
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+(no copyright notices found)
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/mattn/go-colorable
 
 == License Type
@@ -2788,6 +2907,17 @@ Copyright 2013 Miek Gieben. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/mistifyio/go-zfs/v3
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright (c) 2014, OmniTI Computer Consulting, Inc.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/mitchellh/copystructure
 
 == License Type
@@ -2838,7 +2968,12 @@ github.com/moby/docker-image-spec
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2021 masahiro331 m_fujimura@r.recruit.co.jp
+Copyright 2021 masahiro331 mur4m4s4.331@gmail.com
+Copyright 2022 masahiro331 m_fujimura@r.recruit.co.jp
+Copyright 2023 GitHub noreply@github.com
+Copyright 2023 masahiro331 m_fujimura@r.recruit.co.jp
+Copyright 2025 GitHub noreply@github.com
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2907,7 +3042,125 @@ github.com/moby/sys/user
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2014 Ahmet Alp Balkan ahmetb@microsoft.com
+Copyright 2014 Alexander Larsson alexl@redhat.com
+Copyright 2014 Alexander Morozov lk4d4@docker.com
+Copyright 2014 Alexandr Morozov lk4d4@docker.com
+Copyright 2014 Alexandr Morozov lk4d4math@gmail.com
+Copyright 2014 Arnaud Porterie arnaud.porterie@docker.com
+Copyright 2014 Erik Dubbelboer erik@dubbelboer.com
+Copyright 2014 Guillaume J. Charmes guillaume.charmes@docker.com
+Copyright 2014 Guillaume J. Charmes guillaume@charmes.net
+Copyright 2014 Jessica Frazelle jess@docker.com
+Copyright 2014 Jessie Frazelle jfrazelle@users.noreply.github.com
+Copyright 2014 Kato Kazuyoshi kato.kazuyoshi@gmail.com
+Copyright 2014 Michael Crosby crosby.michael@gmail.com
+Copyright 2014 Michael Crosby crosbymichael@gmail.com
+Copyright 2014 Michael Crosby michael@crosbymichael.com
+Copyright 2014 Michael Crosby michael@docker.com
+Copyright 2014 Paul Nasrat pnasrat@gmail.com
+Copyright 2014 Peter Waller peter@scraperwiki.com
+Copyright 2014 Solomon Hykes solomon@docker.com
+Copyright 2014 Tianon Gravi admwiggin@gmail.com
+Copyright 2014 Tibor Vass teabee89@gmail.com
+Copyright 2014 Victor Vieux victor.vieux@docker.com
+Copyright 2014 Vincent Batts vbatts@redhat.com
+Copyright 2014 lalyos lalyos@yahoo.com
+Copyright 2014 shuai-z zs.broccoli@gmail.com
+Copyright 2014 unclejack unclejacksons@gmail.com
+Copyright 2015 Alexander Morozov lk4d4math@gmail.com
+Copyright 2015 Antonio Murdaca me@runcom.ninja
+Copyright 2015 Antonio Murdaca runcom@linux.com
+Copyright 2015 Antonio Murdaca runcom@users.noreply.github.com
+Copyright 2015 Arnaud Porterie arnaud.porterie@docker.com
+Copyright 2015 Cezar Sa Espinola cezarsa@gmail.com
+Copyright 2015 Chen Hanxiao chenhanxiao@cn.fujitsu.com
+Copyright 2015 Dan Walsh dwalsh@redhat.com
+Copyright 2015 David Calavera david.calavera@gmail.com
+Copyright 2015 Jamie Hannaford jamie.hannaford@rackspace.com
+Copyright 2015 John Howard jhoward@microsoft.com
+Copyright 2015 Justas Brazauskas brazauskasjustas@gmail.com
+Copyright 2015 Phil Estes estesp@linux.vnet.ibm.com
+Copyright 2015 Sebastiaan van Stijn thaJeztah@users.noreply.github.com
+Copyright 2015 Stefan J. Wernli swernli@microsoft.com
+Copyright 2015 Tim timwangdev@gmail.com
+Copyright 2015 Victor Vieux vieux@docker.com
+Copyright 2015 Vincent Demeester vincent@sbr.pm
+Copyright 2015 Yan Feng yanfeng2@huawei.com
+Copyright 2016 Aleksa Sarai asarai@suse.com
+Copyright 2016 Alexander Morozov lk4d4@docker.com
+Copyright 2016 Amit Krishnan amit.krishnan@oracle.com
+Copyright 2016 Brian Goff cpuguy83@gmail.com
+Copyright 2016 Daniel Nephin dnephin@docker.com
+Copyright 2016 Darren Stahl darst@microsoft.com
+Copyright 2016 Jessica Frazelle acidburn@docker.com
+Copyright 2016 Jhon Honce jhonce@redhat.com
+Copyright 2016 John Howard jhoward@microsoft.com
+Copyright 2016 Sebastiaan van Stijn thaJeztah@users.noreply.github.com
+Copyright 2016 Victor Vieux victorvieux@gmail.com
+Copyright 2016 Yong Tang yong.tang.github@outlook.com
+Copyright 2017 Brian Goff cpuguy83@gmail.com
+Copyright 2017 Christopher Jones tophj@linux.vnet.ibm.com
+Copyright 2017 Daniel Nephin dnephin@docker.com
+Copyright 2017 Derek McGowan derek@mcgstyle.net
+Copyright 2017 GitHub noreply@github.com
+Copyright 2017 John Howard jhoward@microsoft.com
+Copyright 2017 Justin Cormack justin.cormack@docker.com
+Copyright 2017 Kenfe-Mickael Laventure mickael.laventure@gmail.com
+Copyright 2017 Michael Crosby crosbymichael@gmail.com
+Copyright 2017 Naveed Jamil naveed.jamil@tenpearls.com
+Copyright 2017 Sebastiaan van Stijn github@gone.nl
+Copyright 2017 Steven Hartland steven.hartland@multiplay.co.uk
+Copyright 2017 Tobias Klauser tklauser@distanz.ch
+Copyright 2017 Vincent Demeester vincent@sbr.pm
+Copyright 2017 Yong Tang yong.tang.github@outlook.com
+Copyright 2017 phineas phin@phineas.io
+Copyright 2017 unclejack unclejack@users.noreply.github.com
+Copyright 2017 yuexiao-wang wang.yuexiao@zte.com.cn
+Copyright 2018 Brian Goff cpuguy83@gmail.com
+Copyright 2018 Daniel Nephin dnephin@docker.com
+Copyright 2018 Fabian Kramm kramm@covexo.com
+Copyright 2018 GitHub noreply@github.com
+Copyright 2018 Kasper Fabæch Brandt poizan@poizan.dk
+Copyright 2018 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2018 Oliver Reason oli@overrateddev.co
+Copyright 2018 Sebastiaan van Stijn github@gone.nl
+Copyright 2018 Vincent Demeester vincent@sbr.pm
+Copyright 2019 GitHub noreply@github.com
+Copyright 2019 John Howard jhoward@microsoft.com
+Copyright 2019 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2019 Olli Janatuinen olli.janatuinen@gmail.com
+Copyright 2019 Sebastiaan van Stijn github@gone.nl
+Copyright 2019 Stig Larsson stig@larsson.dev
+Copyright 2020 Aleksa Sarai cyphar@cyphar.com
+Copyright 2020 GitHub noreply@github.com
+Copyright 2020 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2020 Sebastiaan van Stijn github@gone.nl
+Copyright 2020 Shengjing Zhu zhsj@debian.org
+Copyright 2020 Tobias Klauser tklauser@distanz.ch
+Copyright 2020 liuxiaodong liuxiaodong@loongson.cn
+Copyright 2021 Eng Zer Jun engzerjun@gmail.com
+Copyright 2021 GitHub noreply@github.com
+Copyright 2021 Hajime Tazaki thehajime@gmail.com
+Copyright 2021 Kazuyoshi Kato katokazu@amazon.com
+Copyright 2021 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2021 Muhammad Kaisar Arkhan hi@yukiisbo.red
+Copyright 2021 Sebastiaan van Stijn github@gone.nl
+Copyright 2022 Artem Khramov akhramov@pm.me
+Copyright 2022 GitHub noreply@github.com
+Copyright 2022 Kathryn Baldauf kabaldau@microsoft.com
+Copyright 2022 Kazuyoshi Kato katokazu@amazon.com
+Copyright 2022 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2022 Manu Gupta manugupt1@gmail.com
+Copyright 2022 Sebastiaan van Stijn github@gone.nl
+Copyright 2022 谢致邦 (XIE Zhibang) Yeking@Red54.com
+Copyright 2023 Aleksa Sarai cyphar@cyphar.com
+Copyright 2023 GitHub noreply@github.com
+Copyright 2023 Kir Kolyshkin kolyshkin@gmail.com
+Copyright 2023 Sebastiaan van Stijn github@gone.nl
+Copyright 2023 Tianon Gravi admwiggin@gmail.com
+Copyright 2024 GitHub noreply@github.com
+Copyright 2024 Sebastiaan van Stijn github@gone.nl
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2941,7 +3194,9 @@ github.com/modern-go/reflect2
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2018 GitHub noreply@github.com
+Copyright 2018 Tao Wen taowen@gmail.com
+Copyright 2018 kr1sten0 zhqy0807@gmail.com
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3267,6 +3522,47 @@ Copyright (c) 2011-2012 Peter Bourgon
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/pierrec/lz4/v4
+
+== License Type
+=== BSD-3-Clause-09ece85f
+Copyright (c) 2015, Pierre Curto
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of xxHash nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+
+== Copyright
+Copyright (c) 2015, Pierre Curto
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/pjbgf/sha1cd
 
 == License Type
@@ -3286,6 +3582,45 @@ SPDX:BSD-2-Clause
 
 == Copyright
 Copyright (c) 2015, Dave Cheney <dave@cheney.net>
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/pkg/xattr
+
+== License Type
+=== BSD-2-Clause-4efd8bdb
+Copyright (c) 2012 Dave Cheney. All rights reserved.
+Copyright (c) 2014 Kuba Podgórski. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+== Copyright
+Copyright (c) 2012 Dave Cheney. All rights reserved.
+Copyright (c) 2014 Kuba Podgórski. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3763,7 +4098,7 @@ github.com/stefanberger/go-pkcs11uri
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4058,7 +4393,24 @@ go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2016 Vladimir Bauer vbauerster@gmail.com
+Copyright 2017 Alexander Neumann alexander@bumpern.de
+Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
+Copyright 2017 GitHub noreply@github.com
+Copyright 2017 Vladimir Bauer vbauerster@gmail.com
+Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
+Copyright 2018 Vladimir Bauer vbauerster@gmail.com
+Copyright 2019 GitHub noreply@github.com
+Copyright 2019 Vladimir Bauer vbauerster@gmail.com
+Copyright 2020 GitHub noreply@github.com
+Copyright 2020 Ubuntu asellappen@yahoo.com
+Copyright 2020 Vladimir Bauer vbauerster@gmail.com
+Copyright 2021 GitHub noreply@github.com
+Copyright 2021 Samuel-Turner samuel.turner@ibm.com
+Copyright 2021 Vladimir Bauer vbauerster@gmail.com
+Copyright 2022 Vladimir Bauer vbauerster@gmail.com
+Copyright 2023 Vladimir Bauer vbauerster@gmail.com
+Copyright 2024 Vladimir Bauer vbauerster@gmail.com
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4080,7 +4432,9 @@ go.opentelemetry.io/otel/exporters/otlp/otlptrace
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2009 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4091,7 +4445,9 @@ go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2009 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4113,7 +4469,9 @@ go.opentelemetry.io/otel/sdk
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2009 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4139,6 +4497,42 @@ Copyright 2016 Google Inc. All Rights Reserved.
 Copyright 2019, OpenTelemetry Authors
 Copyright 2020, OpenTelemetry Authors
 Copyright 2023, OpenTelemetry Authors
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+go.uber.org/multierr
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2017 Uber Technologies, Inc.
+Copyright (c) 2017-2021 Uber Technologies, Inc.
+Copyright (c) 2017-2023 Uber Technologies, Inc.
+Copyright (c) 2020 Uber Technologies, Inc.
+Copyright (c) 2021 Uber Technologies, Inc.
+Copyright (c) 2023 Uber Technologies, Inc.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+go.uber.org/zap
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2016 Uber Technologies, Inc.
+Copyright (c) 2016, 2017 Uber Technologies, Inc.
+Copyright (c) 2016-2017 Uber Technologies, Inc.
+Copyright (c) 2016-2022 Uber Technologies, Inc.
+Copyright (c) 2017 Uber Technologies, Inc.
+Copyright (c) 2018 Uber Technologies, Inc.
+Copyright (c) 2020 Uber Technologies, Inc.
+Copyright (c) 2021 Uber Technologies, Inc.
+Copyright (c) 2022 Uber Technologies, Inc.
+Copyright (c) 2023 Uber Technologies, Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4807,13 +5201,55 @@ shall terminate as of the date such litigation is filed.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+golang.org/x/xerrors
+
+== License Type
+SPDX:BSD-3-Clause--modified-by-Google
+
+== Copyright
+Copyright (c) 2019 The Go Authors. All rights reserved.
+Copyright 2011 The Go Authors. All rights reserved.
+Copyright 2012 The Go Authors. All rights reserved.
+Copyright 2018 The Go Authors. All rights reserved.
+Copyright 2019 The Go Authors. All rights reserved.
+
+== Patents
+Additional IP Rights Grant (Patents)
+
+"This implementation" means the copyrightable works distributed by
+Google as part of the Go project.
+
+Google hereby grants to You a perpetual, worldwide, non-exclusive,
+no-charge, royalty-free, irrevocable (except as stated in this section)
+patent license to make, have made, use, offer to sell, sell, import,
+transfer and otherwise run, modify and propagate the contents of this
+implementation of Go, where such license applies only to those patent
+claims, both currently owned or controlled by Google and acquired in
+the future, licensable by Google that are necessarily infringed by this
+implementation of Go.  This grant does not include claims that would be
+infringed only as a consequence of further modification of this
+implementation.  If you or your agent or exclusive licensee institute or
+order or agree to the institution of patent litigation against any
+entity (including a cross-claim or counterclaim in a lawsuit) alleging
+that this implementation of Go or any code incorporated within this
+implementation of Go constitutes direct or contributory patent
+infringement, or inducement of patent infringement, then any patent
+rights granted to you under this License for this implementation of Go
+shall terminate as of the date such litigation is filed.
+
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 gomodules.xyz/jsonpatch/v2
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright 2009 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -6740,3 +7176,5 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>
+
+
