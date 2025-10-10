@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//go:embed all:charts
 var charts embed.FS
 
 func FindCandidates(prefix string) ([]string, error) {

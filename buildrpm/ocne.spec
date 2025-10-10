@@ -13,7 +13,6 @@ License: UPL 1.0
 Group: Development/Tools
 
 Source0: %{name}-%{version}.tar.bz2
-Source1: 0001-Add-go-embed-all-charts.patch
 
 BuildRequires: golang
 BuildRequires: helm >= 3.13.0
@@ -32,8 +31,6 @@ clusters and the application in them.
 
 %prep
 %setup -q
-
-git am %{SOURCE1}
 
 %build
 export GOPATH=`pwd`/go
