@@ -126,8 +126,8 @@ unit-test: cli
 	$(GO) test -v  ./...
 
 clean-charts:
-	rm $(CHART_EMBED)/*.tgz
-	rm $(CHART_EMBED)/*.yaml
+	rm -f $(CHART_EMBED)/*.tgz
+	rm -f $(CHART_EMBED)/*.yaml
 	rm -rf $(CHART_GIT_DIR)
 
 clean: clean-charts ## Delete output from prior builds
