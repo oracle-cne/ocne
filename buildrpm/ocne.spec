@@ -57,7 +57,6 @@ if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
 fi
 
 # Build the CLI
-export CATALOG_BRANCH=254-add-kubernetes-133-charts
 make CATALOG_REPO=%{catalog_repo} cli
 
 %install
