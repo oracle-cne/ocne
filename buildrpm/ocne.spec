@@ -72,6 +72,9 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+* Tue Nov 04 2025 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.0
+- Support for Kubernetes 1.33
+
 * Sat Jun 28 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.2.0
 - Support for Kubernetes 1.32
 - Native support for Oracle Linux Virtualization Manager via the olvm provider
