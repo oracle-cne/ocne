@@ -79,7 +79,7 @@ func init() {
 	kubernetesVersions["1.30"] = kubernetesVersions["1.30.3"]
 	kubernetesVersions["1.31"] = kubernetesVersions["1.31.0"]
 	kubernetesVersions["1.32"] = kubernetesVersions["1.32.0"]
-        kubernetesVersions["1.33"] = kubernetesVersions["1.33.5"]
+	kubernetesVersions["1.33"] = kubernetesVersions["1.33.5"]
 }
 
 func GetKubernetesVersions(ver string) (KubernetesVersions, error) {
