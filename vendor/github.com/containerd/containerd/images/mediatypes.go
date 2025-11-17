@@ -57,9 +57,6 @@ const (
 
 	MediaTypeImageLayerEncrypted     = ocispec.MediaTypeImageLayer + "+encrypted"
 	MediaTypeImageLayerGzipEncrypted = ocispec.MediaTypeImageLayerGzip + "+encrypted"
-
-	// In-toto attestation
-	MediaTypeInToto = "application/vnd.in-toto+json"
 )
 
 // DiffCompression returns the compression as defined by the layer diff media
@@ -187,16 +184,6 @@ func IsKnownConfig(mt string) bool {
 		return true
 	}
 	return false
-}
-
-// IsAttestationType returns true if the media type is an attestation type
-func IsAttestationType(mt string) bool {
-	switch mt {
-	case MediaTypeInToto:
-		return true
-	default:
-		return false
-	}
 }
 
 // ChildGCLabels returns the label for a given descriptor to reference it
