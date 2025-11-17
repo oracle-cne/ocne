@@ -21,7 +21,6 @@ SOFTWARE.
 
 import (
 	"bytes"
-	//"compress/zlib"
 	"compress/flate"
 	"container/list"
 	"context"
@@ -659,8 +658,21 @@ func qcow2_zlib_decompress(bs *BlockDriverState, dest *[]byte, src []byte) error
 	return nil
 }
 
-func qcow2_readv_compressed(bs *BlockDriverState, l2Entry uint64, offset uint64, bytes uint64, qiov *QEMUIOVector, qiovOffset uint64) error {
+type cacheLine struct {
+	l2Entry uint64
+	buf []byte
+}
 
+type cache struct {
+	idx int
+	cache []*cacheLine
+}
+
+var compCache cache = cache{
+	cache: make([]*cacheLine, 50),
+}
+
+func qcow2_readv_compressed(bs *BlockDriverState, l2Entry uint64, offset uint64, bytes uint64, qiov *QEMUIOVector, qiovOffset uint64) error {
 	s := bs.opaque.(*BDRVQcow2State)
 	offsetInCluster := offset_into_cluster(s, offset)
 	var cOffset uint64
@@ -668,19 +680,40 @@ func qcow2_readv_compressed(bs *BlockDriverState, l2Entry uint64, offset uint64,
 
 	qcow2_parse_compressed_l2_entry(bs, l2Entry, &cOffset,  &cSize)
 
-	bufBytes := make([]byte, cSize * 2, cSize * 2)
-	buf := unsafe.Pointer(&bufBytes[0])
-
-	err := bdrv_pread(bs.current, cOffset, buf, uint64(cSize))
-	if err != nil {
-		return err
+	// Check the cache.  If the entry is already in the cache, use it.
+	// If not, read the data and kick out an existing entry if the
+	// cache is full.
+	var buf_out []byte
+	for _, cl := range compCache.cache {
+		if cl == nil {
+			continue
+		}
+		if l2Entry == cl.l2Entry {
+			buf_out = cl.buf
+			break
+		}
 	}
+	if buf_out == nil {
+		bufBytes := make([]byte, cSize * 2, cSize * 2)
+		buf := unsafe.Pointer(&bufBytes[0])
 
-	// Only try zlib for now
-	buf_out := make([]byte, 0, cSize)
-	err = qcow2_zlib_decompress(bs, &buf_out, bufBytes)
-	if err != nil {
-		return err
+		err := bdrv_pread(bs.current, cOffset, buf, uint64(cSize))
+		if err != nil {
+			return err
+		}
+
+		// Only try zlib for now
+		buf_out = make([]byte, 0, cSize)
+		err = qcow2_zlib_decompress(bs, &buf_out, bufBytes)
+		if err != nil {
+			return err
+		}
+
+		compCache.cache[compCache.idx] = &cacheLine{
+			l2Entry: l2Entry,
+			buf: buf_out,
+		}
+		compCache.idx = (compCache.idx + 1) % len(compCache.cache)
 	}
 
 	qemu_iovec_from_buf(qiov, qiovOffset, unsafe.Pointer(&buf_out[offsetInCluster]), uint64(len(buf_out)))

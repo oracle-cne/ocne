@@ -491,7 +491,7 @@ github.com/docker/go-units
 github.com/drone/envsubst/v2
 github.com/drone/envsubst/v2/parse
 github.com/drone/envsubst/v2/path
-# github.com/dypflying/go-qcow2lib v1.0.1-0.20240602125421-ea63654c61a5
+# github.com/dypflying/go-qcow2lib v1.0.1-0.20240602125421-ea63654c61a5 => github.com/oracle-cne/go-qcow2lib v1.0.2
 ## explicit; go 1.19
 github.com/dypflying/go-qcow2lib/qcow2
 # github.com/elliotwutingfeng/asciiset v0.0.0-20230602022725-51bbb787efab

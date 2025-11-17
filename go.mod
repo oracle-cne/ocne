@@ -268,3 +268,22 @@ require (
 )
 
 replace github.com/cyphar/filepath-securejoin v0.6.0 => github.com/cyphar/filepath-securejoin v0.4.1
+
+replace github.com/dypflying/go-qcow2lib v1.0.1-0.20240602125421-ea63654c61a5 => github.com/oracle-cne/go-qcow2lib v1.0.2
+
+exclude (
+	k8s.io/cloud-provider v0.0.0
+	k8s.io/controller-manager v0.0.0
+	k8s.io/csi-translation-lib v0.0.0
+	k8s.io/dynamic-resource-allocation v0.0.0
+	k8s.io/endpointslice v0.0.0
+	k8s.io/kube-aggregator v0.0.0
+	k8s.io/kube-controller-manager v0.0.0
+	k8s.io/kube-proxy v0.0.0
+	k8s.io/kube-scheduler v0.0.0
+	k8s.io/kubelet v0.0.0
+	k8s.io/legacy-cloud-providers v0.0.0
+	k8s.io/mount-utils v0.0.0
+	k8s.io/pod-security-admission v0.0.0
+	k8s.io/sample-apiserver v0.0.0
+)
