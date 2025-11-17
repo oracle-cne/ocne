@@ -203,18 +203,16 @@ Copyright (c) 2014-2020 Alex Saskevich
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/aws/aws-sdk-go
+github.com/aws/aws-sdk-go-v2
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
 Copyright (c) 2009 The Go Authors. All rights reserved.
-Copyright (c) 2016 Carl Jackson
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2014-2015 Stripe, Inc.
 Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 == Notices
 AWS SDK for Go
@@ -688,6 +686,7 @@ Copyright 2023 CoreOS, Inc.
 Copyright 2023 Red Hat
 Copyright 2023 Red Hat, Inc.
 Copyright 2024 CoreOS, Inc.
+Copyright 2025 UpCloud
 
 == Notices
 CoreOS Project
@@ -822,42 +821,6 @@ Copyright 2009 The Go Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/docker/cli
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2010 The Go Authors. All rights reserved.
-Copyright 2012-2017 Docker, Inc.
-Copyright 2013-2017 Docker, Inc.
-
-== Notices
-Docker
-Copyright 2012-2017 Docker, Inc.
-
-This product includes software developed at Docker, Inc. (https://www.docker.com).
-
-This product contains software (https://github.com/creack/pty) developed
-by Keith Rarick, licensed under the MIT License.
-
-The following is courtesy of our legal counsel:
-
-
-Use and transfer of Docker may be subject to certain restrictions by the
-United States and other governments.
-It is your responsibility to ensure that your use and/or transfer does not
-violate applicable laws.
-
-For more information, see https://www.bis.doc.gov
-
-See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
-
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/docker/distribution
 
 == License Type
@@ -924,38 +887,6 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2015 Docker, Inc.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/docker/go-metrics
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2012-2015 Docker, Inc.
-Copyright 2013-2016 Docker, Inc.
-Copyright © 2016 Docker, Inc. All rights reserved, except as follows. Code is released under the Apache 2.0 license. The README.md file, and files in the "docs" folder are licensed under the Creative Commons Attribution 4.0 International License under the terms and conditions set forth in the file "LICENSE.docs". You may obtain a duplicate copy of the same license, titled CC-BY-SA-4.0, at http://creativecommons.org/licenses/by/4.0/.
-
-== Notices
-Docker
-Copyright 2012-2015 Docker, Inc.
-
-This product includes software developed at Docker, Inc. (https://www.docker.com).
-
-The following is courtesy of our legal counsel:
-
-
-Use and transfer of Docker may be subject to certain restrictions by the
-United States and other governments.
-It is your responsibility to ensure that your use and/or transfer does not
-violate applicable laws.
-
-For more information, please see https://www.bis.doc.gov
-
-See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
-
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1631,7 +1562,7 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2017 Google LLC. All Rights Reserved.
-Copyright 2017-2022, Google LLC.
+Copyright 2017-2025, Google LLC.
 Copyright 2019 Google LLC. All Rights Reserved.
 Copyright 2020 Google LLC. All Rights Reserved.
 Copyright 2022 Google LLC. All Rights Reserved.
@@ -1713,17 +1644,6 @@ SPDX:BSD-3-Clause--modified-by-Google
 == Copyright
 Copyright (c) 2013 Google. All rights reserved.
 Copyright 2013 The Go Authors. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/google/shlex
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2012 Google Inc. All Rights Reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2566,17 +2486,6 @@ Copyright 2022 masahiro331 m_fujimura@r.recruit.co.jp
 Copyright 2023 GitHub noreply@github.com
 Copyright 2023 masahiro331 m_fujimura@r.recruit.co.jp
 Copyright 2025 GitHub noreply@github.com
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/moby/locker
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2013-2018 Docker, Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3445,6 +3354,17 @@ Copyright (c) 2023 Márk Sági-Kazár <mark.sagikazar@gmail.com>
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/santhosh-tekuri/jsonschema/v6
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/seancfoley/bintree
 
 == License Type
@@ -3699,7 +3619,7 @@ github.com/stefanberger/go-pkcs11uri
 SPDX:Apache-2.0
 
 == Copyright
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3840,7 +3760,7 @@ github.com/vbauerster/mpb/v8
 SPDX:Unlicense
 
 == Copyright
-(no copyright notices found)
+Copyright IBM Corporation, 2020
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3876,45 +3796,6 @@ SPDX:Apache-2.0
 == Copyright
 Copyright (c) 2014 David Mzareulyan
 Copyright 2015, Sander van Harmelen
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonpointer
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonreference
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonschema
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2013 MongoDB, Inc.
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-Copyright 2017 johandorland ( https://github.com/johandorland )
-Copyright 2018 johandorland ( https://github.com/johandorland )
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3971,24 +3852,7 @@ go.opentelemetry.io/auto/sdk
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2016 Vladimir Bauer vbauerster@gmail.com
-Copyright 2017 Alexander Neumann alexander@bumpern.de
-Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
-Copyright 2017 GitHub noreply@github.com
-Copyright 2017 Vladimir Bauer vbauerster@gmail.com
-Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
-Copyright 2018 Vladimir Bauer vbauerster@gmail.com
-Copyright 2019 GitHub noreply@github.com
-Copyright 2019 Vladimir Bauer vbauerster@gmail.com
-Copyright 2020 GitHub noreply@github.com
-Copyright 2020 Ubuntu asellappen@yahoo.com
-Copyright 2020 Vladimir Bauer vbauerster@gmail.com
-Copyright 2021 GitHub noreply@github.com
-Copyright 2021 Samuel-Turner samuel.turner@ibm.com
-Copyright 2021 Vladimir Bauer vbauerster@gmail.com
-Copyright 2022 Vladimir Bauer vbauerster@gmail.com
-Copyright 2023 Vladimir Bauer vbauerster@gmail.com
-Copyright 2024 Vladimir Bauer vbauerster@gmail.com
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3999,7 +3863,48 @@ go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 SPDX:Apache-2.0
 
 == Copyright
-(no copyright notices found)
+Copyright (C) 1991, 1999 Free Software Foundation, Inc.
+Copyright (C) 2013 Blake Mizerany
+Copyright (C) 2013-2015 Alexei Starovoitov <ast@kernel.org>
+Copyright (C) 2014-2019, Matt Butcher and Matt Farina
+Copyright (C) 2015 Huawei Inc.
+Copyright (C) 2015 Wang Nan <wangnan0@huawei.com>
+Copyright (C) 2021 Facebook
+Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright (c) 2009,2014 Google Inc. All rights reserved.
+Copyright (c) 2011 The Snappy-Go Authors. All rights reserved.
+Copyright (c) 2011, Open Knowledge Foundation Ltd.
+Copyright (c) 2012 The Go Authors. All rights reserved.
+Copyright (c) 2013 The Go Authors. All rights reserved.
+Copyright (c) 2013, The GoGo Authors. All rights reserved.
+Copyright (c) 2014 Cenk Altı
+Copyright (c) 2015 Klaus Post
+Copyright (c) 2015 The Libbpf Authors. All rights reserved.
+Copyright (c) 2015, Dave Cheney <dave@cheney.net>
+Copyright (c) 2015, Gengo, Inc.
+Copyright (c) 2016 Caleb Spare
+Copyright (c) 2016 json-iterator
+Copyright (c) 2017 Nathan Sweet
+Copyright (c) 2017-2021 Uber Technologies, Inc.
+Copyright (c) 2018 - 2019 Intel Corporation.
+Copyright (c) 2018 The Go Authors. All rights reserved.
+Copyright (c) 2018, 2019 Cloudflare
+Copyright (c) 2019 Authors of Cilium
+Copyright (c) 2019 Facebook
+Copyright (c) 2019 Klaus Post. All rights reserved.
+Copyright 2009 The Go Authors.
+Copyright 2010 The Go Authors
+Copyright 2010 The Go Authors. All rights reserved.
+Copyright 2012-2015 The Prometheus Authors
+Copyright 2013-2015 Blake Mizerany, Björn Rabenstein
+Copyright 2014 gRPC authors.
+Copyright 2014-2015 The Prometheus Authors
+Copyright 2015 The Go Authors.
+Copyright 2015 The Prometheus Authors
+Copyright 2016 The filepathx Authors
+Copyright 2016-2017 The New York Times Company
+Copyright 2023 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4010,13 +3915,7 @@ go.opentelemetry.io/otel
 SPDX:Apache-2.0
 
 == Copyright
-Copyright (c) 2016-2017 Uber Technologies, Inc.
-Copyright (c) 2017 Uber Technologies, Inc.
-Copyright (c) 2021 The Jaeger Authors.
-Copyright 2014 gRPC authors.
-Copyright 2017, OpenCensus Authors
-Copyright 2023 The Go Authors. All rights reserved.
-Copyright The OpenTelemetry Authors
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4916,7 +4815,7 @@ google.golang.org/genproto/googleapis/rpc
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2024 Google LLC
+Copyright 2025 Google LLC
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5236,6 +5135,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5302,6 +5202,7 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5393,7 +5294,7 @@ SPDX:Apache-2.0
 Copyright 2013 Google Inc. All Rights Reserved.
 Copyright 2014 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
-Copyright 2020 Intel Coporation.
+Copyright 2020 Intel Corporation.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
@@ -5424,6 +5325,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2024 go-swagger maintainers
 Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
@@ -5506,7 +5408,7 @@ Copyright 2024 The Kubernetes Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-oras.land/oras-go
+oras.land/oras-go/v2
 
 == License Type
 SPDX:Apache-2.0
@@ -5895,7 +5797,7 @@ Submitted on behalf of a third-party: @disconnect3d (Disconnect3d)
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-sigs.k8s.io/structured-merge-diff/v4
+sigs.k8s.io/structured-merge-diff/v6
 
 == License Type
 SPDX:Apache-2.0
@@ -5905,6 +5807,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
