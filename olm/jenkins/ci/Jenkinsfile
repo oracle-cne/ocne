@@ -4,7 +4,6 @@ import com.oracle.olcne.pipeline.BranchPattern
 olcnePipeline(
     branchPattern: new BranchPattern(master: 'release/.*', feature: '(?!^release/.*$)(^.*$)'),
     customStages: [container: [enabled: false]],
-    golang: '1.23.9',
     platforms: ['ol8', 'ol9'],
     architectures: ['x86_64', 'aarch64'],
     ol8ModulesToDisable: ['go-toolset:ol8'],

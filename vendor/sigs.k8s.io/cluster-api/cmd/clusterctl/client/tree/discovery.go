@@ -19,16 +19,15 @@ package tree
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	addonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/controllers/external"
-	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
-	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	"sigs.k8s.io/cluster-api/internal/contract"
 	"sigs.k8s.io/cluster-api/util"
 )
 
@@ -56,6 +55,11 @@ type DiscoverOptions struct {
 	// Grouping groups machine objects in case the ready conditions
 	// have the same Status, Severity and Reason.
 	Grouping bool
+
+	// V1Beta1 instructs tree to use V1Beta1 conditions.
+	//
+	// Deprecated: This field will be removed when v1beta1 will be dropped.
+	V1Beta1 bool
 }
 
 func (d DiscoverOptions) toObjectTreeOptions() ObjectTreeOptions {
@@ -84,19 +88,28 @@ func Discovery(ctx context.Context, c client.Client, namespace, name string, opt
 	tree := NewObjectTree(cluster, options.toObjectTreeOptions())
 
 	// Adds cluster infra
-	clusterInfra, err := external.Get(ctx, c, cluster.Spec.InfrastructureRef, cluster.Namespace)
-	if err != nil {
-		return nil, errors.Wrap(err, "get InfraCluster reference from Cluster")
+	clusterInfra, err := external.GetObjectFromContractVersionedRef(ctx, c, cluster.Spec.InfrastructureRef, cluster.Namespace)
+	if err == nil {
+		tree.Add(cluster, clusterInfra, ObjectMetaName("ClusterInfrastructure"))
 	}
-	tree.Add(cluster, clusterInfra, ObjectMetaName("ClusterInfrastructure"))
 
 	if options.ShowClusterResourceSets {
 		addClusterResourceSetsToObjectTree(ctx, c, cluster, tree)
 	}
 
 	// Adds control plane
-	controlPlane, err := external.Get(ctx, c, cluster.Spec.ControlPlaneRef, cluster.Namespace)
+	controlPlane, err := external.GetObjectFromContractVersionedRef(ctx, c, cluster.Spec.ControlPlaneRef, cluster.Namespace)
 	if err == nil {
+		// Keep track that this objects abides to the Cluster API control plane contract,
+		// so the consumers of the ObjectTree will know which info are available on this unstructured object
+		// and how to extract them.
+		contractVersion, err := contract.GetContractVersion(ctx, c, controlPlane.GroupVersionKind().GroupKind())
+		if err != nil {
+			return nil, err
+		}
+
+		addAnnotation(controlPlane, ObjectContractAnnotation, "ControlPlane")
+		addAnnotation(controlPlane, ObjectContractVersionAnnotation, contractVersion)
 		addControlPlane(cluster, controlPlane, tree, options)
 	}
 
@@ -111,14 +124,14 @@ func Discovery(ctx context.Context, c client.Client, namespace, name string, opt
 		machineMap[m.Name] = true
 
 		if visible {
-			if (m.Spec.InfrastructureRef != corev1.ObjectReference{}) {
-				if machineInfra, err := external.Get(ctx, c, &m.Spec.InfrastructureRef, cluster.Namespace); err == nil {
+			if (m.Spec.InfrastructureRef != clusterv1.ContractVersionedObjectReference{}) {
+				if machineInfra, err := external.GetObjectFromContractVersionedRef(ctx, c, m.Spec.InfrastructureRef, m.Namespace); err == nil {
 					tree.Add(m, machineInfra, ObjectMetaName("MachineInfrastructure"), NoEcho(true))
 				}
 			}
 
-			if m.Spec.Bootstrap.ConfigRef != nil {
-				if machineBootstrap, err := external.Get(ctx, c, m.Spec.Bootstrap.ConfigRef, cluster.Namespace); err == nil {
+			if m.Spec.Bootstrap.ConfigRef.IsDefined() {
+				if machineBootstrap, err := external.GetObjectFromContractVersionedRef(ctx, c, m.Spec.Bootstrap.ConfigRef, m.Namespace); err == nil {
 					tree.Add(m, machineBootstrap, ObjectMetaName("BootstrapConfig"), NoEcho(true))
 				}
 			}
@@ -154,7 +167,7 @@ func Discovery(ctx context.Context, c client.Client, namespace, name string, opt
 
 	if len(machinePoolList.Items) > 0 { // Add MachinePool objects
 		tree.Add(cluster, workers)
-		addMachinePoolsToObjectTree(ctx, c, cluster.Namespace, workers, machinePoolList, machinesList, tree, addMachineFunc)
+		addMachinePoolsToObjectTree(ctx, c, workers, machinePoolList, machinesList, tree, addMachineFunc)
 	}
 
 	// Handles orphan machines.
@@ -217,7 +230,7 @@ func addControlPlane(cluster *clusterv1.Cluster, controlPlane *unstructured.Unst
 	}
 }
 
-func addMachineDeploymentToObjectTree(ctx context.Context, c client.Client, cluster *clusterv1.Cluster, workers *unstructured.Unstructured, machinesList *clusterv1.MachineList, tree *ObjectTree, options DiscoverOptions, addMachineFunc func(parent client.Object, m *clusterv1.Machine)) error {
+func addMachineDeploymentToObjectTree(ctx context.Context, c client.Client, cluster *clusterv1.Cluster, workers *NodeObject, machinesList *clusterv1.MachineList, tree *ObjectTree, options DiscoverOptions, addMachineFunc func(parent client.Object, m *clusterv1.Machine)) error {
 	// Adds worker machines.
 	machinesDeploymentList, err := getMachineDeploymentsInCluster(ctx, c, cluster.Namespace, cluster.Name)
 	if err != nil {
@@ -246,12 +259,30 @@ func addMachineDeploymentToObjectTree(ctx context.Context, c client.Client, clus
 			}
 
 			// md.Spec.Template.Spec.Bootstrap.ConfigRef is optional
-			if md.Spec.Template.Spec.Bootstrap.ConfigRef != nil {
-				bootstrapTemplateRefObject := ObjectReferenceObject(md.Spec.Template.Spec.Bootstrap.ConfigRef)
+			if md.Spec.Template.Spec.Bootstrap.ConfigRef.IsDefined() {
+				apiVersion, err := contract.GetAPIVersion(ctx, c, md.Spec.Template.Spec.Bootstrap.ConfigRef.GroupKind())
+				if err != nil {
+					return err
+				}
+				bootstrapTemplateRefObject := ObjectReferenceObject(&corev1.ObjectReference{
+					APIVersion: apiVersion,
+					Kind:       md.Spec.Template.Spec.Bootstrap.ConfigRef.Kind,
+					Namespace:  md.Namespace,
+					Name:       md.Spec.Template.Spec.Bootstrap.ConfigRef.Name,
+				})
 				tree.Add(templateParent, bootstrapTemplateRefObject, ObjectMetaName("BootstrapConfigTemplate"))
 			}
 
-			machineTemplateRefObject := ObjectReferenceObject(&md.Spec.Template.Spec.InfrastructureRef)
+			apiVersion, err := contract.GetAPIVersion(ctx, c, md.Spec.Template.Spec.InfrastructureRef.GroupKind())
+			if err != nil {
+				return err
+			}
+			machineTemplateRefObject := ObjectReferenceObject(&corev1.ObjectReference{
+				APIVersion: apiVersion,
+				Kind:       md.Spec.Template.Spec.InfrastructureRef.Kind,
+				Namespace:  md.Namespace,
+				Name:       md.Spec.Template.Spec.InfrastructureRef.Name,
+			})
 			tree.Add(templateParent, machineTemplateRefObject, ObjectMetaName("MachineInfrastructureTemplate"))
 		}
 
@@ -275,17 +306,17 @@ func addMachineDeploymentToObjectTree(ctx context.Context, c client.Client, clus
 	return nil
 }
 
-func addMachinePoolsToObjectTree(ctx context.Context, c client.Client, namespace string, workers *unstructured.Unstructured, machinePoolList *expv1.MachinePoolList, machinesList *clusterv1.MachineList, tree *ObjectTree, addMachineFunc func(parent client.Object, m *clusterv1.Machine)) {
+func addMachinePoolsToObjectTree(ctx context.Context, c client.Client, workers *NodeObject, machinePoolList *clusterv1.MachinePoolList, machinesList *clusterv1.MachineList, tree *ObjectTree, addMachineFunc func(parent client.Object, m *clusterv1.Machine)) {
 	for i := range machinePoolList.Items {
 		mp := &machinePoolList.Items[i]
 		_, visible := tree.Add(workers, mp, GroupingObject(true))
 
 		if visible {
-			if machinePoolBootstrap, err := external.Get(ctx, c, mp.Spec.Template.Spec.Bootstrap.ConfigRef, namespace); err == nil {
+			if machinePoolBootstrap, err := external.GetObjectFromContractVersionedRef(ctx, c, mp.Spec.Template.Spec.Bootstrap.ConfigRef, mp.Namespace); err == nil {
 				tree.Add(mp, machinePoolBootstrap, ObjectMetaName("BootstrapConfig"), NoEcho(true))
 			}
 
-			if machinePoolInfra, err := external.Get(ctx, c, &mp.Spec.Template.Spec.InfrastructureRef, namespace); err == nil {
+			if machinePoolInfra, err := external.GetObjectFromContractVersionedRef(ctx, c, mp.Spec.Template.Spec.InfrastructureRef, mp.Namespace); err == nil {
 				tree.Add(mp, machinePoolInfra, ObjectMetaName("MachinePoolInfrastructure"), NoEcho(true))
 			}
 		}
@@ -360,12 +391,12 @@ func getMachineSetsInCluster(ctx context.Context, c client.Client, namespace, na
 	return machineSetList, nil
 }
 
-func getMachinePoolsInCluster(ctx context.Context, c client.Client, namespace, name string) (*expv1.MachinePoolList, error) {
+func getMachinePoolsInCluster(ctx context.Context, c client.Client, namespace, name string) (*clusterv1.MachinePoolList, error) {
 	if name == "" {
 		return nil, nil
 	}
 
-	machinePoolList := &expv1.MachinePoolList{}
+	machinePoolList := &clusterv1.MachinePoolList{}
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
 	if err := c.List(ctx, machinePoolList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
