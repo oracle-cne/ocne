@@ -208,16 +208,6 @@ func IsControlPlane(node *v1.Node) bool {
 	cp, _ := GetRole(node)
 	return cp
 }
-
-// IsUpdateAvailable returns true if an update is available on that node
-func IsUpdateAvailable(node *v1.Node) bool {
-	update := false
-	if node.ObjectMeta.Annotations != nil && node.ObjectMeta.Annotations[constants.OCNEAnnoUpdateAvailable] == "true" {
-		update = true
-	}
-	return update
-}
-
 func processImage(registry string, best string, secondBest string, img *v1.ContainerImage) (string, bool, bool) {
 	haveBest := false
 	exactMatch := false
