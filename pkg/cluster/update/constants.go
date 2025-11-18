@@ -14,6 +14,24 @@ exit 0
 
 	OckDirectory="/etc/ocne/ock"
 	OckPatchDirectory="/etc/ocne/ock/patches"
+
+	CheckNodeUpdate = `#! /bin/bash
+shopt -s extglob
+
+BOOT_REF=$(chroot /hostroot ostree admin status | grep '^\*' | cut -d' ' -f2)
+OCK_REFS=$(chroot /hostroot ostree refs | grep '^ock')
+
+BOOT_COMMIT_DATE=$(chroot /hostroot ostree log "$BOOT_REF" | grep '^Date:')
+BOOT_COMMIT_DATE="${BOOT_COMMIT_DATE##Date:+( )}"
+
+UPDATE_COMMIT_DATE=""
+if echo "$OCK_REFS" | grep -q -e 'ock:ock'; then
+	UPDATE_COMMIT_DATE=$(chroot /hostroot ostree log ock:ock | grep '^Date:')
+	UPDATE_COMMIT_DATE="${UPDATE_COMMIT_DATE##Date:+( )}"
+fi
+
+echo '{}' | chroot /hostroot jq ".boot_timestamp = \"$BOOT_COMMIT_DATE\" | .update_timestamp = \"$UPDATE_COMMIT_DATE\""
+`
 )
 
 var Files = map[string]string{

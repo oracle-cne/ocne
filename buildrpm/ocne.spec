@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.3.0
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -72,8 +72,11 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-2
-- Updated dependencies in go.mod
+* Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-3
+- Improve update availability checks for Kubernetes 1.32.7
+
+* Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.0-2
+- Bump go.mod dependencies
 
 * Tue Nov 04 2025 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.0
 - Support for Kubernetes 1.33

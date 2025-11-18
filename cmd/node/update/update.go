@@ -44,6 +44,10 @@ const (
 	flagTimeoutShort = "t"
 	flagTimeoutHelp  = "Node drain timeout, such as 5m"
 
+	flagForce      = "force"
+	flagForceShort = "f"
+	flagForceHelp  = "Attempt to update the node even if an update is not available"
+
 	flagPreUpdateMode = "pre-update-mode"
 	flagPreUpdateModeShort = "p"
 	flagPreUpdateModeHelp = "Determines how to handle the pre-update steps.  Setting this value to \"only\" will run the pre-update process but skip updating nodes.  The value \"skip\" prevents the pre-update process from being executed.  \"default\" runs the pre-update process and and updates the node.  If \"only\" is selected, a node is not required."
@@ -69,6 +73,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&options.PreUpdateMode, flagPreUpdateMode, flagPreUpdateModeShort, update.PreUpdateModeDefault, flagPreUpdateModeHelp)
 	cmd.Flags().BoolVarP(&options.DeleteEmptyDir, flagEmptyDir, flagEmptyDirShort, false, flagEmptyDirHelp)
 	cmd.Flags().BoolVarP(&options.DisableEviction, flagEviction, flagEvictionShort, false, flagEvictionHelp)
+	cmd.Flags().BoolVarP(&options.Force, flagForce, flagForceShort, false, flagForceHelp)
 	return cmd
 }
 

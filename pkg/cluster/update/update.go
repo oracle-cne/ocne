@@ -4,8 +4,11 @@
 package update
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
@@ -519,3 +522,84 @@ func Update(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath
 	}
 	return nil
 }
+
+// Custom time type for non-standard format
+const ctLayout = "2006-01-02 15:04:05 -0700"
+type CustomTime struct {
+	time.Time
+}
+
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	// Remove quotes
+	s := string(b)
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		s = s[1 : len(s)-1]
+	}
+	t, err := time.Parse(ctLayout, s)
+	if err != nil {
+		return err
+	}
+	ct.Time = t
+	return nil
+}
+
+// Struct for your JSON
+type BootUpdateTimestamps struct {
+	BootTimestamp   CustomTime `json:"boot_timestamp"`
+	UpdateTimestamp CustomTime `json:"update_timestamp"`
+}
+
+// IsUpdateAvailable returns true if an update is available on that node
+func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfig *rest.Config, kubeConfigPath string) (bool, error) {
+	if node.Annotations != nil {
+		v, ok := node.Annotations[constants.OCNEAnnoUpdateAvailable]
+		if ok && strings.ToLower(v) == "true" {
+			return true, nil
+		}
+	}
+
+	// Now into the obscure cases.
+	//
+	// Kubernetes 1.32 introduced a change to the permissions assigned
+	// to the kubelet service account.  Notably, it can no longer list
+	// nodes.  Versions of OCK prior to recent 1.32 builds use a selector
+	// to annotate the node indicating that an update is available.  That
+	// command fails because selectors require listing nodes.  This issue
+	// is limited to OCK instances running Kubernetes 1.32.5/7.  Do a more
+	// intensive check for that case.
+	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8"  {
+		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
+		if err != nil {
+			return false, err
+		}
+
+		kcConfig.Streams.Out = bytes.NewBuffer([]byte{})
+		err = script.RunScript(kubeClient, kcConfig, node.Name, constants.OCNESystemNamespace, "check-update-127", CheckNodeUpdate, []v1.EnvVar{})
+		if err != nil {
+			return false, err
+		}
+		err = k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", node.Name))
+		ockInfo := kcConfig.Streams.Out.(*bytes.Buffer)
+		log.Infof(ockInfo.String())
+
+		timestamps := BootUpdateTimestamps{}
+		err = json.Unmarshal(ockInfo.Bytes(), &timestamps)
+		if err != nil {
+			return false, err
+		}
+
+		log.Infof("%+v", timestamps)
+		return timestamps.BootTimestamp.Time.Before(timestamps.UpdateTimestamp.Time), nil
+	}
+
+	return false, nil
+}
+
+func IsUpdateAvailableByName(name string, kubeClient kubernetes.Interface, restConfig *rest.Config, kubeConfigPath string) (bool, error) {
+	node, err := k8s.GetNode(kubeClient, name)
+	if err != nil {
+		return false, err
+	}
+	return IsUpdateAvailable(node, kubeClient, restConfig, kubeConfigPath)
+}
+

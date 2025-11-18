@@ -9,9 +9,11 @@ import (
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 	"os"
 	"path/filepath"
@@ -31,6 +33,9 @@ type Options struct {
 
 	// KubeClient is the optional client-go client
 	KubeClient kubernetes.Interface
+
+	// RestConfig is the optional rest configuration
+	RestConfig *rest.Config
 
 	// SkipCluster true means to show the details of the cluster
 	SkipCluster bool
@@ -88,9 +93,10 @@ func Info(o Options) error {
 
 	// get a kubernetes client
 	kubeClient := o.KubeClient
-	if kubeClient == nil {
+	restConfig := o.RestConfig
+	if kubeClient == nil || restConfig == nil {
 		var err error
-		_, kubeClient, err = client.GetKubeClient(o.KubeConfigPath)
+		restConfig, kubeClient, err = client.GetKubeClient(o.KubeConfigPath)
 		if err != nil {
 			return err
 		}
@@ -124,9 +130,13 @@ func Info(o Options) error {
 		}
 
 		cp, role := k8s.GetRole(&node)
+		updateAvailable, err := update.IsUpdateAvailable(&node, kubeClient, restConfig, o.KubeConfigPath)
+		if err != nil {
+			return err
+		}
 		ci.nodeInfos = append(ci.nodeInfos, &nodeInfo{
 			node:            &nodeList.Items[i],
-			updateAvailable: k8s.IsUpdateAvailable(&node),
+			updateAvailable: updateAvailable,
 			controlPlane:    cp,
 			role:            role,
 			nodeDump:        nodeDumpInfo,
