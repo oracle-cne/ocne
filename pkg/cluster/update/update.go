@@ -565,9 +565,9 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 	// nodes.  Versions of OCK prior to recent 1.32 builds use a selector
 	// to annotate the node indicating that an update is available.  That
 	// command fails because selectors require listing nodes.  This issue
-	// is limited to OCK instances running Kubernetes 1.32.7.  Do a more
+	// is limited to OCK instances running Kubernetes 1.32.5/7.  Do a more
 	// intensive check for that case.
-	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" {
+	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8"  {
 		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
 		if err != nil {
 			return false, err
