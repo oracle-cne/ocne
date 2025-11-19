@@ -70,10 +70,9 @@ func EnsureBootImageVersion(kubeVersion string, imageForContainer string) (strin
 	// the real world.  At some point you've gone out of your way to make
 	// your own life hard...
 	if imgInfo.Tag != "" {
-		ok, err := versions.IsSupportedKubernetesVersion(imgInfo.Tag)
-		if err != nil {
-			return "", err
-		}
+		// Ignore any errors from this call.  Many custom tags are
+		// not going to be valid semantic versions.
+		ok, _ := versions.IsSupportedKubernetesVersion(imgInfo.Tag)
 		if ok {
 			imgInfo.Tag = ""
 
@@ -85,7 +84,6 @@ func EnsureBootImageVersion(kubeVersion string, imageForContainer string) (strin
 			imageForContainer = strings.Join(components[:len(components)-1], ":")
 		}
 	}
-
 
 	if imgInfo.Tag == "" && imgInfo.Digest == "" {
 		// if the version contains a "v" prefix, strip it
