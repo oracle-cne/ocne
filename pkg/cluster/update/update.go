@@ -580,7 +580,6 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 		}
 		err = k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", node.Name))
 		ockInfo := kcConfig.Streams.Out.(*bytes.Buffer)
-		log.Infof(ockInfo.String())
 
 		timestamps := BootUpdateTimestamps{}
 		err = json.Unmarshal(ockInfo.Bytes(), &timestamps)
@@ -588,7 +587,6 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 			return false, err
 		}
 
-		log.Infof("%+v", timestamps)
 		return timestamps.BootTimestamp.Time.Before(timestamps.UpdateTimestamp.Time), nil
 	}
 

@@ -20,6 +20,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -110,10 +111,16 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
+	if log.GetLevel() != log.DebugLevel && log.GetLevel() != log.TraceLevel {
+		rest.SetDefaultWarningHandler(rest.NoWarnings{})
+	}
+
 	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, config.Quiet)
 	if err != nil {
 		return nil, err
 	}
+
+	rest.SetDefaultWarningHandler(rest.WarningLogger{})
 
 	// Wait for all controllers to come online.  This is done
 	// as a separate step so that all the image pulls can happen

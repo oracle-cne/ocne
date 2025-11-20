@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.3.0
-Release: 4%{dist}
+Release: 5%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -72,7 +72,10 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Wed Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-4
+* Thu Nov 20 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-5
+- Clean up some console logging
+
+* Wed Nov 19 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-4
 - Fix an issue where staging an update for a cluster with the oci provider could upload the wrong image
 
 * Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-3
