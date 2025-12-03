@@ -131,7 +131,7 @@ WantedBy=multi-user.target
 Description=Refresh Keepalived on configuration changes
 
 [Service]
-ExecStart=systemctl refresh %s
+ExecStart=systemctl reload %s
 Type=oneshot
 
 [Install]
@@ -155,7 +155,7 @@ WantedBy=multi-user.target
 Description=Restart Nginx on configuration changes
 
 [Service]
-ExecStart=systemctl restart %s
+ExecStart=systemctl reload %s
 Type=oneshot
 `
 
@@ -171,6 +171,7 @@ StartLimitIntervalSec=0
 ExecStartPre=/etc/ocne/nginx/pull_ocne_nginx
 ExecStart=/etc/ocne/nginx/start_ocne_nginx
 ExecStop=podman stop ocne-nginx
+ExecReload=podman exec ocne-nginx nginx -s reload
 Restart=always
 RestartSec=1
 

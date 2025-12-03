@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/config/types"
@@ -506,9 +507,30 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	return nil
 }
 
+// virtualIp handles the migration from the self-managed keepalived and nginx
+// configuration to one that executes in the cluster.
+func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
+	cc, err := k8s.GetKubeadmClusterConfiguration(client)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = kubeadmutil.ParseHostPort(cc.ControlPlaneEndpoint)
+	if err != nil {
+		return err
+	}
+
+	// Check to see if the API server address is in the same subnet as
+	// the control plane nodes.  That must be true for it to be possible
+	// for the control plane endpoint to be a virtual ip.
+
+	return nil
+}
+
 // updateFuncs is an ordered list of update functions to run.
 var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList)error{
 	oneThirtyAndLower,
+	virtualIp,
 }
 // Update applies the cumulative set of changes that have built
 // up over time as configuration deficiences have been discovered
