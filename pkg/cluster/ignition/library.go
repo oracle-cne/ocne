@@ -40,8 +40,11 @@ const (
 	CrioServiceName         = "crio.service"
 	IscsidServiceName       = "iscsid.service"
 	KeepalivedServiceName   = "keepalived.service"
+	KeepalivedRefreshServiceName = "keepalived-refresh.service"
+	KeepalivedRefreshPathName    = "keepalived-refresh.path"
 	NginxServiceName        = "ocne-nginx.service"
 	NginxRefreshServiceName = "ocne-nginx-refresh.service"
+	NginxRefreshPathName    = "ocne-nginx-refresh.path"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.
@@ -114,13 +117,6 @@ elif [[ "$ACTION" == "join" ]]; then
 else
 	echo "Action '$ACTION' is invalid.  Valid values are 'init' and 'join'"
 	exit 1
-fi
-
-# keepalived track script user keepalived_script needs to read this file
-if [ -f "/etc/kubernetes/admin.conf" ]; then
-	cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
-	chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
-	chmod 400 /etc/keepalived/kubeconfig
 fi
 `
 
