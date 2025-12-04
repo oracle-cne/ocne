@@ -285,3 +285,9 @@ func GetImageCandidate(registry string, best string, secondBest string, node *v1
 	}
 	return ret, false, foundExact
 }
+
+// IsControlPlaneNode returns true if the node is a control plane node
+func IsControlPlaneNode(node *v1.Node) bool {
+	_, ok := node.Labels["node-role.kubernetes.io/control-plane"]
+	return ok
+}

@@ -5,7 +5,7 @@ package capi
 
 import (
 	"fmt"
-	"github.com/oracle-cne/ocne/pkg/cluster/update"
+	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -391,11 +391,11 @@ func GetControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 
 	patchDir, ok := patches[PatchesDirectory]
 	if ok {
-		if patchDir != update.OckPatchDirectory {
-			ret.Replace(append(ControlPlaneJoinPatches, PatchesDirectory), update.OckPatchDirectory)
+		if patchDir != ignition.OckPatchDirectory {
+			ret.Replace(append(ControlPlaneJoinPatches, PatchesDirectory), ignition.OckPatchDirectory)
 		}
 	} else {
-		ret.Add(ControlPlaneJoinPatches, map[string]string{PatchesDirectory: update.OckPatchDirectory})
+		ret.Add(ControlPlaneJoinPatches, map[string]string{PatchesDirectory: ignition.OckPatchDirectory})
 	}
 
 	joinSkips, found, err := unstructured.NestedStringSlice(kcp.Object, ControlPlaneJoinSkipPhases...)

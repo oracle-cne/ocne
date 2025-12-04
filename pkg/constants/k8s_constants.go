@@ -165,4 +165,7 @@ const (
 	// Kubernetes Gateway API Crds constants
 	KubernetesGatewayAPICrds        = "kubernetes-gateway-api-crds"
 	KubernetesGatewayAPICrdsVersion = ""
+
+	// Imporant CAPI annotations
+	CAPIClusterNameAnnotation = "cluster.x-k8s.io/cluster-name"
 )

@@ -33,6 +33,10 @@ type PodOptions struct {
 	Env           []v1.EnvVar
 }
 
+func GetPods(client kubernetes.Interface, namespace string) (*v1.PodList, error) {
+	return client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
 func GetPod(client kubernetes.Interface, namespace string, name string) (*v1.Pod, error) {
 	pod, err := client.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 
