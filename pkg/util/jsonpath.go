@@ -36,7 +36,20 @@ func (jp *JsonPatches) Add(path []string, value interface{}) *JsonPatches {
 
 func (jp *JsonPatches) String() string {
 	ret, _ := json.Marshal(jp.Patches)
-	escaped := strings.ReplaceAll(string(ret), `\`, `\\`)
-	escaped = strings.ReplaceAll(escaped, `'`, `\'`)
+	//escaped := strings.ReplaceAll(string(ret), `\`, `\\`)
+	//escaped = strings.ReplaceAll(escaped, `'`, `\'`)
+	escaped := strings.ReplaceAll(string(ret), `'`, `'\''`)
 	return escaped
+}
+
+func (jp *JsonPatches) Merge(toMerge *JsonPatches) *JsonPatches {
+	for _, p := range toMerge.Patches {
+		jp.Patches = append(jp.Patches, &JsonPatch{
+			Op:    p.Op,
+			Path:  p.Path,
+			Value: p.Value,
+		})
+	}
+
+	return jp
 }

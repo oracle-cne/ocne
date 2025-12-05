@@ -5,13 +5,16 @@ package capi
 
 import (
 	"fmt"
+	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/util"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"slices"
+	"strings"
 )
 
 const (
@@ -21,10 +24,13 @@ const (
 // These should be treated as constants
 var ClusterInfrastructureRef []string = []string{"spec", "infrastructureRef"}
 var ClusterControlPlaneRef []string = []string{"spec", "controlPlaneRef"}
+var ClusterEndpointHost []string = []string{"spec", "controlPlaneEndpoint", "host"}
+var ClusterEndpointPort []string = []string{"spec", "controlPlaneEndpoint", "port"}
 var ControlPlaneVersion []string = []string{"spec", "version"}
 var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
 var ControlPlaneJoinPatches []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "patches"}
 var ControlPlaneJoinSkipPhases []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "skipPhases"}
+var ControlPlaneIgnition []string = []string{"spec", "kubeadmConfigSpec", "ignition", "containerLinuxConfig", "additionalConfig"}
 var MachineDeploymentInfrastructureRef []string = []string{"spec", "template", "spec", "infrastructureRef"}
 var MachineDeploymentVersion []string = []string{"spec", "template", "spec", "version"}
 
@@ -35,6 +41,18 @@ var KubeadmControlPlane = "KubeadmControlPlane"
 
 var PatchesDirectory = "directory"
 var PhasePreflight = "preflight"
+
+type UnitUpdate struct {
+	Dropins []string
+}
+
+type IgnitionUpdates struct {
+	Updates *igntypes.Config
+	FilesToRemove []string
+	DirectoriesToRemove []string
+	UsersToRemove []string
+	UnitsToRemove map[string]*UnitUpdate
+}
 
 type GraphNode struct {
 	Object   *unstructured.Unstructured
@@ -419,6 +437,98 @@ func GetControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 			ret.Add(ControlPlaneJoinSkipPhases, joinSkips)
 		}
 	}
+
+	return ret, nil
+}
+
+func UpdateIgnition(res *unstructured.Unstructured, updates *IgnitionUpdates, path ...string) (*util.JsonPatches, error) {
+	log.Debugf("Updating ignition")
+	ignStr, found, err := unstructured.NestedString(res.Object, path...)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("could not find %s in %s/%s", strings.Join(path, "/"), res.GetNamespace(), res.GetName())
+	}
+
+	ign, err := ignition.FromString(ignStr)
+	if err != nil {
+		return nil, err
+	}
+
+	filesToRemove := util.NewSetFromSlice(updates.FilesToRemove)
+	files := slices.DeleteFunc(ign.Storage.Files, func(f igntypes.File)bool {
+		return filesToRemove.Contains(f.Path)
+	})
+
+	directoriesToRemove := util.NewSetFromSlice(updates.DirectoriesToRemove)
+	directories := slices.DeleteFunc(ign.Storage.Directories, func(d igntypes.Directory)bool{
+		return directoriesToRemove.Contains(d.Path)
+	})
+
+	usersToRemove := util.NewSetFromSlice(updates.UsersToRemove)
+	users := slices.DeleteFunc(ign.Passwd.Users, func(u igntypes.PasswdUser)bool{
+		return usersToRemove.Contains(u.Name)
+	})
+
+
+	// Units get removed as follows:
+	// - Units with no dropins are removed entirely
+	// - Units with dropins have those dropins removed
+	unitsToRemove := util.NewSetFromSlice([]string{})
+	for n, uu := range updates.UnitsToRemove {
+		if len(uu.Dropins) == 0 {
+			unitsToRemove.Add(n)
+		}
+	}
+	units := slices.DeleteFunc(ign.Systemd.Units, func(u igntypes.Unit)bool{
+		return unitsToRemove.Contains(u.Name)
+	})
+
+	// There is no need to check dropin length because all units
+	// that had no dropins were removed just before this.
+	for i, u := range units {
+		uu, ok := updates.UnitsToRemove[u.Name]
+		if !ok {
+			continue
+		}
+
+		dropinsToRemove := util.NewSetFromSlice(uu.Dropins)
+		dropins := slices.DeleteFunc(u.Dropins, func(d igntypes.Dropin)bool{
+			return dropinsToRemove.Contains(d.Name)
+		})
+
+		units[i].Dropins = dropins
+	}
+
+	ign.Storage.Files = files
+	ign.Storage.Directories = directories
+	ign.Passwd.Users = users
+	ign.Systemd.Units = units
+
+	// Everything to remove is gone.  Now add things
+	ign = ignition.Merge(ign, updates.Updates)
+
+	// Compare this to the input, and only return a patch if an actual
+	// difference has been introduced.  Reparse the configuration b/c
+	// it's the easiest way to get a close of the original and is
+	// reasonably efficient.
+	ignOrig, err := ignition.FromString(ignStr)
+	if err != nil {
+		return nil, err
+	}
+	if ignition.Compare(ign, ignOrig) {
+		log.Debugf("Ignition files are the same")
+		return nil, nil
+	}
+
+	ignBytes, err := ignition.MarshalIgnition(ign)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := &util.JsonPatches{}
+	ret.Replace(path, string(ignBytes))
 
 	return ret, nil
 }

@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	keepAlivedUser  = "keepalived_script"
-	keepAlivedGroup = "keepalived_script"
+	KeepAlivedUser  = "keepalived_script"
+	KeepAlivedGroup = "keepalived_script"
 
 	keepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
 	KeepAlivedConfigTemplatePath = "/etc/ocne/keepalived.conf.tmpl"
@@ -215,7 +215,6 @@ type keepalivedConfigArguments struct {
 
 type keepalivedCheckScriptArguments struct {
 	BindPort         string
-	AltPort          string
 	VirtualIP        string
 	KeepalivedConfig string
 }
@@ -269,7 +268,6 @@ func generateKeepalivedConfig(iface string, priority string, virtualIP string, p
 func GenerateKeepalivedCheckScript(bindPort uint16, altPort uint16, virtualIP string) (string, error) {
 	return util.TemplateToString(keepalivedCheckScript, &keepalivedCheckScriptArguments{
 		BindPort:         fmt.Sprintf("%d", bindPort),
-		AltPort:          fmt.Sprintf("%d", altPort),
 		VirtualIP:        virtualIP,
 		KeepalivedConfig: keepAlivedConfigPath,
 	})
@@ -299,8 +297,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 		})
 
 	keepAlivedCheckScript, err := GenerateKeepalivedCheckScript(bindPort, altPort, virtualIP)
@@ -311,8 +309,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  KeepAlivedCheckScriptPath,
 			Mode:  0755,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
@@ -320,8 +318,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  KeepAlivedStateScriptPath,
 			Mode:  0755,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
@@ -329,8 +327,8 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		&File{
 			Path:  "/etc/keepalived/log",
 			Mode:  0644,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},

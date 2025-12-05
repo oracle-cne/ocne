@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 
+	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
+	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -17,6 +19,25 @@ import (
 	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	KeepalivedCopyKubeconfig = "/etc/ocne/keepalived-copy-kubeconfig.sh"
+	NginxCopyKubeconfig = "/etc/ocne/nginx-refresh/nginx-copy-kubeconfig.sh"
+	NginxRefreshCheck = "/etc/ocne/nginx-refresh/check_nginx.sh"
+	NginxRefreshLog = "/etc/ocne/nginx-refresh/log"
+	NginxRefreshDir = "/etc/ocne/nginx-refresh"
+	KeepalivedPolkitRules = "/etc/polkit-1/rules.d/51-keepalived.rules"
+	NginxPolkitRules = "/etc/polkit-1/rules.d/52-nginx.rules"
+	KeepalivedConfigTemplate = "/etc/ocne/keepalived.conf.tmpl"
+	NginxConfigTemplate = "/etc/ocne/nginx/nginx.conf.tmpl"
+	KeepalivedPeers = "/etc/keepalived/peers"
+	NginxPeers = "/etc/ocne/nginx-refresh/servers"
+
+	KeepalivedCopyKubeconfigDropin = "copy-kubeconfig.conf"
+	NginxCopyKubeconfigDropin = "copy-kubeconfig.conf"
+
+	NginxScriptUser = "nginx_script"
 )
 
 // TemplateData - for each vmTemplateName maintain a list of OLVMMachineTemplates that
@@ -133,9 +154,22 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 	err = graph.WalkMachineTemplates(func(parent *capi.GraphNode, mtNode *capi.GraphNode, arg interface{}) error {
 		updatedMts := arg.(map[*capi.GraphNode]*unstructured.Unstructured)
 
+		// It is possible that there are control plane patches outside
+		// the scope of new machine templates.  Figure that out now.
+		var controlPlanePatches *util.JsonPatches
+		if parent == graph.ControlPlane {
+			controlPlanePatches, err = controlPlaneIgnitionPatches(parent.Object, graph.InfrastructureCluster.Object)
+			if err != nil {
+				return err
+			}
+		}
+
 		var umt *unstructured.Unstructured
 		umt, ok := updatedMts[mtNode]
 		if !ok {
+			if controlPlanePatches != nil {
+				helpMessages = append(helpMessages, fmt.Sprintf("To update KubeadmControlPlane %s in %s, run:\n    kubectl patch -n %s kubeadmcontrolplane %s --type=json -p='%s'\n", parent.Object.GetName(), parent.Object.GetNamespace(), parent.Object.GetNamespace(), parent.Object.GetName(), controlPlanePatches))
+			}
 			return nil
 		}
 
@@ -146,6 +180,9 @@ func (cad *OlvmDriver) Stage(version string) (string, string, bool, error) {
 			}
 
 			patches, err := capi.GetControlPlanePatches(parent.Object, kubeVersions.Kubernetes, umt.GetName())
+			if controlPlanePatches != nil {
+				patches.Merge(controlPlanePatches)
+			}
 			if err != nil {
 				return err
 			}
@@ -251,4 +288,109 @@ func hasUpdate(node *unstructured.Unstructured, templateName string, provider ty
 		return newTemplateName != templateName, newTemplateName, controlPlaneNode
 	}
 	return false, "", controlPlaneNode
+}
+
+func controlPlaneIgnitionPatches(kcp *unstructured.Unstructured, clusterObj *unstructured.Unstructured) (*util.JsonPatches, error) {
+	log.Debugf("Generating updated ignition for control plane")
+	ignUpdates := ignition.NewIgnition()
+
+	log.Debugf("Checking %+v", clusterObj.Object)
+	apiHost, found, err := unstructured.NestedString(clusterObj.Object, capi.ClusterEndpointHost...)
+	if err != nil {
+		return nil, err
+	} else if !found {
+		return nil, fmt.Errorf("Could not find control plane endpoint in cluster %s", clusterObj.GetName())
+	}
+	apiPort, found, err := unstructured.NestedInt64(clusterObj.Object, capi.ClusterEndpointPort...)
+	if err != nil {
+		return nil, err
+	} else if !found {
+		return nil, fmt.Errorf("Could not find control plane port in cluster %s", clusterObj.GetName())
+	}
+
+	log.Debugf("Have control plane endpoint %s:%d", apiHost, apiPort)
+
+	units := []*igntypes.Unit{
+		&igntypes.Unit{
+			Name: ignition.KeepalivedRefreshPathName,
+			Contents: util.StrPtr(ignition.GetKeepalivedRefreshPathUnit()),
+		},
+		&igntypes.Unit{
+			Name: ignition.KeepalivedRefreshServiceName,
+			Contents: util.StrPtr(ignition.GetKeepalivedRefreshUnit()),
+		},
+		&igntypes.Unit{
+			Name: ignition.NginxRefreshPathName,
+			Contents: util.StrPtr(ignition.GetNginxRefreshPathUnit()),
+		},
+		&igntypes.Unit{
+			Name: ignition.NginxRefreshServiceName,
+			Contents: util.StrPtr(ignition.GetNginxRefreshUnit()),
+		},
+	}
+
+	keepalivedCheckScript, err := ignition.GenerateKeepalivedCheckScript(uint16(apiPort), 6444, apiHost)
+	if err != nil {
+		return nil, err
+	}
+
+	files := []*ignition.File{
+		&ignition.File{
+			Path: ignition.KeepAlivedCheckScriptPath,
+			Mode: 0755,
+			User: ignition.KeepAlivedUser,
+			Group: ignition.KeepAlivedGroup,
+			Contents: ignition.FileContents{
+				Source: keepalivedCheckScript,
+			},
+		},
+	}
+
+	for _, f := range files {
+		err = ignition.AddFile(ignUpdates, f)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, u := range units {
+		ignUpdates = ignition.AddUnit(ignUpdates, u)
+	}
+
+	updates := &capi.IgnitionUpdates{
+		Updates: ignUpdates,
+		FilesToRemove: []string{
+			KeepalivedCopyKubeconfig,
+			NginxCopyKubeconfig,
+			NginxRefreshCheck,
+			NginxRefreshLog,
+			KeepalivedPolkitRules,
+			NginxPolkitRules,
+			KeepalivedConfigTemplate,
+			NginxConfigTemplate,
+			KeepalivedPeers,
+			NginxPeers,
+		},
+		DirectoriesToRemove: []string{
+			NginxRefreshDir,
+		},
+		UnitsToRemove: map[string]*capi.UnitUpdate{
+			ignition.KeepalivedServiceName: &capi.UnitUpdate{
+				Dropins: []string{
+					KeepalivedCopyKubeconfigDropin,
+				},
+			},
+			ignition.NginxServiceName: &capi.UnitUpdate{
+				Dropins: []string{
+					NginxCopyKubeconfigDropin,
+				},
+			},
+		},
+	}
+
+	ret, err := capi.UpdateIgnition(kcp, updates, capi.ControlPlaneIgnition...)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
 }

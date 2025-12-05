@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/oracle-cne/ocne/pkg/application"
+	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	oci2 "github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -165,6 +166,28 @@ func (cad *OlvmDriver) Start() (bool, bool, error) {
 
 // PostStart installs the CAPI controllers and dependent apps in a self-managed cluster.
 func (cad *OlvmDriver) PostStart() error {
+	// If there is a virtual IP configured, install the HA monitor
+	if cad.ClusterConfig.VirtualIp != "" {
+		err := install.InstallApplications([]install.ApplicationDescription{
+			{
+				Application: &types.Application{
+					Name: constants.HAMonitorChart,
+					Namespace: constants.HAMonitorNamespace,
+					Release: constants.HAMonitorRelease,
+					Version: constants.HAMonitorVersion,
+					Catalog: catalog.InternalCatalog,
+					Config: map[string]interface{}{
+						"apiAddress": cad.ClusterConfig.VirtualIp,
+						"apiPort": cad.Config.KubeAPIServerBindPort,
+					},
+				},
+			},
+		}, cad.GetKubeconfigPath(), false)
+		if err != nil {
+			return err
+		}
+	}
+
 	// If the cluster is not self-managed, then the configuration is
 	// complete.
 	if !cad.ClusterConfig.Providers.Olvm.SelfManaged {
