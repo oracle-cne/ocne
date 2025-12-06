@@ -157,6 +157,9 @@ Description=Restart Nginx on configuration changes
 [Service]
 ExecStart=systemctl reload %s
 Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
 `
 
 	NginxService = `
