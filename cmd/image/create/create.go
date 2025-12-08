@@ -1,12 +1,12 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package create
 
 import (
-	"github.com/containers/image/v5/transports/alltransports"
 	"strings"
 
+	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
@@ -62,6 +62,7 @@ func NewCmd() *cobra.Command {
 	cmdutil.SilenceUsage(cmd)
 
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
+	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp2)
 	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
@@ -90,7 +91,7 @@ func RunCmd(cmd *cobra.Command) error {
 
 	// Make sure we create the new image using the base image that goes with the requested version of k8s.
 	// Note that c.BootVolumeContainerImage has the image that will be used to create the ephemeral cluster where
-	// we spin up a pod to create the custom image (which might be different than the base image we use to
+	// we spin up a pod to create the custom image (which might be different from the base image we use to
 	// create the custom image).
 	cc.BootVolumeContainerImage, err = cmdutil.EnsureBootImageVersion(cc.KubeVersion, cc.BootVolumeContainerImage)
 	if err != nil {

@@ -35,6 +35,7 @@ const (
 	FlagConfig      = "config"
 	FlagConfigShort = "c"
 	FlagConfigHelp  = "The path to a configuration file that contains the definition of the cluster to create. If this value is not provided, a small cluster is created using the default hypervisor for the system where the command is executed"
+	FlagConfigHelp2 = "The path to a configuration file that contains the definition of the cluster"
 
 	FlagVersionName  = "version"
 	FlagVersionShort = "v"
