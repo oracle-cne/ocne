@@ -16,7 +16,7 @@ const (
 	KeepAlivedUser  = "keepalived_script"
 	KeepAlivedGroup = "keepalived_script"
 
-	keepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
+	KeepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
 	KeepAlivedConfigTemplatePath = "/etc/ocne/keepalived.conf.tmpl"
 	KeepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
 	KeepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
@@ -24,7 +24,7 @@ const (
 	NginxUser  = "nginx_script"
 	NginxGroup = "nginx_script"
 
-	nginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
+	NginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
 	nginxConfigTemplatePath = "/etc/ocne/nginx/nginx.conf.tmpl"
 	nginxCheckScriptPath    = "/etc/ocne/nginx-refresh/check_nginx.sh"
 	nginxPullPath           = "/etc/ocne/nginx/pull_ocne_nginx"
@@ -233,7 +233,7 @@ func GetKeepalivedRefreshUnit() string {
 }
 
 func GetKeepalivedRefreshPathUnit() string {
-	return fmt.Sprintf(keepalivedRefreshPathUnit, keepAlivedConfigPath, KeepalivedRefreshServiceName)
+	return fmt.Sprintf(keepalivedRefreshPathUnit, KeepAlivedConfigPath, KeepalivedRefreshServiceName)
 }
 
 func GetNginxRefreshUnit() string {
@@ -241,7 +241,7 @@ func GetNginxRefreshUnit() string {
 }
 
 func GetNginxRefreshPathUnit() string {
-	return fmt.Sprintf(nginxRefreshPathUnit, nginxConfigPath, NginxRefreshServiceName)
+	return fmt.Sprintf(nginxRefreshPathUnit, NginxConfigPath, NginxRefreshServiceName)
 }
 
 // generateNginxConfig generates a configuration file for nginx to load balance between
@@ -272,7 +272,7 @@ func GenerateKeepalivedCheckScript(bindPort uint16, altPort uint16, virtualIP st
 	return util.TemplateToString(keepalivedCheckScript, &keepalivedCheckScriptArguments{
 		BindPort:         fmt.Sprintf("%d", bindPort),
 		VirtualIP:        virtualIP,
-		KeepalivedConfig: keepAlivedConfigPath,
+		KeepalivedConfig: KeepAlivedConfigPath,
 	})
 }
 
@@ -295,7 +295,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 	data.Files = append(data.Files,
 		&File{
-			Path: keepAlivedConfigPath,
+			Path: KeepAlivedConfigPath,
 			Mode: 0644,
 			Contents: FileContents{
 				Source: keepAlivedConfig,
@@ -344,7 +344,7 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 
 	data.Files = append(data.Files,
 		&File{
-			Path:  nginxConfigPath,
+			Path:  NginxConfigPath,
 			Mode:  0644,
 			User:  NginxUser,
 			Group: NginxGroup,
@@ -396,12 +396,12 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	nginxRefreshUnit := &igntypes.Unit{
 		Name:     NginxRefreshServiceName,
 		Enabled:  util.BoolPtr(true),
-		Contents: util.StrPtr(fmt.Sprintf(nginxRefreshUnit, NginxServiceName)),
+		Contents: util.StrPtr(GetNginxRefreshUnit()),
 	}
 	nginxRefreshPathUnit := &igntypes.Unit{
 		Name: NginxRefreshPathName,
 		Enabled: util.BoolPtr(true),
-		Contents: util.StrPtr(fmt.Sprintf(nginxRefreshPathUnit, nginxConfigPath, NginxRefreshServiceName)),
+		Contents: util.StrPtr(GetNginxRefreshPathUnit()),
 	}
 	keepAlivedUnit := &igntypes.Unit{
 		Name:    KeepalivedServiceName,
@@ -410,12 +410,12 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	keepAlivedRefreshUnit := &igntypes.Unit{
 		Name: KeepalivedRefreshServiceName,
 		Enabled: util.BoolPtr(true),
-		Contents: util.StrPtr(fmt.Sprintf(keepalivedRefreshUnit, KeepalivedServiceName)),
+		Contents: util.StrPtr(GetKeepalivedRefreshUnit()),
 	}
 	keepAlivedRefreshPathUnit := &igntypes.Unit{
 		Name: KeepalivedRefreshPathName,
 		Enabled: util.BoolPtr(true),
-		Contents: util.StrPtr(fmt.Sprintf(keepalivedRefreshPathUnit, keepAlivedConfigPath, KeepalivedServiceName)),
+		Contents: util.StrPtr(GetKeepalivedRefreshPathUnit()),
 	}
 
 	data.Units = append(data.Units, nginxUnit, nginxRefreshUnit, nginxRefreshPathUnit, keepAlivedUnit, keepAlivedRefreshUnit, keepAlivedRefreshPathUnit)
