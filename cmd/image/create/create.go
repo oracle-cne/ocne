@@ -29,7 +29,6 @@ ocne image create --arch arm64 --type oci
 
 var config types.Config
 var clusterConfig types.ClusterConfig
-var clusterConfigPath string
 var createOptions create.CreateOptions
 var flagArchitectureHelp = "The architecture of the image to create, allowed values: " + strings.Join(flags.ValidArchs, ", ")
 
@@ -62,7 +61,7 @@ func NewCmd() *cobra.Command {
 	cmdutil.SilenceUsage(cmd)
 
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
-	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp2)
+	cmd.Flags().StringVarP(&createOptions.ClusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp2)
 	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
@@ -78,7 +77,7 @@ func RunCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
+	c, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, createOptions.ClusterConfigPath)
 	if err != nil {
 		return err
 	}

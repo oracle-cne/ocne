@@ -59,6 +59,9 @@ type CreateOptions struct {
 
 	// Destination
 	Destination string
+
+	// ClusterConfigPath is the path to a configuration file that contains the definition of the cluster
+	ClusterConfigPath string
 }
 
 type providerFuncs struct {
@@ -143,6 +146,12 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		return err
 	}
 
+	// When a cluster config path is provided, use the proxies from there
+	proxies := startConfig.Proxy
+	if len(options.ClusterConfigPath) > 0 {
+		proxies = clusterConfig.Proxy
+	}
+
 	// create config need for copy
 	cc := &copyConfig{
 		KubectlConfig:            kcConfig,
@@ -153,9 +162,9 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		kubeVersion:              clusterConfig.KubeVersion,
 		imageArchitecture:        options.Architecture,
 		podName:                  podName,
-		httpsProxy:               clusterConfig.Proxy.HttpsProxy,
-		httpProxy:                clusterConfig.Proxy.HttpProxy,
-		noProxy:                  clusterConfig.Proxy.NoProxy,
+		httpsProxy:               proxies.HttpsProxy,
+		httpProxy:                proxies.HttpProxy,
+		noProxy:                  proxies.NoProxy,
 		restConfig:               restConfig,
 	}
 
