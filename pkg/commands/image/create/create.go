@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package create
@@ -8,19 +8,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
+	otypes "github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/k8s/kubectl"
-
-	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
+	"github.com/oracle-cne/ocne/pkg/util"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	otypes "github.com/oracle-cne/ocne/pkg/config/types"
-	"github.com/oracle-cne/ocne/pkg/constants"
-	"github.com/oracle-cne/ocne/pkg/k8s"
-	"github.com/oracle-cne/ocne/pkg/util"
 )
 
 const ProviderTypeOCI = "oci"
@@ -61,6 +59,9 @@ type CreateOptions struct {
 
 	// Destination
 	Destination string
+
+	// ClusterConfigPath is the path to a configuration file that contains the definition of the cluster
+	ClusterConfigPath string
 }
 
 type providerFuncs struct {
@@ -145,6 +146,12 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		return err
 	}
 
+	// When a cluster config path is provided, use the proxies from there
+	proxies := startConfig.Proxy
+	if len(options.ClusterConfigPath) > 0 {
+		proxies = clusterConfig.Proxy
+	}
+
 	// create config need for copy
 	cc := &copyConfig{
 		KubectlConfig:            kcConfig,
@@ -155,9 +162,9 @@ func Create(startConfig *otypes.Config, clusterConfig *otypes.ClusterConfig, opt
 		kubeVersion:              clusterConfig.KubeVersion,
 		imageArchitecture:        options.Architecture,
 		podName:                  podName,
-		httpsProxy:               startConfig.Proxy.HttpsProxy,
-		httpProxy:                startConfig.Proxy.HttpProxy,
-		noProxy:                  startConfig.Proxy.NoProxy,
+		httpsProxy:               proxies.HttpsProxy,
+		httpProxy:                proxies.HttpProxy,
+		noProxy:                  proxies.NoProxy,
 		restConfig:               restConfig,
 	}
 
@@ -260,17 +267,17 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 }
 
 var providers = map[string]providerFuncs{
-	ProviderTypeOCI: providerFuncs{
+	ProviderTypeOCI: {
 		defaultProvider: ociDefaultIgnition,
 		createConfigMap: createOciConfigMap,
 		createImage:     createOciImage,
 	},
-	ProviderTypeOstree: providerFuncs{
+	ProviderTypeOstree: {
 		defaultProvider: qemuDefaultIgnition,
 		createConfigMap: createOstreeConfigMap,
 		createImage:     createOstreeImage,
 	},
-	ProviderTypeOlvm: providerFuncs{
+	ProviderTypeOlvm: {
 		defaultProvider: olvmDefaultIgnition,
 		createConfigMap: createOlvmConfigMap,
 		createImage:     createOlvmImage,

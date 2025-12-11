@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -35,6 +35,7 @@ const (
 	FlagConfig      = "config"
 	FlagConfigShort = "c"
 	FlagConfigHelp  = "The path to a configuration file that contains the definition of the cluster to create. If this value is not provided, a small cluster is created using the default hypervisor for the system where the command is executed"
+	FlagConfigHelp2 = "The path to a configuration file that contains the definition of the cluster"
 
 	FlagVersionName  = "version"
 	FlagVersionShort = "v"
@@ -43,9 +44,5 @@ const (
 )
 
 const (
-	OsHostname   = ""
-	CaButaneFile = "ca.crt"
-	OsRegistry   = "ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree"
-	NodeAddress  = ""
-	NodeIP       = ""
+	OsRegistry = "ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree"
 )
