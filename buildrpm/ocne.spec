@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.3.0
-Release: 5%{dist}
+Version: 2.3.1
+Release: 1%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -72,13 +72,16 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Thu Nov 20 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-5
+* Fri Dec 12 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.1-1
+- Improve the Nginx/Keepalived virtual IP deployment
+
+* Thu Nov 20 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.0-5
 - Clean up some console logging
 
-* Wed Nov 19 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-4
+* Wed Nov 19 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.0-4
 - Fix an issue where staging an update for a cluster with the oci provider could upload the wrong image
 
-* Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.3.0-3
+* Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.0-3
 - Improve update availability checks for Kubernetes 1.32.7
 
 * Mon Nov 17 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.0-2
