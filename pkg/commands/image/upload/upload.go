@@ -8,13 +8,12 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/containers/image/v5/copy"
 	file2 "github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
 )
 
 const ProviderTypeOCI = "oci"
@@ -65,7 +64,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	options.filename = "ocne_" + filepath.Base(fpath)
 	options.file = file
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
-		&logutils.Waiter{
+		{
 			Args:    &options,
 			Message: "Uploading image to object storage",
 			WaitFunction: func(uIface interface{}) error {
