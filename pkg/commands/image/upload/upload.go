@@ -67,6 +67,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	if err = compressFile(file, fmt.Sprintf("%s.tar.gz", fpath)); err != nil {
 		return "", "", err
 	}
+	os.Exit(1)
 
 	options.size = stat.Size()
 	options.filename = "ocne_" + filepath.Base(fpath)
