@@ -4,7 +4,10 @@
 package upload
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -57,6 +60,11 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 
 	stat, err := file.Stat()
 	if err != nil {
+		return "", "", err
+	}
+
+	// Create tarball
+	if err = compressFile(file, fmt.Sprintf("%s.tar.gz", fpath)); err != nil {
 		return "", "", err
 	}
 
@@ -147,4 +155,44 @@ func Upload(options UploadOptions) error {
 	}
 
 	return pf(options)
+}
+
+func compressFile(file *os.File, archiveName string) error {
+	var err error
+
+	// Get file info
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Create archive for writing
+	outFile, err := os.Create(archiveName)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	// Wrap output in gzip and tar writers
+	gw := gzip.NewWriter(outFile)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// Create tar header from file info
+	header, err := tar.FileInfoHeader(info, "")
+	if err != nil {
+		return err
+	}
+	header.Name = file.Name() // Name in archive
+
+	// Write header and file content
+	if err = tw.WriteHeader(header); err != nil {
+		return err
+	}
+	if _, err = io.Copy(tw, file); err != nil {
+		return err
+	}
+	log.Infof("Created archive: %s", archiveName)
+	return nil
 }
