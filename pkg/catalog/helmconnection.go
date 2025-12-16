@@ -106,7 +106,7 @@ func fromHelmYAML(data []byte, kubeVersion string) (*Catalog, error) {
 			aVer := a.AppVersion
 			bVer := b.AppVersion
 
-			log.Debugf("Comparing %s-%s to %s-%s", a.Name, aVer, b.Name, bVer)
+			log.Tracef("Comparing %s-%s to %s-%s", a.Name, aVer, b.Name, bVer)
 
 			// If the strings are the same, then so
 			// are the versions.  This skips some expensive

@@ -13,18 +13,18 @@ import (
 )
 
 const (
-	keepAlivedUser  = "keepalived_script"
-	keepAlivedGroup = "keepalived_script"
+	KeepAlivedUser  = "keepalived_script"
+	KeepAlivedGroup = "keepalived_script"
 
-	keepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
+	KeepAlivedConfigPath         = "/etc/keepalived/keepalived.conf"
 	KeepAlivedConfigTemplatePath = "/etc/ocne/keepalived.conf.tmpl"
-	keepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
-	keepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
+	KeepAlivedCheckScriptPath    = "/etc/keepalived/check_apiserver.sh"
+	KeepAlivedStateScriptPath    = "/etc/keepalived/keepalived_state.sh"
 
 	NginxUser  = "nginx_script"
 	NginxGroup = "nginx_script"
 
-	nginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
+	NginxConfigPath         = "/etc/ocne/nginx/nginx.conf"
 	nginxConfigTemplatePath = "/etc/ocne/nginx/nginx.conf.tmpl"
 	nginxCheckScriptPath    = "/etc/ocne/nginx-refresh/check_nginx.sh"
 	nginxPullPath           = "/etc/ocne/nginx/pull_ocne_nginx"
@@ -61,52 +61,33 @@ vrrp_instance VI_1 {
 }
 `
 
+	// If this node is already hosting the VIP, just do the
+	// check.  If it is not assigned, go sniffing around to
+	// what sort of state is expected.  On first boot, the
+	// unicast_peer list will be empty, indicating that
+	// keepalived is unconfigured.  If that is the case, do
+	// a few checks.  First, do an arping to see if the VIP
+	// is assigned somewhere.  If no response is received then
+	// assume that no node has the VIP.  If a response is
+	// received but it is not possible to curl the endpoint
+	// then assume that there is some stale arp cache entry
+	// somewhere on the subnet.
 	keepalivedCheckScript = `#!/bin/bash
-errorExit() {
-  echo "*** $*" 2>&2
-  exit 1
-}
-
-# update keepalived.conf and restart keepalived.service if necessary
-refreshService() {
-  NODES=$(KUBECONFIG=/etc/keepalived/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
-  if [ $? -ne 0 ]; then
-    return 0
-  fi
-
-  if [ -z "${NODES}" ]; then
-	NODES="localhost"
-  fi
-
-  # check if the existing peers is the same as NODES
-  if [[ "${NODES}" != "$(cat /etc/keepalived/peers)" ]]; then
-    echo $(date): keepalived peers have been changed to: $NODES >> /etc/keepalived/log
-    echo "$NODES" > /etc/keepalived/peers
-
-    ADDRS=$(/usr/sbin/ip addr)
-    ADDRS="$ADDRS localhost"
-    ESCAPED_PEERS=""
-    for node in $NODES; do
-      echo "$ADDRS" | grep -q "$node"
-      if [ $? -eq 0 ]; then
-        continue
+if ! (ip addr | grep -q '{{ .VirtualIP }}/'); then
+  if grep -zo 'unicast_peer[[:space:]]*{[[:space:]]*}' {{ .KeepalivedConfig }}; then
+    if arping -f -I $(ip route get {{ .VirtualIP }} | cut -d' ' -f3 | head -1) -c 3 {{ .VirtualIP }}; then
+      if curl -k https://{{ .VirtualIP }}:{{ .BindPort }}; then
+        exit 1
       fi
-      ESCAPED_PEERS="$ESCAPED_PEERS\n    $node"
-    done
-
-    sed -e 's/PEERS/'"$ESCAPED_PEERS"'/g' /etc/ocne/keepalived.conf.tmpl > /etc/keepalived/keepalived.conf
-
-    systemctl reload keepalived.service &
+    fi
   fi
-}
-
-refreshService
+fi
 
 PORTS=$(netstat -nltp)
 echo $PORTS | grep -q {{ .BindPort }}
 if [ $? -ne 0 ]; then
   echo $(date): keepalived failed to find nginx bound to port >> /etc/keepalived/log
-  return 1
+  exit 1
 fi
 `
 
@@ -121,7 +102,7 @@ events {
 }
 stream {
   upstream backend1 {
-{{ .Peer }}
+    server localhost:{{ .AltPort }} fail_timeout=10s max_fails=1;
     least_conn;
   }
   server {
@@ -133,7 +114,55 @@ stream {
 }
 `
 
-	nginxService = `
+	keepalivedRefreshPathUnit = `
+[Unit]
+Description=Configuration checker for Keepalived
+
+[Path]
+PathChanged=%s
+Unit=%s
+
+[Install]
+WantedBy=multi-user.target
+`
+
+	keepalivedRefreshUnit = `
+[Unit]
+Description=Refresh Keepalived on configuration changes
+
+[Service]
+ExecStart=systemctl reload %s
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+`
+
+	nginxRefreshPathUnit = `
+[Unit]
+Description=Configuration checker for Nginx
+
+[Path]
+PathChanged=%s
+Unit=%s
+
+[Install]
+WantedBy=multi-user.target
+`
+
+	nginxRefreshUnit = `
+[Unit]
+Description=Restart Nginx on configuration changes
+
+[Service]
+ExecStart=systemctl reload %s
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+`
+
+	NginxService = `
 [Unit]
 Description=Nginx load balancer for Kubernetes control plane nodes in OCNE
 Wants=network.target
@@ -145,28 +174,13 @@ StartLimitIntervalSec=0
 ExecStartPre=/etc/ocne/nginx/pull_ocne_nginx
 ExecStart=/etc/ocne/nginx/start_ocne_nginx
 ExecStop=podman stop ocne-nginx
+ExecReload=podman exec ocne-nginx nginx -s reload
 Restart=always
 RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
 WantedBy=keepalived.service
-`
-	nginxRefreshService = `
-[Unit]
-Description=Nginx refresh service for OCNE
-After=network-online.target
-After=ocne-nginx.service
-Wants=network.target
-
-[Service]
-ExecStart=/bin/bash -c "/etc/ocne/nginx-refresh/check_nginx.sh"
-User=nginx_script
-Group=nginx_script
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
 `
 
 	nginxPull = `#!/bin/bash
@@ -193,65 +207,6 @@ exec podman run --name ocne-nginx --replace --rm --network=host --volume=/etc/oc
 `
 
 	nginxImage = "IMAGE=container-registry.oracle.com/olcne/nginx:1.17.7-1"
-
-	polkitRulesKeepalived = `
-// Allow keepalived_script user to restart keepalived.service
-polkit.addRule(function(action, subject) {
-    if (action.id == "org.freedesktop.systemd1.manage-units" &&
-        action.lookup("unit") == "keepalived.service" &&
-        subject.user == "keepalived_script") {
-        return polkit.Result.YES;
-    }
-});
-`
-	polkitRulesNginx = `
-// Allow nginx_script user to restart ocne-nginx.service
-polkit.addRule(function(action, subject) {
-    if (action.id == "org.freedesktop.systemd1.manage-units" &&
-        action.lookup("unit") == "ocne-nginx.service" &&
-        subject.user == "nginx_script") {
-        return polkit.Result.YES;
-    }
-});
-`
-
-	nginxCheckScript = `#!/bin/bash
-# update nginx.conf and restart ocne-nginx.service if necessary
-refreshService() {
-  NODES=$(KUBECONFIG=/etc/ocne/nginx-refresh/kubeconfig kubectl --server=https://localhost:{{ .AltPort }} --tls-server-name=$(hostname) get nodes --request-timeout 1m --no-headers --selector 'node-role.kubernetes.io/control-plane' -o wide | awk -v OFS='\t\t' '{print $6}')
-  if [ $? -ne 0 ]; then
-    return 0
-  fi
-
-  if [ -z "${NODES}" ]; then
-	NODES="localhost"
-  fi
-
-  # check if the existing servers is the same as NODES
-  if [[ "${NODES}" != "$(cat /etc/ocne/nginx-refresh/servers)" ]]; then
-    echo $(date): ocne-nginx-refresh servers have been changed to: $NODES >> /etc/ocne/nginx-refresh/log
-    echo "$NODES" > /etc/ocne/nginx-refresh/servers
-
-    ESCAPED_SERVERS=""
-    for node in $NODES; do
-      if echo "$node" | grep ':'; then
-        node="[$node]"
-      fi
-      ESCAPED_SERVERS="$ESCAPED_SERVERS\n    server $node:{{ .AltPort }} fail_timeout=10s max_fails=1;"
-    done
-
-    sed -e 's/SERVERS/'"$ESCAPED_SERVERS"'/g' /etc/ocne/nginx/nginx.conf.tmpl > /etc/ocne/nginx/nginx.conf
-
-    systemctl restart ocne-nginx.service &
-  fi
-}
-
-# Loop forever, checking for and  updates as needed
-while true; do
-	refreshService
-	sleep 10s
-done
-`
 )
 
 type keepalivedConfigArguments struct {
@@ -262,20 +217,39 @@ type keepalivedConfigArguments struct {
 }
 
 type keepalivedCheckScriptArguments struct {
-	BindPort string
-	AltPort  string
+	BindPort         string
+	VirtualIP        string
+	KeepalivedConfig string
 }
 
 type nginxConfigArguments struct {
 	BindPort string
+	AltPort  string
 	Peer     string
+}
+
+func GetKeepalivedRefreshUnit() string {
+	return fmt.Sprintf(keepalivedRefreshUnit, KeepalivedServiceName)
+}
+
+func GetKeepalivedRefreshPathUnit() string {
+	return fmt.Sprintf(keepalivedRefreshPathUnit, KeepAlivedConfigPath, KeepalivedRefreshServiceName)
+}
+
+func GetNginxRefreshUnit() string {
+	return fmt.Sprintf(nginxRefreshUnit, NginxServiceName)
+}
+
+func GetNginxRefreshPathUnit() string {
+	return fmt.Sprintf(nginxRefreshPathUnit, NginxConfigPath, NginxRefreshServiceName)
 }
 
 // generateNginxConfig generates a configuration file for nginx to load balance between
 // all the master nodes in a given cluster.
-func generateNginxConfig(bindPort uint16, peer string) (string, error) {
+func generateNginxConfig(bindPort uint16, altPort uint16, peer string) (string, error) {
 	return util.TemplateToString(nginxConfig, &nginxConfigArguments{
 		BindPort: fmt.Sprintf("%d", bindPort),
+		AltPort:  fmt.Sprintf("%d", altPort),
 		Peer:     peer,
 	})
 }
@@ -291,20 +265,14 @@ func generateKeepalivedConfig(iface string, priority string, virtualIP string, p
 	})
 }
 
-// generateKeepalivedCheckScript creates a check script for keepalived that monitors the kubernetes master on the node
+// GenerateKeepalivedCheckScript creates a check script for keepalived that monitors the kubernetes master on the node
 // on which keepalived is installed.  This script is configured by default in the text
 // generated by generateKeepalivedConfig
-func generateKeepalivedCheckScript(bindPort uint16, altPort uint16) (string, error) {
+func GenerateKeepalivedCheckScript(bindPort uint16, altPort uint16, virtualIP string) (string, error) {
 	return util.TemplateToString(keepalivedCheckScript, &keepalivedCheckScriptArguments{
-		BindPort: fmt.Sprintf("%d", bindPort),
-		AltPort:  fmt.Sprintf("%d", altPort),
-	})
-}
-
-func generateNginxCheckScript(bindPort uint16, altPort uint16) (string, error) {
-	return util.TemplateToString(nginxCheckScript, &keepalivedCheckScriptArguments{
-		BindPort: fmt.Sprintf("%d", bindPort),
-		AltPort:  fmt.Sprintf("%d", altPort),
+		BindPort:         fmt.Sprintf("%d", bindPort),
+		VirtualIP:        virtualIP,
+		KeepalivedConfig: KeepAlivedConfigPath,
 	})
 }
 
@@ -325,118 +293,63 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 		return nil, err
 	}
 
-	keepAlivedConfigTemplate, err := generateKeepalivedConfig(netInterface, "50", virtualIP, "PEERS")
-	if err != nil {
-		return nil, err
-	}
-
 	data.Files = append(data.Files,
 		&File{
-			Path: keepAlivedConfigPath,
+			Path: KeepAlivedConfigPath,
 			Mode: 0644,
 			Contents: FileContents{
 				Source: keepAlivedConfig,
 			},
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
-		},
-		&File{
-			Path: KeepAlivedConfigTemplatePath,
-			Mode: 0644,
-			Contents: FileContents{
-				Source: keepAlivedConfigTemplate,
-			},
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 		})
 
-	keepAlivedCheckScript, err := generateKeepalivedCheckScript(bindPort, altPort)
-	if err != nil {
-		return nil, err
-	}
-	nginxScript, err := generateNginxCheckScript(bindPort, altPort)
+	keepAlivedCheckScript, err := GenerateKeepalivedCheckScript(bindPort, altPort, virtualIP)
 	if err != nil {
 		return nil, err
 	}
 	data.Files = append(data.Files,
 		&File{
-			Path:  keepAlivedCheckScriptPath,
+			Path:  KeepAlivedCheckScriptPath,
 			Mode:  0755,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedCheckScript,
 			},
 		},
 		&File{
-			Path:  keepAlivedStateScriptPath,
+			Path:  KeepAlivedStateScriptPath,
 			Mode:  0755,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: keepAlivedStateScript,
 			},
 		},
 		&File{
-			Path:  "/etc/keepalived/peers",
-			Mode:  0644,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
-			Contents: FileContents{
-				Source: "",
-			},
-		},
-		&File{
 			Path:  "/etc/keepalived/log",
 			Mode:  0644,
-			User:  keepAlivedUser,
-			Group: keepAlivedGroup,
-			Contents: FileContents{
-				Source: "",
-			},
-		},
-		&File{
-			Path:  "/etc/ocne/nginx-refresh/log",
-			Mode:  0644,
-			User:  NginxUser,
-			Group: NginxGroup,
+			User:  KeepAlivedUser,
+			Group: KeepAlivedGroup,
 			Contents: FileContents{
 				Source: "",
 			},
 		})
 
-	nginxConfigSource, err := generateNginxConfig(bindPort, fmt.Sprintf("    server localhost:%d;", altPort))
-	if err != nil {
-		return nil, err
-	}
-
-	nginxConfigTemplate, err := generateNginxConfig(bindPort, "SERVERS")
+	nginxConfigSource, err := generateNginxConfig(bindPort, altPort, fmt.Sprintf("    server localhost:%d;", altPort))
 	if err != nil {
 		return nil, err
 	}
 
 	data.Files = append(data.Files,
 		&File{
-			Path:  nginxCheckScriptPath,
-			Mode:  0755,
-			User:  NginxUser,
-			Group: NginxGroup,
-			Contents: FileContents{
-				Source: nginxScript,
-			},
-		},
-		&File{
-			Path:  nginxConfigPath,
+			Path:  NginxConfigPath,
 			Mode:  0644,
 			User:  NginxUser,
 			Group: NginxGroup,
 			Contents: FileContents{
 				Source: nginxConfigSource,
-			},
-		},
-		&File{
-			Path: nginxConfigTemplatePath,
-			Mode: 0644,
-			Contents: FileContents{
-				Source: nginxConfigTemplate,
 			},
 		},
 		&File{
@@ -459,36 +372,13 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 			Contents: FileContents{
 				Source: nginxImage,
 			},
-		},
-		&File{
-			Path:  "/etc/ocne/nginx-refresh/servers",
-			Mode:  0644,
-			User:  NginxUser,
-			Group: NginxGroup,
-			Contents: FileContents{
-				Source: "",
-			},
-		},
-		&File{
-			Path: "/etc/polkit-1/rules.d/51-keepalived.rules",
-			Mode: 0644,
-			Contents: FileContents{
-				Source: polkitRulesKeepalived,
-			},
-		},
-		&File{
-			Path: "/etc/polkit-1/rules.d/52-nginx.rules",
-			Mode: 0644,
-			Contents: FileContents{
-				Source: polkitRulesNginx,
-			},
 		})
 
 	// services don't start unless they are included in the units in ostree
 	nginxUnit := &igntypes.Unit{
 		Name:     NginxServiceName,
 		Enabled:  util.BoolPtr(true),
-		Contents: util.StrPtr(nginxService),
+		Contents: util.StrPtr(NginxService),
 	}
 	// add a proxy dropin to ocne-nginx if proxy is configured
 	if proxy != nil && (len(proxy.HttpProxy) > 0 || len(proxy.HttpsProxy) > 0 || len(proxy.NoProxy) > 0) {
@@ -506,14 +396,29 @@ func GenerateAssetsForVirtualIp(bindPort uint16, altPort uint16, virtualIP strin
 	nginxRefreshUnit := &igntypes.Unit{
 		Name:     NginxRefreshServiceName,
 		Enabled:  util.BoolPtr(true),
-		Contents: util.StrPtr(nginxRefreshService),
+		Contents: util.StrPtr(GetNginxRefreshUnit()),
+	}
+	nginxRefreshPathUnit := &igntypes.Unit{
+		Name: NginxRefreshPathName,
+		Enabled: util.BoolPtr(true),
+		Contents: util.StrPtr(GetNginxRefreshPathUnit()),
 	}
 	keepAlivedUnit := &igntypes.Unit{
 		Name:    KeepalivedServiceName,
 		Enabled: util.BoolPtr(true),
 	}
+	keepAlivedRefreshUnit := &igntypes.Unit{
+		Name: KeepalivedRefreshServiceName,
+		Enabled: util.BoolPtr(true),
+		Contents: util.StrPtr(GetKeepalivedRefreshUnit()),
+	}
+	keepAlivedRefreshPathUnit := &igntypes.Unit{
+		Name: KeepalivedRefreshPathName,
+		Enabled: util.BoolPtr(true),
+		Contents: util.StrPtr(GetKeepalivedRefreshPathUnit()),
+	}
 
-	data.Units = append(data.Units, nginxUnit, nginxRefreshUnit, keepAlivedUnit)
+	data.Units = append(data.Units, nginxUnit, nginxRefreshUnit, nginxRefreshPathUnit, keepAlivedUnit, keepAlivedRefreshUnit, keepAlivedRefreshPathUnit)
 
 	return data, nil
 }

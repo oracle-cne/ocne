@@ -10,7 +10,6 @@ import (
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	clustertypes "github.com/oracle-cne/ocne/pkg/cluster/types"
-	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -40,8 +39,11 @@ const (
 	CrioServiceName         = "crio.service"
 	IscsidServiceName       = "iscsid.service"
 	KeepalivedServiceName   = "keepalived.service"
+	KeepalivedRefreshServiceName = "keepalived-refresh.service"
+	KeepalivedRefreshPathName    = "keepalived-refresh.path"
 	NginxServiceName        = "ocne-nginx.service"
 	NginxRefreshServiceName = "ocne-nginx-refresh.service"
+	NginxRefreshPathName    = "ocne-nginx-refresh.path"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.
@@ -115,13 +117,6 @@ else
 	echo "Action '$ACTION' is invalid.  Valid values are 'init' and 'join'"
 	exit 1
 fi
-
-# keepalived track script user keepalived_script needs to read this file
-if [ -f "/etc/kubernetes/admin.conf" ]; then
-	cp /etc/kubernetes/admin.conf /etc/keepalived/kubeconfig
-	chown keepalived_script:keepalived_script /etc/keepalived/kubeconfig
-	chmod 400 /etc/keepalived/kubeconfig
-fi
 `
 
 	ContainerRegistryPath    = "/etc/containers/registries.conf"
@@ -157,6 +152,17 @@ Environment=http_proxy={{.HttpProxy}}
 Environment=no_proxy={{.NoProxy}}
 {{- end}}
 `
+
+	KubeadmUpgradePath = "/etc/ocne/ocne-kubeadm-upgrade.sh"
+	KubeadmUpgrade = `#! /bin/bash
+#
+# Copyright (c) 2025, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+exit 0
+`
+
+	OckDirectory="/etc/ocne/ock"
+	OckPatchDirectory="/etc/ocne/ock/patches"
 )
 
 type ClusterInit struct {
@@ -583,15 +589,15 @@ func KubeadmPatches() (*igntypes.Config, error) {
 	ret := NewIgnition()
 
 	kubeadmUpgradeFile := &File{
-		Path: update.KubeadmUpgradePath,
+		Path: KubeadmUpgradePath,
 		Mode: 0555,
 		Contents: FileContents{
-			Source: update.Files[update.KubeadmUpgradePath],
+			Source: KubeadmUpgrade,
 		},
 	}
 	patchDir := &igntypes.Directory{
 		Node: igntypes.Node{
-			Path: update.OckPatchDirectory,
+			Path: OckPatchDirectory,
 		},
 	}
 

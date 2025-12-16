@@ -10,7 +10,6 @@ import (
 
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
-	"github.com/oracle-cne/ocne/pkg/cluster/update"
 	"github.com/oracle-cne/ocne/pkg/util"
 )
 
@@ -195,7 +194,7 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 			"preflight",
 		},
 		Patches: &Patches{
-			Directory: update.OckPatchDirectory,
+			Directory: OckPatchDirectory,
 		},
 	}
 	if !ci.ExpectingWorkerNodes {
@@ -238,7 +237,7 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 			"preflight",
 		},
 		Patches: &Patches{
-			Directory: update.OckPatchDirectory,
+			Directory: OckPatchDirectory,
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {
