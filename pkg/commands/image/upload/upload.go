@@ -77,14 +77,14 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 	log.Infof("Created file %s", capabilitiesFile.Name())
 
-	// Upload the image capabilities file
-	stat, err = capabilitiesFile.Stat()
+	// Upload the tarball
+	stat, err = tarballFile.Stat()
 	if err != nil {
 		return "", "", err
 	}
 	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(getImageCapabilitiesName(fpath))
-	options.file = capabilitiesFile
+	options.filename = "ocne_" + filepath.Base(getTarballName(fpath))
+	options.file = tarballFile
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
@@ -99,14 +99,14 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", fmt.Errorf("failed to upload %s to object storage", options.filename)
 	}
 
-	// Upload the tarball
-	stat, err = tarballFile.Stat()
+	// Upload the image capabilities file
+	stat, err = capabilitiesFile.Stat()
 	if err != nil {
 		return "", "", err
 	}
 	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(getTarballName(fpath))
-	options.file = tarballFile
+	options.filename = "ocne_" + filepath.Base(getImageCapabilitiesName(fpath))
+	options.file = capabilitiesFile
 	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
@@ -195,11 +195,11 @@ func Upload(options UploadOptions) error {
 	return pf(options)
 }
 
-func compressFile(file *os.File, archiveName string) (*os.File, error) {
+func compressFile(inputFile *os.File, archiveName string) (*os.File, error) {
 	var err error
 
 	// Get file info
-	info, err := file.Stat()
+	info, err := inputFile.Stat()
 	if err != nil {
 		return nil, err
 	}
@@ -222,17 +222,17 @@ func compressFile(file *os.File, archiveName string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	header.Name = file.Name() // Name in archive
+	header.Name = inputFile.Name() // Name in archive
 
 	// Write header and file content
 	if err = tw.WriteHeader(header); err != nil {
 		return nil, err
 	}
-	if _, err = io.Copy(tw, file); err != nil {
+	if _, err = io.Copy(tw, inputFile); err != nil {
 		return nil, err
 	}
 	log.Infof("Created archive: %s", archiveName)
-	return file, nil
+	return outFile, nil
 }
 
 func imageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
