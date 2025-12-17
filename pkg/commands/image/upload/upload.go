@@ -6,6 +6,7 @@ package upload
 import (
 	"archive/tar"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -64,9 +65,16 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create tarball
-	if err = compressFile(file, fmt.Sprintf("%s.tar.gz", fpath)); err != nil {
+	if err = compressFile(file, getTarballName(fpath)); err != nil {
 		return "", "", err
 	}
+
+	// Create image capabilities file
+	capabilitiesFile, err := imageCapabilitiesFile(getImageCapabilitiesName(fpath), options.ImageArchitecture)
+	if err != nil {
+		return "", "", err
+	}
+	log.Infof("created file %s", capabilitiesFile.Name())
 	os.Exit(1)
 
 	options.size = stat.Size()
@@ -196,4 +204,34 @@ func compressFile(file *os.File, archiveName string) error {
 	}
 	log.Infof("Created archive: %s", archiveName)
 	return nil
+}
+
+func imageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
+	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture))
+
+	// Marshal the struct to JSON
+	data, err := json.MarshalIndent(capabilities, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	// Write JSON data to a file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func getTarballName(filePath string) string {
+	return fmt.Sprintf("%s.tar.gz", filePath)
+}
+
+func getImageCapabilitiesName(filePath string) string {
+	return fmt.Sprintf("%s.json", filePath)
 }
