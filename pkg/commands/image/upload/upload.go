@@ -75,7 +75,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	log.Infof("created file %s", capabilitiesFile.Name())
+	log.Infof("Created file %s", capabilitiesFile.Name())
 
 	// Upload the tarball
 	stat, err = tarballFile.Stat()

@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	log "github.com/sirupsen/logrus"
-	"github.com/oracle-cne/ocne/pkg/constants"
 )
 
 // EnsureImage makes sure that an image with a given display name exists.  If
