@@ -1,5 +1,4 @@
-@Library('pipeline-shared@feature/mgianata-test-new-build-images')
-@Library('olcne-pipeline@feature/mgianata-test-new-build-images') _
+@Library('olcne-pipeline')
 import com.oracle.olcne.pipeline.BranchPattern
 
 olcnePipeline(
