@@ -14,21 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// EnsureImage makes sure that an image with a given display name exists.  If
-// it already does, then it returns the OCID of that image.  If not, it will
-// start the process of importing the image from the given object storage
-// description.  A work request OCID is returned to as well to allow the
-// caller to monitor pogress.
-func EnsureImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string, profile string) (string, string, error) {
-	img, found, err := GetImage(imageName, k8sVersion, arch, compartmentId, profile)
-	if found {
-		return *img.Id, "", nil
-	} else if err != nil {
-		return "", "", err
-	}
-	return ImportImage(imageName, k8sVersion, arch, compartmentId, bucketName, objectName, profile)
-}
-
 func GetImageById(ocid string, profile string) (*core.Image, error) {
 	ctx := context.Background()
 	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
@@ -197,8 +182,7 @@ func EnsureCompatibleImageShapes(imageId string, arch string, profile string) er
 	// First find all shapes that aren't compatible with ARM
 	limit := 50
 	var page *string
-	shapesToRemove := []string{}
-
+	var shapesToRemove []string
 	for {
 		req := core.ListImageShapeCompatibilityEntriesRequest{
 			ImageId: &imageId,
