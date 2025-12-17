@@ -88,7 +88,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
-			Message: fmt.Sprintf("Uploading %s of size %d to object storage", options.filename, options.size),
+			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
 				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
@@ -110,7 +110,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
-			Message: fmt.Sprintf("Uploading %s of size %d to object storage", options.filename, options.size),
+			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
 				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
