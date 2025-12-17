@@ -80,7 +80,6 @@ func uploadTarballFile(file *os.File, filePath string, options UploadOptions) er
 	if err := createTarballFile(file, tarballName); err != nil {
 		return err
 	}
-	log.Infof("Created file %s", tarballName)
 
 	tarballFile, err := os.Open(tarballName)
 	if err != nil {
@@ -116,7 +115,6 @@ func uploadCapabilitiesFile(filePath string, options UploadOptions) error {
 	if err := createImageCapabilitiesFile(capabilitiesFileName, options.ImageArchitecture); err != nil {
 		return err
 	}
-	log.Infof("Created file %s", capabilitiesFileName)
 
 	capabilitiesFile, err := os.Open(getImageCapabilitiesName(filePath))
 	if err != nil {
@@ -279,6 +277,9 @@ func createImageCapabilitiesFile(filePath string, imageArchitecture string) erro
 	if err != nil {
 		return err
 	}
+
+	log.Infof("Created file %s", filePath)
+
 	return nil
 }
 
