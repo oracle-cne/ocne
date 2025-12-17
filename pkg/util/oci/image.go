@@ -6,6 +6,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -100,6 +101,8 @@ func GetImage(imageName string, k8sVersion string, arch string, compartmentId st
 // ImportImage creates a custom compute image from the contents of an
 // object storage bucket.
 func ImportImage(imageName string, k8sVersion string, arch string, compartmentId string, bucketName string, objectName string, profile string) (string, string, error) {
+	log.Infof("Importing image %s, object name %s", imageName, objectName)
+	os.Exit(1)
 	ctx := context.Background()
 	c, err := core.NewComputeClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
 	if err != nil {

@@ -59,19 +59,17 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		defer file.Close()
 	}
 
-	// Upload the tarball
-	err = uploadTarballFile(file, fpath, options)
-	if err != nil {
-		return "", "", err
-	}
-
 	// Upload the image capabilities file
 	err = uploadCapabilitiesFile(fpath, options)
 	if err != nil {
 		return "", "", err
 	}
 
-	os.Exit(1)
+	// Upload the tarball
+	err = uploadTarballFile(file, fpath, options)
+	if err != nil {
+		return "", "", err
+	}
 
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
