@@ -65,7 +65,8 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create tarball
-	if err = compressFile(file, getTarballName(fpath)); err != nil {
+	tarballFile, err := compressFile(file, getTarballName(fpath))
+	if err != nil {
 		return "", "", err
 	}
 
@@ -75,11 +76,15 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", err
 	}
 	log.Infof("created file %s", capabilitiesFile.Name())
-	os.Exit(1)
 
+	// Upload the tarball
+	stat, err = tarballFile.Stat()
+	if err != nil {
+		return "", "", err
+	}
 	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(fpath)
-	options.file = file
+	options.filename = "ocne_" + filepath.Base(getTarballName(fpath))
+	options.file = tarballFile
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
@@ -93,6 +98,29 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	if failed {
 		return "", "", fmt.Errorf("Failed to upload image to object storage")
 	}
+
+	// Upload the image capabilites file
+	stat, err = capabilitiesFile.Stat()
+	if err != nil {
+		return "", "", err
+	}
+	options.size = stat.Size()
+	options.filename = "ocne_" + filepath.Base(getImageCapabilitiesName(fpath))
+	options.file = capabilitiesFile
+	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
+		{
+			Args:    &options,
+			Message: "Uploading image to object storage",
+			WaitFunction: func(uIface interface{}) error {
+				uo, _ := uIface.(*UploadOptions)
+				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
+			},
+		},
+	})
+	if failed {
+		return "", "", fmt.Errorf("Failed to upload image to object storage")
+	}
+	os.Exit(1)
 
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
@@ -166,19 +194,19 @@ func Upload(options UploadOptions) error {
 	return pf(options)
 }
 
-func compressFile(file *os.File, archiveName string) error {
+func compressFile(file *os.File, archiveName string) (*os.File, error) {
 	var err error
 
 	// Get file info
 	info, err := file.Stat()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create archive for writing
 	outFile, err := os.Create(archiveName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer outFile.Close()
 
@@ -191,19 +219,19 @@ func compressFile(file *os.File, archiveName string) error {
 	// Create tar header from file info
 	header, err := tar.FileInfoHeader(info, "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	header.Name = file.Name() // Name in archive
 
 	// Write header and file content
 	if err = tw.WriteHeader(header); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err = io.Copy(tw, file); err != nil {
-		return err
+		return nil, err
 	}
 	log.Infof("Created archive: %s", archiveName)
-	return nil
+	return file, nil
 }
 
 func imageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
