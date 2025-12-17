@@ -65,13 +65,13 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create tarball
-	tarballFile, err := compressFile(file, getTarballName(fpath))
+	tarballFile, err := createTarballFile(file, getTarballName(fpath))
 	if err != nil {
 		return "", "", err
 	}
 
 	// Create image capabilities file
-	capabilitiesFile, err := imageCapabilitiesFile(getImageCapabilitiesName(fpath), options.ImageArchitecture)
+	capabilitiesFile, err := createImageCapabilitiesFile(getImageCapabilitiesName(fpath), options.ImageArchitecture)
 	if err != nil {
 		return "", "", err
 	}
@@ -195,7 +195,7 @@ func Upload(options UploadOptions) error {
 	return pf(options)
 }
 
-func compressFile(inputFile *os.File, archiveName string) (*os.File, error) {
+func createTarballFile(inputFile *os.File, archiveName string) (*os.File, error) {
 	var err error
 
 	// Get file info
@@ -209,7 +209,6 @@ func compressFile(inputFile *os.File, archiveName string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer outFile.Close()
 
 	// Wrap output in gzip and tar writers
 	gw := gzip.NewWriter(outFile)
@@ -235,7 +234,7 @@ func compressFile(inputFile *os.File, archiveName string) (*os.File, error) {
 	return outFile, nil
 }
 
-func imageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
+func createImageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
 	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture))
 
 	// Marshal the struct to JSON
