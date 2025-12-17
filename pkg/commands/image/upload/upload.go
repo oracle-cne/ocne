@@ -95,7 +95,7 @@ func uploadTarballFile(file *os.File, filePath string, options *UploadOptions) e
 	options.file = tarballFile
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
-			Args:    &options,
+			Args:    options,
 			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
@@ -131,7 +131,7 @@ func uploadCapabilitiesFile(filePath string, options *UploadOptions) error {
 	options.file = capabilitiesFile
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
-			Args:    &options,
+			Args:    options,
 			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
