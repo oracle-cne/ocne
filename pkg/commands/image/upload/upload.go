@@ -65,19 +65,22 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create tarball
-	tarballFile, err := createTarballFile(file, getTarballName(fpath))
-	if err != nil {
+	if err = createTarballFile(file, getTarballName(fpath)); err != nil {
 		return "", "", err
 	}
 
 	// Create image capabilities file
-	capabilitiesFile, err := createImageCapabilitiesFile(getImageCapabilitiesName(fpath), options.ImageArchitecture)
+	if err = createImageCapabilitiesFile(getImageCapabilitiesName(fpath), options.ImageArchitecture); err != nil {
+		return "", "", err
+	}
+	log.Infof("Created file %s", getImageCapabilitiesName(fpath))
+
+	// Upload the tarball
+	tarballFile, err := os.Open(getTarballName(fpath))
 	if err != nil {
 		return "", "", err
 	}
-	log.Infof("Created file %s", capabilitiesFile.Name())
-
-	// Upload the tarball
+	defer tarballFile.Close()
 	stat, err = tarballFile.Stat()
 	if err != nil {
 		return "", "", err
@@ -100,6 +103,11 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Upload the image capabilities file
+	capabilitiesFile, err := os.Open(getImageCapabilitiesName(fpath))
+	if err != nil {
+		return "", "", err
+	}
+	defer capabilitiesFile.Close()
 	stat, err = capabilitiesFile.Stat()
 	if err != nil {
 		return "", "", err
@@ -195,20 +203,22 @@ func Upload(options UploadOptions) error {
 	return pf(options)
 }
 
-func createTarballFile(inputFile *os.File, archiveName string) (*os.File, error) {
+// createTarballFile - Create a .tar.gz of the input file
+func createTarballFile(inputFile *os.File, archiveName string) error {
 	var err error
 
 	// Get file info
 	info, err := inputFile.Stat()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Create archive for writing
 	outFile, err := os.Create(archiveName)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer outFile.Close()
 
 	// Wrap output in gzip and tar writers
 	gw := gzip.NewWriter(outFile)
@@ -219,41 +229,43 @@ func createTarballFile(inputFile *os.File, archiveName string) (*os.File, error)
 	// Create tar header from file info
 	header, err := tar.FileInfoHeader(info, "")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	header.Name = inputFile.Name() // Name in archive
 
 	// Write header and file content
 	if err = tw.WriteHeader(header); err != nil {
-		return nil, err
+		return err
 	}
 	if _, err = io.Copy(tw, inputFile); err != nil {
-		return nil, err
+		return err
 	}
 	log.Infof("Created archive: %s", archiveName)
-	return outFile, nil
+	return nil
 }
 
-func createImageCapabilitiesFile(filePath string, imageArchitecture string) (*os.File, error) {
+// createImageCapabilitiesFile - create an image capabilities JSON file based on the architecture passed in
+func createImageCapabilitiesFile(filePath string, imageArchitecture string) error {
 	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture))
 
 	// Marshal the struct to JSON
 	data, err := json.MarshalIndent(capabilities, "", "  ")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Write JSON data to a file
 	file, err := os.Create(filePath)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer file.Close()
 
 	_, err = file.Write(data)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return file, nil
+	return nil
 }
 
 func getTarballName(filePath string) string {
