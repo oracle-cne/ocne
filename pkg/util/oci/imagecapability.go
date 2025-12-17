@@ -72,15 +72,14 @@ func amd64Capabilities() *ImageCapability {
 		ImageCapsFormatVersion: "34dd2cea-aff2-4f45-b8f6-1cb5290bfab2",
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
-		AdditionalMetadata: AdditionalMetadata{
-			ShapeCompatibilities: []ShapeCompatibility{},
-		},
+		AdditionalMetadata:     AdditionalMetadata{},
 	}
 
-	shapeCapabilities := imageCapability.AdditionalMetadata.ShapeCompatibilities
+	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range amd64ImageShapes {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
+	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
 	return imageCapability
 }
