@@ -77,14 +77,14 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 	log.Infof("Created file %s", capabilitiesFile.Name())
 
-	// Upload the tarball
-	stat, err = tarballFile.Stat()
+	// Upload the image capabilities file
+	stat, err = capabilitiesFile.Stat()
 	if err != nil {
 		return "", "", err
 	}
 	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(getTarballName(fpath))
-	options.file = tarballFile
+	options.filename = "ocne_" + filepath.Base(getImageCapabilitiesName(fpath))
+	options.file = capabilitiesFile
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
@@ -99,14 +99,14 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", fmt.Errorf("failed to upload %s to object storage", options.filename)
 	}
 
-	// Upload the image capabilities file
-	stat, err = capabilitiesFile.Stat()
+	// Upload the tarball
+	stat, err = tarballFile.Stat()
 	if err != nil {
 		return "", "", err
 	}
 	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(getImageCapabilitiesName(fpath))
-	options.file = capabilitiesFile
+	options.filename = "ocne_" + filepath.Base(getTarballName(fpath))
+	options.file = tarballFile
 	failed = logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    &options,
@@ -120,6 +120,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	if failed {
 		return "", "", fmt.Errorf("failed to upload %s to object storage", options.filename)
 	}
+
 	os.Exit(1)
 
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
