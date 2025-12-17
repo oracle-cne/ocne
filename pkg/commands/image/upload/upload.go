@@ -198,7 +198,7 @@ func UploadOstree(options UploadOptions) error {
 	return image.Copy(fmt.Sprintf("oci-archive:%s", options.ImagePath), options.Destination, "", copy.CopySystemImage)
 }
 
-var providers map[string]func(UploadOptions) error = map[string]func(UploadOptions) error{
+var providers = map[string]func(UploadOptions) error{
 	ProviderTypeOCI:    UploadOci,
 	ProviderTypeOstree: UploadOstree,
 	ProviderTypeOlvm:   UploadOlvm,
