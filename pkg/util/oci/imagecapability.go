@@ -3,7 +3,7 @@ package oci
 type ImageCapability struct {
 	Version                int                   `json:"version"`
 	ExternalLaunchOptions  ExternalLaunchOptions `json:"externalLaunchOptions"`
-	ImageCapabilityData    string                `json:"imageCapabilityData"`
+	ImageCapabilityData    map[string]Descriptor `json:"imageCapabilityData"`
 	ImageCapsFormatVersion string                `json:"imageCapsFormatVersion"`
 	OperatingSystem        string                `json:"operatingSystem"`
 	OperatingSystemVersion string                `json:"operatingSystemVersion"`
@@ -32,13 +32,18 @@ type ShapeCompatibility struct {
 	OcpuConstraints   string `json:"ocpuConstraints,omitempty"`
 	MemoryConstraints string `json:"memoryConstraints,omitempty"`
 }
-
 type ImageArch string
 
 const (
 	AMD64 ImageArch = "amd64"
 	ARM64 ImageArch = "arm64"
 )
+
+type Descriptor struct {
+	DefaultValue   interface{} `json:"defaultValue"`
+	DescriptorType string      `json:"descriptorType"`
+	Values         []string    `json:"values,omitempty"` // omit if not present
+}
 
 var amd64ImageShapes = []string{"VM.DenseIO1.16", "VM.DenseIO1.4", "VM.DenseIO1.8", "VM.DenseIO2.16", "VM.DenseIO2.24", "VM.DenseIO2.8",
 	"VM.GPU2.1", "VM.GPU3.1", "VM.GPU3.2", "VM.GPU3.4", "VM.Standard.B1.1", "VM.Standard.B1.16", "VM.Standard.B1.2", "VM.Standard.B1.4", "VM.Standard.B1.8",
@@ -86,7 +91,7 @@ func arm64Capabilities() *ImageCapability {
 }
 
 func newCommonImageCapability() *ImageCapability {
-	return &ImageCapability{
+	imageCapability := &ImageCapability{
 		Version: 2,
 		ExternalLaunchOptions: ExternalLaunchOptions{
 			Firmware:                      "UEFI_64",
@@ -99,10 +104,26 @@ func newCommonImageCapability() *ImageCapability {
 			PvEncryptionInTransitEnabled:  true,
 			ConsistentVolumeNamingEnabled: true,
 		},
-		ImageCapabilityData:    "",
 		ImageCapsFormatVersion: "34dd2cea-aff2-4f45-b8f6-1cb5290bfab2",
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
 		AdditionalMetadata:     AdditionalMetadata{},
 	}
+
+	data := map[string]Descriptor{
+		"Compute.LaunchMode": {
+			DescriptorType: "enumstring",
+			Values:         []string{"PARAVIRTUALIZED"},
+			DefaultValue:   "PARAVIRTUALIZED",
+		},
+		"Compute.Firmware": {
+			DescriptorType: "enumstring",
+			Values:         []string{"UEFI_64"},
+			DefaultValue:   "UEFI_64",
+		},
+	}
+
+	imageCapability.ImageCapabilityData = data
+
+	return imageCapability
 }
