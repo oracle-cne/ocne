@@ -60,13 +60,13 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Upload the image capabilities file
-	err = uploadCapabilitiesFile(fpath, options)
+	err = uploadCapabilitiesFile(fpath, &options)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Upload the tarball
-	err = uploadTarballFile(file, fpath, options)
+	err = uploadTarballFile(file, fpath, &options)
 	if err != nil {
 		return "", "", err
 	}
@@ -74,7 +74,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
-func uploadTarballFile(file *os.File, filePath string, options UploadOptions) error {
+func uploadTarballFile(file *os.File, filePath string, options *UploadOptions) error {
 	// Create tarball
 	tarballName := getTarballName(filePath)
 	if err := createTarballFile(file, tarballName); err != nil {
@@ -109,7 +109,7 @@ func uploadTarballFile(file *os.File, filePath string, options UploadOptions) er
 	return nil
 }
 
-func uploadCapabilitiesFile(filePath string, options UploadOptions) error {
+func uploadCapabilitiesFile(filePath string, options *UploadOptions) error {
 	// Create image capabilities file
 	capabilitiesFileName := getImageCapabilitiesName(filePath)
 	if err := createImageCapabilitiesFile(capabilitiesFileName, options.ImageArchitecture); err != nil {
