@@ -40,6 +40,10 @@ const (
 	ARM64 ImageArch = "arm64"
 )
 
+var amd64ImageShapes = []string{"VM.DenseIO1.16", "VM.DenseIO1.4", "VM.DenseIO1.8", "VM.DenseIO2.16", "VM.DenseIO2.24", "VM.DenseIO2.8",
+	"VM.GPU2.1", "VM.GPU3.1", "VM.GPU3.2", "VM.GPU3.4", "VM.Standard.B1.1", "VM.Standard.B1.16", "VM.Standard.B1.2", "VM.Standard.B1.4", "VM.Standard.B1.8",
+	"VM.Standard.E2.1", "VM.Standard.E2.1.Micro", "VM.Standard.E2.2", "VM.Standard.E2.4", "VM.Standard.E2.8", "VM.Standard.E3.Flex"}
+
 func NewImageCapability(imageArch ImageArch) *ImageCapability {
 	switch imageArch {
 	case AMD64:
@@ -51,7 +55,7 @@ func NewImageCapability(imageArch ImageArch) *ImageCapability {
 }
 
 func amd64Capabilities() *ImageCapability {
-	return &ImageCapability{
+	imageCapability := &ImageCapability{
 		Version: 2,
 		ExternalLaunchOptions: ExternalLaunchOptions{
 			Firmware:                      "UEFI_64",
@@ -69,58 +73,16 @@ func amd64Capabilities() *ImageCapability {
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
 		AdditionalMetadata: AdditionalMetadata{
-			ShapeCompatibilities: []ShapeCompatibility{
-				{
-					InternalShapeName: "VM.DenseIO1.16",
-				},
-				{
-					InternalShapeName: "VM.DenseIO1.4",
-				},
-				{
-					InternalShapeName: "VM.DenseIO1.8",
-				},
-				{
-					InternalShapeName: "VM.DenseIO2.16",
-				},
-				{
-					InternalShapeName: "VM.DenseIO2.24",
-				},
-				{
-					InternalShapeName: "VM.DenseIO2.8",
-				},
-				{
-					InternalShapeName: "VM.GPU2.1",
-				},
-				{
-					InternalShapeName: "VM.GPU3.1",
-				},
-				{
-					InternalShapeName: "VM.GPU3.2",
-				},
-				{
-					InternalShapeName: "VM.GPU3.4",
-				},
-				{
-					InternalShapeName: "VM.Standard.B1.1",
-				},
-				{
-					InternalShapeName: "VM.Standard.B1.16",
-				},
-				{
-					InternalShapeName: "VM.Standard.B1.2",
-				},
-				{
-					InternalShapeName: "VM.Standard.B1.4",
-				},
-				{
-					InternalShapeName: "VM.Standard.B1.8",
-				},
-				{
-					InternalShapeName: "VM.Standard.E2.1",
-				},
-			},
+			ShapeCompatibilities: []ShapeCompatibility{},
 		},
 	}
+
+	shapeCapabilities := imageCapability.AdditionalMetadata.ShapeCompatibilities
+	for _, shape := range amd64ImageShapes {
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
+	}
+
+	return imageCapability
 }
 
 func arm64Capabilities() *ImageCapability {
