@@ -49,6 +49,8 @@ var amd64ImageShapes = []string{"VM.DenseIO1.16", "VM.DenseIO1.4", "VM.DenseIO1.
 	"e4-2c.128.2048.2t", "e4-2c.128.2048.jbod", "e4-2c.128.2048.nvme", "x5-2.36.256", "x5-2.36.512.nvme-12.8", "x5-2.36.512.nvme-28.8", "x6-2.44.512",
 	"x7-2c.28.256.gpu", "x7-2c.36.192.hpc", "x7-2c.52.768", "x7-2c.52.768.gpu", "x7-2l.52.768.nvme"}
 
+var arm64ImageShapes = []string{"VM.Standard.A1.Flex", "VM.Standard.A2.Flex", "a1-2c.160.1024"}
+
 func NewImageCapability(imageArch ImageArch) *ImageCapability {
 	switch imageArch {
 	case AMD64:
@@ -60,7 +62,31 @@ func NewImageCapability(imageArch ImageArch) *ImageCapability {
 }
 
 func amd64Capabilities() *ImageCapability {
-	imageCapability := &ImageCapability{
+	imageCapability := newCommonImageCapability()
+
+	var shapeCapabilities []ShapeCompatibility
+	for _, shape := range amd64ImageShapes {
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
+	}
+	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
+
+	return imageCapability
+}
+
+func arm64Capabilities() *ImageCapability {
+	imageCapability := newCommonImageCapability()
+
+	var shapeCapabilities []ShapeCompatibility
+	for _, shape := range arm64ImageShapes {
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
+	}
+	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
+
+	return imageCapability
+}
+
+func newCommonImageCapability() *ImageCapability {
+	return &ImageCapability{
 		Version: 2,
 		ExternalLaunchOptions: ExternalLaunchOptions{
 			Firmware:                      "UEFI_64",
@@ -79,16 +105,4 @@ func amd64Capabilities() *ImageCapability {
 		OperatingSystemVersion: "8",
 		AdditionalMetadata:     AdditionalMetadata{},
 	}
-
-	var shapeCapabilities []ShapeCompatibility
-	for _, shape := range amd64ImageShapes {
-		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
-	}
-	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
-
-	return imageCapability
-}
-
-func arm64Capabilities() *ImageCapability {
-	return &ImageCapability{}
 }
