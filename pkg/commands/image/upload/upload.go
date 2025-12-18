@@ -47,12 +47,12 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", err
 	}
 
-	fpath, err := file2.AbsDir(options.ImagePath)
+	qcow2Image, err := file2.AbsDir(options.ImagePath)
 	if err != nil {
 		return "", "", err
 	}
 
-	file, err := os.Open(fpath)
+	file, err := os.Open(qcow2Image)
 	if err != nil {
 		return "", "", err
 	} else {
@@ -60,13 +60,19 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create the image capabilities file
-	capabilitiesFileSpec := getImageCapabilitiesFileSpec(fpath)
+	capabilitiesFileSpec := getImageCapabilitiesFileSpec(qcow2Image)
 	if err := createImageCapabilitiesFile(capabilitiesFileSpec, options.ImageArchitecture); err != nil {
 		return "", "", err
 	}
 
-	// Create and upload the tarball
-	err = uploadTarballFile(fpath, capabilitiesFileSpec, &options)
+	// Create tarball
+	tarballName := getTarballName(qcow2Image)
+	if err := createTarballFile(qcow2Image, capabilitiesFileSpec, tarballName); err != nil {
+		return "", "", err
+	}
+
+	// Upload the tarball
+	err = uploadTarballFile(tarballName, &options)
 	if err != nil {
 		return "", "", err
 	}
@@ -74,13 +80,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
-func uploadTarballFile(imageFileSpec string, capabilitiesFileSpec string, options *UploadOptions) error {
-	// Create tarball
-	tarballName := getTarballName(imageFileSpec)
-	if err := createTarballFile(imageFileSpec, capabilitiesFileSpec, tarballName); err != nil {
-		return err
-	}
-
+func uploadTarballFile(tarballName string, options *UploadOptions) error {
 	tarballFile, err := os.Open(tarballName)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func Upload(options UploadOptions) error {
 }
 
 // createTarballFile - Create a .tar.gz of the input file
-func createTarballFile(imageFileSpec string, capabilitiesFileSpec string, archiveName string) error {
+func createTarballFile(qcow2Image string, capabilitiesFileSpec string, archiveName string) error {
 	// Create archive for writing
 	outFile, err := os.Create(archiveName)
 	if err != nil {
@@ -194,7 +194,7 @@ func createTarballFile(imageFileSpec string, capabilitiesFileSpec string, archiv
 	defer tw.Close()
 
 	// List of files to add
-	files := []string{imageFileSpec, capabilitiesFileSpec}
+	files := []string{qcow2Image, capabilitiesFileSpec}
 
 	for _, filename := range files {
 		if err := addFileToTarWriter(filename, tw); err != nil {
