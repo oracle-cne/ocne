@@ -59,14 +59,14 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		defer file.Close()
 	}
 
-	// Upload the image capabilities file
-	err = uploadCapabilitiesFile(fpath, &options)
-	if err != nil {
+	// Create the image capabilities file
+	capabilitiesFileSpec := getImageCapabilitiesFileSpec(fpath)
+	if err := createImageCapabilitiesFile(capabilitiesFileSpec, options.ImageArchitecture); err != nil {
 		return "", "", err
 	}
 
-	// Upload the tarball
-	err = uploadTarballFile(file, fpath, &options)
+	// Create and upload the tarball
+	err = uploadTarballFile(file, capabilitiesFileSpec, fpath, &options)
 	if err != nil {
 		return "", "", err
 	}
@@ -74,12 +74,13 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
-func uploadTarballFile(file *os.File, filePath string, options *UploadOptions) error {
+func uploadTarballFile(file *os.File, capabilitiesFileSpec string, filePath string, options *UploadOptions) error {
 	// Create tarball
 	tarballName := getTarballName(filePath)
-	if err := createTarballFile(file, tarballName); err != nil {
+	if err := createTarballFile(file, capabilitiesFileSpec, tarballName); err != nil {
 		return err
 	}
+	os.Exit(1)
 
 	tarballFile, err := os.Open(tarballName)
 	if err != nil {
@@ -106,43 +107,6 @@ func uploadTarballFile(file *os.File, filePath string, options *UploadOptions) e
 	if failed {
 		return fmt.Errorf("failed to upload %s to object storage", options.filename)
 	}
-	return nil
-}
-
-func uploadCapabilitiesFile(filePath string, options *UploadOptions) error {
-	// Create image capabilities file
-	capabilitiesFileName := getImageCapabilitiesName(filePath)
-	if err := createImageCapabilitiesFile(capabilitiesFileName, options.ImageArchitecture); err != nil {
-		return err
-	}
-
-	capabilitiesFile, err := os.Open(getImageCapabilitiesName(filePath))
-	if err != nil {
-		return err
-	}
-	defer capabilitiesFile.Close()
-
-	stat, err := capabilitiesFile.Stat()
-	if err != nil {
-		return err
-	}
-	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(capabilitiesFileName)
-	options.file = capabilitiesFile
-	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
-		{
-			Args:    options,
-			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
-			WaitFunction: func(uIface interface{}) error {
-				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
-			},
-		},
-	})
-	if failed {
-		return fmt.Errorf("failed to upload %s to object storage", options.filename)
-	}
-
 	return nil
 }
 
@@ -216,11 +180,16 @@ func Upload(options UploadOptions) error {
 }
 
 // createTarballFile - Create a .tar.gz of the input file
-func createTarballFile(inputFile *os.File, archiveName string) error {
+func createTarballFile(inputFile *os.File, capabilitiesFileSpec string, archiveName string) error {
 	var err error
 
 	// Get file info
 	info, err := inputFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	capabilitiesFile, err := os.Open(capabilitiesFileSpec)
 	if err != nil {
 		return err
 	}
@@ -250,6 +219,9 @@ func createTarballFile(inputFile *os.File, archiveName string) error {
 		return err
 	}
 	if _, err = io.Copy(tw, inputFile); err != nil {
+		return err
+	}
+	if _, err = io.Copy(tw, capabilitiesFile); err != nil {
 		return err
 	}
 	log.Infof("Created archive: %s", archiveName)
@@ -287,6 +259,6 @@ func getTarballName(filePath string) string {
 	return fmt.Sprintf("%s.tar.gz", filePath)
 }
 
-func getImageCapabilitiesName(filePath string) string {
+func getImageCapabilitiesFileSpec(filePath string) string {
 	return fmt.Sprintf("%s.json", filePath)
 }
