@@ -66,7 +66,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create and upload the tarball
-	err = uploadTarballFile(file, capabilitiesFileSpec, fpath, &options)
+	err = uploadTarballFile(fpath, capabilitiesFileSpec, &options)
 	if err != nil {
 		return "", "", err
 	}
@@ -74,10 +74,10 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
-func uploadTarballFile(file *os.File, capabilitiesFileSpec string, filePath string, options *UploadOptions) error {
+func uploadTarballFile(imageFileSpec string, capabilitiesFileSpec string, options *UploadOptions) error {
 	// Create tarball
-	tarballName := getTarballName(filePath)
-	if err := createTarballFile(file, capabilitiesFileSpec, tarballName); err != nil {
+	tarballName := getTarballName(imageFileSpec)
+	if err := createTarballFile(tarballName, capabilitiesFileSpec, tarballName); err != nil {
 		return err
 	}
 	os.Exit(1)
@@ -180,20 +180,7 @@ func Upload(options UploadOptions) error {
 }
 
 // createTarballFile - Create a .tar.gz of the input file
-func createTarballFile(inputFile *os.File, capabilitiesFileSpec string, archiveName string) error {
-	var err error
-
-	// Get file info
-	info, err := inputFile.Stat()
-	if err != nil {
-		return err
-	}
-
-	capabilitiesFile, err := os.Open(capabilitiesFileSpec)
-	if err != nil {
-		return err
-	}
-
+func createTarballFile(imageFileSpec string, capabilitiesFileSpec string, archiveName string) error {
 	// Create archive for writing
 	outFile, err := os.Create(archiveName)
 	if err != nil {
@@ -207,25 +194,44 @@ func createTarballFile(inputFile *os.File, capabilitiesFileSpec string, archiveN
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Create tar header from file info
-	header, err := tar.FileInfoHeader(info, "")
+	// List of files to add
+	files := []string{imageFileSpec, capabilitiesFileSpec}
+
+	for _, filename := range files {
+		if err := addFileToTarWriter(filename, tw); err != nil {
+			return err
+		}
+	}
+
+	log.Infof("Created archive: %s", archiveName)
+	return nil
+}
+
+func addFileToTarWriter(filename string, tw *tar.Writer) error {
+	file, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
-	header.Name = inputFile.Name() // Name in archive
+	defer file.Close()
 
-	// Write header and file content
-	if err = tw.WriteHeader(header); err != nil {
+	info, err := file.Stat()
+	if err != nil {
 		return err
 	}
-	if _, err = io.Copy(tw, inputFile); err != nil {
+
+	header := &tar.Header{
+		Name:    info.Name(), // Entry name in archive
+		Size:    info.Size(),
+		Mode:    int64(info.Mode()), // File permissions
+		ModTime: info.ModTime(),
+	}
+
+	if err := tw.WriteHeader(header); err != nil {
 		return err
 	}
-	if _, err = io.Copy(tw, capabilitiesFile); err != nil {
-		return err
-	}
-	log.Infof("Created archive: %s", archiveName)
-	return nil
+
+	_, err = io.Copy(tw, file)
+	return err
 }
 
 // createImageCapabilitiesFile - create an image capabilities JSON file based on the architecture passed in
