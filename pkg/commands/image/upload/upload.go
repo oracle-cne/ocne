@@ -77,7 +77,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 func uploadTarballFile(imageFileSpec string, capabilitiesFileSpec string, options *UploadOptions) error {
 	// Create tarball
 	tarballName := getTarballName(imageFileSpec)
-	if err := createTarballFile(tarballName, capabilitiesFileSpec, tarballName); err != nil {
+	if err := createTarballFile(imageFileSpec, capabilitiesFileSpec, tarballName); err != nil {
 		return err
 	}
 	os.Exit(1)
