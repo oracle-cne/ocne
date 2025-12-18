@@ -80,7 +80,6 @@ func uploadTarballFile(imageFileSpec string, capabilitiesFileSpec string, option
 	if err := createTarballFile(imageFileSpec, capabilitiesFileSpec, tarballName); err != nil {
 		return err
 	}
-	os.Exit(1)
 
 	tarballFile, err := os.Open(tarballName)
 	if err != nil {
