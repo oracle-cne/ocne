@@ -56,6 +56,8 @@ var amd64ImageShapes = []string{"VM.DenseIO1.16", "VM.DenseIO1.4", "VM.DenseIO1.
 
 var arm64ImageShapes = []string{"VM.Standard.A1.Flex", "VM.Standard.A2.Flex", "a1-2c.160.1024"}
 
+var amd64ImageShapesPCA = []string{"VM.PCAStandard.E5.Flex"}
+
 func NewImageCapability(imageArch ImageArch) *ImageCapability {
 	switch imageArch {
 	case AMD64:
@@ -70,7 +72,7 @@ func amd64Capabilities() *ImageCapability {
 	imageCapability := newCommonImageCapability()
 
 	var shapeCapabilities []ShapeCompatibility
-	for _, shape := range amd64ImageShapes {
+	for _, shape := range amd64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
