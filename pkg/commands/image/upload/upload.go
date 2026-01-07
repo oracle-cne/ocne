@@ -257,7 +257,7 @@ func createImageCapabilitiesFile(filePath string, imageArchitecture string) erro
 }
 
 func getTarballName(filePath string) string {
-	return fmt.Sprintf("%s.tar.gz", filePath)
+	return fmt.Sprintf("%s.tar.oci", filePath)
 }
 
 func getImageCapabilitiesFileSpec(filePath string) string {
