@@ -69,7 +69,7 @@ func NewImageCapability(imageArch ImageArch) *ImageCapability {
 }
 
 func amd64Capabilities() *ImageCapability {
-	imageCapability := newCommonImageCapability()
+	imageCapability := newPCAImageCapability()
 
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range amd64ImageShapesPCA {
@@ -89,6 +89,25 @@ func arm64Capabilities() *ImageCapability {
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
+	return imageCapability
+}
+
+func newPCAImageCapability() *ImageCapability {
+	imageCapability := &ImageCapability{
+		Version: 2,
+		ExternalLaunchOptions: ExternalLaunchOptions{
+			Firmware:                      "UEFI_64",
+			NetworkType:                   "PARAVIRTUALIZED",
+			BootVolumeType:                "PARAVIRTUALIZED",
+			RemoteDataVolumeType:          "PARAVIRTUALIZED",
+			LocalDataVolumeType:           "PARAVIRTUALIZED",
+			LaunchOptionsSource:           "CUSTOM",
+			PvEncryptionInTransitEnabled:  false,
+			ConsistentVolumeNamingEnabled: false,
+		},
+		OperatingSystem:        "Oracle Linux",
+		OperatingSystemVersion: "8",
+	}
 	return imageCapability
 }
 
