@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/cmd/flags"
@@ -257,7 +258,7 @@ func createImageCapabilitiesFile(filePath string, imageArchitecture string) erro
 }
 
 func getTarballName(filePath string) string {
-	return fmt.Sprintf("%s.tar.oci", filePath)
+	return fmt.Sprintf("%s.upload.oci", strings.TrimSuffix(filePath, ".oci"))
 }
 
 func getImageCapabilitiesFileSpec(filePath string) string {
