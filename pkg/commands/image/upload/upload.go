@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
@@ -13,16 +13,13 @@ import (
 	"path/filepath"
 
 	"github.com/containers/image/v5/copy"
+	"github.com/oracle-cne/ocne/cmd/flags"
 	file2 "github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
 	log "github.com/sirupsen/logrus"
 )
-
-const ProviderTypeOCI = "oci"
-const ProviderTypeOstree = "ostree"
-const ProviderTypeOlvm = "olvm"
 
 func setCompartmentId(options *UploadOptions) error {
 	// Compartment ID is already resolved.
@@ -55,9 +52,8 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	file, err := os.Open(qcow2Image)
 	if err != nil {
 		return "", "", err
-	} else {
-		defer file.Close()
 	}
+	defer file.Close()
 
 	// Create the image capabilities file
 	capabilitiesFileSpec := getImageCapabilitiesFileSpec(qcow2Image)
@@ -162,9 +158,9 @@ func UploadOstree(options UploadOptions) error {
 }
 
 var providers = map[string]func(UploadOptions) error{
-	ProviderTypeOCI:    UploadOci,
-	ProviderTypeOstree: UploadOstree,
-	ProviderTypeOlvm:   UploadOlvm,
+	flags.ProviderTypeOCI:    UploadOci,
+	flags.ProviderTypeOstree: UploadOstree,
+	flags.ProviderTypeOlvm:   UploadOlvm,
 }
 
 // Upload uploads a VM image to OCI Object storage and then imports

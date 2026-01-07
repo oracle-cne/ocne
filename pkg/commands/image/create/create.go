@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package create
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/start"
 	otypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -20,10 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
-
-const ProviderTypeOCI = "oci"
-const ProviderTypeOstree = "ostree"
-const ProviderTypeOlvm = "olvm"
 
 const (
 	podName         = "ocne-image-builder"
@@ -267,17 +264,17 @@ func createPod(client kubernetes.Interface, namespace string, name string, image
 }
 
 var providers = map[string]providerFuncs{
-	ProviderTypeOCI: {
+	flags.ProviderTypeOCI: {
 		defaultProvider: ociDefaultIgnition,
 		createConfigMap: createOciConfigMap,
 		createImage:     createOciImage,
 	},
-	ProviderTypeOstree: {
+	flags.ProviderTypeOstree: {
 		defaultProvider: qemuDefaultIgnition,
 		createConfigMap: createOstreeConfigMap,
 		createImage:     createOstreeImage,
 	},
-	ProviderTypeOlvm: {
+	flags.ProviderTypeOlvm: {
 		defaultProvider: olvmDefaultIgnition,
 		createConfigMap: createOlvmConfigMap,
 		createImage:     createOlvmImage,
