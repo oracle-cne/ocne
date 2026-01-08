@@ -215,15 +215,13 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 		return err
 	}
 
-	// Test renaming the file based on PCA docs
+	// Rename files based on what PCA requires
 	name := info.Name()
-	/*
-		if strings.HasSuffix(name, ".oci") {
-			name = "output.QCOW2"
-		} else {
-			name = "image_metadata.json"
-		}
-	*/
+	if strings.HasSuffix(name, ".oci") {
+		name = "output.QCOW2"
+	} else {
+		name = "image_metadata.json"
+	}
 
 	header := &tar.Header{
 		Name:    name, // Entry name in archive
