@@ -217,7 +217,7 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 
 	// Test renaming the file based on PCA docs
 	name := info.Name()
-	if strings.Contains(name, ".oci") {
+	if strings.HasSuffix(name, ".oci") {
 		name = "output.QCOW2"
 	} else {
 		name = "image_metadata.json"
