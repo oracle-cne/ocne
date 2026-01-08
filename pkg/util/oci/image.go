@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -106,10 +106,9 @@ func ImportImage(imageName string, k8sVersion string, arch string, compartmentId
 				constants.OCIKubernetesVersionTag: k8sVersion,
 			},
 			ImageSourceDetails: core.ImageSourceViaObjectStorageTupleDetails{
-				NamespaceName: &namespace,
-				BucketName:    &bucketName,
-				ObjectName:    &objectName,
-				//SourceImageType:        core.ImageSourceDetailsSourceImageTypeQcow2,
+				NamespaceName:          &namespace,
+				BucketName:             &bucketName,
+				ObjectName:             &objectName,
 				OperatingSystem:        &osName,
 				OperatingSystemVersion: &osVersion,
 			},
