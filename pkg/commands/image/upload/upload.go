@@ -48,7 +48,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	if len(regions) == 1 {
 		options.PCA = true
 	}
-	log.Infof("PCA boolean flag: %v", options.PCA)
+	log.Debugf("PCA boolean flag: %v", options.PCA)
 
 	err = setCompartmentId(&options)
 	if err != nil {
