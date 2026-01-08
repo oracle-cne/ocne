@@ -1,11 +1,12 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
 
 import (
-	"github.com/oracle-cne/ocne/pkg/config/types"
 	"io"
+
+	"github.com/oracle-cne/ocne/pkg/config/types"
 )
 
 // UploadOptions are the options for the upload image command
@@ -34,6 +35,9 @@ type UploadOptions struct {
 
 	// Profile is the OCI config profile
 	Profile string
+
+	// PCA is a boolean to indicate if OCI config is for a PCA
+	PCA bool
 
 	// ImageName is the name of the custom image to create
 	ImageName string

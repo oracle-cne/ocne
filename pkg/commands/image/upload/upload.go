@@ -40,7 +40,16 @@ func setCompartmentId(options *UploadOptions) error {
 // UploadAsync uploads a VM image to object storage and then begins
 // the import process.  A work request is returned for the import.
 func UploadAsync(options UploadOptions) (string, string, error) {
-	err := setCompartmentId(&options)
+	// Hack to determine if OCI config is for a PCA.  PCA will only have one region.
+	regions, err := oci.ListRegions(options.Profile)
+	if err != nil {
+		return "", "", err
+	}
+	if len(regions) == 1 {
+		options.PCA = true
+	}
+
+	err = setCompartmentId(&options)
 	if err != nil {
 		return "", "", err
 	}
@@ -58,7 +67,7 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 
 	// Create the image capabilities file
 	capabilitiesFileSpec := getImageCapabilitiesFileSpec(qcow2Image)
-	if err := createImageCapabilitiesFile(capabilitiesFileSpec, options.ImageArchitecture); err != nil {
+	if err := createImageCapabilitiesFile(capabilitiesFileSpec, options.ImageArchitecture, options.PCA); err != nil {
 		return "", "", err
 	}
 
@@ -234,8 +243,8 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 }
 
 // createImageCapabilitiesFile - create an image capabilities JSON file based on the architecture passed in
-func createImageCapabilitiesFile(filePath string, imageArchitecture string) error {
-	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture))
+func createImageCapabilitiesFile(filePath string, imageArchitecture string, isPCA bool) error {
+	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture), isPCA)
 
 	// Marshal the struct to JSON
 	data, err := json.MarshalIndent(capabilities, "", "  ")
