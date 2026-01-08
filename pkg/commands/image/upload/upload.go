@@ -190,20 +190,20 @@ func createTarballFile(qcow2Image string, capabilitiesFileSpec string, archiveNa
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Add files to tarball
+	// List of files to add
+	files := []string{qcow2Image, capabilitiesFileSpec}
 
-	if err := addFileToTarWriter(qcow2Image, strings.ReplaceAll(qcow2Image, ".oci", ".QCOW2"), tw); err != nil {
-		return err
-	}
-	if err := addFileToTarWriter(capabilitiesFileSpec, capabilitiesFileSpec, tw); err != nil {
-		return err
+	for _, filename := range files {
+		if err := addFileToTarWriter(filename, tw); err != nil {
+			return err
+		}
 	}
 
 	log.Infof("Created archive: %s", archiveName)
 	return nil
 }
 
-func addFileToTarWriter(filename string, newFilename string, tw *tar.Writer) error {
+func addFileToTarWriter(filename string, tw *tar.Writer) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -216,7 +216,7 @@ func addFileToTarWriter(filename string, newFilename string, tw *tar.Writer) err
 	}
 
 	header := &tar.Header{
-		Name:    newFilename, // Entry name in archive
+		Name:    strings.ReplaceAll(info.Name(), ".oci", ".QCOW2"), // Entry name in archive
 		Size:    info.Size(),
 		Mode:    int64(info.Mode()), // File permissions
 		ModTime: info.ModTime(),
