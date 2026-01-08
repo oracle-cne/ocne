@@ -129,7 +129,7 @@ func newOCICommonImageCapability() *ImageCapability {
 			RemoteDataVolumeType: "PARAVIRTUALIZED",
 			LocalDataVolumeType:  "PARAVIRTUALIZED",
 			//LaunchOptionsSource:           "NATIVE",
-			//PvAttachmentVersion:           1,
+			PvAttachmentVersion:           2,
 			PvEncryptionInTransitEnabled:  true,
 			ConsistentVolumeNamingEnabled: true,
 		},
