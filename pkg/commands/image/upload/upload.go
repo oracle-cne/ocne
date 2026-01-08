@@ -144,11 +144,6 @@ func UploadOci(options UploadOptions) error {
 		return err
 	}
 
-	// Set schema.  compartmentId is set by UploadAsync
-	if err = EnsureImageDetails(options.compartmentId, options.Profile, imageId, options.ImageArchitecture); err != nil {
-		return err
-	}
-
 	log.Infof("Image OCID is %s", imageId)
 
 	return nil
