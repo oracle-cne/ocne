@@ -75,7 +75,7 @@ func amd64Capabilities() *ImageCapability {
 	for _, shape := range amd64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
-	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
+	//imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
 	return imageCapability
 }
