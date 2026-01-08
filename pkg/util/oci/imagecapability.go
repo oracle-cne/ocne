@@ -59,16 +59,20 @@ var arm64ImageShapesOCI = []string{"VM.Standard.A1.Flex", "VM.Standard.A2.Flex",
 
 var amd64ImageShapesPCA = []string{"VM.PCAStandard.E5.Flex"}
 
+var arm64ImageShapesPCA []string
+
+// NewImageCapability - generate image capabilities structure based on architecture and whether PCA or not
 func NewImageCapability(imageArch ImageArch, isPCA bool) *ImageCapability {
 	switch imageArch {
 	case AMD64:
 		return amd64Capabilities(isPCA)
 	case ARM64:
-		return arm64Capabilities()
+		return arm64Capabilities(isPCA)
 	}
 	return &ImageCapability{}
 }
 
+// amd64Capabilities - create image capabilities for amd64
 func amd64Capabilities(isPCA bool) *ImageCapability {
 	if isPCA {
 		return amd64CapabilitiesPCA()
@@ -76,6 +80,7 @@ func amd64Capabilities(isPCA bool) *ImageCapability {
 	return amd64CapabilitiesOCI()
 }
 
+// amd64CapabilitiesOCI - create image capabilities for amd64 OCI
 func amd64CapabilitiesOCI() *ImageCapability {
 	imageCapability := newOCICommonImageCapability()
 
@@ -88,26 +93,27 @@ func amd64CapabilitiesOCI() *ImageCapability {
 	return imageCapability
 }
 
+// amd64CapabilitiesPCA - create image capabilities for amd64 PCA
 func amd64CapabilitiesPCA() *ImageCapability {
-	imageCapability := &ImageCapability{
-		Version: 2,
-		ExternalLaunchOptions: ExternalLaunchOptions{
-			Firmware:                      "UEFI_64",
-			NetworkType:                   "PARAVIRTUALIZED",
-			BootVolumeType:                "PARAVIRTUALIZED",
-			RemoteDataVolumeType:          "PARAVIRTUALIZED",
-			LocalDataVolumeType:           "PARAVIRTUALIZED",
-			LaunchOptionsSource:           "CUSTOM",
-			PvEncryptionInTransitEnabled:  false,
-			ConsistentVolumeNamingEnabled: false,
-		},
-		OperatingSystem:        "Oracle Linux",
-		OperatingSystemVersion: "8",
+	imageCapability := newPCACommonImageCapability()
+	var shapeCapabilities []ShapeCompatibility
+	for _, shape := range amd64ImageShapesPCA {
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
 	return imageCapability
 }
 
-func arm64Capabilities() *ImageCapability {
+// arm64Capabilities - create image capabilities for arm64
+func arm64Capabilities(isPCA bool) *ImageCapability {
+	if isPCA {
+		return arm64CapabilitiesPCA()
+	}
+	return arm64CapabilitiesOCI()
+
+}
+
+// arm64CapabilitiesOCI - create image capabilities for arm64 OCI
+func arm64CapabilitiesOCI() *ImageCapability {
 	imageCapability := newOCICommonImageCapability()
 
 	var shapeCapabilities []ShapeCompatibility
@@ -116,6 +122,16 @@ func arm64Capabilities() *ImageCapability {
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
+	return imageCapability
+}
+
+// arm64CapabilitiesPCA - create image capabilities for arm64 PCA
+func arm64CapabilitiesPCA() *ImageCapability {
+	imageCapability := newPCACommonImageCapability()
+	var shapeCapabilities []ShapeCompatibility
+	for _, shape := range arm64ImageShapesPCA {
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
+	}
 	return imageCapability
 }
 
@@ -154,4 +170,22 @@ func newOCICommonImageCapability() *ImageCapability {
 	imageCapability.ImageCapabilityData = data
 
 	return imageCapability
+}
+
+func newPCACommonImageCapability() *ImageCapability {
+	return &ImageCapability{
+		Version: 2,
+		ExternalLaunchOptions: ExternalLaunchOptions{
+			Firmware:                      "UEFI_64",
+			NetworkType:                   "PARAVIRTUALIZED",
+			BootVolumeType:                "PARAVIRTUALIZED",
+			RemoteDataVolumeType:          "PARAVIRTUALIZED",
+			LocalDataVolumeType:           "PARAVIRTUALIZED",
+			LaunchOptionsSource:           "CUSTOM",
+			PvEncryptionInTransitEnabled:  false,
+			ConsistentVolumeNamingEnabled: false,
+		},
+		OperatingSystem:        "Oracle Linux",
+		OperatingSystemVersion: "8",
+	}
 }
