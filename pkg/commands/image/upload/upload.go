@@ -215,8 +215,16 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 		return err
 	}
 
+	// Test renaming the file based on PCA docs
+	name := info.Name()
+	if strings.Contains(name, ".oci") {
+		name = "output.QCOW2"
+	} else {
+		name = "image_metadata.json"
+	}
+
 	header := &tar.Header{
-		Name:    strings.ReplaceAll(info.Name(), ".oci", ".QCOW2"), // Entry name in archive
+		Name:    name, // Entry name in archive
 		Size:    info.Size(),
 		Mode:    int64(info.Mode()), // File permissions
 		ModTime: info.ModTime(),
