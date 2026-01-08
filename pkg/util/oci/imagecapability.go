@@ -69,27 +69,11 @@ func NewImageCapability(imageArch ImageArch) *ImageCapability {
 }
 
 func amd64Capabilities() *ImageCapability {
-	imageCapability := newPCAImageCapability()
-
-	var shapeCapabilities []ShapeCompatibility
-	for _, shape := range amd64ImageShapesPCA {
-		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
-	}
-	//imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
-
-	return imageCapability
+	return newPCAImageCapability()
 }
 
 func arm64Capabilities() *ImageCapability {
-	imageCapability := newCommonImageCapability()
-
-	var shapeCapabilities []ShapeCompatibility
-	for _, shape := range arm64ImageShapes {
-		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
-	}
-	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
-
-	return imageCapability
+	return newPCAImageCapability()
 }
 
 func newPCAImageCapability() *ImageCapability {
