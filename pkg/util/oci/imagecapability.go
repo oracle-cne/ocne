@@ -149,6 +149,7 @@ func newOCICommonImageCapability() *ImageCapability {
 			PvEncryptionInTransitEnabled:  true,
 			ConsistentVolumeNamingEnabled: true,
 		},
+		ImageCapsFormatVersion: "34dd2cea-aff2-4f45-b8f6-1cb5290bfab2",
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
 		AdditionalMetadata:     AdditionalMetadata{},
