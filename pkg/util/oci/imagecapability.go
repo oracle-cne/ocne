@@ -55,7 +55,7 @@ var amd64ImageShapesOCI = []string{"BM.Standard2.52", "BM.DenseIO.E4.128", "BM.S
 	"VM.Standard1.16", "VM.Standard.B1.1", "VM.Standard.B1.2", "VM.Standard.B1.4", "VM.Standard.B1.8", "VM.Standard.B1.16", "VM.Standard.E5.Flex",
 	"VM.Standard.E6.Flex", "BM.GPU3.8", "VM.GPU3.1", "VM.GPU3.2", "VM.GPU3.4", "BM.HPC2.36", "BM.GPU4.8"}
 
-var arm64ImageShapesOCI = []string{"VM.Standard.A1.Flex", "VM.Standard.A2.Flex", "BM.Standard.A1.160"}
+var arm64ImageShapesOCI = []string{"VM.Standard.A1.Flex", "VM.Standard.A2.Flex", "a1-2c.160.1024"}
 
 var amd64ImageShapesPCA = []string{"VM.PCAStandard.E5.Flex"}
 
@@ -146,8 +146,8 @@ func newOCICommonImageCapability() *ImageCapability {
 			LocalDataVolumeType:           "VFIO",
 			LaunchOptionsSource:           "NATIVE",
 			PvAttachmentVersion:           1,
-			PvEncryptionInTransitEnabled:  true,
-			ConsistentVolumeNamingEnabled: true,
+			PvEncryptionInTransitEnabled:  false,
+			ConsistentVolumeNamingEnabled: false,
 		},
 		ImageCapsFormatVersion: "34dd2cea-aff2-4f45-b8f6-1cb5290bfab2",
 		OperatingSystem:        "Oracle Linux",
