@@ -3,10 +3,12 @@
 
 package oci
 
+import "encoding/json"
+
 type ImageCapability struct {
 	Version                int                   `json:"version"`
 	ExternalLaunchOptions  ExternalLaunchOptions `json:"externalLaunchOptions"`
-	ImageCapabilityData    Capabilities          `json:"imageCapabilityData"`
+	ImageCapabilityData    string                `json:"imageCapabilityData"`
 	ImageCapsFormatVersion string                `json:"imageCapsFormatVersion"`
 	OperatingSystem        string                `json:"operatingSystem"`
 	OperatingSystemVersion string                `json:"operatingSystemVersion"`
@@ -42,9 +44,9 @@ const (
 	ARM64 ImageArch = "arm64"
 )
 
-type Capabilities map[string]Descriptors
-
-type Descriptors map[string]Descriptor
+type ImageCapabilityData struct {
+	Capabilities map[string]Descriptor `json:"capabilities"`
+}
 
 type Descriptor struct {
 	DefaultValue   interface{} `json:"defaultValue"`
@@ -161,21 +163,27 @@ func newOCICommonImageCapability() *ImageCapability {
 		AdditionalMetadata:     AdditionalMetadata{},
 	}
 
-	var data Capabilities = make(Capabilities)
-	data["capabilities"] = make(Descriptors)
-	data["capabilities"]["Compute.LaunchMode"] =
-		Descriptor{
-			DescriptorType: "enumstring",
-			Values:         []string{"PARAVIRTUALIZED"},
-			DefaultValue:   "PARAVIRTUALIZED",
-		}
-	data["capabilities"]["Compute.Firmware"] = Descriptor{
-		DescriptorType: "enumstring",
-		Values:         []string{"UEFI_64"},
-		DefaultValue:   "UEFI_64",
+	data := ImageCapabilityData{
+		Capabilities: map[string]Descriptor{
+			"Compute.LaunchMode": {
+				DescriptorType: "enumstring",
+				Values:         []string{"PARAVIRTUALIZED"},
+				DefaultValue:   "PARAVIRTUALIZED",
+			},
+			"Compute.Firmware": {
+				DescriptorType: "enumstring",
+				Values:         []string{"UEFI_64"},
+				DefaultValue:   "UEFI_64",
+			},
+		},
 	}
 
-	imageCapability.ImageCapabilityData = data
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+
+	imageCapability.ImageCapabilityData = string(bytes)
 
 	return imageCapability
 }
