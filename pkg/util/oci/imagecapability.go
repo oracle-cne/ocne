@@ -41,7 +41,6 @@ type ImageArch string
 
 const (
 	AMD64 ImageArch = "amd64"
-	ARM64 ImageArch = "arm64"
 )
 
 type ImageCapabilityData struct {
@@ -108,6 +107,7 @@ func amd64CapabilitiesPCA() (*ImageCapability, error) {
 	for _, shape := range amd64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
+	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 	return imageCapability, nil
 }
 
@@ -143,6 +143,7 @@ func arm64CapabilitiesPCA() (*ImageCapability, error) {
 	for _, shape := range arm64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
+	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 	return imageCapability, nil
 }
 
@@ -205,5 +206,6 @@ func newPCACommonImageCapability() *ImageCapability {
 		},
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
+		AdditionalMetadata:     AdditionalMetadata{},
 	}
 }
