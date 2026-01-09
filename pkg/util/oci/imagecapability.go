@@ -26,7 +26,7 @@ type ExternalLaunchOptions struct {
 }
 
 type AdditionalMetadata struct {
-	SourcePublicImageId  string               `json:"sourcePublicImageId"`
+	SourcePublicImageId  *string              `json:"sourcePublicImageId"`
 	ShapeCompatibilities []ShapeCompatibility `json:"shapeCompatibilities"`
 }
 
