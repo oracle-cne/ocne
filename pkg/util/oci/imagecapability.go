@@ -6,7 +6,7 @@ package oci
 type ImageCapability struct {
 	Version                int                   `json:"version"`
 	ExternalLaunchOptions  ExternalLaunchOptions `json:"externalLaunchOptions"`
-	ImageCapabilityData    map[string]Descriptor `json:"imageCapabilityData"`
+	ImageCapabilityData    Capabilities          `json:"imageCapabilityData"`
 	ImageCapsFormatVersion string                `json:"imageCapsFormatVersion"`
 	OperatingSystem        string                `json:"operatingSystem"`
 	OperatingSystemVersion string                `json:"operatingSystemVersion"`
@@ -41,6 +41,10 @@ const (
 	AMD64 ImageArch = "amd64"
 	ARM64 ImageArch = "arm64"
 )
+
+type Capabilities map[string]Descriptors
+
+type Descriptors map[string]Descriptor
 
 type Descriptor struct {
 	DefaultValue   interface{} `json:"defaultValue"`
@@ -155,17 +159,18 @@ func newOCICommonImageCapability() *ImageCapability {
 		AdditionalMetadata:     AdditionalMetadata{},
 	}
 
-	data := map[string]Descriptor{
-		"Compute.LaunchMode": {
+	var data Capabilities
+	data["capabilities"] = map[string]Descriptor{}
+	data["capabilities"]["Compute.LaunchMode"] =
+		Descriptor{
 			DescriptorType: "enumstring",
 			Values:         []string{"PARAVIRTUALIZED"},
 			DefaultValue:   "PARAVIRTUALIZED",
-		},
-		"Compute.Firmware": {
-			DescriptorType: "enumstring",
-			Values:         []string{"UEFI_64"},
-			DefaultValue:   "UEFI_64",
-		},
+		}
+	data["capabilities"]["Compute.Firmware"] = Descriptor{
+		DescriptorType: "enumstring",
+		Values:         []string{"UEFI_64"},
+		DefaultValue:   "UEFI_64",
 	}
 
 	imageCapability.ImageCapabilityData = data
