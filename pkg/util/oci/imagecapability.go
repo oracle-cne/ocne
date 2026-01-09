@@ -26,14 +26,14 @@ type ExternalLaunchOptions struct {
 }
 
 type AdditionalMetadata struct {
-	SourcePublicImageId  *string              `json:"sourcePublicImageId,omitempty"`
+	SourcePublicImageId  string               `json:"sourcePublicImageId"`
 	ShapeCompatibilities []ShapeCompatibility `json:"shapeCompatibilities"`
 }
 
 type ShapeCompatibility struct {
 	InternalShapeName string  `json:"internalShapeName"`
-	OcpuConstraints   *string `json:"ocpuConstraints,omitempty"`
-	MemoryConstraints *string `json:"memoryConstraints,omitempty"`
+	OcpuConstraints   *string `json:"ocpuConstraints"`
+	MemoryConstraints *string `json:"memoryConstraints"`
 }
 type ImageArch string
 
@@ -162,9 +162,7 @@ func newOCICommonImageCapability() *ImageCapability {
 		ImageCapsFormatVersion: "34dd2cea-aff2-4f45-b8f6-1cb5290bfab2",
 		OperatingSystem:        "Oracle Linux",
 		OperatingSystemVersion: "8",
-		AdditionalMetadata: AdditionalMetadata{
-			SourcePublicImageId: nil,
-		},
+		AdditionalMetadata:     AdditionalMetadata{},
 	}
 
 	var data Capabilities = make(Capabilities)
