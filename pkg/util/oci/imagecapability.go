@@ -159,8 +159,8 @@ func newOCICommonImageCapability() *ImageCapability {
 		AdditionalMetadata:     AdditionalMetadata{},
 	}
 
-	var data Capabilities
-	data["capabilities"] = map[string]Descriptor{}
+	var data Capabilities = make(Capabilities)
+	data["capabilities"] = make(Descriptors)
 	data["capabilities"]["Compute.LaunchMode"] =
 		Descriptor{
 			DescriptorType: "enumstring",
