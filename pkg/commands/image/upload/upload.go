@@ -245,7 +245,10 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 
 // createImageCapabilitiesFile - create an image capabilities JSON file based on the architecture passed in
 func createImageCapabilitiesFile(filePath string, imageArchitecture string, isPCA bool) error {
-	capabilities := oci.NewImageCapability(oci.ImageArch(imageArchitecture), isPCA)
+	capabilities, err := oci.NewImageCapability(oci.ImageArch(imageArchitecture), isPCA)
+	if err != nil {
+		return err
+	}
 
 	// Marshal the struct to JSON
 	data, err := json.MarshalIndent(capabilities, "", "  ")

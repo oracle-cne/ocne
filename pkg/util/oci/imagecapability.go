@@ -70,18 +70,15 @@ var amd64ImageShapesPCA = []string{"VM.PCAStandard.E5.Flex"}
 var arm64ImageShapesPCA []string
 
 // NewImageCapability - generate image capabilities structure based on architecture and whether PCA or not
-func NewImageCapability(imageArch ImageArch, isPCA bool) *ImageCapability {
-	switch imageArch {
-	case AMD64:
+func NewImageCapability(imageArch ImageArch, isPCA bool) (*ImageCapability, error) {
+	if imageArch == AMD64 {
 		return amd64Capabilities(isPCA)
-	case ARM64:
-		return arm64Capabilities(isPCA)
 	}
-	return &ImageCapability{}
+	return arm64Capabilities(isPCA)
 }
 
 // amd64Capabilities - create image capabilities for amd64
-func amd64Capabilities(isPCA bool) *ImageCapability {
+func amd64Capabilities(isPCA bool) (*ImageCapability, error) {
 	if isPCA {
 		return amd64CapabilitiesPCA()
 	}
@@ -89,8 +86,11 @@ func amd64Capabilities(isPCA bool) *ImageCapability {
 }
 
 // amd64CapabilitiesOCI - create image capabilities for amd64 OCI
-func amd64CapabilitiesOCI() *ImageCapability {
-	imageCapability := newOCICommonImageCapability()
+func amd64CapabilitiesOCI() (*ImageCapability, error) {
+	imageCapability, err := newOCICommonImageCapability()
+	if err != nil {
+		return nil, err
+	}
 
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range amd64ImageShapesOCI {
@@ -98,21 +98,21 @@ func amd64CapabilitiesOCI() *ImageCapability {
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
-	return imageCapability
+	return imageCapability, nil
 }
 
 // amd64CapabilitiesPCA - create image capabilities for amd64 PCA
-func amd64CapabilitiesPCA() *ImageCapability {
+func amd64CapabilitiesPCA() (*ImageCapability, error) {
 	imageCapability := newPCACommonImageCapability()
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range amd64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
-	return imageCapability
+	return imageCapability, nil
 }
 
 // arm64Capabilities - create image capabilities for arm64
-func arm64Capabilities(isPCA bool) *ImageCapability {
+func arm64Capabilities(isPCA bool) (*ImageCapability, error) {
 	if isPCA {
 		return arm64CapabilitiesPCA()
 	}
@@ -121,8 +121,11 @@ func arm64Capabilities(isPCA bool) *ImageCapability {
 }
 
 // arm64CapabilitiesOCI - create image capabilities for arm64 OCI
-func arm64CapabilitiesOCI() *ImageCapability {
-	imageCapability := newOCICommonImageCapability()
+func arm64CapabilitiesOCI() (*ImageCapability, error) {
+	imageCapability, err := newOCICommonImageCapability()
+	if err != nil {
+		return nil, err
+	}
 
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range arm64ImageShapesOCI {
@@ -130,20 +133,20 @@ func arm64CapabilitiesOCI() *ImageCapability {
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
-	return imageCapability
+	return imageCapability, nil
 }
 
 // arm64CapabilitiesPCA - create image capabilities for arm64 PCA
-func arm64CapabilitiesPCA() *ImageCapability {
+func arm64CapabilitiesPCA() (*ImageCapability, error) {
 	imageCapability := newPCACommonImageCapability()
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range arm64ImageShapesPCA {
 		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
-	return imageCapability
+	return imageCapability, nil
 }
 
-func newOCICommonImageCapability() *ImageCapability {
+func newOCICommonImageCapability() (*ImageCapability, error) {
 	imageCapability := &ImageCapability{
 		Version: 2,
 		ExternalLaunchOptions: ExternalLaunchOptions{
@@ -180,12 +183,11 @@ func newOCICommonImageCapability() *ImageCapability {
 
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-
 	imageCapability.ImageCapabilityData = string(bytes)
 
-	return imageCapability
+	return imageCapability, nil
 }
 
 func newPCACommonImageCapability() *ImageCapability {
