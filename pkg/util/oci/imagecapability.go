@@ -92,11 +92,7 @@ func amd64CapabilitiesOCI() *ImageCapability {
 
 	var shapeCapabilities []ShapeCompatibility
 	for _, shape := range amd64ImageShapesOCI {
-		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{
-			InternalShapeName: shape,
-			OcpuConstraints:   nil,
-			MemoryConstraints: nil,
-		})
+		shapeCapabilities = append(shapeCapabilities, ShapeCompatibility{InternalShapeName: shape})
 	}
 	imageCapability.AdditionalMetadata.ShapeCompatibilities = shapeCapabilities
 
