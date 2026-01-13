@@ -55,7 +55,7 @@ type UploadOptions struct {
 	compartmentId string
 	filename      string
 	size          int64
-	file          io.ReadCloser
+	file          io.Reader
 }
 
 // OlvmUploadOptions are the options for the upload image command

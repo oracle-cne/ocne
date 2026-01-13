@@ -5,6 +5,7 @@ package upload
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 
 	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/cmd/flags"
-	file2 "github.com/oracle-cne/ocne/pkg/file"
+	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
@@ -55,16 +56,16 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 		return "", "", err
 	}
 
-	qcow2Image, err := file2.AbsDir(options.ImagePath)
+	qcow2Image, err := file.AbsDir(options.ImagePath)
 	if err != nil {
 		return "", "", err
 	}
 
-	file, err := os.Open(qcow2Image)
+	qcow2File, err := os.Open(qcow2Image)
 	if err != nil {
 		return "", "", err
 	}
-	defer file.Close()
+	defer qcow2File.Close()
 
 	// Create the image capabilities file
 	capabilitiesFileSpec := getImageCapabilitiesFileSpec(qcow2Image)
@@ -73,13 +74,13 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	}
 
 	// Create tarball
-	tarballName := getTarballName(qcow2Image)
-	if err := createTarballFile(qcow2Image, capabilitiesFileSpec, tarballName); err != nil {
+	tarBytes, err := createTarballInMemory(qcow2Image, capabilitiesFileSpec)
+	if err != nil {
 		return "", "", err
 	}
 
 	// Upload the tarball
-	err = uploadTarballFile(tarballName, &options)
+	err = uploadTarballBytes(tarBytes, qcow2File.Name(), &options)
 	if err != nil {
 		return "", "", err
 	}
@@ -87,26 +88,26 @@ func UploadAsync(options UploadOptions) (string, string, error) {
 	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
 }
 
-func uploadTarballFile(tarballName string, options *UploadOptions) error {
-	tarballFile, err := os.Open(tarballName)
-	if err != nil {
-		return err
-	}
-	defer tarballFile.Close()
-	stat, err := tarballFile.Stat()
-	if err != nil {
-		return err
-	}
-	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(tarballName)
-	options.file = tarballFile
+// uploadTarballBytes streams the in-memory tarball ([]byte)
+func uploadTarballBytes(tarball []byte, baseName string, options *UploadOptions) error {
+	options.size = int64(len(tarball))
+	options.filename = "ocne_" + filepath.Base(baseName)
+	options.file = bytes.NewReader(tarball)
+
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
 		{
 			Args:    options,
 			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
+				return oci.UploadObject(
+					uo.ClusterConfig.Providers.Oci.ImageBucket,
+					options.filename,
+					uo.ClusterConfig.Providers.Oci.Profile,
+					uo.size,
+					uo.file,
+					nil,
+				)
 			},
 		},
 	})
@@ -180,42 +181,42 @@ func Upload(options UploadOptions) error {
 	return pf(options)
 }
 
-// createTarballFile - Create a .tar.gz of the input file
-func createTarballFile(qcow2Image string, capabilitiesFileSpec string, archiveName string) error {
-	// Create archive for writing
-	outFile, err := os.Create(archiveName)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	// Wrap output in gzip and tar writers
-	gw := gzip.NewWriter(outFile)
+// createTarballInMemory - Create a .tar.gz of the input files in memory and return as []byte
+func createTarballInMemory(qcow2Image string, capabilitiesFileSpec string) ([]byte, error) {
+	// In-memory buffer
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
 	defer gw.Close()
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
 	// List of files to add
 	files := []string{qcow2Image, capabilitiesFileSpec}
-
 	for _, filename := range files {
 		if err := addFileToTarWriter(filename, tw); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	log.Infof("Created archive: %s", archiveName)
-	return nil
+	// Properly close writers to flush all data
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+	if err := gw.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func addFileToTarWriter(filename string, tw *tar.Writer) error {
-	file, err := os.Open(filename)
+	addFile, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer addFile.Close()
 
-	info, err := file.Stat()
+	info, err := addFile.Stat()
 	if err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ func addFileToTarWriter(filename string, tw *tar.Writer) error {
 		return err
 	}
 
-	_, err = io.Copy(tw, file)
+	_, err = io.Copy(tw, addFile)
 	return err
 }
 
@@ -257,13 +258,13 @@ func createImageCapabilitiesFile(filePath string, imageArchitecture string, isPC
 	}
 
 	// Write JSON data to a file
-	file, err := os.Create(filePath)
+	jsonFile, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer jsonFile.Close()
 
-	_, err = file.Write(data)
+	_, err = jsonFile.Write(data)
 	if err != nil {
 		return err
 	}
@@ -271,10 +272,6 @@ func createImageCapabilitiesFile(filePath string, imageArchitecture string, isPC
 	log.Infof("Created file %s", filePath)
 
 	return nil
-}
-
-func getTarballName(filePath string) string {
-	return fmt.Sprintf("%s.upload.oci", strings.TrimSuffix(filePath, ".oci"))
 }
 
 func getImageCapabilitiesFileSpec(filePath string) string {
