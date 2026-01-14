@@ -52,6 +52,11 @@ type UpdateOptions struct {
 
 	// PreUpdateMode determines how to handle the preupdate process
 	PreUpdateMode string
+
+	// Force attempts an update even if an update does not appear to be
+	// available.  Useful to work around cases where a node fails to
+	// advertise that an update is available for some reason.
+	Force bool
 }
 
 // Update updates a cluster node with a new CrateOS image and restarts the node
@@ -128,7 +133,7 @@ func Update(o UpdateOptions) error {
 		return err
 	}
 
-	err = prepareNode(&o, kubeClient, kcConfig)
+	err = prepareNode(&o, kubeClient, restConfig, kcConfig)
 	if err != nil {
 		return err
 	}
@@ -171,21 +176,20 @@ func Update(o UpdateOptions) error {
 	return nil
 }
 
-// prepareNode checks if an update is available then cordons and drains the node.
-func prepareNode(o *UpdateOptions, kubeClient kubernetes.Interface, kcConfig *kubectl.KubectlConfig) error {
-	const key = "ocne.oracle.com/update-available"
+func isUpdateAvailable(o *UpdateOptions, kubeClient kubernetes.Interface, restConfig *rest.Config, kubeConfigPath string) (bool, error) {
+	// An update is being forced, and by extension is available
+	if o.Force {
+		return true, nil
+	}
 
-	// check if node is ready to be updated, the annotation will be set to true
-	node, err := k8s.GetNode(kubeClient, o.NodeName)
+	return update.IsUpdateAvailableByName(o.NodeName, kubeClient, restConfig, kubeConfigPath)
+}
+
+// prepareNode checks if an update is available then cordons and drains the node.
+func prepareNode(o *UpdateOptions, kubeClient kubernetes.Interface, restConfig *rest.Config, kcConfig *kubectl.KubectlConfig) error {
+	readyToUpdate, err := isUpdateAvailable(o, kubeClient, restConfig, *kcConfig.ConfigFlags.KubeConfig)
 	if err != nil {
 		return err
-	}
-	readyToUpdate := false
-	if node.Annotations != nil {
-		v, ok := node.Annotations[key]
-		if ok && strings.ToLower(v) == "true" {
-			readyToUpdate = true
-		}
 	}
 	if !readyToUpdate {
 		return fmt.Errorf("Node %s has no updates available", o.NodeName)
@@ -308,7 +312,11 @@ func areControlPlaneNodesAcceptable(nodeList *corev1.NodeList, nodeNameBeingUpgr
 	for _, node := range nodeList.Items {
 		if node.Name != nodeNameBeingUpgraded {
 			if k8s.IsControlPlane(&node) {
-				if k8s.IsUpdateAvailable(&node) {
+				updateAvailable, err := update.IsUpdateAvailable(&node, kubeClient, restConfig, kubeConfigPath)
+				if err != nil {
+					return false, err
+				}
+				if updateAvailable {
 					// In this scenario, a worker is attempting to be upgraded and a control plane node has an update available
 					return false, nil
 				}

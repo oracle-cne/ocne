@@ -10,12 +10,15 @@ import (
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
+	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	conftypes "github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"github.com/oracle-cne/ocne/pkg/util"
@@ -253,8 +256,29 @@ func (bd *ByoDriver) Start() (bool, bool, error) {
 }
 
 func (bd *ByoDriver) PostStart() error {
-	// There is no post-start, so no-op
-	return nil
+	// There are only post-start steps if the cluster uses a
+	// virtual ip.  When using a virtual ip, the auto-configuration
+	// application is required.
+	if bd.Config.VirtualIp == "" {
+		return nil
+	}
+
+	err := install.InstallApplications([]install.ApplicationDescription{
+		{
+			Application: &conftypes.Application{
+				Name: constants.HAMonitorChart,
+				Namespace: constants.HAMonitorNamespace,
+				Release: constants.HAMonitorRelease,
+				Version: constants.HAMonitorVersion,
+				Catalog: catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"apiAddress": bd.Config.VirtualIp,
+					"apiPort": bd.Config.KubeAPIServerBindPort,
+				},
+			},
+		},
+	}, bd.GetKubeconfigPath(), false)
+	return err
 }
 
 func (bd *ByoDriver) Stop() error {

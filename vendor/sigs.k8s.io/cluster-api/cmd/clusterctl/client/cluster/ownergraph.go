@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 )
 
@@ -68,8 +69,9 @@ func FilterClusterObjectsWithNameFilter(s string) func(u unstructured.Unstructur
 // own owner references; there is no guarantee about the stability of this API. Using this test with providers may require
 // a custom implementation of this function, or the OwnerGraph it returns.
 func GetOwnerGraph(ctx context.Context, namespace, kubeconfigPath string, filterFn GetOwnerGraphFilterFunction) (OwnerGraph, error) {
-	p := newProxy(Kubeconfig{Path: kubeconfigPath, Context: ""})
-	invClient := newInventoryClient(p, nil)
+	p := NewProxy(Kubeconfig{Path: kubeconfigPath, Context: ""})
+	// NOTE: Each Cluster API version supports one contract version, and by convention the contract version matches the current API version.
+	invClient := newInventoryClient(p, nil, clusterv1.GroupVersion.Version)
 
 	graph := newObjectGraph(p, invClient)
 
@@ -101,7 +103,7 @@ func discoverOwnerGraph(ctx context.Context, namespace string, o *objectGraph, f
 		objList := new(unstructured.UnstructuredList)
 
 		if err := retryWithExponentialBackoff(ctx, discoveryBackoff, func(ctx context.Context) error {
-			return getObjList(ctx, o.proxy, typeMeta, selectors, objList)
+			return getObjList(ctx, o.proxy, &typeMeta, selectors, objList)
 		}); err != nil {
 			return nil, err
 		}
@@ -117,7 +119,7 @@ func discoverOwnerGraph(ctx context.Context, namespace string, o *objectGraph, f
 					providerNamespaceSelector := []client.ListOption{client.InNamespace(p.Namespace)}
 					providerNamespaceSecretList := new(unstructured.UnstructuredList)
 					if err := retryWithExponentialBackoff(ctx, discoveryBackoff, func(ctx context.Context) error {
-						return getObjList(ctx, o.proxy, typeMeta, providerNamespaceSelector, providerNamespaceSecretList)
+						return getObjList(ctx, o.proxy, &typeMeta, providerNamespaceSelector, providerNamespaceSecretList)
 					}); err != nil {
 						return nil, err
 					}

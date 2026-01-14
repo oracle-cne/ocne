@@ -4,8 +4,13 @@
 package update
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
@@ -14,8 +19,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kubeadmconst "k8s.io/kubernetes/cmd/kubeadm/app/constants"
+	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
@@ -503,9 +511,279 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	return nil
 }
 
+var vipableProviderIds = []string{
+	"olvm://",
+}
+
+func isVipableProvider(provider string) bool {
+	if provider == "" {
+		return true
+	}
+
+	for _, vp := range vipableProviderIds {
+		if strings.HasPrefix(provider, vp) {
+			return true
+		}
+	}
+	return false
+}
+
+func unitToPath(u string) string {
+	return fmt.Sprintf("/etc/systemd/system/%s", u)
+}
+
+func generateVipUpdateScript(bindPort uint16, altPort uint16, virtualIp string) (string, error) {
+	keepalivedCheckScript, err := ignition.GenerateKeepalivedCheckScript(bindPort, altPort, virtualIp)
+	if err != nil {
+		return "", err
+	}
+
+	in := struct {
+		Units []string
+		UnitsToEnable []string
+		UnitsToStart []string
+		Files map[string]string
+	}{
+		Units: []string{
+			ignition.KeepalivedRefreshServiceName,
+			ignition.NginxRefreshServiceName,
+		},
+		UnitsToEnable: []string{
+			ignition.NginxRefreshPathName,
+			ignition.KeepalivedRefreshPathName,
+			ignition.KeepalivedRefreshServiceName,
+			ignition.NginxRefreshServiceName,
+
+		},
+		UnitsToStart: []string {
+			ignition.NginxRefreshPathName,
+			ignition.KeepalivedRefreshPathName,
+		},
+		Files: map[string]string{
+			unitToPath(ignition.KeepalivedRefreshServiceName): ignition.GetKeepalivedRefreshUnit(),
+			unitToPath(ignition.KeepalivedRefreshPathName): ignition.GetKeepalivedRefreshPathUnit(),
+			unitToPath(ignition.NginxRefreshServiceName): ignition.GetNginxRefreshUnit(),
+			unitToPath(ignition.NginxRefreshPathName): ignition.GetNginxRefreshPathUnit(),
+			unitToPath(ignition.NginxServiceName): ignition.NginxService,
+			ignition.KeepAlivedCheckScriptPath: keepalivedCheckScript,
+		},
+	}
+
+	// Base64 encode the file contents to avoid having
+	// to deal with escaping and whatnot.
+	for p, c := range in.Files {
+		in.Files[p] = base64.StdEncoding.EncodeToString([]byte(c))
+	}
+
+	ret, err := util.TemplateToString(UpdateVipConfiguration, &in)
+	if err != nil {
+		return "", err
+	}
+
+	return ret, nil
+}
+
+func parseEndpoint(endpoint string) (string, uint16, error) {
+	endpointHost, endpointPortStr, err := kubeadmutil.ParseHostPort(endpoint)
+	if err != nil {
+		return "", 0, err
+	}
+
+	endpointPort64, err := strconv.ParseUint(endpointPortStr, 10, 16)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return endpointHost, uint16(endpointPort64), nil
+}
+
+func getEndpointForNode(node *v1.Node, pods *v1.PodList) (string, uint16, error) {
+	kubeApiPodName := fmt.Sprintf("kube-apiserver-%s", node.Name)
+	for _, p := range pods.Items {
+		if p.Name == kubeApiPodName {
+			endpoint, ok := p.Annotations[kubeadmconst.KubeAPIServerAdvertiseAddressEndpointAnnotationKey]
+			if !ok {
+				return "", 0, fmt.Errorf("could not find endpoint annotation %s on node %s", kubeadmconst.KubeAPIServerAdvertiseAddressEndpointAnnotationKey, node.Name)
+			}
+
+			return parseEndpoint(endpoint)
+		}
+	}
+
+	return "", 0, fmt.Errorf("could not find kube-apiserver pod for node %s", node.Name)
+}
+
+// virtualIp handles the migration from the self-managed keepalived and nginx
+// configuration to one that executes in the cluster.
+func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
+	//  If the daemonset based VIP config updater is already deployed,
+	// then this must already be done.
+	haRelease, err := getRelease(constants.HAMonitorRelease, constants.HAMonitorNamespace, kubeConfigPath)
+	if err != nil {
+		return err
+	} else if haRelease != nil {
+		log.Debugf("Virtual IP monitor is already installed")
+		return nil
+	}
+
+	cc, err := k8s.GetKubeadmClusterConfiguration(client)
+	if err != nil {
+		return err
+	}
+
+	apiHost, apiHostPort, err := parseEndpoint(cc.ControlPlaneEndpoint)
+	if err != nil {
+		return err
+	}
+
+	// If the control plane endpoint address is assigned to one of the
+	// nodes, then it cannot be a VIP.  This is normal for a cluster
+	// with a single control plane node, but in some cases for simple
+	// testing it can happen with a multi control plane node cluster
+	// as well.
+	for _, n := range nodes.Items {
+		if !k8s.IsControlPlaneNode(&n) {
+			continue
+		}
+
+		for _, a := range n.Status.Addresses {
+			if apiHost == a.Address {
+				log.Debugf("Node %s advertises the control plane endpoint %s", n.Name, apiHost)
+				return nil
+			}
+		}
+
+		// If the provider is one that can have a VIP configuration,
+		// then it is possible for the nodes to have one.
+		if isVipableProvider(n.Spec.ProviderID) {
+			log.Debugf("Node %s has provider id that can host a virtual IP: %s", n.Name, n.Spec.ProviderID)
+			continue
+		}
+
+		// If the provider is one that would not typically have a VIP
+		// configuration, but the cluster is not from CAPI, then it
+		// might have one anyway.
+		_, ok := n.Annotations[constants.CAPIClusterNameAnnotation]
+		if !ok {
+			continue
+		}
+
+		// There is no reason to believe that this cluster uses
+		// a VIP configuration.  Bail now to avoid the expensive
+		// checks that are to follow.
+		return nil
+	}
+
+	// Check to see if a VIP is configured by seeing if the control
+	// plane endpoint is present in the keepalived.conf
+	for _, n := range nodes.Items {
+		if !k8s.IsControlPlaneNode(&n) {
+			continue
+		}
+
+		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
+		if err != nil {
+			return err
+		}
+
+		kcConfig.Streams.Out = bytes.NewBuffer([]byte{})
+
+		err = script.RunScript(client, kcConfig, n.Name, constants.OCNESystemNamespace, "check-ips", GetKeepalivedConf, []v1.EnvVar{})
+		if err != nil {
+			return err
+		}
+
+		err = k8s.DeletePod(client, constants.OCNESystemNamespace, fmt.Sprintf("check-ips-%s", n.Name))
+		if err != nil {
+			return err
+		}
+
+		keepalivedConf := kcConfig.Streams.Out.(*bytes.Buffer).String()
+		log.Debugf("Looking for %s", apiHost)
+		log.Debugf("  in:")
+		log.Debugf(keepalivedConf)
+		if strings.Contains(keepalivedConf, apiHost) {
+			log.Debugf("Node %s manages a virtual IP", n.Name)
+			continue
+		}
+
+		// If keepalived and nginx are not enabled, then the node
+		// must node have a VIP and by extension there is nothing
+		// to upgrade.
+		log.Debugf("Node %s does not use a virtual IP", n.Name)
+		return nil
+	}
+
+	// At this point it is known that an upgrade is required.  Now comes
+	// the hard part.  Upgrading requires the following:
+	//  - update keepalived check script
+	//  - stop keepalived refresh service
+	//  - stop nginx refresh service
+	//  - delete kubeconfigs
+	//  - deploy path and refresh trigger units for keepalived/nginx
+	//  - install monitor daemonset to cluster
+	kubeSystemPods, err := k8s.GetPods(client, constants.KubeNamespace)
+	if err != nil {
+		return err
+	}
+
+	for _, n := range nodes.Items {
+		if !k8s.IsControlPlaneNode(&n) {
+			continue
+		}
+
+		_, endpointPort, err := getEndpointForNode(&n, kubeSystemPods)
+		if err != nil {
+			return err
+		}
+
+		updateScript, err := generateVipUpdateScript(apiHostPort, endpointPort, apiHost)
+		if err != nil {
+			return err
+		}
+		log.Debugf("update script for node %s is:", n.Name)
+		log.Debugf(updateScript)
+
+		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
+		if err != nil {
+			return err
+		}
+
+		err = script.RunScript(client, kcConfig, n.Name, constants.OCNESystemNamespace, "upgrade-vips", updateScript, []v1.EnvVar{})
+		if err != nil {
+			return err
+		}
+
+		_ = k8s.DeletePod(client, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", n.Name))
+	}
+
+	err = install.InstallApplications([]install.ApplicationDescription{
+		{
+			Application: &types.Application{
+				Name: constants.HAMonitorChart,
+				Namespace: constants.HAMonitorNamespace,
+				Release: constants.HAMonitorRelease,
+				Version: constants.HAMonitorVersion,
+				Catalog: catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"apiAddress": apiHost,
+					"apiPort": strconv.FormatUint(uint64(apiHostPort), 10),
+				},
+			},
+		},
+	}, kubeConfigPath, false)
+
+	// If this is an OLVM cluster, crack the ignition contents and
+	// replace the contents so it matches the result of the process
+	// above.
+
+	return nil
+}
+
 // updateFuncs is an ordered list of update functions to run.
 var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList)error{
 	oneThirtyAndLower,
+	virtualIp,
 }
 // Update applies the cumulative set of changes that have built
 // up over time as configuration deficiences have been discovered
@@ -519,3 +797,82 @@ func Update(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath
 	}
 	return nil
 }
+
+// Custom time type for non-standard format
+const ctLayout = "2006-01-02 15:04:05 -0700"
+type CustomTime struct {
+	time.Time
+}
+
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	// Remove quotes
+	s := string(b)
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		s = s[1 : len(s)-1]
+	}
+	t, err := time.Parse(ctLayout, s)
+	if err != nil {
+		return err
+	}
+	ct.Time = t
+	return nil
+}
+
+// Struct for your JSON
+type BootUpdateTimestamps struct {
+	BootTimestamp   CustomTime `json:"boot_timestamp"`
+	UpdateTimestamp CustomTime `json:"update_timestamp"`
+}
+
+// IsUpdateAvailable returns true if an update is available on that node
+func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfig *rest.Config, kubeConfigPath string) (bool, error) {
+	if node.Annotations != nil {
+		v, ok := node.Annotations[constants.OCNEAnnoUpdateAvailable]
+		if ok && strings.ToLower(v) == "true" {
+			return true, nil
+		}
+	}
+
+	// Now into the obscure cases.
+	//
+	// Kubernetes 1.32 introduced a change to the permissions assigned
+	// to the kubelet service account.  Notably, it can no longer list
+	// nodes.  Versions of OCK prior to recent 1.32 builds use a selector
+	// to annotate the node indicating that an update is available.  That
+	// command fails because selectors require listing nodes.  This issue
+	// is limited to OCK instances running Kubernetes 1.32.5/7.  Do a more
+	// intensive check for that case.
+	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8"  {
+		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
+		if err != nil {
+			return false, err
+		}
+
+		kcConfig.Streams.Out = bytes.NewBuffer([]byte{})
+		err = script.RunScript(kubeClient, kcConfig, node.Name, constants.OCNESystemNamespace, "check-update-127", CheckNodeUpdate, []v1.EnvVar{})
+		if err != nil {
+			return false, err
+		}
+		err = k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", node.Name))
+		ockInfo := kcConfig.Streams.Out.(*bytes.Buffer)
+
+		timestamps := BootUpdateTimestamps{}
+		err = json.Unmarshal(ockInfo.Bytes(), &timestamps)
+		if err != nil {
+			return false, err
+		}
+
+		return timestamps.BootTimestamp.Time.Before(timestamps.UpdateTimestamp.Time), nil
+	}
+
+	return false, nil
+}
+
+func IsUpdateAvailableByName(name string, kubeClient kubernetes.Interface, restConfig *rest.Config, kubeConfigPath string) (bool, error) {
+	node, err := k8s.GetNode(kubeClient, name)
+	if err != nil {
+		return false, err
+	}
+	return IsUpdateAvailable(node, kubeClient, restConfig, kubeConfigPath)
+}
+

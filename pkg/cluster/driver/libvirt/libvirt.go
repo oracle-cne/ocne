@@ -14,12 +14,14 @@ import (
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	libvirt "github.com/digitalocean/go-libvirt"
+	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/certificate"
 	"github.com/oracle-cne/ocne/pkg/cluster/cache"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
 	"github.com/oracle-cne/ocne/pkg/cluster/kubepki"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
+	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	conftypes "github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -857,6 +859,31 @@ func (ld *LibvirtDriver) Start() (bool, bool, error) {
 }
 
 func (ld *LibvirtDriver) PostStart() error {
+	// There are only post-start steps if the cluster uses a
+	// virtual ip.  When using a virtual ip, the auto-configuration
+	// application is required.
+	if ld.Config.LoadBalancer != "" {
+		return nil
+	}
+
+	err := install.InstallApplications([]install.ApplicationDescription{
+		{
+			Application: &conftypes.Application{
+				Name: constants.HAMonitorChart,
+				Namespace: constants.HAMonitorNamespace,
+				Release: constants.HAMonitorRelease,
+				Version: constants.HAMonitorVersion,
+				Catalog: catalog.InternalCatalog,
+				Config: map[string]interface{}{
+					"apiAddress": ld.KubeAPIServerIP,
+					"apiPort": ld.Config.KubeAPIServerBindPort,
+				},
+			},
+		},
+	}, ld.GetKubeconfigPath(), false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

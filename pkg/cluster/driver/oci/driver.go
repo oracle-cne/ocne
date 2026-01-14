@@ -538,10 +538,16 @@ func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (dri
 		return nil, err
 	}
 
+	if log.GetLevel() != log.DebugLevel && log.GetLevel() != log.TraceLevel {
+		rest.SetDefaultWarningHandler(rest.NoWarnings{})
+	}
+
 	err = install.InstallApplications(capiApplications, cad.BootstrapKubeConfig, config.Quiet)
 	if err != nil {
 		return nil, err
 	}
+
+	rest.SetDefaultWarningHandler(rest.WarningLogger{})
 
 	_, kubeClient, err := client.GetKubeClient(cad.BootstrapKubeConfig)
 	if err != nil {

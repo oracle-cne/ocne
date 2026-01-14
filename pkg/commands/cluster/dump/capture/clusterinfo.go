@@ -10,23 +10,26 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/info"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"os"
 	"path/filepath"
 )
 
 const clusterInfoFile = "cluster-info.out"
 
-func CaptureClusterInfo(skipNodes bool, kubeClient kubernetes.Interface, outDir string, skipRedact bool, nodeNames []string) {
+func CaptureClusterInfo(skipNodes bool, kubeClient kubernetes.Interface,  restConfig *rest.Config, kubeConfigPath string, outDir string, skipRedact bool, nodeNames []string) {
 	b := bytes.Buffer{}
 	writer := bufio.NewWriter(&b)
 
 	// get the cluster info
 	err := info.Info(info.Options{
-		KubeClient:  kubeClient,
-		RootDumpDir: outDir,
-		Writer:      writer,
-		SkipNodes:   skipNodes,
-		NodeNames:   nodeNames,
+		KubeClient:     kubeClient,
+		RestConfig:     restConfig,
+		KubeConfigPath: kubeConfigPath,
+		RootDumpDir:    outDir,
+		Writer:         writer,
+		SkipNodes:      skipNodes,
+		NodeNames:      nodeNames,
 	})
 	if err != nil {
 		log.Errorf(err.Error())

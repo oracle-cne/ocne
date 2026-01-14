@@ -35,9 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	logf "sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -240,19 +241,19 @@ func (o *objectMover) checkProvisioningCompleted(ctx context.Context, graph *obj
 			return err
 		}
 
-		if !clusterObj.Status.InfrastructureReady {
+		if !ptr.Deref(clusterObj.Status.Initialization.InfrastructureProvisioned, false) {
 			errList = append(errList, errors.Errorf("cannot start the move operation while %q %s/%s is still provisioning the infrastructure", clusterObj.GroupVersionKind(), clusterObj.GetNamespace(), clusterObj.GetName()))
 			continue
 		}
 
 		// Note: can't use IsFalse here because we need to handle the absence of the condition as well as false.
-		if !conditions.IsTrue(clusterObj, clusterv1.ControlPlaneInitializedCondition) {
+		if !conditions.IsTrue(clusterObj, clusterv1.ClusterControlPlaneInitializedCondition) {
 			errList = append(errList, errors.Errorf("cannot start the move operation while the control plane for %q %s/%s is not yet initialized", clusterObj.GroupVersionKind(), clusterObj.GetNamespace(), clusterObj.GetName()))
 			continue
 		}
 
-		if clusterObj.Spec.ControlPlaneRef != nil && !clusterObj.Status.ControlPlaneReady {
-			errList = append(errList, errors.Errorf("cannot start the move operation while the control plane for %q %s/%s is not yet ready", clusterObj.GroupVersionKind(), clusterObj.GetNamespace(), clusterObj.GetName()))
+		if clusterObj.Spec.ControlPlaneRef.IsDefined() && !ptr.Deref(clusterObj.Status.Initialization.ControlPlaneInitialized, false) {
+			errList = append(errList, errors.Errorf("cannot start the move operation while the control plane for %q %s/%s is not yet initialized", clusterObj.GroupVersionKind(), clusterObj.GetNamespace(), clusterObj.GetName()))
 			continue
 		}
 	}
@@ -270,7 +271,7 @@ func (o *objectMover) checkProvisioningCompleted(ctx context.Context, graph *obj
 			return err
 		}
 
-		if machineObj.Status.NodeRef == nil {
+		if !machineObj.Status.NodeRef.IsDefined() {
 			errList = append(errList, errors.Errorf("cannot start the move operation while %q %s/%s is still provisioning the node", machineObj.GroupVersionKind(), machineObj.GetNamespace(), machineObj.GetName()))
 		}
 	}
@@ -963,7 +964,7 @@ func (o *objectMover) createTargetObject(ctx context.Context, nodeToCreate *node
 	// Rebuild the owner reference chain
 	o.buildOwnerChain(obj, nodeToCreate)
 
-	// FIXME Workaround for https://github.com/kubernetes/kubernetes/issues/32220. Remove when the issue is fixed.
+	// TODO Workaround for https://github.com/kubernetes/kubernetes/issues/32220. Remove when the issue is fixed.
 	// If the resource already exists, the API server ordinarily returns an AlreadyExists error. Due to the above issue, if the resource has a non-empty metadata.generateName field, the API server returns a ServerTimeoutError. To ensure that the API server returns an AlreadyExists error, we set the metadata.generateName field to an empty string.
 	if obj.GetName() != "" && obj.GetGenerateName() != "" {
 		obj.SetGenerateName("")
@@ -1190,7 +1191,7 @@ var (
 // the objects gets immediately deleted (force delete).
 func (o *objectMover) deleteSourceObject(ctx context.Context, nodeToDelete *node) error {
 	// Don't delete cluster-wide nodes or nodes that are below a hierarchy that starts with a global object (e.g. a secrets owned by a global identity object).
-	if nodeToDelete.isGlobal || nodeToDelete.isGlobalHierarchy {
+	if nodeToDelete.isGlobal || nodeToDelete.isGlobalHierarchy || nodeToDelete.shouldNotDelete {
 		return nil
 	}
 
@@ -1230,18 +1231,17 @@ func (o *objectMover) deleteSourceObject(ctx context.Context, nodeToDelete *node
 			sourceObj.GroupVersionKind(), sourceObj.GetNamespace(), sourceObj.GetName())
 	}
 
+	if err := cFrom.Delete(ctx, sourceObj); err != nil {
+		return errors.Wrapf(err, "error deleting %q %s/%s",
+			sourceObj.GroupVersionKind(), sourceObj.GetNamespace(), sourceObj.GetName())
+	}
+
 	if len(sourceObj.GetFinalizers()) > 0 {
 		if err := cFrom.Patch(ctx, sourceObj, removeFinalizersPatch); err != nil {
 			return errors.Wrapf(err, "error removing finalizers from %q %s/%s",
 				sourceObj.GroupVersionKind(), sourceObj.GetNamespace(), sourceObj.GetName())
 		}
 	}
-
-	if err := cFrom.Delete(ctx, sourceObj); err != nil {
-		return errors.Wrapf(err, "error deleting %q %s/%s",
-			sourceObj.GroupVersionKind(), sourceObj.GetNamespace(), sourceObj.GetName())
-	}
-
 	return nil
 }
 

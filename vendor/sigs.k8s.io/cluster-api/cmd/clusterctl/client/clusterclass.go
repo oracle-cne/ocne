@@ -23,9 +23,12 @@ import (
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/scheme"
@@ -34,7 +37,7 @@ import (
 // addClusterClassIfMissing returns a Template that includes the base template and adds any cluster class definitions that
 // are references in the template. If the cluster class referenced already exists in the cluster it is not added to the
 // template.
-func addClusterClassIfMissing(ctx context.Context, template Template, clusterClassClient repository.ClusterClassClient, clusterClient cluster.Client, targetNamespace string, listVariablesOnly bool) (Template, error) {
+func addClusterClassIfMissing(ctx context.Context, template Template, clusterClassClient repository.ClusterClassClient, clusterClient cluster.Client, listVariablesOnly bool) (Template, error) {
 	classes, err := clusterClassNamesFromTemplate(template)
 	if err != nil {
 		return nil, err
@@ -44,7 +47,7 @@ func addClusterClassIfMissing(ctx context.Context, template Template, clusterCla
 		return template, nil
 	}
 
-	clusterClassesTemplate, err := fetchMissingClusterClassTemplates(ctx, clusterClassClient, clusterClient, classes, targetNamespace, listVariablesOnly)
+	clusterClassesTemplate, err := fetchMissingClusterClassTemplates(ctx, clusterClassClient, clusterClient, classes, listVariablesOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +65,8 @@ func addClusterClassIfMissing(ctx context.Context, template Template, clusterCla
 // clusterClassNamesFromTemplate returns the list of ClusterClasses referenced
 // by clusters defined in the template. If not clusters are defined in the template
 // or if no cluster uses a cluster class it returns an empty list.
-func clusterClassNamesFromTemplate(template Template) ([]string, error) {
-	classes := []string{}
+func clusterClassNamesFromTemplate(template Template) ([]types.NamespacedName, error) {
+	classes := []types.NamespacedName{}
 
 	// loop through all the objects and if the object is a cluster
 	// check and see if cluster.spec.topology.class is defined.
@@ -73,21 +76,33 @@ func clusterClassNamesFromTemplate(template Template) ([]string, error) {
 		if obj.GroupVersionKind().GroupKind() != clusterv1.GroupVersion.WithKind("Cluster").GroupKind() {
 			continue
 		}
-		cluster := &clusterv1.Cluster{}
-		if err := scheme.Scheme.Convert(&obj, cluster, nil); err != nil {
-			return nil, errors.Wrap(err, "failed to convert object to Cluster")
+		switch {
+		case obj.GroupVersionKind().Version == clusterv1.GroupVersion.Version:
+			cluster := &clusterv1.Cluster{}
+			if err := scheme.Scheme.Convert(&obj, cluster, nil); err != nil {
+				return nil, errors.Wrap(err, "failed to convert object to Cluster")
+			}
+			if !cluster.Spec.Topology.IsDefined() {
+				continue
+			}
+			classes = append(classes, cluster.GetClassKey())
+		case obj.GroupVersionKind().Version == clusterv1beta1.GroupVersion.Version:
+			cluster := &clusterv1beta1.Cluster{}
+			if err := scheme.Scheme.Convert(&obj, cluster, nil); err != nil {
+				return nil, errors.Wrap(err, "failed to convert object to Cluster")
+			}
+			if cluster.Spec.Topology == nil {
+				continue
+			}
+			classes = append(classes, cluster.GetClassKey())
 		}
-		if cluster.Spec.Topology == nil {
-			continue
-		}
-		classes = append(classes, cluster.GetClassKey().Name)
 	}
 	return classes, nil
 }
 
 // fetchMissingClusterClassTemplates returns a list of templates for ClusterClasses that do not yet exist
 // in the cluster. If the cluster is not initialized, all the ClusterClasses are added.
-func fetchMissingClusterClassTemplates(ctx context.Context, clusterClassClient repository.ClusterClassClient, clusterClient cluster.Client, classes []string, targetNamespace string, listVariablesOnly bool) (Template, error) {
+func fetchMissingClusterClassTemplates(ctx context.Context, clusterClassClient repository.ClusterClassClient, clusterClient cluster.Client, classes []types.NamespacedName, listVariablesOnly bool) (Template, error) {
 	// first check if the cluster is initialized.
 	// If it is initialized:
 	//    For every ClusterClass check if it already exists in the cluster.
@@ -118,7 +133,7 @@ func fetchMissingClusterClassTemplates(ctx context.Context, clusterClassClient r
 	templates := []repository.Template{}
 	for _, class := range classes {
 		if clusterInitialized {
-			exists, err := clusterClassExists(ctx, c, class, targetNamespace)
+			exists, err := clusterClassExists(ctx, c, class.Name, class.Namespace)
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +143,7 @@ func fetchMissingClusterClassTemplates(ctx context.Context, clusterClassClient r
 		}
 		// The cluster is either not initialized or the ClusterClass does not yet exist in the cluster.
 		// Fetch the cluster class to install.
-		clusterClassTemplate, err := clusterClassClient.Get(ctx, class, targetNamespace, listVariablesOnly)
+		clusterClassTemplate, err := clusterClassClient.Get(ctx, class.Name, class.Namespace, listVariablesOnly)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get the cluster class template for %q", class)
 		}
@@ -142,7 +157,7 @@ func fetchMissingClusterClassTemplates(ctx context.Context, clusterClassClient r
 				if exists, err := objExists(ctx, c, obj); err != nil {
 					return nil, err
 				} else if exists {
-					return nil, fmt.Errorf("%s(%s) already exists in the cluster", obj.GetName(), obj.GetObjectKind().GroupVersionKind())
+					return nil, fmt.Errorf("%s(%s) already exists in the cluster", klog.KObj(&obj), obj.GetObjectKind().GroupVersionKind())
 				}
 			}
 		}

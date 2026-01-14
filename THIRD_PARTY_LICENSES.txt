@@ -31,19 +31,6 @@ Copyright (c) 2026, Oracle and/or its affiliates.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-cel.dev/expr
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2022 Google LLC
-Copyright 2023 Google LLC
-Copyright 2024 Google LLC
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 dario.cat/mergo
 
 == License Type
@@ -208,48 +195,6 @@ Copyright (c) 2014 Adrian-George Bostan.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/antlr4-go/antlr/v4
-
-== License Type
-=== BSD-3-Clause-f399e127
-Copyright (c) 2012-2023 The ANTLR Project. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither name of copyright holders nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-
-== Copyright
-Copyright (c) 2012-2022 The ANTLR Project. All rights reserved.
-Copyright (c) 2012-2023 The ANTLR Project. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/asaskevich/govalidator
 
 == License Type
@@ -261,18 +206,16 @@ Copyright (c) 2014-2020 Alex Saskevich
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/aws/aws-sdk-go
+github.com/aws/aws-sdk-go-v2
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
 Copyright (c) 2009 The Go Authors. All rights reserved.
-Copyright (c) 2016 Carl Jackson
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2014-2015 Stripe, Inc.
 Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 == Notices
 AWS SDK for Go
@@ -301,17 +244,6 @@ SPDX:MIT
 
 == Copyright
 Copyright (c) 2014 Benedikt Lang <github at benediktlang.de>
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/cenkalti/backoff/v4
-
-== License Type
-SPDX:MIT
-
-== Copyright
-Copyright (c) 2014 Cenk Altı
 
 --------------------------------- (separator) ----------------------------------
 
@@ -757,6 +689,7 @@ Copyright 2023 CoreOS, Inc.
 Copyright 2023 Red Hat
 Copyright 2023 Red Hat, Inc.
 Copyright 2024 CoreOS, Inc.
+Copyright 2025 UpCloud
 
 == Notices
 CoreOS Project
@@ -801,6 +734,7 @@ SPDX:BSD-3-Clause--modified-by-Google
 == Copyright
 Copyright (C) 2014-2015 Docker Inc & Go Authors. All rights reserved.
 Copyright (C) 2017-2024 SUSE LLC. All rights reserved.
+Copyright (C) 2017-2025 SUSE LLC. All rights reserved.
 Copyright (C) 2024 SUSE LLC. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
@@ -890,42 +824,6 @@ Copyright 2009 The Go Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/docker/cli
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2010 The Go Authors. All rights reserved.
-Copyright 2012-2017 Docker, Inc.
-Copyright 2013-2017 Docker, Inc.
-
-== Notices
-Docker
-Copyright 2012-2017 Docker, Inc.
-
-This product includes software developed at Docker, Inc. (https://www.docker.com).
-
-This product contains software (https://github.com/creack/pty) developed
-by Keith Rarick, licensed under the MIT License.
-
-The following is courtesy of our legal counsel:
-
-
-Use and transfer of Docker may be subject to certain restrictions by the
-United States and other governments.
-It is your responsibility to ensure that your use and/or transfer does not
-violate applicable laws.
-
-For more information, see https://www.bis.doc.gov
-
-See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
-
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/docker/distribution
 
 == License Type
@@ -992,38 +890,6 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2015 Docker, Inc.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/docker/go-metrics
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2012-2015 Docker, Inc.
-Copyright 2013-2016 Docker, Inc.
-Copyright © 2016 Docker, Inc. All rights reserved, except as follows. Code is released under the Apache 2.0 license. The README.md file, and files in the "docs" folder are licensed under the Creative Commons Attribution 4.0 International License under the terms and conditions set forth in the file "LICENSE.docs". You may obtain a duplicate copy of the same license, titled CC-BY-SA-4.0, at http://creativecommons.org/licenses/by/4.0/.
-
-== Notices
-Docker
-Copyright 2012-2015 Docker, Inc.
-
-This product includes software developed at Docker, Inc. (https://www.docker.com).
-
-The following is courtesy of our legal counsel:
-
-
-Use and transfer of Docker may be subject to certain restrictions by the
-United States and other governments.
-It is your responsibility to ensure that your use and/or transfer does not
-violate applicable laws.
-
-For more information, please see https://www.bis.doc.gov
-
-See also https://www.apache.org/dev/crypto.html and/or seek legal counsel.
-
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1529,6 +1395,18 @@ Copyright 2018 go-swagger maintainers
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/go-viper/mapstructure/v2
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2013 Mitchell Hashimoto
+Copyright 2022 The Go Authors. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/gobuffalo/flect
 
 == License Type
@@ -1675,260 +1553,7 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2014 Google Inc.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/google/cel-go
-
-== License Type
-=== Apache-2.0-9e40c772
-=== BSD-3-Clause--modified-by-Google
-
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
-
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-   1. Definitions.
-
-      "License" shall mean the terms and conditions for use, reproduction,
-      and distribution as defined by Sections 1 through 9 of this document.
-
-      "Licensor" shall mean the copyright owner or entity authorized by
-      the copyright owner that is granting the License.
-
-      "Legal Entity" shall mean the union of the acting entity and all
-      other entities that control, are controlled by, or are under common
-      control with that entity. For the purposes of this definition,
-      "control" means (i) the power, direct or indirect, to cause the
-      direction or management of such entity, whether by contract or
-      otherwise, or (ii) ownership of fifty percent (50%) or more of the
-      outstanding shares, or (iii) beneficial ownership of such entity.
-
-      "You" (or "Your") shall mean an individual or Legal Entity
-      exercising permissions granted by this License.
-
-      "Source" form shall mean the preferred form for making modifications,
-      including but not limited to software source code, documentation
-      source, and configuration files.
-
-      "Object" form shall mean any form resulting from mechanical
-      transformation or translation of a Source form, including but
-      not limited to compiled object code, generated documentation,
-      and conversions to other media types.
-
-      "Work" shall mean the work of authorship, whether in Source or
-      Object form, made available under the License, as indicated by a
-      copyright notice that is included in or attached to the work
-      (an example is provided in the Appendix below).
-
-      "Derivative Works" shall mean any work, whether in Source or Object
-      form, that is based on (or derived from) the Work and for which the
-      editorial revisions, annotations, elaborations, or other modifications
-      represent, as a whole, an original work of authorship. For the purposes
-      of this License, Derivative Works shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
-
-      "Contribution" shall mean any work of authorship, including
-      the original version of the Work and any modifications or additions
-      to that Work or Derivative Works thereof, that is intentionally
-      submitted to Licensor for inclusion in the Work by the copyright owner
-      or by an individual or Legal Entity authorized to submit on behalf of
-      the copyright owner. For the purposes of this definition, "submitted"
-      means any form of electronic, verbal, or written communication sent
-      to the Licensor or its representatives, including but not limited to
-      communication on electronic mailing lists, source code control systems,
-      and issue tracking systems that are managed by, or on behalf of, the
-      Licensor for the purpose of discussing and improving the Work, but
-      excluding communication that is conspicuously marked or otherwise
-      designated in writing by the copyright owner as "Not a Contribution."
-
-      "Contributor" shall mean Licensor and any individual or Legal Entity
-      on behalf of whom a Contribution has been received by Licensor and
-      subsequently incorporated within the Work.
-
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source or Object form.
-
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      (except as stated in this section) patent license to make, have made,
-      use, offer to sell, sell, import, and otherwise transfer the Work,
-      where such license applies only to those patent claims licensable
-      by such Contributor that are necessarily infringed by their
-      Contribution(s) alone or by combination of their Contribution(s)
-      with the Work to which such Contribution(s) was submitted. If You
-      institute patent litigation against any entity (including a
-      cross-claim or counterclaim in a lawsuit) alleging that the Work
-      or a Contribution incorporated within the Work constitutes direct
-      or contributory patent infringement, then any patent licenses
-      granted to You under this License for that Work shall terminate
-      as of the date such litigation is filed.
-
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without
-      modifications, and in Source or Object form, provided that You
-      meet the following conditions:
-
-      (a) You must give any other recipients of the Work or
-          Derivative Works a copy of this License; and
-
-      (b) You must cause any modified files to carry prominent notices
-          stating that You changed the files; and
-
-      (c) You must retain, in the Source form of any Derivative Works
-          that You distribute, all copyright, patent, trademark, and
-          attribution notices from the Source form of the Work,
-          excluding those notices that do not pertain to any part of
-          the Derivative Works; and
-
-      (d) If the Work includes a "NOTICE" text file as part of its
-          distribution, then any Derivative Works that You distribute must
-          include a readable copy of the attribution notices contained
-          within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works, in at least one
-          of the following places: within a NOTICE text file distributed
-          as part of the Derivative Works; within the Source form or
-          documentation, if provided along with the Derivative Works; or,
-          within a display generated by the Derivative Works, if and
-          wherever such third-party notices normally appear. The contents
-          of the NOTICE file are for informational purposes only and
-          do not modify the License. You may add Your own attribution
-          notices within Derivative Works that You distribute, alongside
-          or as an addendum to the NOTICE text from the Work, provided
-          that such additional attribution notices cannot be construed
-          as modifying the License.
-
-      You may add Your own copyright statement to Your modifications and
-      may provide additional or different license terms and conditions
-      for use, reproduction, or distribution of Your modifications, or
-      for any such Derivative Works as a whole, provided Your use,
-      reproduction, and distribution of the Work otherwise complies with
-      the conditions stated in this License.
-
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work
-      by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms or conditions.
-      Notwithstanding the above, nothing herein shall supersede or modify
-      the terms of any separate license agreement you may have executed
-      with Licensor regarding such Contributions.
-
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,
-      except as required for reasonable and customary use in describing the
-      origin of the Work and reproducing the content of the NOTICE file.
-
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each
-      Contributor provides its Contributions) on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied, including, without limitation, any warranties or conditions
-      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-      PARTICULAR PURPOSE. You are solely responsible for determining the
-      appropriateness of using or redistributing the Work and assume any
-      risks associated with Your exercise of permissions under this License.
-
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,
-      unless required by applicable law (such as deliberate and grossly
-      negligent acts) or agreed to in writing, shall any Contributor be
-      liable to You for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use the
-      Work (including but not limited to damages for loss of goodwill,
-      work stoppage, computer failure or malfunction, or any and all
-      other commercial damages or losses), even if such Contributor
-      has been advised of the possibility of such damages.
-
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,
-      and charge a fee for, acceptance of support, warranty, indemnity,
-      or other liability obligations and/or rights consistent with this
-      License. However, in accepting such obligations, You may act only
-      on Your own behalf and on Your sole responsibility, not on behalf
-      of any other Contributor, and only if You agree to indemnify,
-      defend, and hold each Contributor harmless for any liability
-      incurred by, or claims asserted against, such Contributor by reason
-      of your accepting any such warranty or additional liability.
-
-   END OF TERMS AND CONDITIONS
-
-   APPENDIX: How to apply the Apache License to your work.
-
-      To apply the Apache License to your work, attach the following
-      boilerplate notice, with the fields enclosed by brackets "[]"
-      replaced with your own identifying information. (Don't include
-      the brackets!)  The text should be enclosed in the appropriate
-      comment syntax for the file format. We also recommend that a
-      file or class name and description of purpose be included on the
-      same "printed page" as the copyright notice for easier
-      identification within third-party archives.
-
-   Copyright [yyyy] [name of copyright owner]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-===========================================================================
-The common/types/pb/equal.go modification of proto.Equal logic
-===========================================================================
-Copyright (c) 2018 The Go Authors. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-   * Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-   * Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the
-distribution.
-   * Neither the name of Google Inc. nor the names of its
-contributors may be used to endorse or promote products derived from
-this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-
-== Copyright
-Copyright (c) 2018 The Go Authors. All rights reserved.
-Copyright 2018 Google LLC
-Copyright 2019 Google LLC
-Copyright 2020 Google LLC
-Copyright 2021 Google LLC
-Copyright 2022 Google LLC
-Copyright 2023 Google LLC
-Copyright 2024 Google LLC
+Copyright 2014-2022 Google Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1940,9 +1565,10 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2017 Google LLC. All Rights Reserved.
-Copyright 2017-2022, Google LLC.
+Copyright 2017-2025, Google LLC.
 Copyright 2019 Google LLC. All Rights Reserved.
 Copyright 2020 Google LLC. All Rights Reserved.
+Copyright 2022 Google LLC. All Rights Reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2025,28 +1651,6 @@ Copyright 2013 The Go Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/google/gofuzz
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2014 Google Inc. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/google/shlex
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2012 Google Inc. All Rights Reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/google/uuid
 
 == License Type
@@ -2091,6 +1695,7 @@ Copyright 2015 The Gorilla WebSocket Authors. All rights reserved.
 Copyright 2016 The Gorilla WebSocket Authors. All rights reserved.  Use of
 Copyright 2017 The Gorilla WebSocket Authors. All rights reserved.
 Copyright 2019 The Gorilla WebSocket Authors. All rights reserved.
+Copyright 2025 The Gorilla WebSocket Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2118,48 +1723,6 @@ Copyright © 2012 Greg Jones (greg.jones@gmail.com)
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/grpc-ecosystem/grpc-gateway/v2
-
-== License Type
-=== BSD-3-Clause--modified-by-Google-c510a2a0
-Copyright (c) 2015, Gengo, Inc.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    * Neither the name of Gengo, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived from this
-      software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-
-== Copyright
-Copyright (c) 2015, Gengo, Inc.
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2010, 2019 The Go Authors.  All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/hashicorp/errwrap
 
 == License Type
@@ -2179,17 +1742,6 @@ Copyright 2020 GitHub noreply@github.com
 
 == Dependency
 github.com/hashicorp/go-multierror
-
-== License Type
-SPDX:MPL-2.0
-
-== Copyright
-(no copyright notices found)
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/hashicorp/hcl
 
 == License Type
 SPDX:MPL-2.0
@@ -2756,46 +2308,6 @@ Copyright (c) 2018 Peter Lithammer
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/magiconair/properties
-
-== License Type
-=== BSD-2-Clause-714beb73
-Copyright (c) 2013-2020, Frank Schroeder
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
- * Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
- * Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-
-== Copyright
-Copyright (c) 2013-2020, Frank Schroeder
-Copyright 2011 The Go Authors. All rights reserved.
-Copyright 2013-2014 Frank Schroeder. All rights reserved.
-Copyright 2013-2022 Frank Schroeder. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/mailru/easyjson
 
 == License Type
@@ -2977,17 +2489,6 @@ Copyright 2022 masahiro331 m_fujimura@r.recruit.co.jp
 Copyright 2023 GitHub noreply@github.com
 Copyright 2023 masahiro331 m_fujimura@r.recruit.co.jp
 Copyright 2025 GitHub noreply@github.com
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/moby/locker
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2013-2018 Docker, Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3350,7 +2851,6 @@ Copyright 2016 The Linux Foundation
 Copyright 2016 The Linux Foundation.
 Copyright 2016-2022 The Linux Foundation
 Copyright 2017 The Linux Foundation
-Copyright 2018 The Linux Foundation
 
 --------------------------------- (separator) ----------------------------------
 
@@ -3703,6 +3203,7 @@ Copyright 2021 The Prometheus Authors
 Copyright 2022 The Prometheus Authors
 Copyright 2023 The Prometheus Authors
 Copyright 2024 The Prometheus Authors
+Copyright 2025 The Prometheus Authors
 
 == Notices
 Prometheus instrumentation library for Go applications
@@ -3758,7 +3259,6 @@ Copyright 2013 The Prometheus Authors
 Copyright 2014 The Prometheus Authors
 Copyright 2015 The Prometheus Authors
 Copyright 2016 The Prometheus Authors
-Copyright 2017 The Prometheus Authors
 Copyright 2018 The Prometheus Authors
 Copyright 2019 The Prometheus Authors
 Copyright 2020 The Prometheus Authors
@@ -3846,14 +3346,24 @@ Copyright © 2011 Russ Ross <russ@russross.com>.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/sagikazarmark/slog-shim
+github.com/sagikazarmark/locafero
 
 == License Type
-SPDX:BSD-3-Clause--modified-by-Google
+SPDX:MIT
 
 == Copyright
-Copyright (c) 2009 The Go Authors. All rights reserved.
-Copyright 2022 The Go Authors. All rights reserved.
+Copyright (c) 2023 Márk Sági-Kazár <mark.sagikazar@gmail.com>
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/santhosh-tekuri/jsonschema/v6
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4022,6 +3532,17 @@ Copyright 2015 Sony Corporation
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/sourcegraph/conc
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2023 Sourcegraph
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/spf13/afero
 
 == License Type
@@ -4031,6 +3552,7 @@ SPDX:Apache-2.0
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2013 tsuru authors. All rights reserved.
 Copyright 2016-present Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>
+Copyright 2018 Google LLC
 Copyright © 2014 Steve Francia <spf@spf13.com>.
 Copyright © 2015 Jerry Jacobs <jerry.jacobs@xor-gate.org>.
 Copyright © 2015 Steve Francia <spf@spf13.com>.
@@ -4089,7 +3611,6 @@ SPDX:MIT
 == Copyright
 Copyright (c) 2014 Steve Francia
 Copyright © 2014 Steve Francia <spf@spf13.com>.
-Copyright © 2015 Steve Francia <spf@spf13.com>.
 Copyright © 2016 Steve Francia <spf@spf13.com>.
 
 --------------------------------- (separator) ----------------------------------
@@ -4101,19 +3622,7 @@ github.com/stefanberger/go-pkcs11uri
 SPDX:Apache-2.0
 
 == Copyright
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/stoewer/go-strcase
-
-== License Type
-SPDX:MIT
-
-== Copyright
-Copyright (c) 2017, A. Stoewer <adrian.stoewer@rz.ifi.lmu.de>
-Copyright (c) 2017, Adrian Stoewer <adrian.stoewer@rz.ifi.lmu.de>
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4233,17 +3742,6 @@ Copyright 2014-2022 Ulrich Kunitz. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/valyala/fastjson
-
-== License Type
-SPDX:MIT
-
-== Copyright
-Copyright (c) 2018 Aliaksandr Valialkin
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/vbatts/tar-split
 
 == License Type
@@ -4265,7 +3763,7 @@ github.com/vbauerster/mpb/v8
 SPDX:Unlicense
 
 == Copyright
-(no copyright notices found)
+Copyright IBM Corporation, 2020
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4301,45 +3799,6 @@ SPDX:Apache-2.0
 == Copyright
 Copyright (c) 2014 David Mzareulyan
 Copyright 2015, Sander van Harmelen
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonpointer
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonreference
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/xeipuuv/gojsonschema
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2013 MongoDB, Inc.
-Copyright 2015 xeipuuv
-Copyright 2015 xeipuuv ( https://github.com/xeipuuv )
-Copyright 2017 johandorland ( https://github.com/johandorland )
-Copyright 2018 johandorland ( https://github.com/johandorland )
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4401,30 +3860,65 @@ Copyright (c) 2015 Andrew Smith
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+go.opentelemetry.io/auto/sdk
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+(no copyright notices found)
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2016 Vladimir Bauer vbauerster@gmail.com
-Copyright 2017 Alexander Neumann alexander@bumpern.de
-Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
-Copyright 2017 GitHub noreply@github.com
-Copyright 2017 Vladimir Bauer vbauerster@gmail.com
-Copyright 2017 Àlex Vinyals Valdepeñas alevinval@gmail.com
-Copyright 2018 Vladimir Bauer vbauerster@gmail.com
-Copyright 2019 GitHub noreply@github.com
-Copyright 2019 Vladimir Bauer vbauerster@gmail.com
-Copyright 2020 GitHub noreply@github.com
-Copyright 2020 Ubuntu asellappen@yahoo.com
-Copyright 2020 Vladimir Bauer vbauerster@gmail.com
-Copyright 2021 GitHub noreply@github.com
-Copyright 2021 Samuel-Turner samuel.turner@ibm.com
-Copyright 2021 Vladimir Bauer vbauerster@gmail.com
-Copyright 2022 Vladimir Bauer vbauerster@gmail.com
-Copyright 2023 Vladimir Bauer vbauerster@gmail.com
-Copyright 2024 Vladimir Bauer vbauerster@gmail.com
+Copyright (C) 1991, 1999 Free Software Foundation, Inc.
+Copyright (C) 2013 Blake Mizerany
+Copyright (C) 2013-2015 Alexei Starovoitov <ast@kernel.org>
+Copyright (C) 2014-2019, Matt Butcher and Matt Farina
+Copyright (C) 2015 Huawei Inc.
+Copyright (C) 2015 Wang Nan <wangnan0@huawei.com>
+Copyright (C) 2021 Facebook
+Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright (c) 2009,2014 Google Inc. All rights reserved.
+Copyright (c) 2011 The Snappy-Go Authors. All rights reserved.
+Copyright (c) 2011, Open Knowledge Foundation Ltd.
+Copyright (c) 2012 The Go Authors. All rights reserved.
+Copyright (c) 2013 The Go Authors. All rights reserved.
+Copyright (c) 2013, The GoGo Authors. All rights reserved.
+Copyright (c) 2014 Cenk Altı
+Copyright (c) 2015 Klaus Post
+Copyright (c) 2015 The Libbpf Authors. All rights reserved.
+Copyright (c) 2015, Dave Cheney <dave@cheney.net>
+Copyright (c) 2015, Gengo, Inc.
+Copyright (c) 2016 Caleb Spare
+Copyright (c) 2016 json-iterator
+Copyright (c) 2017 Nathan Sweet
+Copyright (c) 2017-2021 Uber Technologies, Inc.
+Copyright (c) 2018 - 2019 Intel Corporation.
+Copyright (c) 2018 The Go Authors. All rights reserved.
+Copyright (c) 2018, 2019 Cloudflare
+Copyright (c) 2019 Authors of Cilium
+Copyright (c) 2019 Facebook
+Copyright (c) 2019 Klaus Post. All rights reserved.
+Copyright 2009 The Go Authors.
+Copyright 2010 The Go Authors
+Copyright 2010 The Go Authors. All rights reserved.
+Copyright 2012-2015 The Prometheus Authors
+Copyright 2013-2015 Blake Mizerany, Björn Rabenstein
+Copyright 2014 gRPC authors.
+Copyright 2014-2015 The Prometheus Authors
+Copyright 2015 The Go Authors.
+Copyright 2015 The Prometheus Authors
+Copyright 2016 The filepathx Authors
+Copyright 2016-2017 The New York Times Company
+Copyright 2023 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4440,44 +3934,7 @@ SPDX:Apache-2.0
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-go.opentelemetry.io/otel/exporters/otlp/otlptrace
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2022 The Go Authors. All rights reserved.
-Copyright The OpenTelemetry Authors
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2009 The Go Authors. All rights reserved.
-Copyright 2022 The Go Authors. All rights reserved.
-Copyright The OpenTelemetry Authors
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 go.opentelemetry.io/otel/metric
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-(no copyright notices found)
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-go.opentelemetry.io/otel/sdk
 
 == License Type
 SPDX:Apache-2.0
@@ -4497,20 +3954,6 @@ SPDX:Apache-2.0
 
 == Copyright
 (no copyright notices found)
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-go.opentelemetry.io/proto/otlp
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2016 Google Inc. All Rights Reserved.
-Copyright 2019, OpenTelemetry Authors
-Copyright 2020, OpenTelemetry Authors
-Copyright 2023, OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -4547,6 +3990,117 @@ Copyright (c) 2020 Uber Technologies, Inc.
 Copyright (c) 2021 Uber Technologies, Inc.
 Copyright (c) 2022 Uber Technologies, Inc.
 Copyright (c) 2023 Uber Technologies, Inc.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+go.yaml.in/yaml/v2
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright (c) 2006 Kirill Simonov
+Copyright 2011-2016 Canonical Ltd.
+
+== Notices
+Copyright 2011-2016 Canonical Ltd.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+go.yaml.in/yaml/v3
+
+== License Type
+=== MIT-3c91c172
+=== Apache-2.0
+
+This project is covered by two different licenses: MIT and Apache.
+
+#### MIT License ####
+
+The following files were ported to Go from C files of libyaml, and thus
+are still covered by their original MIT license, with the additional
+copyright staring in 2011 when the project was ported over:
+
+    apic.go emitterc.go parserc.go readerc.go scannerc.go
+    writerc.go yamlh.go yamlprivateh.go
+
+Copyright (c) 2006-2010 Kirill Simonov
+Copyright (c) 2006-2011 Kirill Simonov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+### Apache License ###
+
+All the remaining project files are covered by the Apache license:
+
+Copyright (c) 2011-2019 Canonical Ltd
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+
+== Copyright
+Copyright (c) 2006-2010 Kirill Simonov
+Copyright (c) 2006-2011 Kirill Simonov
+Copyright (c) 2011-2019 Canonical Ltd
+Copyright 2011-2016 Canonical Ltd.
+
+== Notices
+Copyright 2011-2016 Canonical Ltd.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5269,24 +4823,13 @@ Copyright The OpenTelemetry Authors
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-google.golang.org/genproto/googleapis/api
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2024 Google LLC
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 google.golang.org/genproto/googleapis/rpc
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2024 Google LLC
+Copyright 2025 Google LLC
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5313,6 +4856,7 @@ Copyright 2021 gRPC authors.
 Copyright 2022 gRPC authors.
 Copyright 2023 gRPC authors.
 Copyright 2024 gRPC authors.
+Copyright 2025 gRPC authors.
 
 == Notices
 Copyright 2014 gRPC authors.
@@ -5350,7 +4894,9 @@ Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2023 Google Inc.  All rights reserved.
 Copyright 2023 The Go Authors. All rights reserved.
+Copyright 2024 Google Inc.  All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -5425,21 +4971,6 @@ SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
 Copyright (c) 2012 Péter Surányi. Portions Copyright (c) 2009 The Go
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-gopkg.in/ini.v1
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2014 Unknwon
-Copyright 2015 Unknwon
-Copyright 2016 Unknwon
-Copyright 2017 Unknwon
-Copyright 2019 Unknwon
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5598,6 +5129,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5617,6 +5149,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5641,6 +5174,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5662,6 +5196,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5681,6 +5216,7 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5703,6 +5239,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5738,6 +5275,26 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+k8s.io/component-helpers
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2015 The Kubernetes Authors.
+Copyright 2016 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
+Copyright 2020 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
+Copyright 2023 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5751,7 +5308,7 @@ SPDX:Apache-2.0
 Copyright 2013 Google Inc. All Rights Reserved.
 Copyright 2014 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
-Copyright 2020 Intel Coporation.
+Copyright 2020 Intel Corporation.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
@@ -5767,6 +5324,7 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright (C) MongoDB, Inc. 2017-present.
+Copyright (c) 2014 Alex Saskevich
 Copyright (c) 2020 The Go Authors. All rights reserved.
 Copyright 2015 go-swagger maintainers
 Copyright 2016 The Kubernetes Authors.
@@ -5781,6 +5339,8 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2024 go-swagger maintainers
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5802,6 +5362,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5830,6 +5391,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5860,25 +5422,13 @@ Copyright 2024 The Kubernetes Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-oras.land/oras-go
+oras.land/oras-go/v2
 
 == License Type
 SPDX:Apache-2.0
 
 == Copyright
 Copyright 2021 ORAS Authors.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-sigs.k8s.io/apiserver-network-proxy/konnectivity-client
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2019 The Kubernetes Authors.
-Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5898,6 +5448,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -5919,6 +5470,7 @@ Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
 Copyright 2024 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -6217,7 +5769,49 @@ Copyright 2022 The Kubernetes Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-sigs.k8s.io/structured-merge-diff/v4
+sigs.k8s.io/randfill
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2014 Google Inc. All rights reserved.
+Copyright 2014 The gofuzz Authors
+Copyright 2014 The gofuzz Authors.
+Copyright 2025 The Kubernetes Authors
+Copyright 2025 The Kubernetes Authors.
+
+== Notices
+When donating the randfill project to the CNCF, we could not reach all the
+gofuzz contributors to sign the CNCF CLA. As such, according to the CNCF rules
+to donate a repository, we must add a NOTICE referencing section 7 of the CLA
+with a list of developers who could not be reached.
+
+`7. Should You wish to submit work that is not Your original creation, You may
+submit it to the Foundation separately from any Contribution, identifying the
+complete details of its source and of any license or other restriction
+(including, but not limited to, related patents, trademarks, and license
+agreements) of which you are personally aware, and conspicuously marking the
+work as "Submitted on behalf of a third-party: [named here]".`
+
+Submitted on behalf of a third-party: @dnephin (Daniel Nephin)
+Submitted on behalf of a third-party: @AlekSi (Alexey Palazhchenko)
+Submitted on behalf of a third-party: @bbigras (Bruno Bigras)
+Submitted on behalf of a third-party: @samirkut (Samir)
+Submitted on behalf of a third-party: @posener (Eyal Posener)
+Submitted on behalf of a third-party: @Ashikpaul (Ashik Paul)
+Submitted on behalf of a third-party: @kwongtailau (Kwongtai)
+Submitted on behalf of a third-party: @ericcornelissen (Eric Cornelissen)
+Submitted on behalf of a third-party: @eclipseo (Robert-André Mauchin)
+Submitted on behalf of a third-party: @yanzhoupan (Andrew Pan)
+Submitted on behalf of a third-party: @STRRL (Zhiqiang ZHOU)
+Submitted on behalf of a third-party: @disconnect3d (Disconnect3d)
+
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+sigs.k8s.io/structured-merge-diff/v6
 
 == License Type
 SPDX:Apache-2.0
@@ -6227,6 +5821,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -6549,17 +6144,16 @@ Apache license:
 
 
 == Copyright
-Copyright (c) 2006 Kirill Simonov
 Copyright (c) 2006-2010 Kirill Simonov
 Copyright (c) 2006-2011 Kirill Simonov
 Copyright (c) 2011-2019 Canonical Ltd
 Copyright (c) 2012 The Go Authors. All rights reserved.
 Copyright (c) 2014 Sam Ghods
-Copyright 2011-2016 Canonical Ltd.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2021 The Kubernetes Authors.
 Copyright 2022 The Kubernetes Authors.
 Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 ----------------------------------- Licenses -----------------------------------
 

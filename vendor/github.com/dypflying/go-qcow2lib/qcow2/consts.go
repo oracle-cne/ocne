@@ -51,6 +51,7 @@ const (
 	QCOW2_VERSION3                  = 3
 	QCOW2_REFCOUNT_ORDER            = 4
 	QCOW2_CRYPT_METHOD              = 0
+	QCOW2_COMPRESSED_SECTOR_SIZE    = uint64(512)
 	//	DEFAULT_ALIGNMENT               = 4096    //align to 4k
 	DEFAULT_ALIGNMENT    = DEFAULT_SECTOR_SIZE //align to sector
 	DEFAULT_MAX_TRANSFER = 1 << 31             //2G

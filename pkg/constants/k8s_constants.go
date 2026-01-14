@@ -73,6 +73,11 @@ const (
 	CatalogVersion   = "2.0.0"
 	CatalogName      = DefaultCatalogName
 
+	HAMonitorRelease = "ha-config"
+	HAMonitorNamespace = "ocne-system"
+	HAMonitorChart = "ocne-ha-monitor"
+	HAMonitorVersion = "2.0.0"
+
 	CommunityCatalogName      = "ArtifactHub Community Catalog"
 	CommunityCatalogURI       = "https://artifacthub.io"
 	CommunityCatalogNamespace = OCNESystemNamespace
@@ -160,4 +165,7 @@ const (
 	// Kubernetes Gateway API Crds constants
 	KubernetesGatewayAPICrds        = "kubernetes-gateway-api-crds"
 	KubernetesGatewayAPICrdsVersion = ""
+
+	// Imporant CAPI annotations
+	CAPIClusterNameAnnotation = "cluster.x-k8s.io/cluster-name"
 )
