@@ -10,7 +10,6 @@ import (
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/objectstorage"
-	log "github.com/sirupsen/logrus"
 )
 
 // GetNamespace returns the object storage namespace for this tenancy
@@ -29,45 +28,8 @@ func GetNamespace(profile string) (string, error) {
 	return *resp.Value, nil
 }
 
-// EnsureObject ensures that an object exists in object storage and that the
-// object is the same as the one that is desired.  If the object exists and
-// is the same, then the function simply returns.  If not, it uploads the
-// object to the given bucket and object name.
-func EnsureObject(bucketName string, objectName string, profile string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
-	namespace, err := GetNamespace(profile)
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-	c, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(common.CustomProfileConfigProvider("", profile))
-	if err != nil {
-		return err
-	}
-
-	// Check to see if an object already exists.
-	resp, err := c.ListObjects(ctx, objectstorage.ListObjectsRequest{
-		NamespaceName: &namespace,
-		BucketName:    &bucketName,
-		Prefix:        &objectName,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Check if the objects are the same.  A rough estimate is fine for now.
-	for _, o := range resp.ListObjects.Objects {
-		if *o.Name == objectName {
-			log.Debugf("Object already exists")
-			return nil
-		}
-	}
-
-	return UploadObject(bucketName, objectName, profile, contentLen, content, metadata)
-}
-
 // UploadObject uploads the contents of a stream to an object storage bucket
-func UploadObject(bucketName string, objectName string, profile string, contentLen int64, content io.ReadCloser, metadata map[string]string) error {
+func UploadObject(bucketName string, objectName string, profile string, contentLen int64, content io.Reader, metadata map[string]string) error {
 	namespace, err := GetNamespace(profile)
 	if err != nil {
 		return err
@@ -88,10 +50,9 @@ func UploadObject(bucketName string, objectName string, profile string, contentL
 		BucketName:    &bucketName,
 		ObjectName:    &objectName,
 		ContentLength: &contentLen,
-		PutObjectBody: content,
+		PutObjectBody: io.NopCloser(content),
 		OpcMeta:       metadata,
 	}
 	_, err = c.PutObject(ctx, request)
 	return err
-
 }

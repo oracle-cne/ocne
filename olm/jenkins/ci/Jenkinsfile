@@ -4,11 +4,13 @@ import com.oracle.olcne.pipeline.BranchPattern
 olcnePipeline(
     branchPattern: new BranchPattern(master: 'release/.*', feature: '(?!^release/.*$)(^.*$)'),
     customStages: [container: [enabled: false]],
-    platforms: ['ol8', 'ol9'],
+    golang: '1.23.9',
+    platforms: ['ol8', 'ol9', 'ol10'],
     architectures: ['x86_64', 'aarch64'],
     ol8ModulesToDisable: ['go-toolset:ol8'],
     yumOL8Repos: ['ol8_codeready_builder', 'ol8_UEKR7'],
     yumOL9Repos: ['ol9_codeready_builder', 'ol9_UEKR7'],
+    yumOL10Repos: ['ol10_codeready_builder', 'ol10_UEKR8'],
     preBuildCommands: [
       "make build/catalog build/developer-catalog",
     ],

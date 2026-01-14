@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oracle-cne/ocne/cmd/flags"
 	"github.com/oracle-cne/ocne/pkg/application"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/driver"
@@ -449,9 +450,8 @@ func (cad *ClusterApiDriver) getOCIClusterObject() (unstructured.Unstructured, e
 	if err != nil {
 		if k8s.IsNotExist(err) {
 			return unstructured.Unstructured{}, fmt.Errorf("Cluster resources do not include a valid cluster.x-k8s.io/v1beta1/Cluster")
-		} else {
-			return unstructured.Unstructured{}, err
 		}
+		return unstructured.Unstructured{}, err
 	}
 
 	return ociClusterObj, err
@@ -589,7 +589,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 
 	// Check to see if a converted image already exists.  If so, don't bother
 	// making a new one.
-	imageName, err := create.DefaultImagePath(create.ProviderTypeOCI, version, arch)
+	imageName, err := create.DefaultImagePath(flags.ProviderTypeOCI, version, arch)
 	if err != nil {
 		return "", "", err
 	}
@@ -609,7 +609,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 		cad.ClusterConfig.OsTag = version
 	}
 	err = create.Create(cad.Config, cad.ClusterConfig, create.CreateOptions{
-		ProviderType: create.ProviderTypeOCI,
+		ProviderType: flags.ProviderTypeOCI,
 		Architecture: arch,
 	})
 	cad.Config.KubeConfig = oldKcfg
@@ -621,7 +621,7 @@ func (cad *ClusterApiDriver) ensureImage(name string, arch string, version strin
 	// Image creation is done.  Upload it.
 	imageId, workRequestId, err := upload.UploadAsync(upload.UploadOptions{
 		ClusterConfig:     cad.ClusterConfig,
-		ProviderType:      upload.ProviderTypeOCI,
+		ProviderType:      flags.ProviderTypeOCI,
 		Profile:           cad.ClusterConfig.Providers.Oci.Profile,
 		BucketName:        cad.ClusterConfig.Providers.Oci.ImageBucket,
 		CompartmentName:   compartmentId,
@@ -816,7 +816,7 @@ func (cad *ClusterApiDriver) Start() (bool, bool, error) {
 	if err != nil {
 		return false, false, err
 	}
-	podLogs := []*util.ScanCloser{}
+	var podLogs []*util.ScanCloser
 	for _, op := range ociPods {
 		podLog, err := k8s.GetPodLogs(clientIface, op, "")
 		if err != nil {
@@ -1082,7 +1082,7 @@ func (cad *ClusterApiDriver) Delete() error {
 			break
 		}
 
-		// If the kubeconfig for the this cluster does not exist,
+		// If the kubeconfig for this cluster does not exist,
 		// assume that the resources are in the target cluster.
 		_, err = os.Stat(cad.KubeConfig)
 		if err != nil {
@@ -1121,7 +1121,7 @@ func (cad *ClusterApiDriver) Delete() error {
 
 func (cad *ClusterApiDriver) Close() error {
 	// There needs to be some logic to figure out when a cluster
-	// is done being deleted.  It is not reasoble to develop
+	// is done being deleted.  It is not reasonable to develop
 	// this against the OCI CAPI provider because it is unreliable
 	// when deleting clusters.  For now, leave the ephemeral one
 	// behind so that deletion can continue in the background.
