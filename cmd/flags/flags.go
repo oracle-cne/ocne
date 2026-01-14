@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package flags
@@ -12,9 +12,14 @@ import (
 const (
 	FlagArchitecture      = "arch"
 	FlagArchitectureShort = "a"
+
+	ProviderTypeOCI    = "oci"
+	ProviderTypeOstree = "ostree"
+	ProviderTypeOlvm   = "olvm"
 )
 
 var ValidArchs = []string{"amd64", "arm64"}
+var ValidProviderTypes = []string{ProviderTypeOCI, ProviderTypeOstree, ProviderTypeOlvm}
 
 // ValidateArchitecture validates that the passed in architecture is one of the valid values
 func ValidateArchitecture(arch string) error {

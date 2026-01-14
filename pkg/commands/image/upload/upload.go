@@ -1,25 +1,27 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-
-	log "github.com/sirupsen/logrus"
+	"strings"
 
 	"github.com/containers/image/v5/copy"
-	file2 "github.com/oracle-cne/ocne/pkg/file"
+	"github.com/oracle-cne/ocne/cmd/flags"
+	"github.com/oracle-cne/ocne/pkg/file"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
 	"github.com/oracle-cne/ocne/pkg/util/oci"
+	log "github.com/sirupsen/logrus"
 )
-
-const ProviderTypeOCI = "oci"
-const ProviderTypeOstree = "ostree"
-const ProviderTypeOlvm = "olvm"
 
 func setCompartmentId(options *UploadOptions) error {
 	// Compartment ID is already resolved.
@@ -39,46 +41,80 @@ func setCompartmentId(options *UploadOptions) error {
 // UploadAsync uploads a VM image to object storage and then begins
 // the import process.  A work request is returned for the import.
 func UploadAsync(options UploadOptions) (string, string, error) {
-	err := setCompartmentId(&options)
+	// Hack to determine if OCI config is for a PCA.  PCA will only have one region.
+	regions, err := oci.ListRegions(options.Profile)
+	if err != nil {
+		return "", "", err
+	}
+	if len(regions) == 1 {
+		options.PCA = true
+	}
+	log.Debugf("PCA boolean flag: %v", options.PCA)
+
+	err = setCompartmentId(&options)
 	if err != nil {
 		return "", "", err
 	}
 
-	fpath, err := file2.AbsDir(options.ImagePath)
+	qcow2Image, err := file.AbsDir(options.ImagePath)
 	if err != nil {
 		return "", "", err
 	}
 
-	file, err := os.Open(fpath)
-	if err != nil {
-		return "", "", err
-	} else {
-		defer file.Close()
-	}
-
-	stat, err := file.Stat()
+	qcow2File, err := os.Open(qcow2Image)
 	if err != nil {
 		return "", "", err
 	}
+	defer qcow2File.Close()
 
-	options.size = stat.Size()
-	options.filename = "ocne_" + filepath.Base(fpath)
-	options.file = file
+	// Create the image capabilities file
+	capabilitiesFileSpec := getImageCapabilitiesFileSpec(qcow2Image)
+	if err := createImageCapabilitiesFile(capabilitiesFileSpec, options.ImageArchitecture, options.PCA); err != nil {
+		return "", "", err
+	}
+
+	// Create tarball
+	tarBytes, err := createTarballInMemory(qcow2Image, capabilitiesFileSpec)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Upload the tarball
+	err = uploadTarballBytes(tarBytes, qcow2File.Name(), &options)
+	if err != nil {
+		return "", "", err
+	}
+
+	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
+}
+
+// uploadTarballBytes streams the in-memory tarball ([]byte)
+func uploadTarballBytes(tarball []byte, baseName string, options *UploadOptions) error {
+	options.size = int64(len(tarball))
+	options.filename = "ocne_" + filepath.Base(baseName)
+	options.file = bytes.NewReader(tarball)
+
 	failed := logutils.WaitFor(logutils.Info, []*logutils.Waiter{
-		&logutils.Waiter{
-			Args:    &options,
-			Message: "Uploading image to object storage",
+		{
+			Args:    options,
+			Message: fmt.Sprintf("Uploading %s of size %d bytes to object storage", options.filename, options.size),
 			WaitFunction: func(uIface interface{}) error {
 				uo, _ := uIface.(*UploadOptions)
-				return oci.UploadObject(uo.ClusterConfig.Providers.Oci.ImageBucket, options.filename, uo.ClusterConfig.Providers.Oci.Profile, uo.size, uo.file, nil)
+				return oci.UploadObject(
+					uo.ClusterConfig.Providers.Oci.ImageBucket,
+					options.filename,
+					uo.ClusterConfig.Providers.Oci.Profile,
+					uo.size,
+					uo.file,
+					nil,
+				)
 			},
 		},
 	})
 	if failed {
-		return "", "", fmt.Errorf("Failed to upload image to object storage")
+		return fmt.Errorf("failed to upload %s to object storage", options.filename)
 	}
-
-	return oci.ImportImage(options.ImageName, options.KubernetesVersion, options.ImageArchitecture, options.compartmentId, options.ClusterConfig.Providers.Oci.ImageBucket, options.filename, options.Profile)
+	return nil
 }
 
 // EnsureImageDetails sets important configuration options for the custom image.
@@ -119,11 +155,6 @@ func UploadOci(options UploadOptions) error {
 		return err
 	}
 
-	// Set schema.  compartmentId is set by UploadAsync
-	if err = EnsureImageDetails(options.compartmentId, options.Profile, imageId, options.ImageArchitecture); err != nil {
-		return err
-	}
-
 	log.Infof("Image OCID is %s", imageId)
 
 	return nil
@@ -133,10 +164,10 @@ func UploadOstree(options UploadOptions) error {
 	return image.Copy(fmt.Sprintf("oci-archive:%s", options.ImagePath), options.Destination, "", copy.CopySystemImage)
 }
 
-var providers map[string]func(UploadOptions) error = map[string]func(UploadOptions) error{
-	ProviderTypeOCI:    UploadOci,
-	ProviderTypeOstree: UploadOstree,
-	ProviderTypeOlvm:   UploadOlvm,
+var providers = map[string]func(UploadOptions) error{
+	flags.ProviderTypeOCI:    UploadOci,
+	flags.ProviderTypeOstree: UploadOstree,
+	flags.ProviderTypeOlvm:   UploadOlvm,
 }
 
 // Upload uploads a VM image to OCI Object storage and then imports
@@ -148,4 +179,101 @@ func Upload(options UploadOptions) error {
 	}
 
 	return pf(options)
+}
+
+// createTarballInMemory - Create a .tar.gz of the input files in memory and return as []byte
+func createTarballInMemory(qcow2Image string, capabilitiesFileSpec string) ([]byte, error) {
+	// In-memory buffer
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// List of files to add
+	files := []string{qcow2Image, capabilitiesFileSpec}
+	for _, filename := range files {
+		if err := addFileToTarWriter(filename, tw); err != nil {
+			return nil, err
+		}
+	}
+
+	// Properly close writers to flush all data
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+	if err := gw.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func addFileToTarWriter(filename string, tw *tar.Writer) error {
+	addFile, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer addFile.Close()
+
+	info, err := addFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Rename files based on what PCA requires
+	name := info.Name()
+	if strings.HasSuffix(name, ".oci") {
+		name = "output.QCOW2"
+	} else {
+		name = "image_metadata.json"
+	}
+
+	header := &tar.Header{
+		Name:    name, // Entry name in archive
+		Size:    info.Size(),
+		Mode:    int64(info.Mode()), // File permissions
+		ModTime: info.ModTime(),
+	}
+
+	if err := tw.WriteHeader(header); err != nil {
+		return err
+	}
+
+	_, err = io.Copy(tw, addFile)
+	return err
+}
+
+// createImageCapabilitiesFile - create an image capabilities JSON file based on the architecture passed in
+func createImageCapabilitiesFile(filePath string, imageArchitecture string, isPCA bool) error {
+	capabilities, err := oci.NewImageCapability(oci.ImageArch(imageArchitecture), isPCA)
+	if err != nil {
+		return err
+	}
+
+	// Marshal the struct to JSON
+	data, err := json.MarshalIndent(capabilities, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// Write JSON data to a file
+	jsonFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer jsonFile.Close()
+
+	_, err = jsonFile.Write(data)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Created file %s", filePath)
+
+	return nil
+}
+
+func getImageCapabilitiesFileSpec(filePath string) string {
+	return fmt.Sprintf("%s.json", filePath)
 }

@@ -9,8 +9,11 @@ Copyright (c) 2023 Oracle and/or its affiliates.
 Copyright (c) 2024 Oracle and/or its affiliates.
 Copyright (c) 2024, 2025 Oracle and/or its affiliates.
 Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 Copyright (c) 2024, Oracle and/or its affiliates.
+Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 Copyright (c) 2025, Oracle and/or its affiliates.
+Copyright (c) 2026, Oracle and/or its affiliates.
 
 -------------------------- Fourth Party Dependencies ---------------------------
 
@@ -3489,7 +3492,7 @@ END OF TERMS AND CONDITIONS
 == Copyright
 Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.
 Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
-Copyright (c) 2016, 2018, 2024, Oracle and/or its affiliates.  All rights reserved.
+Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
 Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
 Copyright (c) 2016, 2023 Oracle and/or its affiliates.
 Copyright (c) 2016, 2023, Oracle and/or its affiliates.  All rights reserved.
@@ -4352,6 +4355,17 @@ Copyright © 2016 Maxim Kupriianov <max@kc.vc>
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/youmark/pkcs8
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2014 youmark
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 go.mongodb.org/mongo-driver
 
 == License Type
@@ -4589,6 +4603,7 @@ Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2022 The Go Authors. All rights reserved.
 Copyright 2023 The Go Authors. All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)

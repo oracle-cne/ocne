@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package upload
@@ -35,11 +35,11 @@ var uploadOptions = upload.UploadOptions{
 	KubernetesVersion: pkgconst.KubeVersion,
 }
 var flagArchitectureHelp = "The architecture of the image to upload, allowed values: " + strings.Join(flags.ValidArchs, ", ")
+var flagProviderTypeHelp = "The provider type, allowed values: " + strings.Join(flags.ValidProviderTypes, ", ")
 
 const (
 	flagProviderType      = "type"
 	flagProviderTypeShort = "t"
-	flagProviderTypeHelp  = "The provider type, default is oci"
 
 	flagImagePath      = "file"
 	flagImagePathShort = "f"
@@ -63,7 +63,7 @@ const (
 
 	flagProfile      = "profile"
 	flagProfileShort = "p"
-	flagProfileHelp  ="The name of the OCI configuration profile"
+	flagProfileHelp  = "The name of the OCI configuration profile"
 
 	flagKubernetesVersionHelp = "The version of Kubernetes embedded in the image"
 )
@@ -84,7 +84,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&uploadOptions.KubeConfigPath, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&clusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp)
-	cmd.Flags().StringVarP(&uploadOptions.ProviderType, flagProviderType, flagProviderTypeShort, upload.ProviderTypeOCI, flagProviderTypeHelp)
+	cmd.Flags().StringVarP(&uploadOptions.ProviderType, flagProviderType, flagProviderTypeShort, flags.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&uploadOptions.BucketName, flagBucket, flagBucketShort, pkgconst.OciBucket, flagBucketHelp)
 	cmd.Flags().StringVarP(&uploadOptions.CompartmentName, flagCompartment, flagCompartmentShort, "", flagCompartmentHelp)
 	cmd.Flags().StringVarP(&uploadOptions.ImagePath, flagImagePath, flagImagePathShort, "", flagImagePathHelp)

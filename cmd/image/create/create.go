@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package create
@@ -31,11 +31,11 @@ var config types.Config
 var clusterConfig types.ClusterConfig
 var createOptions create.CreateOptions
 var flagArchitectureHelp = "The architecture of the image to create, allowed values: " + strings.Join(flags.ValidArchs, ", ")
+var flagProviderTypeHelp = "The provider type, allowed values: " + strings.Join(flags.ValidProviderTypes, ", ")
 
 const (
 	flagProviderType      = "type"
 	flagProviderTypeShort = "t"
-	flagProviderTypeHelp  = "The provider type, default is oci"
 
 	flagIgnitionProvider      = "ignition-provider"
 	flagIgnitionProviderShort = "i"
@@ -62,7 +62,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&config.KubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&createOptions.ClusterConfigPath, constants.FlagConfig, "", "", constants.FlagConfigHelp2)
-	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, create.ProviderTypeOCI, flagProviderTypeHelp)
+	cmd.Flags().StringVarP(&createOptions.ProviderType, flagProviderType, flagProviderTypeShort, flags.ProviderTypeOCI, flagProviderTypeHelp)
 	cmd.Flags().StringVarP(&createOptions.Architecture, flags.FlagArchitecture, flags.FlagArchitectureShort, "amd64", flagArchitectureHelp)
 	cmd.Flags().StringVarP(&createOptions.IgnitionProvider, flagIgnitionProvider, flagIgnitionProviderShort, "", flagIgnitionProviderHelp)
 	cmd.Flags().StringVarP(&createOptions.KernelArguments, flagKargs, flagKargsShort, "", flagKargsHelp)

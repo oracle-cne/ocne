@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package oci
@@ -12,7 +12,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/identity"
 )
 
-// Takes a path to a compartment name in the format
+// GetCompartmentId - Takes a path to a compartment name in the format
 // compartment1/compartment2/compartment3 and locates
 // the OCID of the indicated compartment by following
 // the path.
@@ -49,6 +49,11 @@ func GetCompartmentId(compartmentName string, profile string) (string, error) {
 		})
 		if err != nil {
 			return "", err
+		}
+
+		// If the topmost compartment is the only compartment, hand back that id.
+		if len(lcr.Items) == 0 {
+			return id, nil
 		}
 
 		// Look for the correct element in the list of responses
