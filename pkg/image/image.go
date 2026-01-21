@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package image
@@ -36,6 +36,25 @@ var archMap = map[string]string{
 	"":        "",
 }
 
+func init() {
+	// If the default driver is overlayfs and the default options are
+	// set, privilege is needed to parse containers-storage transports
+	// even if no containers are going to be started.  To allow for
+	// more configurations to work, avoid mounting anything if possible.
+	// Users can explicitly override this setting by setting the
+	// STORAGE_OPTS environment variable.  Setting the variable here
+	// is a bit cheesy, but it's the least complicated way to do it.
+	storageOptsVar := "STORAGE_OPTS"
+	storageOpts := "skip_mount_home=true"
+
+	_, ok := os.LookupEnv(storageOptsVar)
+	if ok {
+		return
+	}
+
+	os.Setenv(storageOptsVar, storageOpts)
+}
+
 // EnsureBaseQcow2Image ensures that the base image is downloaded. Return a tar stream of the image.
 func EnsureBaseQcow2Image(imageName string, arch string) (*tar.Reader, func(), error) {
 	// Fetch the image, or use the local cache if it exists
@@ -52,7 +71,7 @@ func EnsureBaseQcow2Image(imageName string, arch string) (*tar.Reader, func(), e
 		return nil, nil, err
 	}
 
-	tarStream, closer, err := GetTarFromLayerById(imgRef, layers[0].Digest.Encoded())
+	tarStream, closer, err := GetTarFromLayerById(imgRef, layers[0].Digest.Encoded(), layers[0].MediaType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -241,29 +260,37 @@ func getLayerFile(imgRef types.ImageReference, layerId string) (*os.File, error)
 // image.  The backing readers for the tar stream are a gzip stream and a file
 // stream.  Both of these have to be closed.  The second return value is a
 // function that closes each of these streams in the proper order.
-func GetTarFromLayerById(imgRef types.ImageReference, layerId string) (*tar.Reader, func(), error) {
+func GetTarFromLayerById(imgRef types.ImageReference, layerId string, mediaType string) (*tar.Reader, func(), error) {
 	layerFile, err := getLayerFile(imgRef, layerId)
 	if err != nil {
 		return nil, func() {}, err
 	}
 
+	var tarReader *tar.Reader
+	var closer func()
 	// Layers are gzipped, so it is necessary to
 	// unzip them.
-	gzipReader, err := gzip.NewReader(layerFile)
-	if err != nil {
-		layerFile.Close()
-		return nil, func() {}, err
-	}
+	if strings.HasSuffix(mediaType, "gzip") {
+		gzipReader, err := gzip.NewReader(layerFile)
+		if err != nil {
+			layerFile.Close()
+			return nil, func() {}, err
+		}
 
-	// The unzipped file is a tar archive,
-	// so set up a reader for that.
-	tarReader := tar.NewReader(gzipReader)
-	return tarReader,
-		func() {
+		// The unzipped file is a tar archive,
+		// so set up a reader for that.
+		tarReader = tar.NewReader(gzipReader)
+		closer = func() {
 			gzipReader.Close()
 			layerFile.Close()
-		},
-		nil
+		}
+	} else {
+		tarReader = tar.NewReader(layerFile)
+		closer = func() {
+			layerFile.Close()
+		}
+	}
+	return tarReader, closer, nil
 }
 
 // AdvanceTarToPath searches a tar stream until it finds the header for
