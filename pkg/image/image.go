@@ -43,7 +43,7 @@ func init() {
 	// more configurations to work, avoid mounting anything if possible.
 	// Users can explicitly override this setting by setting the
 	// STORAGE_OPTS environment variable.  Setting the variable here
-	// is a bit cheesy, but it's the least comlicated way to do it.
+	// is a bit cheesy, but it's the least complicated way to do it.
 	storageOptsVar := "STORAGE_OPTS"
 	storageOpts := "skip_mount_home=true"
 
