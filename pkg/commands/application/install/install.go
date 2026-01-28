@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
+	"github.com/oracle-cne/ocne/pkg/cluster"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/ls"
 	"github.com/oracle-cne/ocne/pkg/constants"
@@ -57,6 +58,19 @@ func Install(opt application.InstallOptions) error {
 			FileOverride: opt.Values,
 		})
 	}
+
+	if opt.AppName == constants.UIChart {
+		_, kubeClient, err := client.GetKubeClient(opt.KubeConfigPath)
+		if err != nil {
+			return err
+		}
+
+		err = cluster.CreateCert(kubeClient, opt.Namespace)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Upload the helm chart stored at the temporary directory
 	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues, opt.Force)
 	return err
