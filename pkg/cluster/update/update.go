@@ -854,6 +854,9 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 			return false, err
 		}
 		err = k8s.DeletePod(kubeClient, constants.OCNESystemNamespace, fmt.Sprintf("check-update-%s", node.Name))
+		if err != nil {
+			return false, err
+		}
 		ockInfo := kcConfig.Streams.Out.(*bytes.Buffer)
 
 		timestamps := BootUpdateTimestamps{}
