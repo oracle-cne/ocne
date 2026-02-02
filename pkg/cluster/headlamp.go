@@ -5,13 +5,14 @@ package cluster
 
 import (
 	"context"
+
+	"github.com/oracle-cne/ocne/pkg/certificate"
+	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/k8s"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/certificate"
-	"github.com/oracle-cne/ocne/pkg/constants"
-	"github.com/oracle-cne/ocne/pkg/k8s"
 )
 
 // CreateCert - create a default certificate for accessing the UI
@@ -22,7 +23,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	}
 
 	// Nothing to do if the secret already exists
-	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Get(context.TODO(), constants.UISecretNameTLS, metav1.GetOptions{})
+	_, err = client.CoreV1().Secrets(namespace).Get(context.TODO(), constants.UISecretNameTLS, metav1.GetOptions{})
 	if err == nil || !errors.IsNotFound(err) {
 		return err
 	}
@@ -37,7 +38,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.UISecretNameTLS,
-			Namespace: constants.OCNESystemNamespace,
+			Namespace: namespace,
 		},
 		Data: make(map[string][]byte),
 		Type: v1.SecretTypeTLS,
@@ -45,7 +46,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	secret.Data[constants.CertKey] = certs.LeafCertResult.CertPEM
 	secret.Data[constants.PrivKey] = certs.LeafCertResult.PrivateKeyPEM
 
-	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err = client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	secret.Data[constants.CertKey] = certs.RootCertResult.CertPEM
 	secret.Data[constants.PrivKey] = certs.RootCertResult.PrivateKeyPEM
 
-	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err = client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 
 	return err
 }
