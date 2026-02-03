@@ -4,6 +4,8 @@
 package application
 
 import (
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/helm"
 )
@@ -85,6 +87,8 @@ type InstallOptions struct {
 	// Force causes the application to overwrite and take ownership
 	// of existing resources.
 	Force bool
+
+	ApplicationOptions
 }
 type UpdateOptions struct {
 
@@ -108,6 +112,8 @@ type UpdateOptions struct {
 
 	// ResetValues is used to reset the values to the ones built into the chart.
 	ResetValues bool
+
+	ApplicationOptions
 }
 
 // TemplateOptions are the options for the application template command
@@ -127,4 +133,10 @@ type TemplateOptions struct {
 
 	// Catalog is the name of the catalog to search for template values
 	Catalog string
+}
+
+type ApplicationOptions struct {
+	Timeout     time.Duration
+	Wait        bool
+	WaitForJobs bool
 }

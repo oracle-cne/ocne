@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
@@ -168,18 +169,18 @@ func GetValues(kubeInfo *client.KubeInfo, releaseName string, namespace string) 
 
 // UpgradeChartFromArchive installs a release into a cluster or upgrades an existing one.  The
 // reader must be a compressed tar archive.
-func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
+func UpgradeChartFromArchive(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, archive io.Reader, wait bool, waitForJobs bool, timeout time.Duration, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
 	theChart, err := loader.LoadArchive(archive)
 	if err != nil {
 		log.Errorf("Error loading archive: %v", err)
 		return nil, err
 	}
 
-	return UpgradeChart(kubeInfo, releaseName, namespace, createNamespace, theChart, wait, dryRun, overrides, resetValues, force)
+	return UpgradeChart(kubeInfo, releaseName, namespace, createNamespace, theChart, wait, waitForJobs, timeout, dryRun, overrides, resetValues, force)
 }
 
 // UpgradeChart installs a release into a cluster or upgrades an existing one.
-func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, theChart *chart.Chart, wait bool, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
+func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace string, createNamespace bool, theChart *chart.Chart, wait bool, waitForJobs bool, timeout time.Duration, dryRun bool, overrides []HelmOverrides, resetValues bool, force bool) (*release.Release, error) {
 	var err error
 	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
@@ -209,6 +210,8 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.Namespace = namespace
 		client.DryRun = dryRun
 		client.Wait = wait
+		client.WaitForJobs = waitForJobs
+		client.Timeout = timeout
 		client.ResetValues = resetValues
 		client.TakeOwnership = force
 
@@ -239,6 +242,8 @@ func UpgradeChart(kubeInfo *client.KubeInfo, releaseName string, namespace strin
 		client.DryRun = dryRun
 		client.Replace = true
 		client.Wait = wait
+		client.WaitForJobs = waitForJobs
+		client.Timeout = timeout
 		client.CreateNamespace = createNamespace
 		client.TakeOwnership = force
 

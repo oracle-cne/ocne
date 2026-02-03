@@ -66,6 +66,11 @@ func Update(opt application.UpdateOptions) error {
 		ReleaseName:    opt.ReleaseName,
 		Values:         opt.Values,
 		ResetValues:    opt.ResetValues,
+		ApplicationOptions: application.ApplicationOptions{
+			Timeout:     opt.Timeout,
+			Wait:        opt.Wait,
+			WaitForJobs: opt.WaitForJobs,
+		},
 	})
 	return err
 }
