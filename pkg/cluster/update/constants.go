@@ -18,7 +18,7 @@ OCK_REFS=$(chroot /hostroot ostree refs | grep '^ock')
 BOOT_COMMIT_DATE=$(chroot /hostroot ostree log "$BOOT_REF" | grep '^Date:')
 BOOT_COMMIT_DATE="${BOOT_COMMIT_DATE##Date:+( )}"
 
-UPDATE_COMMIT_DATE=""
+UPDATE_COMMIT_DATE="$BOOT_COMMIT_DATE"
 if echo "$OCK_REFS" | grep -q -e 'ock:ock'; then
 	UPDATE_COMMIT_DATE=$(chroot /hostroot ostree log ock:ock | grep '^Date:')
 	UPDATE_COMMIT_DATE="${UPDATE_COMMIT_DATE##Date:+( )}"
