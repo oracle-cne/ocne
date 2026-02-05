@@ -1,4 +1,4 @@
-@Library('olcne-pipeline')
+@Library('olcne-pipeline@feature/fixv4')
 import com.oracle.olcne.pipeline.BranchPattern
 
 olcnePipeline(
