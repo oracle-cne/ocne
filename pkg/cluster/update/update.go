@@ -12,22 +12,22 @@ import (
 	"strings"
 	"time"
 
-	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v4/pkg/release"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeadmconst "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
-	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/application/ls"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -108,7 +108,6 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 
 	log.Debugf("Finding images to tag on %s", node.ObjectMeta.Name)
 
-
 	kubeProxyImg, kubeProxyCurrent, _ := k8s.GetImageCandidate(constants.KubeProxyImage, constants.CurrentTag, kubeProxyTag, node)
 	corednsImg, corednsCurrent, _ := k8s.GetImageCandidate(constants.CoreDNSImage, constants.CurrentTag, corednsTag, node)
 	flannelImg, flannelCurrent, _ := k8s.GetImageCandidate(constants.CNIFlannelImage, constants.CurrentTag, flannelTag, node)
@@ -149,8 +148,8 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 func getRelease(release string, namespace string, kubeConfigPath string) (*release.Release, error) {
 	releases, err := ls.List(application.LsOptions{
 		KubeConfigPath: kubeConfigPath,
-		Namespace: namespace,
-		All: false,
+		Namespace:      namespace,
+		All:            false,
 	})
 	if err != nil {
 		return nil, err
@@ -167,7 +166,6 @@ func getRelease(release string, namespace string, kubeConfigPath string) (*relea
 
 	return nil, nil
 }
-
 
 func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 	// If kube-proxy is already installed as an application, don't try
@@ -211,11 +209,10 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 					Version:   constants.KubeProxyVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config:    proxyRelease.Config,
-					},
 				},
+			},
 		}, kubeConfigPath, false)
 	}
-
 
 	// Calculating the correct overrides based solely on the kubeconfig is
 	// hard, and is not tolerant to user customizations.  It's much easier
@@ -257,13 +254,13 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 				Release:   constants.KubeProxyRelease,
 				Version:   constants.KubeProxyVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{
-						"image": map[string]interface{}{
-							"tag": constants.KubeProxyTag,
-						},
-						"kubeconfig": kcfgParsed,
-						"config": confParsed,
+				Config: map[string]interface{}{
+					"image": map[string]interface{}{
+						"tag": constants.KubeProxyTag,
 					},
+					"kubeconfig": kcfgParsed,
+					"config":     confParsed,
+				},
 			},
 		},
 	}, kubeConfigPath, false)
@@ -285,7 +282,6 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 
 		return err
 	}
-
 
 	if corednsRelease != nil {
 		tag, found, err := unstructured.NestedString(corednsRelease.Config, "image", "tag")
@@ -334,12 +330,12 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 				Release:   constants.CoreDNSRelease,
 				Version:   constants.CoreDNSVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{
+				Config: map[string]interface{}{
 					"image": map[string]interface{}{
 						"tag": constants.CoreDNSTag,
 					},
 					"service": map[string]interface{}{
-						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIP":  kubeletConfig.ClusterDNS[0],
 						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
@@ -539,10 +535,10 @@ func generateVipUpdateScript(bindPort uint16, altPort uint16, virtualIp string) 
 	}
 
 	in := struct {
-		Units []string
+		Units         []string
 		UnitsToEnable []string
-		UnitsToStart []string
-		Files map[string]string
+		UnitsToStart  []string
+		Files         map[string]string
 	}{
 		Units: []string{
 			ignition.KeepalivedRefreshServiceName,
@@ -553,19 +549,18 @@ func generateVipUpdateScript(bindPort uint16, altPort uint16, virtualIp string) 
 			ignition.KeepalivedRefreshPathName,
 			ignition.KeepalivedRefreshServiceName,
 			ignition.NginxRefreshServiceName,
-
 		},
-		UnitsToStart: []string {
+		UnitsToStart: []string{
 			ignition.NginxRefreshPathName,
 			ignition.KeepalivedRefreshPathName,
 		},
 		Files: map[string]string{
 			unitToPath(ignition.KeepalivedRefreshServiceName): ignition.GetKeepalivedRefreshUnit(),
-			unitToPath(ignition.KeepalivedRefreshPathName): ignition.GetKeepalivedRefreshPathUnit(),
-			unitToPath(ignition.NginxRefreshServiceName): ignition.GetNginxRefreshUnit(),
-			unitToPath(ignition.NginxRefreshPathName): ignition.GetNginxRefreshPathUnit(),
-			unitToPath(ignition.NginxServiceName): ignition.NginxService,
-			ignition.KeepAlivedCheckScriptPath: keepalivedCheckScript,
+			unitToPath(ignition.KeepalivedRefreshPathName):    ignition.GetKeepalivedRefreshPathUnit(),
+			unitToPath(ignition.NginxRefreshServiceName):      ignition.GetNginxRefreshUnit(),
+			unitToPath(ignition.NginxRefreshPathName):         ignition.GetNginxRefreshPathUnit(),
+			unitToPath(ignition.NginxServiceName):             ignition.NginxService,
+			ignition.KeepAlivedCheckScriptPath:                keepalivedCheckScript,
 		},
 	}
 
@@ -760,14 +755,14 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 	err = install.InstallApplications([]install.ApplicationDescription{
 		{
 			Application: &types.Application{
-				Name: constants.HAMonitorChart,
+				Name:      constants.HAMonitorChart,
 				Namespace: constants.HAMonitorNamespace,
-				Release: constants.HAMonitorRelease,
-				Version: constants.HAMonitorVersion,
-				Catalog: catalog.InternalCatalog,
+				Release:   constants.HAMonitorRelease,
+				Version:   constants.HAMonitorVersion,
+				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
 					"apiAddress": apiHost,
-					"apiPort": strconv.FormatUint(uint64(apiHostPort), 10),
+					"apiPort":    strconv.FormatUint(uint64(apiHostPort), 10),
 				},
 			},
 		},
@@ -781,10 +776,11 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 }
 
 // updateFuncs is an ordered list of update functions to run.
-var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList)error{
+var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList) error{
 	oneThirtyAndLower,
 	virtualIp,
 }
+
 // Update applies the cumulative set of changes that have built
 // up over time as configuration deficiences have been discovered
 // and repaired.
@@ -800,6 +796,7 @@ func Update(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath
 
 // Custom time type for non-standard format
 const ctLayout = "2006-01-02 15:04:05 -0700"
+
 type CustomTime struct {
 	time.Time
 }
@@ -842,7 +839,7 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 	// command fails because selectors require listing nodes.  This issue
 	// is limited to OCK instances running Kubernetes 1.32.5/7.  Do a more
 	// intensive check for that case.
-	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8"  {
+	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8" {
 		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
 		if err != nil {
 			return false, err
@@ -878,4 +875,3 @@ func IsUpdateAvailableByName(name string, kubeClient kubernetes.Interface, restC
 	}
 	return IsUpdateAvailable(node, kubeClient, restConfig, kubeConfigPath)
 }
-

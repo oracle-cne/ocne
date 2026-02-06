@@ -5,9 +5,10 @@ package helm
 
 import (
 	"fmt"
-	"helm.sh/helm/v3/pkg/strvals"
-	"sigs.k8s.io/yaml"
 	"strings"
+
+	"helm.sh/helm/v4/pkg/strvals"
+	"sigs.k8s.io/yaml"
 )
 
 // HelmValueFileConstructor creates a YAML file from a set of key value pairs

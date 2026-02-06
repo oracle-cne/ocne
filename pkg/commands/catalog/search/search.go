@@ -8,16 +8,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/ls"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
-	"regexp"
-	"strings"
+	"helm.sh/helm/v4/pkg/chart/loader"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
 )

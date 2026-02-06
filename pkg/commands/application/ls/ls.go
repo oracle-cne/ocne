@@ -4,10 +4,10 @@
 package ls
 
 import (
-	"helm.sh/helm/v3/pkg/release"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"helm.sh/helm/v4/pkg/release"
 )
 
 // List takes in a set of options and returns a list of releases from a given namespace or from all namespace

@@ -8,33 +8,34 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/containers/image/v5/copy"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	imageUtil "github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	log "github.com/sirupsen/logrus"
-	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v4/pkg/chart/loader"
 	v1Apps "k8s.io/api/apps/v1"
 	v1Batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path/filepath"
-	"regexp"
 	"sigs.k8s.io/yaml"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var appsWithRequiredValues = map[string]map[string]string{
@@ -232,7 +233,6 @@ func buildOverride(chart catalog.ChartMeta, confInterface interface{}, configFro
 	}
 	return toReturn, nil
 }
-
 
 // skip determines if an application should be mirrored
 func skip(cm *catalog.ChartMeta) bool {

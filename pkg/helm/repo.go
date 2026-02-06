@@ -5,11 +5,12 @@ package helm
 
 import (
 	"fmt"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/repo"
-	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"strings"
+
+	"github.com/oracle-cne/ocne/pkg/k8s/client"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/repo"
 )
 
 type HelmReleaseOpts struct {
