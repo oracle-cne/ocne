@@ -20,7 +20,6 @@ import (
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chart/loader"
-	"helm.sh/helm/v4/pkg/chartutil"
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/release"
@@ -281,7 +280,7 @@ func Template(kubeInfo *client.KubeInfo, theChart *chart.Chart, overrides []Helm
 	installClient.IncludeCRDs = true
 	installClient.Wait = false
 	//installClient.CreateNamespace = true
-	installClient.KubeVersion = &chartutil.KubeVersion{
+	installClient.KubeVersion = &common.KubeVersion{
 		Version: k8sVersion.String(),
 		Major:   strconv.FormatUint(k8sVersion.Major(), 10),
 		Minor:   strconv.FormatUint(k8sVersion.Minor(), 10),
@@ -673,7 +672,7 @@ func GetShowValues(archive io.Reader) ([]byte, error) {
 	}
 	files := theChart.Raw
 	for _, file := range files {
-		if file.Name == chartutil.ValuesfileName {
+		if file.Name == common.ValuesfileName {
 			bytesToReturn = file.Data
 			return bytesToReturn, nil
 		}

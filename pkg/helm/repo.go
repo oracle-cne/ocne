@@ -10,7 +10,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/getter"
-	"helm.sh/helm/v4/pkg/repo"
+	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 )
 
 type HelmReleaseOpts struct {
@@ -60,7 +60,7 @@ func FindLatestChartVersion(chartName, repoName, repoURI string) (string, error)
 }
 
 // findMostRecentChartVersion Finds the most recent ChartVersion that
-func findMostRecentChartVersion(indexFile *repo.IndexFile, chartName string) (*repo.ChartVersion, error) {
+func findMostRecentChartVersion(indexFile *repov1.IndexFile, chartName string) (*repov1.ChartVersion, error) {
 	// The indexFile is already sorted in descending order for each chart
 	chartVersions := findChartEntry(indexFile, chartName)
 	if len(chartVersions) == 0 {
@@ -69,8 +69,8 @@ func findMostRecentChartVersion(indexFile *repo.IndexFile, chartName string) (*r
 	return chartVersions[0], nil
 }
 
-func findChartEntry(index *repo.IndexFile, chartName string) repo.ChartVersions {
-	var selectedVersion repo.ChartVersions
+func findChartEntry(index *repov1.IndexFile, chartName string) repov1.ChartVersions {
+	var selectedVersion repov1.ChartVersions
 	for name, chartVersions := range index.Entries {
 		if name == chartName {
 			selectedVersion = chartVersions
@@ -79,15 +79,15 @@ func findChartEntry(index *repo.IndexFile, chartName string) repo.ChartVersions 
 	return selectedVersion
 }
 
-func loadAndSortRepoIndexFile(repoName string, repoURL string) (*repo.IndexFile, error) {
+func loadAndSortRepoIndexFile(repoName string, repoURL string) (*repov1.IndexFile, error) {
 	// NOTES:
 	// - we'll need to allow defining credentials etc in the source lists for protected repos
 	// - also we'll likely need better scaffolding around local repo management
-	cfg := &repo.Entry{
+	cfg := &repov1.Entry{
 		Name: repoName,
 		URL:  repoURL,
 	}
-	chartRepository, err := repo.NewChartRepository(cfg, getter.All(cli.New()))
+	chartRepository, err := repov1.NewChartRepository(cfg, getter.All(cli.New()))
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func loadAndSortRepoIndexFile(repoName string, repoURL string) (*repo.IndexFile,
 	if err != nil {
 		return nil, err
 	}
-	indexFile, err := repo.LoadIndexFile(indexFilePath)
+	indexFile, err := repov1.LoadIndexFile(indexFilePath)
 	if err != nil {
 		return nil, err
 	}

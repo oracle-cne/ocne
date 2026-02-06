@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"helm.sh/helm/v4/pkg/action"
-	"helm.sh/helm/v4/pkg/chartutil"
+	"helm.sh/helm/v4/pkg/chart/common"
 	"helm.sh/helm/v4/pkg/kube/fake"
 	"helm.sh/helm/v4/pkg/registry"
 	"helm.sh/helm/v4/pkg/release"
@@ -27,7 +27,7 @@ func CreateActionConfig(includeRelease bool, releaseName string, releaseStatus r
 	cfg := &action.Configuration{
 		Releases:       storage.Init(driver.NewMemory()),
 		KubeClient:     &fake.FailingKubeClient{PrintingKubeClient: fake.PrintingKubeClient{Out: io.Discard}},
-		Capabilities:   chartutil.DefaultCapabilities,
+		Capabilities:   common.DefaultCapabilities,
 		RegistryClient: registryClient,
 		Log:            debugLog,
 	}
