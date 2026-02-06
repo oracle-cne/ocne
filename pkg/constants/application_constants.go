@@ -8,7 +8,7 @@ import "time"
 const (
 	FlagTimeout      = "timeout"
 	FlagTimeoutShort = "t"
-	FlagTimeoutHelp  = "time to wait for any individual Kubernetes operation (like Jobs for hooks)"
+	FlagTimeoutHelp  = "time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)"
 
 	FlagWait      = "wait"
 	FlagWaitShort = "w"
