@@ -57,19 +57,6 @@ func Install(opt application.InstallOptions) error {
 			FileOverride: opt.Values,
 		})
 	}
-	if opt.Wait {
-		overrides = append(overrides, helm.HelmOverrides{
-			SetOverrides: "wait=true",
-		})
-	}
-	if opt.WaitForJobs {
-		overrides = append(overrides, helm.HelmOverrides{
-			SetOverrides: "wait-for-jobs=true",
-		})
-	}
-	overrides = append(overrides, helm.HelmOverrides{
-		SetOverrides: "timeout=" + opt.Timeout.String(),
-	})
 
 	// Upload the helm chart stored at the temporary directory
 	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, opt.Wait, opt.WaitForJobs, opt.Timeout, false, overrides, opt.ResetValues, opt.Force)
