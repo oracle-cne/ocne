@@ -307,7 +307,7 @@ func Template(kubeInfo *client.KubeInfo, theChart *chart.Chart, overrides []Helm
 }
 
 // Uninstall will uninstall the helmRelease in the specified namespace using helm uninstall
-func Uninstall(kubeInfo *client.KubeInfo, releaseName string, namespace string, dryRun bool) (err error) {
+func Uninstall(kubeInfo *client.KubeInfo, releaseName string, namespace string, timeout time.Duration, wait bool, dryRun bool) (err error) {
 	actionConfig, err := actionConfigFn(kubeInfo, namespace)
 	if err != nil {
 		return err

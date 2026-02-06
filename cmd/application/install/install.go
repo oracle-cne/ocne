@@ -34,6 +34,9 @@ ocne app install -b
 
 # Install Grafana from the catalog named embedded, which is built into in the CLI
 ocne application install --name grafana --release grafana --catalog embedded --namespace grafana
+
+# Install the application named myApplication with the in-cluster name appRelease using wait and timeout
+ocne application install --name "myApplication" --release "appRelease" --wait --wait-for-jobs --timeout 5m 
 `
 )
 

@@ -31,6 +31,9 @@ ocne app update -b
 
 # Update the application Grafana using the catalog built into the CLI
 ocne application update --release grafana --namespace grafana --catalog embedded
+
+# Update application with the release name appRelease using wait and timeout  
+ocne application update --release appRelease --wait --wait-for-jobs --timeout 5m 
 `
 )
 

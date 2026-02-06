@@ -4,12 +4,15 @@
 package uninstall
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+	"time"
+
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/uninstall"
+	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -17,13 +20,19 @@ const (
 	helpShort   = "Uninstall an application."
 	helpLong    = `Uninstall an application that was installed from the catalog.`
 	helpExample = `
+# Uninstall application with the release name appRelease
 ocne application uninstall --release appRelease
+
+# Uninstall application with the release name appRelease using wait and timeout
+ocne application uninstall --release appRelease --wait --timeout 5m 
 `
 )
 
 var kubeConfig string
 var namespace string
 var releaseName string
+var timeout time.Duration
+var wait bool
 
 const (
 	flagRelease      = "release"
@@ -52,6 +61,8 @@ func NewCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&kubeConfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
 	cmd.Flags().StringVarP(&namespace, flagNamespace, flagNamespaceShort, "", flagNamespaceHelp)
 	cmd.Flags().StringVarP(&releaseName, flagRelease, flagReleaseShort, "", flagReleaseHelp)
+	cmd.Flags().DurationVarP(&timeout, pkgconst.FlagTimeout, pkgconst.FlagTimeoutShort, pkgconst.DefaultTimeout, pkgconst.FlagTimeoutHelp)
+	cmd.Flags().BoolVarP(&wait, pkgconst.FlagWait, pkgconst.FlagWaitShort, false, pkgconst.FlagWaitHelp)
 	cmd.MarkFlagRequired(flagRelease)
 
 	return cmd
@@ -64,6 +75,8 @@ func RunCmd(cmd *cobra.Command) error {
 		KubeConfigPath: kubeConfig,
 		Namespace:      namespace,
 		ReleaseName:    releaseName,
+		Wait:           wait,
+		Timeout:        timeout,
 	})
 	if err != nil {
 		return err

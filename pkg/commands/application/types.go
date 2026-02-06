@@ -32,6 +32,9 @@ type UninstallOptions struct {
 
 	// ReleaseName is the release name that should be uninstalled
 	ReleaseName string
+
+	Timeout time.Duration
+	Wait    bool
 }
 
 // ShowOptions are the options for the application show command
