@@ -1,4 +1,4 @@
-@Library('olcne-pipeline@feature/fixv4')
+@Library('olcne-pipeline@feature/select-golang-latestoreq')
 import com.oracle.olcne.pipeline.BranchPattern
 
 olcnePipeline(
