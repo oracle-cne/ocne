@@ -239,11 +239,6 @@ type Config struct {
 	Password                 string                 `yaml:"password"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
-	Timeout                  *time.Duration         `yaml:"timeout,omitempty"`
-	Wait                     bool                   `yaml:"waitfake"`
-	WaitPtr                  *bool                  `yaml:"wait,omitempty"`
-	WaitForJobs              bool                   `yaml:"waitForJobsFake"`
-	WaitForJobsPtr           *bool                  `yaml:"waitForJobs,omitempty"`
 }
 
 type ClusterConfig struct {
@@ -284,11 +279,6 @@ type ClusterConfig struct {
 	ClusterDefinition        string                 `yaml:"clusterDefinition"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
-	// Timeout                  *time.Duration         `yaml:"timeout,omitempty"`
-	// Wait                     bool                   `yaml:"waitfake"`
-	// WaitPtr                  *bool                  `yaml:"wait,omitempty"`
-	// WaitForJobs              bool                   `yaml:"waitForJobsFake"`
-	// WaitForJobsPtr           *bool                  `yaml:"waitForJobs,omitempty"`
 }
 
 type ImageInfo struct {
@@ -772,11 +762,6 @@ func MergeConfig(def *Config, ovr *Config) Config {
 		Password:                 ies(def.Password, ovr.Password),
 		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
 		ExtraIgnitionInline:      ies(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
-		Timeout:                  ied(def.Timeout, ovr.Timeout),
-		Wait:                     iebp(def.WaitPtr, ovr.WaitPtr, false),
-		WaitPtr:                  iebpp(def.WaitPtr, ovr.WaitPtr),
-		WaitForJobs:              iebp(def.WaitForJobsPtr, ovr.WaitForJobsPtr, false),
-		WaitForJobsPtr:           iebpp(def.WaitForJobsPtr, ovr.WaitForJobsPtr),
 	}
 }
 
@@ -822,11 +807,6 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 		ClusterDefinition:        ies(def.ClusterDefinition, ovr.ClusterDefinition),
 		ExtraIgnition:            ies(def.ExtraIgnition, ovr.ExtraIgnition),
 		ExtraIgnitionInline:      ies(def.ExtraIgnitionInline, ovr.ExtraIgnitionInline),
-		// Timeout:                  ied(def.Timeout, ovr.Timeout),
-		// Wait:                     iebp(def.WaitPtr, ovr.WaitPtr, false),
-		// WaitPtr:                  iebpp(def.WaitPtr, ovr.WaitPtr),
-		// WaitForJobs:              iebp(def.WaitForJobsPtr, ovr.WaitForJobsPtr, false),
-		// WaitForJobsPtr:           iebpp(def.WaitForJobsPtr, ovr.WaitForJobsPtr),
 	}
 }
 
@@ -872,11 +852,6 @@ func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 		ClusterDefinition:        cc.ClusterDefinition,
 		ExtraIgnition:            ies(c.ExtraIgnition, cc.ExtraIgnition),
 		ExtraIgnitionInline:      ies(c.ExtraIgnitionInline, cc.ExtraIgnitionInline),
-		// Timeout:                  ied(c.Timeout, cc.Timeout),
-		// Wait:                     iebp(c.WaitPtr, cc.WaitPtr, false),
-		// WaitPtr:                  iebpp(c.WaitPtr, cc.WaitPtr),
-		// WaitForJobs:              iebp(c.WaitForJobsPtr, cc.WaitForJobsPtr, false),
-		// WaitForJobsPtr:           iebpp(c.WaitForJobsPtr, cc.WaitForJobsPtr),
 	}
 	return clusterConfigToReturn
 }
