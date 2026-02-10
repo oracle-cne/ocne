@@ -1,3 +1,4 @@
+@Library('pipeline-shared@feature/select-golang-latestoreq')
 @Library('olcne-pipeline@feature/select-golang-latestoreq')
 import com.oracle.olcne.pipeline.BranchPattern
 
