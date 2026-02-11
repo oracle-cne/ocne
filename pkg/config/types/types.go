@@ -193,13 +193,16 @@ type Catalog struct {
 }
 
 type Application struct {
-	Name       string      `yaml:"name"`
-	Release    string      `yaml:"release"`
-	Version    string      `yaml:"version"`
-	Catalog    string      `yaml:"catalog"`
-	Namespace  string      `yaml:"namespace"`
-	Config     interface{} `yaml:"config"`
-	ConfigFrom string      `yaml:"configFrom"`
+	Name        string         `yaml:"name"`
+	Release     string         `yaml:"release"`
+	Version     string         `yaml:"version"`
+	Catalog     string         `yaml:"catalog"`
+	Namespace   string         `yaml:"namespace"`
+	Config      interface{}    `yaml:"config"`
+	ConfigFrom  string         `yaml:"configFrom"`
+	Timeout     *time.Duration `yaml:"timeout,omitempty"`
+	Wait        bool           `yaml:"wait,omitempty"`
+	WaitForJobs bool           `yaml:"waitForJobs,omitempty"`
 }
 
 type EphemeralClusterConfig struct {
