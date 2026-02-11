@@ -1,9 +1,11 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package application
 
 import (
+	"time"
+
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/helm"
 )
@@ -30,6 +32,9 @@ type UninstallOptions struct {
 
 	// ReleaseName is the release name that should be uninstalled
 	ReleaseName string
+
+	Timeout time.Duration
+	Wait    bool
 }
 
 // ShowOptions are the options for the application show command
@@ -85,6 +90,8 @@ type InstallOptions struct {
 	// Force causes the application to overwrite and take ownership
 	// of existing resources.
 	Force bool
+
+	ApplicationOptions
 }
 type UpdateOptions struct {
 
@@ -108,6 +115,8 @@ type UpdateOptions struct {
 
 	// ResetValues is used to reset the values to the ones built into the chart.
 	ResetValues bool
+
+	ApplicationOptions
 }
 
 // TemplateOptions are the options for the application template command
@@ -127,4 +136,10 @@ type TemplateOptions struct {
 
 	// Catalog is the name of the catalog to search for template values
 	Catalog string
+}
+
+type ApplicationOptions struct {
+	Timeout     time.Duration
+	Wait        bool
+	WaitForJobs bool
 }
