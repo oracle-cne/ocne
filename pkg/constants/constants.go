@@ -77,6 +77,7 @@ const (
 	ProviderTypeLibvirt = "libvirt"
 	ProviderTypeOCI     = "oci"
 	ProviderTypeOlvm    = "olvm"
+	ProviderTypeVsphere = "vsphere"
 	ProviderTypeNone    = "none"
 
 	CatalogMirror = "ocne.oracle.com/mirror"
