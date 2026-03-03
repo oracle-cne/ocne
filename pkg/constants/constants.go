@@ -65,7 +65,7 @@ const (
 	OCIKubernetesVersionTag = "ocne/kubernetes"
 
 	// OCI Configuration Options
-	OciDefaultProfile   = "DEFAULT"
+	OciDefaultProfile = "DEFAULT"
 
 	// OCNE annotations
 	OCNEAnnoUpdateAvailable = "ocne.oracle.com/update-available"
@@ -84,3 +84,12 @@ const (
 )
 
 var OciArmCompatibleShapes = [...]string{OciVmStandardA1Flex, OciBmStandardA1160, OciVmStandardA2Flex}
+
+// vSphere Cluster API constants
+const (
+	VsphereCAPIChart      = "vsphere-capi"
+	VsphereCAPINamespace  = "capi-vsphere-system"
+	VsphereCAPIRelease    = "vsphere-capi"
+	VsphereCAPIVersion    = "1.14.0"
+	VsphereCAPIDeployment = "capv-controller-manager"
+)

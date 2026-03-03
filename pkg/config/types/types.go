@@ -78,18 +78,19 @@ type OvirtCsiDriver struct {
 
 // VsphereProvider captures basic vSphere parameters. This is intentionally minimal and can be extended as needed.
 type VsphereProvider struct {
-    Server               string `yaml:"server"`
-    Datacenter           string `yaml:"datacenter"`
-    Network              string `yaml:"network"`
-    Datastore            string `yaml:"datastore"`
-    ResourcePool         string `yaml:"resourcePool"`
-    Folder               string `yaml:"folder"`
-    Template             string `yaml:"template"`
-    Thumbprint           string `yaml:"thumbprint"`
-    Username             string `yaml:"username"`
-    Password             string `yaml:"password"`
-    Namespace            string `yaml:"namespace"`
-    ControlPlaneEndpoint string `yaml:"controlPlaneEndpoint"`
+	Server               string `yaml:"server"`
+	Datacenter           string `yaml:"datacenter"`
+	Network              string `yaml:"network"`
+	Datastore            string `yaml:"datastore"`
+	ResourcePool         string `yaml:"resourcePool"`
+	Folder               string `yaml:"folder"`
+	Template             string `yaml:"template"`
+	Thumbprint           string `yaml:"thumbprint"`
+	Username             string `yaml:"username"`
+	Password             string `yaml:"password"`
+	Namespace            string `yaml:"namespace"`
+	ControlPlaneEndpoint string `yaml:"controlPlaneEndpoint"`
+	KubeConfigPath       string `yaml:"kubeconfig"`
 }
 
 type NamespacedName struct {
@@ -706,23 +707,24 @@ func MergeByoProvider(def *ByoProvider, ovr *ByoProvider) ByoProvider {
 // MergeVsphereProvider takes two VsphereProviders and merges them into a third.
 // The default values for the result come from the first argument. If a value is set in the second argument, it takes precedence.
 func MergeVsphereProvider(def *VsphereProvider, ovr *VsphereProvider) VsphereProvider {
-    if ovr == nil {
-        return *def
-    }
-    return VsphereProvider{
-        Server:               ies(def.Server, ovr.Server),
-        Datacenter:           ies(def.Datacenter, ovr.Datacenter),
-        Network:              ies(def.Network, ovr.Network),
-        Datastore:            ies(def.Datastore, ovr.Datastore),
-        ResourcePool:         ies(def.ResourcePool, ovr.ResourcePool),
-        Folder:               ies(def.Folder, ovr.Folder),
-        Template:             ies(def.Template, ovr.Template),
-        Thumbprint:           ies(def.Thumbprint, ovr.Thumbprint),
-        Username:             ies(def.Username, ovr.Username),
-        Password:             ies(def.Password, ovr.Password),
-        Namespace:            ies(def.Namespace, ovr.Namespace),
-        ControlPlaneEndpoint: ies(def.ControlPlaneEndpoint, ovr.ControlPlaneEndpoint),
-    }
+	if ovr == nil {
+		return *def
+	}
+	return VsphereProvider{
+		KubeConfigPath:       ies(def.KubeConfigPath, ovr.KubeConfigPath),
+		Server:               ies(def.Server, ovr.Server),
+		Datacenter:           ies(def.Datacenter, ovr.Datacenter),
+		Network:              ies(def.Network, ovr.Network),
+		Datastore:            ies(def.Datastore, ovr.Datastore),
+		ResourcePool:         ies(def.ResourcePool, ovr.ResourcePool),
+		Folder:               ies(def.Folder, ovr.Folder),
+		Template:             ies(def.Template, ovr.Template),
+		Thumbprint:           ies(def.Thumbprint, ovr.Thumbprint),
+		Username:             ies(def.Username, ovr.Username),
+		Password:             ies(def.Password, ovr.Password),
+		Namespace:            ies(def.Namespace, ovr.Namespace),
+		ControlPlaneEndpoint: ies(def.ControlPlaneEndpoint, ovr.ControlPlaneEndpoint),
+	}
 }
 
 // MergeProviders takes two Providers and merges them into a third.
