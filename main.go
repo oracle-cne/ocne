@@ -5,6 +5,7 @@ package main
 
 import (
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/olvm"
+	"github.com/oracle-cne/ocne/pkg/cluster/driver/vsphere"
 	"os"
 
 	"github.com/oracle-cne/ocne/cmd/root"
@@ -25,6 +26,7 @@ func registerDrivers() {
 	driver.RegisterDriver(libvirt.DriverName, libvirt.CreateDriver)
 	driver.RegisterDriver(none.DriverName, none.CreateDriver)
 	driver.RegisterDriver(olvm.DriverName, olvm.CreateDriver)
+	driver.RegisterDriver(vsphere.DriverName, vsphere.CreateDriver)
 }
 
 func main() {
