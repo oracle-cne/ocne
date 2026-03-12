@@ -5,15 +5,20 @@ package template
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	"github.com/oracle-cne/ocne/pkg/helm"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
+
+var allowedEditors = map[string]bool{
+	"vim": true, "vi": true, "nano": true, "emacs": true,
+}
 
 // Template takes in a set of options and returns the string that describes the helm template
 func Template(opt application.TemplateOptions) ([]byte, error) {
@@ -45,16 +50,32 @@ func Template(opt application.TemplateOptions) ([]byte, error) {
 // RunInteractiveMode takes the output of the template function, writes it to a file, and displays it
 // It displays it by opening up the text editor specified in the EDITOR environment variable
 func RunInteractiveMode(name string, output []byte) error {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		return fmt.Errorf("EDITOR enviroment variable is not set. Allowed editors: vim, vi, nano, emacs")
+	}
+
+	// Extract base command name
+	editorBase := filepath.Base(editor)
+
+	// Validate against whitelist
+	if !allowedEditors[editorBase] {
+		return fmt.Errorf("editor '%s' is not allowed. Allowed editors: vim, vi, nano, emacs", editorBase)
+	}
+
+	// Validate that editor exists and is executable
+	editorPath, err := exec.LookPath(editorBase)
+	if err != nil {
+		return fmt.Errorf("editor '%s' not found in PATH", editorBase)
+	}
+
 	fileName := name + "-values.yaml"
-	err := os.WriteFile(name+"-values.yaml", output, 0644)
+	err = os.WriteFile(name+"-values.yaml", output, 0644)
 	if err != nil {
 		return err
 	}
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		return fmt.Errorf("EDITOR enviroment variable is not set")
-	}
-	cmd := exec.Command(editor, fileName)
+
+	cmd := exec.Command(editorPath, fileName)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
