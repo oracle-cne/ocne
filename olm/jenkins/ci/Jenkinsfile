@@ -20,7 +20,7 @@ olcnePipeline(
       'git config --global --add safe.directory "$(pwd)"',
       '''REQ=$(sed -n 's/^toolchain go//p; s/^go //p' go.mod | sort -rV | head -n1)
 dnf erase -y golang
-AVAIL=$(dnf list --showduplicates golang | awk '$1 ~ /^golang(\.[^[:space:]]+)?$/ {print $2}' | sed 's/-.*//' | sort -rV | awk -v req="$REQ" '
+AVAIL=$(dnf list --showduplicates golang | awk '$1 ~ /^golang(\\.[^[:space:]]+)?$/ {print $2}' | sed 's/-.*//' | sort -rV | awk -v req="$REQ" '
 BEGIN {
   split(req, version, ".")
   series = version[1] "." version[2]
