@@ -6,7 +6,7 @@
 
 Name: ocne
 Version: 2.3.3
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -72,7 +72,7 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-1
+* Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-2
 - Allow only certain linux editors for EDITOR env vars
 
 * Thu Feb 05 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.2-2
