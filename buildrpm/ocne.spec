@@ -5,8 +5,8 @@
 %global _buildhost build-ol%{?oraclelinux}-%{?_arch}.oracle.com
 
 Name: ocne
-Version: 2.3.1
-Release: 1%{dist}
+Version: 2.3.3
+Release: 2%{dist}
 Vendor: Oracle America
 Summary: Oracle Cloud Native Environment command line interface
 License: UPL 1.0
@@ -72,6 +72,16 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
+=======
+* Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-2
+- Allow only certain linux editors for EDITOR env vars
+
+* Thu Feb 05 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.2-2
+- Initialize UPDATE_COMMIT_DATE to NOT be empty string
+
+* Wed Jan 21 2026 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.2-1
+- Allow for uncompressed layers and avoid home mounts when not required
+
 * Fri Dec 12 2025 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.1-1
 - Improve the Nginx/Keepalived virtual IP deployment
 
