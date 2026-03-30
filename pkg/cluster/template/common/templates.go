@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/oci"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/olvm"
+	"github.com/oracle-cne/ocne/pkg/cluster/template/vsphere"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 )
@@ -19,6 +20,8 @@ func GetTemplate(config *types.Config, clusterConfig *types.ClusterConfig) (stri
 		tmpl, err = oci.GetOciTemplate(config, clusterConfig)
 	case constants.ProviderTypeOlvm:
 		tmpl, err = olvm.GetOlvmTemplate(config, clusterConfig)
+	case constants.ProviderTypeVsphere:
+		tmpl, err = vsphere.GetVsphereTemplate(config, clusterConfig)
 
 	default:
 		return "", fmt.Errorf("templates not implemented for provider %s", clusterConfig.Provider)
