@@ -73,7 +73,7 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
 * Wed Apr 08 2026 Daniel Krasinski <daniel.krasinski@oracle.com> - 2.3.3-3
-- Repair an issue where `ocne cluster console` was not accurately determining if stdin was a tty
+- Repair an issue where ocne cluster console was not accurately determining if stdin was a tty
 
 * Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-2
 - Allow only certain linux editors for EDITOR env vars
