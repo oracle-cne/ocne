@@ -5,23 +5,14 @@ package util
 
 import (
 	"os"
+
+	"github.com/moby/term"
 )
 
-// FileIsTTY gives a best guess that a given file represents
-// a TTY or PTY.  The current best guess is that the file is
-// a character device.
-//
-// While it is possible for character devices not to be TTYs,
-// it is unlikely to be true in the context of this code.  A
-// common counterexample is something like a disk.  If someone
-// is trying to do something like pipe a disk to stdin, then
-// they are being silly and some odd behavior can be tolerated.
+// FileIsTTY reports whether a given file is attached to a terminal.
+// Use the same check as kubectl so both commands agree when stdin/stdout
+// is a character device that is not actually a TTY.
 func FileIsTTY(f *os.File) (bool, error) {
-	fi, err := f.Stat()
-	if err != nil {
-		return false, err
-	}
-
-	isCharDevice := fi.Mode()&os.ModeCharDevice != 0
-	return isCharDevice, nil
+	_, isTTY := term.GetFdInfo(f)
+	return isTTY, nil
 }
