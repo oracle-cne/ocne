@@ -72,7 +72,6 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-=======
 * Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-2
 - Allow only certain linux editors for EDITOR env vars
 
