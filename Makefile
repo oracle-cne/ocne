@@ -43,7 +43,7 @@ ifeq ($(OS), Linux)
 	CLI_VERSION=$(shell rpmspec -q --queryformat='%{VERSION}-%{RELEASE}' ${MAKEFILE_DIR}/buildrpm/ocne.spec)
 endif
 ifndef RELEASE_BRANCH
-	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main))
 endif
 
 DEVELOPER_BUILD?=
