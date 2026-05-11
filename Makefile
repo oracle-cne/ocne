@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Oracle and/or its affiliates.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 include make/quality.mk
 
@@ -10,8 +10,10 @@ INFO_DIR:=github.com/oracle-cne/ocne/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
-PLATFORM_OUT_DIR:=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)
-PLATFORM_INSTRUMENTED_OUT_DIR:=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented 
+# Only expand this variable when required so that other targets
+# can be built with only their direct dependencies
+PLATFORM_OUT_DIR=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)
+PLATFORM_INSTRUMENTED_OUT_DIR=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented 
 CHART_BUILD_DIR:=$(BUILD_DIR)/catalog
 CHART_BUILD_OUT_DIR:=$(CHART_BUILD_DIR)/repo
 CHART_GIT_DIR:=build/charts
@@ -30,9 +32,11 @@ CODE_COVERAGE:=$(TEST_DIR)/coverage
 
 NAME:=ocne
 
-GIT_COMMIT:=$(shell git rev-parse HEAD)
-BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
-CLI_VERSION:=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)-$(shell grep Release: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2 | cut -d '%' -f 1)
+# These variables should only be evaluated when the target requires it
+# so that targets can be executed with only their direct dependencies.
+GIT_COMMIT=$(shell git rev-parse HEAD)
+BUILD_DATE=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
+CLI_VERSION=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)-$(shell grep Release: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2 | cut -d '%' -f 1)
 OS:=$(shell uname)
 ifeq ($(OS), Linux)
 	CLI_VERSION=$(shell rpmspec -q --queryformat='%{VERSION}-%{RELEASE}' ${MAKEFILE_DIR}/buildrpm/ocne.spec)
