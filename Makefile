@@ -1,8 +1,6 @@
-# Copyright (c) 2024, Oracle and/or its affiliates.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 include make/quality.mk
-
-GOPATH ?= $(shell go env GOPATH)
 
 CATALOG_REPO=https://github.com/oracle-cne/catalog.git
 MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -10,8 +8,15 @@ INFO_DIR:=github.com/oracle-cne/ocne/cmd/info
 CLONE_DIR:=${MAKEFILE_DIR}/temp-clone-dir
 BUILD_DIR:=build
 OUT_DIR:=out
-PLATFORM_OUT_DIR:=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)
-PLATFORM_INSTRUMENTED_OUT_DIR:=$(OUT_DIR)/$(shell go env GOOS)_$(shell go env GOARCH)_instrumented 
+
+# Some targets are useful to execute without doing a build.  Try to avoid
+# using any extra programs.  It would be nice to avoid evaluation of these
+# unless they were required, but that is not feasible.  Instead, set some
+# stub values if the commands are not available.  It's gross, but if go
+# isn't installed then the CLI build is going to fail anyway.
+PLATFORM_OUT_DIR:=$(OUT_DIR)/$(shell go env GOOS 2>/dev/null || echo os)_$(shell go env GOARCH 2>/dev/null || echo arch)
+PLATFORM_INSTRUMENTED_OUT_DIR=$(OUT_DIR)/$(shell go env GOOS 2>/dev/null || echo os)_$(shell go env GOARCH 2>/dev/full || echo arch)_instrumented
+
 CHART_BUILD_DIR:=$(BUILD_DIR)/catalog
 CHART_BUILD_OUT_DIR:=$(CHART_BUILD_DIR)/repo
 CHART_GIT_DIR:=build/charts
@@ -30,7 +35,7 @@ CODE_COVERAGE:=$(TEST_DIR)/coverage
 
 NAME:=ocne
 
-GIT_COMMIT:=$(shell git rev-parse HEAD)
+GIT_COMMIT:=$(shell git rev-parse HEAD 2>/dev/null || echo HEAD)
 BUILD_DATE:=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
 CLI_VERSION:=$(shell grep Version: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2)-$(shell grep Release: ${MAKEFILE_DIR}/buildrpm/ocne.spec | cut -d ' ' -f 2 | cut -d '%' -f 1)
 OS:=$(shell uname)
@@ -38,7 +43,7 @@ ifeq ($(OS), Linux)
 	CLI_VERSION=$(shell rpmspec -q --queryformat='%{VERSION}-%{RELEASE}' ${MAKEFILE_DIR}/buildrpm/ocne.spec)
 endif
 ifndef RELEASE_BRANCH
-	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+	RELEASE_BRANCH=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main))
 endif
 
 DEVELOPER_BUILD?=
@@ -119,7 +124,7 @@ build-cli-instrumented: $(CHART_EMBED) $(PLATFORM_INSTRUMENTED_OUT_DIR)
 
 .PHONY: cli
 cli: build-cli ## Build and install the CLI
-	cp out/$(shell go env GOOS)_$(shell go env GOARCH)/ocne $(GOPATH)/bin
+	cp out/$(shell go env GOOS)_$(shell go env GOARCH)/ocne $(shell go env GOPATH)/bin
 
 .PHONY: unit-test
 unit-test: cli
