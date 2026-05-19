@@ -1,10 +1,11 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package update
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
@@ -30,6 +31,9 @@ ocne app update -b
 
 # Update the application Grafana using the catalog built into the CLI
 ocne application update --release grafana --namespace grafana --catalog embedded
+
+# Update application with the release name appRelease using wait and timeout  
+ocne application update --release appRelease --wait --wait-for-jobs --timeout 5m 
 `
 )
 
@@ -41,6 +45,9 @@ var namespace string
 var builtin bool
 var catalogName string
 var resetValues bool
+var timeout time.Duration
+var wait bool
+var waitForJobs bool
 
 const (
 	flagRelease      = "release"
@@ -93,6 +100,9 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&version, flagVersion, flagVersionShort, "", flagVersionHelp)
 	cmd.Flags().StringVarP(&catalogName, flagCatalogName, flagCatalogNameShort, pkgconst.DefaultCatalogName, flagCatalogNameHelp)
 	cmd.Flags().BoolVarP(&resetValues, flagResetValues, "", false, flagResetValuesHelp)
+	cmd.Flags().DurationVarP(&timeout, pkgconst.FlagTimeout, pkgconst.FlagTimeoutShort, pkgconst.DefaultTimeout, pkgconst.FlagTimeoutHelp)
+	cmd.Flags().BoolVarP(&wait, pkgconst.FlagWait, pkgconst.FlagWaitShort, false, pkgconst.FlagWaitHelp)
+	cmd.Flags().BoolVarP(&waitForJobs, pkgconst.FlagWaitForJobs, pkgconst.FlagWaitForJobsShort, false, pkgconst.FlagWaitForJobsHelp)
 
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagRelease)
 	cmd.MarkFlagsMutuallyExclusive(flagBuiltIn, flagVersion)
@@ -120,6 +130,10 @@ func RunCmd(cmd *cobra.Command) error {
 		ReleaseName:    release,
 		Values:         values,
 		ResetValues:    resetValues,
+		ApplicationOptions: application.ApplicationOptions{
+			Timeout:     timeout,
+			Wait:        wait,
+			WaitForJobs: waitForJobs},
 	})
 	if err != nil {
 		return err

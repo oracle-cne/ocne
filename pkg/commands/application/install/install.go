@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package install
@@ -57,8 +57,9 @@ func Install(opt application.InstallOptions) error {
 			FileOverride: opt.Values,
 		})
 	}
+
 	// Upload the helm chart stored at the temporary directory
-	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, false, false, overrides, opt.ResetValues, opt.Force)
+	_, err = helm.UpgradeChartFromArchive(kubeInfo, opt.ReleaseName, opt.Namespace, true, chartReader, opt.Wait, opt.WaitForJobs, opt.Timeout, false, overrides, opt.ResetValues, opt.Force)
 	return err
 }
 

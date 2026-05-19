@@ -71,6 +71,17 @@ SUBCOMMANDS
     depends on the style of application served by the target catalog.  In
     general, it will be a set of Helm values.
 
+-t, --timeout <timeout duration>
+    time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)
+
+-w, --wait
+    if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment,
+    StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. 
+    It will wait for as long as --timeout
+
+-j, --wait-for-jobs
+    if set and --wait enabled, will wait until all Jobs have been completed before marking the release as successful. It will wait for as long as --timeout
+
 `template` [OPTIONS]...
   Generate a documented template containing all configuration options available
   for a particular application.  The format of the template is depends on the
@@ -120,6 +131,17 @@ The name of the catalog that contains the application.
     is the same as the format used when installing the application.  In
     general, it will be a set of Helm values.
 
+-t, --timeout <timeout duration>
+    time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)
+
+-w, --wait
+    if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment,
+    StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. 
+    It will wait for as long as --timeout
+
+-j, --wait-for-jobs
+    if set and --wait enabled, will wait until all Jobs have been completed before marking the release as successful. It will wait for as long as --timeout
+
 `uninstall` [OPTIONS]...
   Uninstall an application.
 
@@ -160,6 +182,14 @@ The name of the catalog that contains the application.
 `-d`, `--difference`
     Show the computed values and the default values for an application
     separately.
+
+-t, --timeout <timeout duration>
+    time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)
+
+-w, --wait
+    if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment,
+    StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. 
+    It will wait for as long as --timeout
 
 AUTHOR
 ------
