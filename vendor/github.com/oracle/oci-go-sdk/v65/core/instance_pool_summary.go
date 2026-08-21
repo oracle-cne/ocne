@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -50,6 +50,9 @@ type InstancePoolSummary struct {
 	// Avoid entering confidential information.
 	DisplayName *string `mandatory:"false" json:"displayName"`
 
+	// The type of resources managed by the pool.
+	PoolType InstancePoolPoolTypeEnum `mandatory:"false" json:"poolType,omitempty"`
+
 	// Defined tags for this resource. Each key is predefined and scoped to a
 	// namespace. For more information, see Resource Tags (https://docs.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
 	// Example: `{"Operations": {"CostCenter": "42"}}`
@@ -59,6 +62,9 @@ type InstancePoolSummary struct {
 	// predefined name, type, or namespace. For more information, see Resource Tags (https://docs.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
 	// Example: `{"Department": "Finance"}`
 	FreeformTags map[string]string `mandatory:"false" json:"freeformTags"`
+
+	// Count of instance in running state associated to the Instance Pool.
+	CurrentSize *int `mandatory:"false" json:"currentSize"`
 }
 
 func (m InstancePoolSummary) String() string {
@@ -74,6 +80,9 @@ func (m InstancePoolSummary) ValidateEnumValue() (bool, error) {
 		errMessage = append(errMessage, fmt.Sprintf("unsupported enum value for LifecycleState: %s. Supported values are: %s.", m.LifecycleState, strings.Join(GetInstancePoolSummaryLifecycleStateEnumStringValues(), ",")))
 	}
 
+	if _, ok := GetMappingInstancePoolPoolTypeEnum(string(m.PoolType)); !ok && m.PoolType != "" {
+		errMessage = append(errMessage, fmt.Sprintf("unsupported enum value for PoolType: %s. Supported values are: %s.", m.PoolType, strings.Join(GetInstancePoolPoolTypeEnumStringValues(), ",")))
+	}
 	if len(errMessage) > 0 {
 		return true, fmt.Errorf("%s", strings.Join(errMessage, "\n"))
 	}

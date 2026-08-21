@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -67,6 +67,9 @@ type ListDedicatedVmHostsRequest struct {
 
 	// The available OCPUs of the dedicated VM host.
 	RemainingOcpusGreaterThanOrEqualTo *float32 `mandatory:"false" contributesTo:"query" name:"remainingOcpusGreaterThanOrEqualTo"`
+
+	// The remaining local volume of the dedicated VM host, in GBs.
+	RemainingLocalVolumeInGBsGreaterThanOrEqualTo *float32 `mandatory:"false" contributesTo:"query" name:"remainingLocalVolumeInGBsGreaterThanOrEqualTo"`
 
 	// A filter to return only confidential Dedicated VM hosts (DVMH) or confidential VM instances on DVMH.
 	IsMemoryEncryptionEnabled *bool `mandatory:"false" contributesTo:"query" name:"isMemoryEncryptionEnabled"`

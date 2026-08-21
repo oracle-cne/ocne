@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -82,6 +82,10 @@ func (m *createinstanceconfigurationbase) UnmarshalPolymorphicJSON(data []byte) 
 
 	var err error
 	switch m.Source {
+	case "GMC":
+		mm := CreateGmcConfigurationDetails{}
+		err = json.Unmarshal(data, &mm)
+		return mm, err
 	case "NONE":
 		mm := CreateInstanceConfigurationDetails{}
 		err = json.Unmarshal(data, &mm)
@@ -139,16 +143,19 @@ type CreateInstanceConfigurationBaseSourceEnum string
 const (
 	CreateInstanceConfigurationBaseSourceNone     CreateInstanceConfigurationBaseSourceEnum = "NONE"
 	CreateInstanceConfigurationBaseSourceInstance CreateInstanceConfigurationBaseSourceEnum = "INSTANCE"
+	CreateInstanceConfigurationBaseSourceGmc      CreateInstanceConfigurationBaseSourceEnum = "GMC"
 )
 
 var mappingCreateInstanceConfigurationBaseSourceEnum = map[string]CreateInstanceConfigurationBaseSourceEnum{
 	"NONE":     CreateInstanceConfigurationBaseSourceNone,
 	"INSTANCE": CreateInstanceConfigurationBaseSourceInstance,
+	"GMC":      CreateInstanceConfigurationBaseSourceGmc,
 }
 
 var mappingCreateInstanceConfigurationBaseSourceEnumLowerCase = map[string]CreateInstanceConfigurationBaseSourceEnum{
 	"none":     CreateInstanceConfigurationBaseSourceNone,
 	"instance": CreateInstanceConfigurationBaseSourceInstance,
+	"gmc":      CreateInstanceConfigurationBaseSourceGmc,
 }
 
 // GetCreateInstanceConfigurationBaseSourceEnumValues Enumerates the set of values for CreateInstanceConfigurationBaseSourceEnum
@@ -165,6 +172,7 @@ func GetCreateInstanceConfigurationBaseSourceEnumStringValues() []string {
 	return []string{
 		"NONE",
 		"INSTANCE",
+		"GMC",
 	}
 }
 

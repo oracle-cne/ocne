@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -21,13 +21,13 @@ import (
 	"strings"
 )
 
-// UpdateComputeGpuMemoryClusterDetails Updates compute GPU memory cluster details.
+// UpdateComputeGpuMemoryClusterDetails Updates compute GPU Memory Cluster details.
 type UpdateComputeGpuMemoryClusterDetails struct {
 
 	// Instance Configuration to be used for this GPU Memory Cluster
 	InstanceConfigurationId *string `mandatory:"false" json:"instanceConfigurationId"`
 
-	// The number of instances currently running in the GpuMemoryCluster
+	// The desired number of instances for the GPU Memory Cluster.
 	Size *int64 `mandatory:"false" json:"size"`
 
 	// Defined tags for this resource. Each key is predefined and scoped to a
@@ -43,6 +43,11 @@ type UpdateComputeGpuMemoryClusterDetails struct {
 	// A user-friendly name. Does not have to be unique, and it's changeable.
 	// Avoid entering confidential information.
 	DisplayName *string `mandatory:"false" json:"displayName"`
+
+	GpuMemoryClusterScaleConfig *UpdateComputeGpuMemoryClusterScaleConfig `mandatory:"false" json:"gpuMemoryClusterScaleConfig"`
+
+	// Unique list of OCIDs for private IPs (IPv4/IPv6) associated with the GPU Memory Cluster
+	PrivateIpIds []string `mandatory:"false" json:"privateIpIds"`
 }
 
 func (m UpdateComputeGpuMemoryClusterDetails) String() string {

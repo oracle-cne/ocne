@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -71,6 +71,23 @@ type CreateCrossConnectDetails struct {
 	CustomerReferenceName *string `mandatory:"false" json:"customerReferenceName"`
 
 	MacsecProperties *CreateMacsecProperties `mandatory:"false" json:"macsecProperties"`
+
+	// The flag to enable or disable the down timer for the interface.
+	IsInterfaceHoldTimerEnabled *bool `mandatory:"false" json:"isInterfaceHoldTimerEnabled"`
+
+	// The duration of the interface down timer in milliseconds between 0 and 3000 in multiples of 500.
+	InterfaceDownTimerValueInMilliseconds *int `mandatory:"false" json:"interfaceDownTimerValueInMilliseconds"`
+
+	// When true, restricts placement so cross-connects lands only on QoS-capable devices.
+	// When false (default), placement may use any supported device. If no QoS-capable devices are available
+	// in the selected location, the request fails.
+	IsQosEnabled *bool `mandatory:"false" json:"isQosEnabled"`
+
+	// The name of the FastConnect device where this cross-connect is installed.
+	OciPhysicalDeviceName *string `mandatory:"false" json:"ociPhysicalDeviceName"`
+
+	// The name of the FastConnect interface where this cross-connect is installed.
+	InterfaceName *string `mandatory:"false" json:"interfaceName"`
 }
 
 func (m CreateCrossConnectDetails) String() string {

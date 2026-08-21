@@ -46,7 +46,9 @@ var (
 	ErrDecimalMode = errors.New("unreasonable mode would be reasonable if specified in octal; remember to add a leading zero")
 
 	// systemd
-	ErrTooManySystemdSources = errors.New("only one of the following can be set: contents, contents_local")
+	ErrTooManySystemdSources              = errors.New("only one of the following can be set: contents, contents_local")
+	ErrQuadletBadExtension                = errors.New("unsupported file extension for quadlet: must be one of .container, .volume, .network, .kube, .image, .build, .pod, or .artifact")
+	ErrTemplateInstanceCannotHaveContents = errors.New("template instances cannot have contents or contents_local")
 
 	// mount units
 	ErrMountUnitNoPath     = errors.New("path is required if with_mount_unit is true and format is not swap")
@@ -54,18 +56,22 @@ var (
 	ErrMountPointForbidden = errors.New("path must be under /etc or /var if with_mount_unit is true")
 
 	// boot device
-	ErrUnknownBootDeviceLayout = errors.New("layout must be one of: aarch64, ppc64le, s390x-eckd, s390x-virt, s390x-zfcp, x86_64")
-	ErrTooFewMirrorDevices     = errors.New("mirroring requires at least two devices")
-	ErrNoLuksBootDevice        = errors.New("device is required for layouts: s390x-eckd, s390x-zfcp")
-	ErrMirrorNotSupport        = errors.New("mirroring not supported on layouts: s390x-eckd, s390x-zfcp, s390x-virt")
-	ErrLuksBootDeviceBadName   = errors.New("device name must start with /dev/dasd on s390x-eckd layout or /dev/sd on s390x-zfcp layout")
-	ErrCexArchitectureMismatch = errors.New("when using cex the targeted architecture must match s390x")
-	ErrCexNotSupported         = errors.New("cex is not currently supported on the target platform")
-	ErrNoLuksMethodSpecified   = errors.New("no method specified for luks")
+	ErrUnknownBootDeviceLayout       = errors.New("layout must be one of: aarch64, ppc64le, s390x-eckd, s390x-virt, s390x-zfcp, x86_64")
+	ErrUnknownBootDeviceLayoutLegacy = errors.New("layout must be one of: aarch64, ppc64le, x86_64")
+	ErrTooFewMirrorDevices           = errors.New("mirroring requires at least two devices")
+	ErrMirrorRequiresLayout          = errors.New("boot_device.layout should be specified when boot_device.mirror is specified")
+	ErrNoLuksBootDevice              = errors.New("device is required for layouts: s390x-eckd, s390x-zfcp")
+	ErrMirrorNotSupport              = errors.New("mirroring not supported on layouts: s390x-eckd, s390x-zfcp, s390x-virt")
+	ErrLuksBootDeviceBadName         = errors.New("device name must start with /dev/dasd on s390x-eckd layout or /dev/sd on s390x-zfcp layout")
+	ErrCexArchitectureMismatch       = errors.New("when using cex the targeted architecture must match s390x")
+	ErrCexNotSupported               = errors.New("cex is not currently supported on the target platform")
+	ErrNoLuksMethodSpecified         = errors.New("no method specified for luks")
 
 	// partition
 	ErrReuseByLabel         = errors.New("partitions cannot be reused by label; number must be specified except on boot disk (/dev/disk/by-id/coreos-boot-disk) or when wipe_table is true")
 	ErrWrongPartitionNumber = errors.New("incorrect partition number; a new partition will be created using reserved label")
+	ErrRootTooSmall         = errors.New("root should have 8GiB of space assigned")
+	ErrRootConstrained      = errors.New("root partition cannot expand; it is set to fill available space but is followed by an auto-positioned partition")
 
 	// MachineConfigs
 	ErrFieldElided              = errors.New("field ignored in raw mode")

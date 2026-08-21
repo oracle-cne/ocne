@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2022 Sean C Foley
+// Copyright 2020-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 
 package ipaddr
 
+import "unsafe"
+
 // Iterator iterates collections, such as subnets and sequential address ranges.
+// Use StdPushIterator or StdPullIterator to convert an Iterator to a standard library iterator.
 type Iterator[T any] interface {
 	// HasNext returns true if there is another item to iterate, false otherwise.
 	HasNext() bool
@@ -26,6 +29,7 @@ type Iterator[T any] interface {
 }
 
 // IteratorWithRemove is an iterator that provides a removal operation.
+// Use NewPointIteratorWithRemove followed by StdPushIterator or StdPullIterator to convert an IteratorWithRemove to a standard library iterator.
 type IteratorWithRemove[T any] interface {
 	Iterator[T]
 
@@ -51,6 +55,10 @@ func (it *singleIterator[T]) Next() (res T) {
 	return
 }
 
+func (it *singleIterator[T]) Remove() (res T) { // only exposed with nil iterators where nothing is iterated
+	return
+}
+
 type multiAddrIterator struct {
 	Iterator[*AddressSection]
 	zone Zone
@@ -65,11 +73,15 @@ func (it multiAddrIterator) Next() (res *Address) {
 }
 
 func nilAddrIterator() Iterator[*Address] {
-	return &singleIterator[*Address]{}
+	return &singleIterator[*Address]{empty: true}
 }
 
 func nilIterator[T any]() Iterator[T] {
-	return &singleIterator[T]{}
+	return &singleIterator[T]{empty: true}
+}
+
+func nilIteratorWithRemove[T any]() IteratorWithRemove[T] {
+	return &singleIterator[T]{empty: true}
 }
 
 func addrIterator(
@@ -172,6 +184,18 @@ func (iter macAddressIterator) Next() *MACAddress {
 	return iter.Iterator.Next().ToMAC()
 }
 
+type addrTypeIterator[T AddressType] struct {
+	Iterator[T]
+}
+
+func (it addrTypeIterator[T]) Next() AddressType {
+	next := it.Iterator.Next()
+	if isNilPtr(next) {
+		return nil
+	}
+	return next
+}
+
 type addressSeriesIterator struct {
 	Iterator[*Address]
 }
@@ -216,6 +240,85 @@ func (iter ipSectionSeriesIterator) Next() ExtendedIPSegmentSeries {
 	return wrapIPSection(iter.Iterator.Next())
 }
 
+// prefixBlockToSeqRangeIterator converts any ordered iterator of addresses or subnets into an ordered iterator of disjoint sequential ranges
+func prefixBlockToSeqRangeIterator[T ipAddressTypeConstraint[T]](inputIterator Iterator[T]) Iterator[*SequentialRange[T]] {
+	return &toSeqRangeIterator[T]{iter: inputIterator}
+}
+
+type toSeqRangeIterator[T ipAddressTypeConstraint[T]] struct {
+	iter            Iterator[T]
+	currentLower    T
+	currentNotEmpty bool
+}
+
+func (iter *toSeqRangeIterator[T]) HasNext() bool {
+	return iter.currentNotEmpty || iter.iter.HasNext()
+}
+
+func (iter *toSeqRangeIterator[T]) Next() *SequentialRange[T] {
+	var current T
+	nestedIter := iter.iter
+	if iter.currentNotEmpty {
+		current = iter.currentLower
+	} else if nestedIter.HasNext() {
+		current = nestedIter.Next()
+	} else {
+		return nil
+	}
+
+	latest := current
+	merged := false
+	for {
+		if !nestedIter.HasNext() {
+			iter.currentNotEmpty = false
+			break
+		}
+		next := nestedIter.Next()
+		if latest.upperIsAdjacentTo(next) {
+			merged = true
+			latest = next
+		} else {
+			iter.currentLower = next
+			iter.currentNotEmpty = true
+			break
+		}
+	}
+
+	// next spans from lower of current to upper of latest
+	current = current.WithoutPrefixLen()
+	if merged {
+		latest = latest.WithoutPrefixLen()
+		return newSequRangeUnchecked(current.GetLower(), latest.GetUpper(), true)
+	}
+	lower, upper := current.GetLowerAndUpper()
+	return newSequRangeUnchecked(lower, upper, current.IsMultiple())
+}
+
+type spanningIterWrapper[T ipAddressTypeConstraint[T]] struct {
+	Iterator[T]
+}
+
+func (iter spanningIterWrapper[T]) Next() T {
+	hasNext := iter.HasNext()
+	next := iter.Iterator.Next()
+	if hasNext && !next.IsMultiple() {
+		wasNext := next
+		next = wasNext.setBitCountPrefixLen()
+		nextAddr := next.ToAddressBase()
+		cache := nextAddr.cache
+		if cache != nil {
+			cached := (*prefLenCache)(atomicLoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cache.prefLenCache))))
+			if cached == nil {
+				cached = &prefLenCache{withoutPrefixLen: wasNext.ToAddressBase()}
+				dataLoc := (*unsafe.Pointer)(unsafe.Pointer(&cache.prefLenCache))
+				atomicStorePointer(dataLoc, unsafe.Pointer(cached))
+			}
+		}
+
+	}
+	return next
+}
+
 // StdPushIterator converts a "pull" iterator in this libary to a "push" iterator assignable to the type iter.Seq in the standard library.
 //
 // The returned iterator is a single-use iterator.
@@ -223,13 +326,13 @@ func (iter ipSectionSeriesIterator) Next() ExtendedIPSegmentSeries {
 // This function does not return iter.Seq directly, instead it returns a func(yield func(V) bool) assignable to a variable of type iter.Seq[V].
 // This avoids adding a dependency of this libary on Go version 1.23 while still integrating with the iter package introduced with Go 1.23.
 //
-// To convert an instance of IteratorWithRemove, wrap it by calling NewPointIteratorWithRemove first, then pass the returned iterator this function.
-// To convert an instance of CachingTrieIterator, wrap it by calling NewPointCachingTrieIterator first, then pass the returned iterator this function.
+// To convert an instance of IteratorWithRemove, wrap it by calling NewPointIteratorWithRemove first, then pass the returned iterator to this function.
+// To convert an instance of CachingTrieIterator, wrap it by calling NewPointCachingTrieIterator first, then pass the returned iterator to this function.
 //
 // You should avoid doing a double conversion on an iterator from this library,
 // first to a "push" iterator with StdPushIterator and then to a "pull" iterator using iter.Pull in the standard libary.
 // The result is an iterator less efficient than the original that also requires a call to the "stop" function to release resources.
-// Instead, use StdPullIterator to get a pull iterator with an API similar to that provided by iter.Pull.
+// Instead, call StdPullIterator to get a pull iterator with an API similar to that provided by iter.Pull.
 func StdPushIterator[V any](iterator Iterator[V]) func(yield func(V) bool) {
 	return func(yield func(V) bool) {
 		for iterator.HasNext() && yield(iterator.Next()) {

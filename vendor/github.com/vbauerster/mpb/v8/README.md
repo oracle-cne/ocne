@@ -50,7 +50,7 @@ func main() {
     )
     // simulating some work
     max := 100 * time.Millisecond
-    for i := 0; i < total; i++ {
+    for range total {
         time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
         bar.Increment()
     }
@@ -68,7 +68,7 @@ func main() {
     total, numBars := 100, 3
     wg.Add(numBars)
 
-    for i := 0; i < numBars; i++ {
+    for i := range numBars {
         name := fmt.Sprintf("Bar#%d:", i)
         bar := p.AddBar(int64(total),
             mpb.PrependDecorators(
@@ -90,7 +90,7 @@ func main() {
             defer wg.Done()
             rng := rand.New(rand.NewSource(time.Now().UnixNano()))
             max := 100 * time.Millisecond
-            for i := 0; i < total; i++ {
+            for range total {
                 // start variable is solely for EWMA calculation
                 // EWMA's unit of measure is an iteration's duration
                 start := time.Now()
@@ -104,14 +104,14 @@ func main() {
     p.Wait()
 ```
 
-#### [Dynamic total](_examples/dynTotal/main.go)
+#### [dynTotal example](_examples/dynTotal/main.go)
 
-![dynamic total](_svg/godEMrCZmJkHYH1X9dN4Nm0U7.svg)
+![dynTotal](_svg/godEMrCZmJkHYH1X9dN4Nm0U7.svg)
 
-#### [Complex example](_examples/complex/main.go)
+#### [queueBar example](_examples/queueBar/main.go)
 
-![complex](_svg/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
+![queueBar](_svg/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
 
-#### [Bytes counters](_examples/io/main.go)
+#### [io example](_examples/io/main.go)
 
-![byte counters](_svg/hIpTa3A5rQz65ssiVuRJu87X6.svg)
+![io](_svg/hIpTa3A5rQz65ssiVuRJu87X6.svg)

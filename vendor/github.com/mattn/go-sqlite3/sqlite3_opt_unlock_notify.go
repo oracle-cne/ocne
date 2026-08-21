@@ -12,11 +12,16 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_ENABLE_UNLOCK_NOTIFY
 
 #include <stdlib.h>
+#ifndef USE_LIBSQLITE3
 #include "sqlite3-binding.h"
+#else
+#include <sqlite3.h>
+#endif
 
 extern void unlock_notify_callback(void *arg, int argc);
 */
 import "C"
+
 import (
 	"fmt"
 	"math"
@@ -78,7 +83,7 @@ func unlock_notify_wait(db *C.sqlite3) C.int {
 	h := unt.add(c)
 	defer unt.remove(h)
 
-	pargv := C.malloc(C.sizeof_uint)
+	pargv := C.malloc(C.size_t(unsafe.Sizeof(uint(0))))
 	defer C.free(pargv)
 
 	argv := (*[1]uint)(pargv)

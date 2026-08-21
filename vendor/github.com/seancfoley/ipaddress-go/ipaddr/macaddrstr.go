@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2023 Sean C Foley
+// Copyright 2020-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@ var zeroMACAddressString = NewMACAddressString("")
 //   - 6 or 8 bytes in hex representation like "aa:bb:cc:dd:ee:ff"
 //   - The same but with a hyphen separator like "aa-bb-cc-dd-ee-ff" (the range separator in this case becomes '/')
 //   - The same but with space separator like "aa bb cc dd ee ff"
-//   - The dotted representation, 4 sets of 12 bits in hex representation like "aaa.bbb.ccc.ddd"
+//   - The dotted representation, 3 or 4 sets of 16 bits in hex representation like "aaaa.bbbb.cccc" or "aaaa.bbbb.cccc.dddd"
 //   - The 12 or 16 hex representation with no separators like "aabbccddeeff"
 //
 // All of the above range variations also work for each of these ways of representing MAC addresses.
@@ -233,7 +233,7 @@ func (addrStr *MACAddressString) validate(validationOptions addrstrparam.MACAddr
 	addrStr.addressProvider, addrStr.validateError = validator.validateMACAddressStr(addrStr, validationOptions)
 }
 
-// Validate validates that this string is a valid address, and if not, throws an exception with a descriptive message indicating why it is not.
+// Validate validates that this string is a valid address, and if not, returns an error with a descriptive message indicating why it is not.
 func (addrStr *MACAddressString) Validate() addrerr.AddressStringError {
 	return addrStr.init().validateError
 }

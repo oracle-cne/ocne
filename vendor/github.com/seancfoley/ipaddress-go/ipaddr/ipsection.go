@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2024 Sean C Foley
+// Copyright 2020-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -374,11 +374,14 @@ func (section *ipAddressSectionInternal) toZeroHostLen(prefixLength BitCount) (*
 	} else {
 		minIndex = getNetworkSegmentIndex(prefixLength, section.GetBytesPerSegment(), section.GetBitsPerSegment())
 	}
+	if minIndex < 0 {
+		minIndex = 0
+	}
 	mask := section.addrType.getIPNetwork().GetNetworkMask(prefixLength)
 	return section.getSubnetSegments(
 		minIndex,
 		nil, // intentionally no prefix length
-		true,
+		false,
 		section.getDivision,
 		func(i int) SegInt { return mask.GetSegment(i).GetSegmentValue() })
 }
@@ -658,7 +661,7 @@ func (section *ipAddressSectionInternal) bitwiseOr(msk *IPAddressSection, retain
 		func(i int) SegInt { return msk.GetSegment(i).GetSegmentValue() })
 }
 
-func (section *ipAddressSectionInternal) matchesWithMask(other *IPAddressSection, mask *IPAddressSection) bool {
+func (section *ipAddressSectionInternal) matchesWithMask(other, mask *IPAddressSection) bool {
 	if err := section.checkMaskSegmentCount(other); err != nil {
 		return false
 	} else if err := section.checkMaskSegmentCount(mask); err != nil {
@@ -753,8 +756,8 @@ func (section *ipAddressSectionInternal) intersect(other *IPAddressSection) (res
 		higher := seg.getUpperSegmentValue()
 		otherLower := otherSeg.GetSegmentValue()
 		otherHigher := otherSeg.getUpperSegmentValue()
-		lower = maxSegInt(lower, otherLower)
-		higher = minSegInt(higher, otherHigher)
+		lower = max(lower, otherLower)
+		higher = min(higher, otherHigher)
 		segs[i] = createAddressDivision(seg.deriveNewMultiSeg(lower, higher, segPref))
 	}
 	res = deriveIPAddressSectionPrefLen(section.toIPAddressSection(), segs, pref)
@@ -923,16 +926,16 @@ func (section *ipAddressSectionInternal) coverSeriesWithPrefixBlock() ExtendedIP
 	if section.IsSinglePrefixBlock() {
 		return wrapIPSection(section.toIPAddressSection())
 	}
-	return coverWithPrefixBlock(
-		section.getLower().ToIP(),
-		section.getUpper().ToIP()).Wrap()
+	lower, upper := section.getLowestHighestSections()
+	return coverWithPrefixBlock(lower.ToIP(), upper.ToIP()).Wrap()
 }
 
 func (section *ipAddressSectionInternal) coverWithPrefixBlock() *IPAddressSection {
 	if section.IsSinglePrefixBlock() {
 		return section.toIPAddressSection()
 	}
-	return coverWithPrefixBlock(section.getLower().ToIP(), section.getUpper().ToIP())
+	lower, upper := section.getLowestHighestSections()
+	return coverWithPrefixBlock(lower.ToIP(), upper.ToIP())
 }
 
 func (section *ipAddressSectionInternal) coverWithPrefixBlockTo(other *IPAddressSection) (*IPAddressSection, addrerr.SizeMismatchError) {
@@ -1096,8 +1099,8 @@ func (section *ipAddressSectionInternal) getOredSegments(
 				segmentPrefixLength = getSegmentPrefixLength(bitsPerSegment, networkPrefixLength, i)
 				seg = segProducer(i)
 				maskValue = segmentMaskProducer(i)
-				value = seg.getSegmentValue()
-				upperValue = seg.getUpperSegmentValue()
+				origValue, origUpperValue = seg.getSegmentValue(), seg.getUpperSegmentValue()
+				value, upperValue = origValue, origUpperValue
 				if verifyMask {
 					mask64 := uint64(maskValue)
 					val64 := uint64(value)
@@ -1109,7 +1112,6 @@ func (section *ipAddressSectionInternal) getOredSegments(
 					}
 					value = SegInt(masker.GetOredLower(val64, mask64))
 					upperValue = SegInt(masker.GetOredUpper(upperVal64, mask64))
-
 				} else {
 					value |= maskValue
 					upperValue |= maskValue
@@ -1376,6 +1378,18 @@ func (section *ipAddressSectionInternal) IsFullRange() bool {
 	return section.addressSectionInternal.IsFullRange()
 }
 
+// IncludesZeroBits returns true if the bits in the lower value of this series between the indicated indices are all zero.
+// Index 0 is the most significant bit.  The bits are checked from fromBPrefixBitIndex inclusive to toPrefixBitIndex exclusive.
+func (section *ipAddressSectionInternal) IncludesZeroBits(fromBPrefixBitIndex, toPrefixBitIndex int) bool {
+	return section.addressSectionInternal.IncludesZeroBits(fromBPrefixBitIndex, toPrefixBitIndex)
+}
+
+// IncludesMaxBits returns true if the bits in the upper value of this series between the indicated indices are all one.
+// Index 0 is the most significant bit.  The bits are checked from fromBPrefixBitIndex inclusive to toPrefixBitIndex exclusive.
+func (section *ipAddressSectionInternal) IncludesMaxBits(fromBPrefixBitIndex, toPrefixBitIndex int) bool {
+	return section.addressSectionInternal.IncludesMaxBits(fromBPrefixBitIndex, toPrefixBitIndex)
+}
+
 // GetSequentialBlockIndex gets the minimal segment index for which all following segments are full-range blocks.
 //
 // The segment at this index is not a full-range block itself, unless all segments are full-range.
@@ -1578,7 +1592,7 @@ func (addr *IPAddressSection) containsSame(other *IPAddressSection) bool {
 // Sections must also have the same number of segments to be comparable, otherwise false is returned.
 func (section *IPAddressSection) Contains(other AddressSectionType) bool {
 	if section == nil {
-		return other == nil || other.ToSectionBase() == nil
+		return false
 	}
 	return section.contains(other)
 }
@@ -1588,7 +1602,7 @@ func (section *IPAddressSection) Contains(other AddressSectionType) bool {
 // Sections must also have the same number of segments to be comparable, otherwise false is returned.
 func (section *IPAddressSection) Overlaps(other AddressSectionType) bool {
 	if section == nil {
-		return other == nil || other.ToSectionBase() == nil
+		return false
 	}
 	return section.overlaps(other)
 }
@@ -1847,6 +1861,14 @@ func (section *IPAddressSection) GetUpper() *IPAddressSection {
 	return section.getUpper().ToIP()
 }
 
+// GetLowerAndUpper returns the sections in the range with the lowest and highest numeric value,
+// which will be the same section if it represents a single value.
+// For example, for "1.2-3.4.5-6", the sections "1.2.4.5" and "1.3.4.6" are returned.
+func (section *IPAddressSection) GetLowerAndUpper() (lower, upper *IPAddressSection) {
+	l, u := section.getLowestHighestSections()
+	return l.ToIP(), u.ToIP()
+}
+
 // ToZeroHost converts the address section to one in which all individual address sections have a host of zero,
 // the host being the bits following the prefix length.
 // If the address section has no prefix length, then it returns an all-zero address section.
@@ -2040,17 +2062,22 @@ func (section *IPAddressSection) SequentialBlockIterator() Iterator[*IPAddressSe
 	return ipSectionIterator{section.sequentialBlockIterator()}
 }
 
-// IncrementBoundary returns the item that is the given increment from the range boundaries of this item.
+// IncrementBoundary returns the item that is the given increment from the range boundaries of this section.
 //
-// If the given increment is positive, adds the value to the highest (GetUpper) in the range to produce a new item.
-// If the given increment is negative, adds the value to the lowest (GetLower) in the range to produce a new item.
+// If the given increment is positive, adds the value to the highest (GetUpper) in the range to produce a new section.
+// If the given increment is negative, adds the value to the lowest (GetLower) in the range to produce a new section.
 // If the increment is zero, returns this.
 //
-// If this represents just a single value, this item is simply incremented by the given increment value, positive or negative.
+// If this represents just a single value, this section is simply incremented by the given increment value, positive or negative.
 //
 // On overflow or underflow, IncrementBoundary returns nil.
 func (section *IPAddressSection) IncrementBoundary(increment int64) *IPAddressSection {
 	return section.incrementBoundary(increment).ToIP()
+}
+
+// IncrementBoundarySingle increments the boundary of the address or subnet section by 1 to produce a new address section.  Equivalent to IncrementBoundary(1).
+func (section *IPAddressSection) IncrementBoundarySingle() *IPAddressSection {
+	return section.incrementBoundarySingle().ToIP()
 }
 
 // Increment returns the item that is the given increment upwards into the range,
@@ -2073,6 +2100,59 @@ func (section *IPAddressSection) IncrementBoundary(increment int64) *IPAddressSe
 // On overflow or underflow, Increment returns nil.
 func (section *IPAddressSection) Increment(increment int64) *IPAddressSection {
 	return section.increment(increment).ToIP()
+}
+
+// IncrementSingle increments the address or subnet section by 1 to produce a new address.  Equivalent to Increment(1).
+func (section *IPAddressSection) IncrementSingle() *IPAddressSection {
+	return section.incrementSingle().ToIP()
+}
+
+// DecrementSingle decrements the address or subnet section by 1 to produce a new address.  Equivalent to Increment(-1).
+func (section *IPAddressSection) DecrementSingle() *IPAddressSection {
+	return section.decrementSingle().ToIP()
+}
+
+// IncrementBig returns the address from the subnet section that is the given increment upwards into the subnet section range.
+//
+// Equivalent to Increment, but taking a big integer as the increment argument.
+func (section *IPAddressSection) IncrementBig(increment *big.Int) *IPAddressSection {
+	return section.incrementBig(increment).ToIP()
+}
+
+// UpperIsAdjacentTo indicates if the given section's lower value is the next individual address following this section's upper value.
+// This means they are adjacent, having no intervening section.
+// Prefix lengths are ignored in this determination, just like with equality and containment.
+//
+// UpperIsAdjacentTo returns true given the section produced by IncrementBoundarySingle.
+func (section *IPAddressSection) UpperIsAdjacentTo(other AddressSectionType) bool {
+	return upperIsAdjacentTo(section.ToSectionBase(), other.ToSectionBase())
+}
+
+// UpperIsAdjacentTo indicates if the given section's lower value is the next individual address following this section's upper value.
+// This means they are adjacent, having no intervening section.
+// Prefix lengths are ignored in this determination, just like with equality and containment.
+//
+// UpperIsAdjacentTo returns true given the section produced by IncrementBoundarySingle.
+func (section *IPAddressSection) upperIsAdjacentTo(other *IPAddressSection) bool {
+	return upperIsAdjacentTo(section.ToSectionBase(), other.ToSectionBase())
+}
+
+// Get returns the individual address sectio that is at the given index in this collection of address sections,
+// with the increment of 0 returning the first in the range.
+func (section *IPAddressSection) Get(index int64) *IPAddressSection {
+	if section.GetCount().Sign() == 0 { // handles adaptive zero and zero-length sections
+		outOfBounds()
+	}
+	return section.get(index).ToIP()
+}
+
+// GetBig returns the individual address sectio that is at the given index in this collection of address sections,
+// with the increment of 0 returning the first in the range.
+func (section *IPAddressSection) GetBig(index *big.Int) *IPAddressSection {
+	if section.GetCount().Sign() == 0 { // handles adaptive zero and zero-length sections
+		outOfBounds()
+	}
+	return section.getBig(index).ToIP()
 }
 
 // Enumerate indicates where an individual address section sits relative to the address section range ordering.

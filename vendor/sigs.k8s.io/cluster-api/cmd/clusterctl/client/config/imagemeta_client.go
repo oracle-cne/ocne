@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 
 	"sigs.k8s.io/cluster-api/util/container"
 )
@@ -84,7 +84,7 @@ func (p *imageMetaClient) getImageMeta(component, imageName string) (*imageMeta,
 	// Otherwise read the image override configurations.
 	var meta map[string]imageMeta
 	if err := p.reader.UnmarshalKey(imagesConfigKey, &meta); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal image override configurations")
+		return nil, pkgerrors.Wrap(err, "failed to unmarshal image override configurations")
 	}
 
 	// If there are not image override configurations, return.
@@ -125,6 +125,9 @@ type imageMeta struct {
 	// repository sets the container registry to pull images from.
 	Repository string `json:"repository,omitempty"`
 
+	// Name allows to specify a different name for the image.
+	Name string `json:"name,omitempty"`
+
 	// Tag allows to specify a tag for the images.
 	Tag string `json:"tag,omitempty"`
 }
@@ -134,6 +137,9 @@ type imageMeta struct {
 func (i *imageMeta) Union(other *imageMeta) {
 	if other.Repository != "" {
 		i.Repository = other.Repository
+	}
+	if other.Name != "" {
+		i.Name = other.Name
 	}
 	if other.Tag != "" {
 		i.Tag = other.Tag
@@ -145,6 +151,9 @@ func (i *imageMeta) ApplyToImage(image container.Image) string {
 	// apply transformations
 	if i.Repository != "" {
 		image.Repository = strings.TrimSuffix(i.Repository, "/")
+	}
+	if i.Name != "" {
+		image.Name = i.Name
 	}
 	if i.Tag != "" {
 		image.Tag = i.Tag

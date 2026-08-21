@@ -1,5 +1,5 @@
 //
-// Copyright 2022-2024 Sean C Foley
+// Copyright 2022-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 // Not all nodes in the pathway through the tree need to be included in the linked list.
 //
 // In other words, a path follows a pathway through a tree from root to leaf, but not necessarily including all nodes encountered along the way.
-type Path[E Key, V any] struct {
+type Path[E Key[E], V any] struct {
 	root, leaf *PathNode[E, V]
 }
 
@@ -71,7 +71,7 @@ func (path *Path[E, V]) Size() (storedSize int) {
 }
 
 // PathNode is an element in the list of a Path
-type PathNode[E Key, V any] struct {
+type PathNode[E Key[E], V any] struct {
 	previous, next *PathNode[E, V]
 
 	// the key for the node

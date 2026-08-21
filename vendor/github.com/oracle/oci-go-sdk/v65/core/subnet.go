@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -31,10 +31,6 @@ import (
 // Getting Started with Policies (https://docs.oracle.com/iaas/Content/Identity/Concepts/policygetstarted.htm).
 type Subnet struct {
 
-	// The subnet's CIDR block.
-	// Example: `10.0.1.0/24`
-	CidrBlock *string `mandatory:"true" json:"cidrBlock"`
-
 	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the compartment containing the subnet.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
@@ -50,10 +46,6 @@ type Subnet struct {
 	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the VCN the subnet is in.
 	VcnId *string `mandatory:"true" json:"vcnId"`
 
-	// The IP address of the virtual router.
-	// Example: `10.0.14.1`
-	VirtualRouterIp *string `mandatory:"true" json:"virtualRouterIp"`
-
 	// The MAC address of the virtual router.
 	// Example: `00:00:00:00:00:01`
 	VirtualRouterMac *string `mandatory:"true" json:"virtualRouterMac"`
@@ -62,6 +54,10 @@ type Subnet struct {
 	// instead of an AD-specific subnet. Oracle recommends creating regional subnets.
 	// Example: `Uocm:PHX-AD-1`
 	AvailabilityDomain *string `mandatory:"false" json:"availabilityDomain"`
+
+	// The subnet's CIDR block.
+	// Example: `10.0.1.0/24`
+	CidrBlock *string `mandatory:"false" json:"cidrBlock"`
 
 	// The list of all IPv4 CIDR blocks for the subnet that meets the following criteria:
 	// - Ipv4 CIDR blocks must be valid.
@@ -146,9 +142,17 @@ type Subnet struct {
 	// Example: `subnet123.vcn1.oraclevcn.com`
 	SubnetDomainName *string `mandatory:"false" json:"subnetDomainName"`
 
+	// Usage of system tag keys. These predefined keys are scoped to namespaces.
+	// Example: `{ "orcl-cloud": { "free-tier-retained": "true" } }`
+	SystemTags map[string]map[string]interface{} `mandatory:"false" json:"systemTags"`
+
 	// The date and time the subnet was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
+
+	// The IP address of the virtual router.
+	// Example: `10.0.14.1`
+	VirtualRouterIp *string `mandatory:"false" json:"virtualRouterIp"`
 }
 
 func (m Subnet) String() string {

@@ -17,16 +17,18 @@ package signature
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigpayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 // SignImage signs a container manifest using the specified signer object
-func SignImage(signer SignerVerifier, image name.Digest, optionalAnnotations map[string]interface{}) (payload, signature []byte, err error) {
+func SignImage(signer SignerVerifier, image name.Digest, optionalAnnotations map[string]any) (payload, signature []byte, err error) {
 	imgPayload := sigpayload.Cosign{
 		Image:       image,
 		Annotations: optionalAnnotations,
@@ -43,7 +45,7 @@ func SignImage(signer SignerVerifier, image name.Digest, optionalAnnotations map
 }
 
 // VerifyImageSignature verifies a signature over a container manifest
-func VerifyImageSignature(signer SignerVerifier, payload, signature []byte) (image name.Digest, annotations map[string]interface{}, err error) {
+func VerifyImageSignature(signer SignerVerifier, payload, signature []byte) (image name.Digest, annotations map[string]any, err error) {
 	if err := signer.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload)); err != nil {
 		return name.Digest{}, nil, fmt.Errorf("signature verification failed: %w", err)
 	}
@@ -52,4 +54,21 @@ func VerifyImageSignature(signer SignerVerifier, payload, signature []byte) (ima
 		return name.Digest{}, nil, fmt.Errorf("could not deserialize image payload: %w", err)
 	}
 	return imgPayload.Image, imgPayload.Annotations, nil
+}
+
+// GetOptsFromAlgorithmDetails returns a list of LoadOptions that are
+// appropriate for the given algorithm details. It ignores the hash type because
+// that can be retrieved from the algorithm details.
+func GetOptsFromAlgorithmDetails(algorithmDetails AlgorithmDetails, opts ...LoadOption) []LoadOption {
+	res := []LoadOption{options.WithHash(algorithmDetails.hashType)}
+	for _, opt := range opts {
+		var useED25519ph bool
+		var rsaPSSOptions *rsa.PSSOptions
+		opt.ApplyED25519ph(&useED25519ph)
+		opt.ApplyRSAPSS(&rsaPSSOptions)
+		if useED25519ph || rsaPSSOptions != nil {
+			res = append(res, opt)
+		}
+	}
+	return res
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -41,6 +41,12 @@ type CapacityBin struct {
 
 	// List of VMI shapes supported on each capacity bucket.
 	SupportedShapes []string `mandatory:"true" json:"supportedShapes"`
+
+	// The total local volume of the capacity bucket, in GBs.
+	TotalLocalVolumeInGBs *float32 `mandatory:"false" json:"totalLocalVolumeInGBs"`
+
+	// The remaining local volume of the capacity bucket, in GBs.
+	RemainingLocalVolumeInGBs *float32 `mandatory:"false" json:"remainingLocalVolumeInGBs"`
 }
 
 func (m CapacityBin) String() string {
