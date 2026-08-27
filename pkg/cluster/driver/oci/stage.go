@@ -14,7 +14,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/cluster/driver/capi"
 	"github.com/oracle-cne/ocne/pkg/cluster/template/common"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
-	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
+	//"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -314,15 +314,15 @@ func (cad *ClusterApiDriver) Stage(version string) (string, string, bool, error)
 		return "", "", false, err
 	}
 
-	for _, img := range ociImages {
-		if img.WorkRequestId != "" {
-			err = upload.EnsureImageDetails(*img.Image.CompartmentId, cad.ClusterConfig.Providers.Oci.Profile, img.NewId, img.Arch)
-
-			if err != nil {
-				return "", "", false, err
-			}
-		}
-	}
+// 	for _, img := range ociImages {
+// 		if img.WorkRequestId != "" {
+// 			err = upload.EnsureImageDetails(*img.Image.CompartmentId, cad.ClusterConfig.Providers.Oci.Profile, img.NewId, img.Arch)
+// 
+// 			if err != nil {
+// 				return "", "", false, err
+// 			}
+// 		}
+// 	}
 
 	// Make new machine templates.  This is done by creating a new
 	// OCIMachineTemplate for each existing one that uses an existing

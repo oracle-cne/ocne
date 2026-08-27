@@ -641,20 +641,20 @@ func (cad *ClusterApiDriver) ensureImages() error {
 	controlPlaneArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.ControlPlaneShape.Shape)
 	workerArch := oci.ArchitectureFromShape(cad.ClusterConfig.Providers.Oci.WorkerShape.Shape)
 
-	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
-	if err != nil {
-		return err
-	}
+//	compartmentId, err := oci.GetCompartmentId(cad.ClusterConfig.Providers.Oci.Compartment, cad.ClusterConfig.Providers.Oci.Profile)
+//	if err != nil {
+//		return err
+//	}
 
 	// If the control plane arch and worker arch are the same, only import the
 	// one image.
 	imageImports := map[string]string{}
-	controlPlaneImageId := ""
-	workerImageId := ""
+	//controlPlaneImageId := ""
+	//workerImageId := ""
 	if controlPlaneArch == workerArch {
 		workRequest := ""
 		var err error
-		controlPlaneImageId, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
+		_, workRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -665,11 +665,11 @@ func (cad *ClusterApiDriver) ensureImages() error {
 		controlPlaneWorkRequest := ""
 		workerWorkRequest := ""
 		var err error
-		controlPlaneImageId, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
+		_, controlPlaneWorkRequest, err = cad.ensureImage(constants.OciImageName, controlPlaneArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
-		workerImageId, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion, false)
+		_, workerWorkRequest, err = cad.ensureImage(constants.OciImageName, workerArch, cad.ClusterConfig.KubeVersion, false)
 		if err != nil {
 			return err
 		}
@@ -681,22 +681,22 @@ func (cad *ClusterApiDriver) ensureImages() error {
 			imageImports[workerWorkRequest] = "Importing worker image"
 		}
 	}
-	err = oci.WaitForWorkRequests(imageImports, cad.ClusterConfig.Providers.Oci.Profile)
+	err := oci.WaitForWorkRequests(imageImports, cad.ClusterConfig.Providers.Oci.Profile)
 	if err != nil {
 		return err
 	}
-	if controlPlaneImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, controlPlaneImageId, controlPlaneArch)
-		if err != nil {
-			return err
-		}
-	}
-	if workerImageId != "" {
-		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, workerImageId, workerArch)
-		if err != nil {
-			return err
-		}
-	}
+//	if controlPlaneImageId != "" {
+//		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, controlPlaneImageId, controlPlaneArch)
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	if workerImageId != "" {
+//		err = upload.EnsureImageDetails(compartmentId, cad.ClusterConfig.Providers.Oci.Profile, workerImageId, workerArch)
+//		if err != nil {
+//			return err
+//		}
+//	}
 
 	return nil
 }
