@@ -4,6 +4,7 @@
 package capi
 
 import (
+	"context"
 	"fmt"
 	igntypes "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
@@ -12,6 +13,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cluster-api/controllers/external"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	crtpkg "sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/client-go/rest"
 	"slices"
 	"strings"
@@ -28,6 +32,7 @@ var ClusterEndpointHost []string = []string{"spec", "controlPlaneEndpoint", "hos
 var ClusterEndpointPort []string = []string{"spec", "controlPlaneEndpoint", "port"}
 var ControlPlaneVersion []string = []string{"spec", "version"}
 var ControlPlaneMachineTemplateInfrastructureRef []string = []string{"spec", "machineTemplate", "infrastructureRef"}
+var ControlPlaneMachineTemplateInfrastructureRefV2 []string = []string{"spec", "machineTemplate", "spec", "infrastructureRef"}
 var ControlPlaneJoinPatches []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "patches"}
 var ControlPlaneJoinSkipPhases []string = []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "skipPhases"}
 var ControlPlaneIgnition []string = []string{"spec", "kubeadmConfigSpec", "ignition", "containerLinuxConfig", "additionalConfig"}
@@ -37,6 +42,8 @@ var MachineDeploymentVersion []string = []string{"spec", "template", "spec", "ve
 var SkipKubeProxyAnnotation = "controlplane.cluster.x-k8s.io/skip-kube-proxy"
 var SkipCoreDNSAnnotation = "controlplane.cluster.x-k8s.io/skip-coredns"
 var ControlPlaneAPI = "controlplane.cluster.x-k8s.io/v1beta1"
+var ControlPlaneAPIV2 = "controlplane.cluster.x-k8s.io/v1beta2"
+var ControlPlaneGroup = "controlplane.cluster.x-k8s.io"
 var KubeadmControlPlane = "KubeadmControlPlane"
 
 var PatchesDirectory = "directory"
@@ -158,14 +165,31 @@ func getByRef(restConf *rest.Config, u *unstructured.Unstructured, path ...strin
 		return nil, err
 	}
 
-	ret, err := makeUnstFromRef(ref, u.GetNamespace())
-	if err != nil {
-		return nil, err
-	}
+	var ret *GraphNode = nil
 
-	err = k8s.GetResource(restConf, ret.Object)
-	if err != nil {
-		return nil, err
+	// If there is an apiVersion then use the bespoke function.
+	// If not, use the CAPI implementation
+	if _, ok := ref["apiVersion"]; ok {
+		ret, err = makeUnstFromRef(ref, u.GetNamespace())
+		if err != nil {
+			return nil, err
+		}
+
+		err = k8s.GetResource(restConf, ret.Object)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		ret = newGraphNode()
+		client, err := crtpkg.New(restConf, crtpkg.Options{})
+		if err != nil {
+			return nil, err
+		}
+		ret.Object, err = external.GetObjectFromContractVersionedRef(context.TODO(), client, clusterv1.ContractVersionedObjectReference{
+			APIGroup:  ref["apiGroup"],
+			Kind: ref["kind"],
+			Name:  ref["name"],
+		}, u.GetNamespace())
 	}
 
 	return ret, nil
@@ -177,14 +201,21 @@ func getByOwner(restConf *rest.Config, owner *unstructured.Unstructured, apiVers
 		return nil, err
 	}
 
+	// Getting unstrutured resources that have had version bumps don't
+	// necessarily reflect the version change in their objects.  Relax
+	// the check to group and name.
+	groupName := schema.FromAPIVersionAndKind(owner.GetAPIVersion(), owner.GetKind()).Group
+
 	ret := []*GraphNode{}
 	for _, u := range ul.Items {
 		if u.GetNamespace() != owner.GetNamespace() {
 			continue
 		}
 
+
 		for _, o := range u.GetOwnerReferences() {
-			if o.APIVersion == owner.GetAPIVersion() && o.Kind == owner.GetKind() && o.Name == owner.GetName() {
+			ownerGroup := schema.FromAPIVersionAndKind(o.APIVersion, o.Kind).Group
+			if ownerGroup == groupName && o.Kind == owner.GetKind() && o.Name == owner.GetName() {
 				gn := newGraphNode()
 				gn.Object = &u
 				ret = append(ret, gn)
@@ -201,7 +232,18 @@ func populateControlPlane(restConf *rest.Config, graph *ClusterGraph, controlPla
 		return fmt.Errorf("Only KubeadmControlPlanes are supported")
 	}
 
-	machineTemplate, err := getByRef(restConf, controlPlane.Object, ControlPlaneMachineTemplateInfrastructureRef...)
+
+	var refPath []string
+	cpv := controlPlane.Object.GetAPIVersion()
+	if cpv == ControlPlaneAPI {
+		refPath = ControlPlaneMachineTemplateInfrastructureRef
+	} else if cpv == ControlPlaneAPIV2 {
+		refPath = ControlPlaneMachineTemplateInfrastructureRefV2
+	} else {
+		return fmt.Errorf("Unknown API Version %s", cpv)
+	}
+
+	machineTemplate, err := getByRef(restConf, controlPlane.Object, refPath...)
 	if err != nil {
 		return err
 	}
@@ -218,6 +260,13 @@ func populateMachineDeployments(restConf *rest.Config, graph *ClusterGraph, clus
 	if err != nil {
 		return err
 	}
+
+	mdsv2, err := getByOwner(restConf, cluster.Object, "cluster.x-k8s.io/v1beta2", "MachineDeployment")
+	if err != nil {
+		return err
+	}
+
+	mds = append(mds, mdsv2...)
 
 	for _, md := range mds {
 		md = graph.AddToAll(md)
@@ -354,8 +403,8 @@ func (cg *ClusterGraph) WalkMachineTemplates(cb WalkResourceCb, arg interface{})
 // PatchControlPlane adds any changes required to a KubeadmControlPlane
 func PatchControlPlane(restConfig *rest.Config, kcp *unstructured.Unstructured) error {
 	// Ensure this is a KubeadmControlPlane
-	if kcp.GetAPIVersion() != ControlPlaneAPI || kcp.GetKind() != KubeadmControlPlane {
-		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), ControlPlaneAPI, KubeadmControlPlane)
+	if kcp.GroupVersionKind().Group != ControlPlaneGroup || kcp.GetKind() != KubeadmControlPlane {
+		return fmt.Errorf("Control plane object %s in namespace %s is not a %s/%s", kcp.GetName(), kcp.GetNamespace(), ControlPlaneGroup, KubeadmControlPlane)
 	}
 
 	didUpdate := false
@@ -395,7 +444,12 @@ func GetControlPlanePatches(kcp *unstructured.Unstructured, version string, mtNa
 
 	// These are mandatory changes to update control plane nodes
 	ret.Replace(ControlPlaneVersion, version)
-	ret.Replace(append(ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
+
+	if kcp.GetAPIVersion() == ControlPlaneAPIV2 {
+		ret.Replace(append(ControlPlaneMachineTemplateInfrastructureRefV2, "name"), mtName)
+	} else {
+		ret.Replace(append(ControlPlaneMachineTemplateInfrastructureRef, "name"), mtName)
+	}
 
 	//  The joinConfiguration needs to apply the OCK patches
 	patches, found, err := unstructured.NestedStringMap(kcp.Object, ControlPlaneJoinPatches...)

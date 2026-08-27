@@ -226,6 +226,7 @@ func templateNameFromMachineTemplate(mt *unstructured.Unstructured) (string, err
 	templateName, found, err := unstructured.NestedString(mt.Object, vmTemplateName...)
 	if !found {
 		err = fmt.Errorf("OLVMMachineTemplate %s in %s has no vmTemplateName", mt.GetName(), mt.GetNamespace())
+		mj, _ := mt.MarshalJSON()
 	}
 	if err != nil {
 		return "", err
