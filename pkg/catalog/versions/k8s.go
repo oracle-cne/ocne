@@ -99,7 +99,7 @@ func init() {
 	kubernetesVersions["1.31"] = kubernetesVersions["1.31.0"]
 	kubernetesVersions["1.32"] = kubernetesVersions["1.32.0"]
 	kubernetesVersions["1.33"] = kubernetesVersions["1.33.5"]
-	kubernetesVersions["1.34"] = kubernetesVersions["1.35.0"]
+	kubernetesVersions["1.34"] = kubernetesVersions["1.34.0"]
 	kubernetesVersions["1.35"] = kubernetesVersions["1.35.0"]
 	kubernetesVersions["1.36"] = kubernetesVersions["1.36.0"]
 
