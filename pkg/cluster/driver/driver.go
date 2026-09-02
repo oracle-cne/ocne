@@ -20,6 +20,7 @@ type ClusterDriver interface {
 	GetKubeAPIServerAddress() string
 	PostInstallHelpStanza() string
 	DefaultCNIInterfaces() []string
+	ShouldAssignNodeIP() bool
 	Stage(string) (string, string, bool, error)
 }
 

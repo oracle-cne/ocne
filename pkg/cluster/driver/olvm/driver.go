@@ -237,3 +237,7 @@ func (cad *OlvmDriver) DefaultCNIInterfaces() []string {
 	// let CNI pick the interface
 	return nil
 }
+
+func (cad *OlvmDriver) ShouldAssignNodeIP() bool {
+	return cad.ClusterConfig.VirtualIp != ""
+}

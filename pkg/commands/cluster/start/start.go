@@ -310,9 +310,29 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 				"--ip-masq",
 				"--kube-subnet-mgr",
 			}
-			ifaces := drv.DefaultCNIInterfaces()
-			for _, i := range ifaces {
-				args = append(args, fmt.Sprintf("--iface=%s", i))
+			for _, iface := range drv.DefaultCNIInterfaces() {
+				args = append(args, fmt.Sprintf("--iface=%s", iface))
+			}
+			flannelConfig := map[string]interface{}{
+				"args": args,
+				"image": map[string]interface{}{
+					"tag": tag,
+				},
+			}
+			if drv.ShouldAssignNodeIP() {
+				args = append(args, "--public-ip=$(NODE_IP)")
+				flannelConfig["args"] = args
+				flannelConfig["extraEnv"] = []map[string]interface{}{
+					{
+						"name": "NODE_IP",
+						"valueFrom": map[string]interface{}{
+							"fieldRef": map[string]interface{}{
+								"fieldPath": "status.hostIP",
+							},
+						},
+					},
+				}
+				log.Debugf("Configuring Flannel to use each node's host IP")
 			}
 
 			ipv4Cidr := ""
@@ -340,12 +360,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					Config: map[string]interface{}{
 						"podCidr": ipv4Cidr,
 						"podCidrv6": ipv6Cidr,
-						"flannel": map[string]interface{}{
-							"args": args,
-							"image": map[string]interface{}{
-								"tag": tag,
-							},
-						},
+						"flannel": flannelConfig,
 					},
 				},
 			})

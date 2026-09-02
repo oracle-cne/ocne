@@ -102,6 +102,10 @@ func (nd *NoneDriver) DefaultCNIInterfaces() []string {
 	return []string{""}
 }
 
+func (nd *NoneDriver) ShouldAssignNodeIP() bool {
+	return false
+}
+
 // Stage is a no-op
 func (nd *NoneDriver) Stage(version string) (string, string, bool, error) {
 	return "", "", true, nil

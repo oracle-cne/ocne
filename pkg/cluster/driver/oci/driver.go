@@ -1173,3 +1173,7 @@ func (cad *ClusterApiDriver) PostInstallHelpStanza() string {
 func (cad *ClusterApiDriver) DefaultCNIInterfaces() []string {
 	return []string{}
 }
+
+func (cad *ClusterApiDriver) ShouldAssignNodeIP() bool {
+	return false
+}

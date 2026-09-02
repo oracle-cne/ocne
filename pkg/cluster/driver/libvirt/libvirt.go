@@ -862,7 +862,7 @@ func (ld *LibvirtDriver) PostStart() error {
 	// There are only post-start steps if the cluster uses a
 	// virtual ip.  When using a virtual ip, the auto-configuration
 	// application is required.
-	if ld.Config.LoadBalancer != "" {
+	if !ld.usesVirtualIP() {
 		return nil
 	}
 
@@ -965,6 +965,14 @@ func (ld *LibvirtDriver) DefaultCNIInterfaces() []string {
 		return []string{fmt.Sprintf(BridgeNicPattern, BridgeBus, BridgeSlot)}
 	}
 	return []string{""}
+}
+
+func (ld *LibvirtDriver) ShouldAssignNodeIP() bool {
+	return ld.usesVirtualIP()
+}
+
+func (ld *LibvirtDriver) usesVirtualIP() bool {
+	return ld.Config.LoadBalancer == ""
 }
 
 // Stage is a no-op
