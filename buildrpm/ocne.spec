@@ -72,8 +72,8 @@ chmod 755 %{buildroot}%{_sysconfdir}/bash_completion.d/ocne
 %{_sysconfdir}/bash_completion.d/ocne
 
 %changelog
-* Mon May 18 2026 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.4.0-1
-- Add Kubernetes 1.34, 1.35, 1.36
+* Sun Sep 06 2026 Daniel Krasinski <daniel.krasinski@oracle.com) - 2.4.0-1
+- Add Kubernetes 1.34 and 1.35
 
 * Fri Mar 13 2026 Thomas Tanaka <thomas.tanaka@oracle.com> - 2.3.3-2
 - Allow only certain linux editors for EDITOR env vars
