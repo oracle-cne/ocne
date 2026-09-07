@@ -270,6 +270,8 @@ replace github.com/cyphar/filepath-securejoin v0.7.0 => github.com/cyphar/filepa
 
 replace github.com/dypflying/go-qcow2lib v1.0.1-0.20240602125421-ea63654c61a5 => github.com/oracle-cne/go-qcow2lib v1.0.2
 
+replace k8s.io/cri-api => k8s.io/cri-api v0.36.3
+
 exclude (
 	k8s.io/cloud-provider v0.0.0
 	k8s.io/controller-manager v0.0.0
