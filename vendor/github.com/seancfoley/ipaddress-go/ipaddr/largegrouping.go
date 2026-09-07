@@ -1,5 +1,5 @@
 //
-// Copyright 2022-2024 Sean C Foley
+// Copyright 2022-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,7 +128,7 @@ func (grouping *largeDivisionGroupingInternal) calcBytes() (bytes, upperBytes []
 		for totalDivBits := div.GetBitCount(); totalDivBits > 0; totalDivBits -= 64 {
 
 			// grab those 64 bits (from bigBytes and bigUpperBytes) and put them in val and upperVal
-			divBits := imin(totalDivBits, 64)
+			divBits := min(totalDivBits, 64)
 			var divBytes []byte
 			var val, upperVal uint64
 			if len(bigBytes) > 8 {
@@ -518,7 +518,7 @@ func (grouping *IPAddressLargeDivisionGrouping) CompareSize(other AddressItem) i
 		// we have size 0, other has size >= 1
 		return -1
 	}
-	return compareCount(grouping, other)
+	return compareCounts(grouping, other)
 	//return grouping.compareSize(other)
 }
 

@@ -1,5 +1,5 @@
 //
-// Copyright 2022-2024 Sean C Foley
+// Copyright 2022-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,12 +33,12 @@ func bigOne() *big.Int {
 
 var one = bigOne()
 
-type change struct {
+type Change struct {
 	big   *big.Int
 	small uint64
 }
 
-func (c change) Equal(c2 change) bool {
+func (c Change) Equal(c2 Change) bool {
 	if c.small == c2.small {
 		if c.big == nil {
 			return c2.big == nil
@@ -49,7 +49,7 @@ func (c change) Equal(c2 change) bool {
 	return false
 }
 
-func (c *change) increment() {
+func (c *Change) increment() {
 	val := c.small
 	val++
 	if val == 0 {
@@ -62,36 +62,46 @@ func (c *change) increment() {
 	c.small = val
 }
 
-func (c change) String() string {
+func (c Change) String() string {
 	return c.big.String() + " " + strconv.FormatUint(c.small, 10)
 }
 
-type changeTracker struct {
-	currentChange change
+type ChangeTracker struct {
+	currentChange Change
 	watched       bool
 }
 
-func (c *changeTracker) changed() {
+func (c *ChangeTracker) Changed() {
 	if c.watched {
 		c.watched = false
 		c.currentChange.increment()
 	} // else nobody is watching the current change, so no need to do anything
 }
 
-func (c *changeTracker) changedSince(otherChange change) bool {
+func (c *ChangeTracker) ChangedSince(otherChange Change) {
+	if c.IsChangedSince(otherChange) {
+		c.ChangePanic()
+	}
+}
+
+func (c *ChangeTracker) ChangePanic() {
+	panic("the collection has been modified since the iterator was created")
+}
+
+func (c *ChangeTracker) IsChangedSince(otherChange Change) bool {
 	return !c.currentChange.Equal(otherChange)
 }
 
-func (c *changeTracker) getCurrent() change {
+func (c *ChangeTracker) GetCurrent() Change {
 	c.watched = true
 	return c.currentChange
 }
 
-func (c *changeTracker) String() string {
+func (c *ChangeTracker) String() string {
 	return "current change: " + c.currentChange.String()
 }
 
-type bounds[E Key] struct {
+type bounds[E Key[E]] struct {
 }
 
 func (b *bounds[E]) isInBounds(_ E) bool {
@@ -114,8 +124,21 @@ func (b *bounds[E]) isAboveUpperBound(_ E) bool {
 	return true
 }
 
-type Key interface {
-	comparable // needed by populateCacheItem
+type Key[E any] interface {
+	//comparable // needed by populateCacheItem
+
+	// Compare returns a negative integer, zero, or a positive integer if this key is less than, equal, or greater than the give key.
+	// When comparing, the first mismatched bit determines the result.
+	// If either key is prefixed, you compare only the bits up until the minumum prefix length.
+	// If those bits are equal, and both have the same prefix length, they are equal.
+	// Otherwise, the next bit in the key with the longer prefix (or no prefix at all) determines the result.
+	// If that bit is 1, that key is larger, if it is 0, then smaller.
+	Compare(E) int
+
+	GetCount() *big.Int
+
+	// // Returns the key element at the given index into this key
+	// GetKeyElement(*big.Int) E
 }
 
 // C represents cached values in iterators
@@ -123,7 +146,7 @@ type C any
 
 const sizeUnknown = -1
 
-type binTreeNode[E Key, V any] struct {
+type binTreeNode[E Key[E], V any] struct {
 
 	// the key for the node
 	item E
@@ -135,7 +158,10 @@ type binTreeNode[E Key, V any] struct {
 
 	storedSize int
 
-	cTracker *changeTracker
+	// the total number of elements covered by prefix block keys added to the sub-tree starting from this node as root
+	containedCount *big.Int
+
+	cTracker *ChangeTracker
 
 	// used to store opResult objects for search operations
 	pool *sync.Pool
@@ -169,7 +195,7 @@ func (node *binTreeNode[E, V]) checkCopy() {
 	}
 }
 
-func (node *binTreeNode[E, V]) getChangeTracker() *changeTracker {
+func (node *binTreeNode[E, V]) getChangeTracker() *ChangeTracker {
 	if node == nil {
 		return nil
 	}
@@ -278,40 +304,13 @@ func (node *binTreeNode[E, V]) IsAdded() bool {
 func (node *binTreeNode[E, V]) SetAdded() {
 	if !node.added {
 		node.setNodeAdded(true)
-		node.adjustCount(1)
+		//node.adjustCount(1)
+		node.setContainmentCount(1, node.GetKeyContainedCount())
 	}
 }
 
 func (node *binTreeNode[E, V]) setNodeAdded(added bool) {
 	node.added = added
-}
-
-// Size returns the count of nodes added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
-// This is a constant-time operation since the size is maintained in each node and adjusted with each add and Remove operation in the sub-tree.
-func (node *binTreeNode[E, V]) Size() (storedSize int) {
-	if node != nil {
-		storedSize = node.storedSize
-		if storedSize == sizeUnknown {
-			iterator := node.containedFirstAllNodeIterator(true)
-			for next := iterator.Next(); next != nil; next = iterator.Next() {
-				var nodeSize int
-				if next.IsAdded() {
-					nodeSize = 1
-				}
-				lower := next.getLowerSubNode()
-				if lower != nil {
-					nodeSize += lower.storedSize
-				}
-				upper := next.getUpperSubNode()
-				if upper != nil {
-					nodeSize += upper.storedSize
-				}
-				next.storedSize = nodeSize
-			}
-			storedSize = node.storedSize
-		}
-	}
-	return
 }
 
 // NodeSize returns the count of all nodes in the tree starting from this node and extending to all sub-nodes.
@@ -327,18 +326,231 @@ func (node *binTreeNode[E, V]) NodeSize() int {
 	return totalCount
 }
 
-func (node *binTreeNode[E, V]) adjustCount(delta int) {
-	if delta != 0 {
-		thisNode := node
-		for {
-			thisNode.storedSize += delta
-			thisNode = thisNode.getParent()
-			if thisNode == nil {
-				break
+// Size returns the count of nodes added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
+// This is a constant-time operation since the size is maintained in each node and adjusted with each add and Remove operation in the sub-tree.
+func (node *binTreeNode[E, V]) Size() (storedSize int) {
+	if node != nil {
+		storedSize = node.storedSize
+		if storedSize == sizeUnknown {
+			iterator := node.containedFirstAllNodeIterator(true)
+			for next := iterator.Next(); next != nil; next = iterator.Next() {
+				var nodeSize int
+				var containedCount *big.Int
+				if next.IsAdded() {
+					nodeSize = 1
+					containedCount = next.GetKeyContainedCount()
+				} else {
+					containedCount = bigZero()
+				}
+				lower := next.getLowerSubNode()
+				if lower != nil {
+					nodeSize += lower.storedSize
+					containedCount.Add(containedCount, lower.containedCount)
+				}
+				upper := next.getUpperSubNode()
+				if upper != nil {
+					nodeSize += upper.storedSize
+					containedCount.Add(containedCount, upper.containedCount)
+				}
+				next.storedSize = nodeSize
+				next.containedCount = containedCount
+			}
+			storedSize = node.storedSize
+		}
+	}
+	return
+}
+
+// GetMatchingKeyCount returns the total number of elements covered by prefix block keys added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
+func (node *binTreeNode[E, V]) getMatchingKeyCount() *big.Int {
+	if node == nil {
+		return bigZeroConst()
+	}
+	if node.storedSize == sizeUnknown { // calculate containedCount for this node
+		node.Size()
+	}
+	count := node.containedCount
+	if count == nil { // in an empty trie with adjusting roots, it can have no contained count yet
+		count = bigZeroConst()
+	}
+	return count
+}
+
+// GetMatchingKeyCount returns the total number of elements covered by prefix block keys added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
+func (node *binTreeNode[E, V]) GetMatchingKeyCount() *big.Int {
+	return bigZero().Set(node.getMatchingKeyCount())
+}
+
+// GetKeyElementBig returns the added node containing the given index into the keys of the sub-trie starting with this node as the root, with the index of zero returning the first added node.
+// It also returns the remaining index into the returned node's key itself.
+//
+// If the increment is negative, or the increment exceeds GetCount() - 1, GetKeyElementBig panics.
+func (node *binTreeNode[E, V]) GetKeyElementBig(keyIndex *big.Int) (*binTreeNode[E, V], *big.Int) {
+	//func (node *binTreeNode[E, V]) GetKeyElementBig(keyIndex *big.Int) E {
+	if keyIndex.Sign() < 0 || node == nil {
+		outOfBounds()
+	}
+	if keyIndex.CmpAbs(node.getMatchingKeyCount()) >= 0 {
+		outOfBounds()
+	}
+	currentIndex := bigZero().Set(keyIndex)
+	currentNode := node
+	for {
+		if currentNode.IsAdded() {
+			return currentNode, currentIndex
+			// return currentNode.GetKey().GetKeyElement(currentIndex)
+		}
+
+		lowerNode := currentNode.getLowerSubNode()
+		if lowerNode == nil {
+			currentNode = currentNode.getUpperSubNode()
+		} else {
+			lowerCount := lowerNode.getMatchingKeyCount()
+			if currentIndex.CmpAbs(lowerCount) >= 0 {
+				currentIndex.Sub(currentIndex, lowerCount)
+				currentNode = currentNode.getUpperSubNode()
+			} else {
+				currentNode = lowerNode
 			}
 		}
 	}
 }
+
+// GetBig returns the address at the given index into the keys of the sub-trie starting with this node as the root, with the index of zero returning the first element covered by the first key.
+// It also returns the remaining index into the returned node's key itself.
+//
+// If the increment is negative, or the increment exceeds GetCount() - 1, this panics.
+func (node *binTreeNode[E, V]) GetKeyElement(addressIndex int64) (*binTreeNode[E, V], int64) {
+	// use IsUint64
+	if addressIndex < 0 || node == nil {
+		outOfBounds()
+	}
+
+	nodeCount := node.getMatchingKeyCount()
+	index := uint64(addressIndex) // we use uints because big.Int.Uint64() and big.Int.IsUint64 are more efficient than big.Int.Int64() and big.Int.IsInt64
+	if nodeCount.IsUint64() && index >= nodeCount.Uint64() {
+		outOfBounds()
+	}
+	for {
+		if node.IsAdded() {
+			return node, int64(index)
+		}
+		lowerNode := node.getLowerSubNode()
+		if lowerNode == nil {
+			node = node.getUpperSubNode()
+		} else {
+			lowerCount := lowerNode.getMatchingKeyCount()
+			if lowerCount.IsUint64() {
+				lc := lowerCount.Uint64()
+				if index >= lc {
+					index -= lc
+					node = node.getUpperSubNode()
+				} else {
+					node = lowerNode
+				}
+			} else {
+				node = lowerNode
+			}
+		}
+	}
+}
+
+func outOfBounds() {
+	panic("out of bounds")
+}
+
+// ContainingMaxElements returns true if and only if the total number of individial keys contained by the prefix block keys of
+// added nodes in the tree, starting from this node and extending to all sub-nodes, is the maximum possible.
+// In other words, the keys of the added nodes together contain all the possible individual sub-keys.
+func (node *binTreeNode[E, V]) ContainingMaxElements() bool {
+	if node == nil {
+		return true
+	}
+	maxContainedCount := node.GetKeyContainedCount()
+	return node.containedCount != nil && node.containedCount.CmpAbs(maxContainedCount) == 0
+}
+
+// GetKeyContainedCount returns the count of potential elements matched by the key
+func (node *binTreeNode[E, V]) GetKeyContainedCount() *big.Int {
+	if node == nil {
+		return bigZero()
+	}
+	return node.GetKey().GetCount()
+}
+
+func (node *binTreeNode[E, V]) addContainedCount(containedCountDelta *big.Int) {
+	count := node.containedCount
+	if count == nil {
+		node.containedCount = bigZero().Set(containedCountDelta)
+	} else {
+		count.Add(count, containedCountDelta)
+	}
+}
+
+// returns the delta between new and old, newCount - oldCount
+func (node *binTreeNode[E, V]) setContainedCount(newContainedCount *big.Int) *big.Int {
+	count := node.containedCount
+	if count == nil {
+		node.containedCount = bigZero().Set(newContainedCount)
+		return newContainedCount
+	}
+	result := bigZero().Sub(newContainedCount, count)
+	count.Set(newContainedCount)
+	return result
+}
+
+func (node *binTreeNode[E, V]) getSubNodeContainedCount() *big.Int {
+	lowerNode, upperNode := node.getLowerSubNode(), node.getUpperSubNode()
+	if lowerNode == nil {
+		if upperNode == nil {
+			return bigZeroConst()
+		}
+		return upperNode.containedCount
+	} else if upperNode == nil {
+		return lowerNode.containedCount
+	}
+	return addBigs(upperNode.containedCount, lowerNode.containedCount)
+}
+
+func (node *binTreeNode[E, V]) setContainmentCount(addedNodeDelta int, newContainedCount *big.Int) {
+	if newContainedCount == nil || newContainedCount.Sign() == 0 {
+		if addedNodeDelta != 0 {
+			node.incrementCounts(addedNodeDelta)
+		}
+		return
+	}
+	containedCountDelta := node.setContainedCount(newContainedCount)
+	if containedCountDelta.Sign() == 0 {
+		if addedNodeDelta != 0 {
+			node.incrementCounts(addedNodeDelta)
+		}
+		return
+	}
+	currentNode := node.getParent()
+	if addedNodeDelta == 0 {
+		for currentNode != nil {
+			if currentNode.IsAdded() {
+				break
+			}
+			currentNode.addContainedCount(containedCountDelta)
+			currentNode = currentNode.getParent()
+		}
+	} else {
+		node.storedSize += addedNodeDelta
+		for currentNode != nil {
+			if currentNode.IsAdded() {
+				currentNode.incrementCounts(addedNodeDelta)
+				break
+			}
+			currentNode.addContainedCount(containedCountDelta)
+			currentNode.storedSize += addedNodeDelta
+			currentNode = currentNode.getParent()
+		}
+	}
+}
+
+// Once a root is set, it is never changed.  A trie can start with no root node.  Each time we add an element we check if there is a root.
+// See ensureRoot.
 
 // Remove removes this node from the collection of added nodes,
 // and also removes from the tree if possible.
@@ -360,23 +572,49 @@ func (node *binTreeNode[E, V]) Remove() {
 	}
 }
 
+// RemoveChildren removes both child nodes of this node, if any exist.
+// Returns whether one was removed.
+func (node *binTreeNode[E, V]) RemoveChildren() bool {
+	node.checkCopy()
+	lower, upper := node.getLowerSubNode(), node.getUpperSubNode()
+	if lower != nil {
+		lower.Clear()
+		if upper != nil {
+			upper.Clear()
+		}
+		return true
+	} else if upper != nil {
+		upper.Clear()
+		return true
+	}
+	return false
+}
+
+// func (node *binTreeNode[E, V]) removed() {
+// 	node.adjustCount(-1)
+// 	node.setNodeAdded(false)
+// 	node.cTracker.changed()
+// 	node.ClearValue()
+// }
+
 func (node *binTreeNode[E, V]) removed() {
-	node.adjustCount(-1)
 	node.setNodeAdded(false)
-	node.cTracker.changed()
+	node.setContainmentCount(-1, node.getSubNodeContainedCount())
+	node.cTracker.Changed()
 	node.ClearValue()
 }
 
 // Makes the parent of this point to something else, thus removing this and all sub-nodes from the tree
-func (node *binTreeNode[E, V]) replaceThis(replacement *binTreeNode[E, V]) {
-	node.replaceThisRecursive(replacement, 0)
-	node.cTracker.changed()
+func (node *binTreeNode[E, V]) replaceThis(replacement *binTreeNode[E, V]) (result *binTreeNode[E, V]) {
+	result = node.replaceThisRecursive(replacement, 0, nil)
+	node.cTracker.Changed()
+	return
 }
 
-func (node *binTreeNode[E, V]) replaceThisRecursive(replacement *binTreeNode[E, V], additionalSizeAdjustment int) {
+func (node *binTreeNode[E, V]) replaceThisRecursive(replacement *binTreeNode[E, V], additionalSizeDecrement int, additionalContainmentCountDecrement *big.Int) (result *binTreeNode[E, V]) {
 	if node.IsRoot() {
 		node.replaceThisRoot(replacement)
-		return
+		return node
 	}
 	parent := node.getParent()
 	if parent.getUpperSubNode() == node {
@@ -384,35 +622,160 @@ func (node *binTreeNode[E, V]) replaceThisRecursive(replacement *binTreeNode[E, 
 		// before the parent severs the link to ourselves with the call to setUpper,
 		// since the setUpper call is allowed to change the characteristics of the child,
 		// and in some cases this does adjust the size of the child.
-		node.adjustTree(parent, replacement, additionalSizeAdjustment, true)
+		result = parent.adjustTree(node.storedSize, node.containedCount, replacement, additionalSizeDecrement, additionalContainmentCountDecrement, true)
+		node.setParent(nil)
 		parent.setUpper(replacement)
 	} else if parent.getLowerSubNode() == node {
-		node.adjustTree(parent, replacement, additionalSizeAdjustment, false)
+		result = parent.adjustTree(node.storedSize, node.containedCount, replacement, additionalSizeDecrement, additionalContainmentCountDecrement, false)
+		node.setParent(nil)
 		parent.setLower(replacement)
 	} else {
 		panic("corrupted trie") // will never reach here
 	}
+	return
 }
 
-func (node *binTreeNode[E, V]) adjustTree(parent, replacement *binTreeNode[E, V], additionalSizeAdjustment int, replacedUpper bool) {
-	sizeAdjustment := -node.storedSize
-	if replacement == nil {
-		if !parent.IsAdded() && (!freezeRoot || !parent.IsRoot()) {
-			parent.storedSize += sizeAdjustment
+func (node *binTreeNode[E, V]) adjustTree(
+	childSizeDecrement int,
+	childContainmentDecrement *big.Int,
+	childReplacement *binTreeNode[E, V],
+	additionalSizeDecrement int,
+	additionalContainmentCountDecrement *big.Int,
+	replacedUpper bool) *binTreeNode[E, V] {
+
+	isAdded := node.IsAdded()
+	if childReplacement == nil {
+		if !isAdded && (!freezeRoot || !node.IsRoot()) {
+			// parent is not added and thus can be replaced by its only remaining child, the one not being removed, or with nothing, if no remaining child
+			node.storedSize -= childSizeDecrement
+			node.containedCount = subtractBigs(node.containedCount, childContainmentDecrement)
 			var parentReplacement *binTreeNode[E, V]
 			if replacedUpper {
-				parentReplacement = parent.getLowerSubNode()
+				parentReplacement = node.getLowerSubNode()
 			} else {
-				parentReplacement = parent.getUpperSubNode()
+				parentReplacement = node.getUpperSubNode()
 			}
-			parent.replaceThisRecursive(parentReplacement, sizeAdjustment)
+			return node.replaceThisRecursive(parentReplacement, childSizeDecrement, childContainmentDecrement)
 		} else {
-			parent.adjustCount(sizeAdjustment + additionalSizeAdjustment)
+			var containedCountDecrement *big.Int
+			if !isAdded {
+				containedCountDecrement = addBigs(childContainmentDecrement, additionalContainmentCountDecrement)
+			}
+			node.adjustContainmentCount(
+				childSizeDecrement+additionalSizeDecrement,
+				containedCountDecrement)
 		}
 	} else {
-		parent.adjustCount(replacement.storedSize + sizeAdjustment + additionalSizeAdjustment)
+		var containedCountDecrement *big.Int
+		if !isAdded {
+			containedCountDecrement = subtractBigs(addBigs(childContainmentDecrement, additionalContainmentCountDecrement),
+				childReplacement.containedCount)
+		}
+		node.adjustContainmentCount(
+			childSizeDecrement+additionalSizeDecrement-childReplacement.storedSize,
+			containedCountDecrement)
 	}
-	node.setParent(nil)
+	return node
+}
+
+func (node *binTreeNode[E, V]) adjustContainmentCount(addedNodeDecrement int, containedCountDecrement *big.Int) {
+	if containedCountDecrement == nil || containedCountDecrement.Sign() == 0 {
+		if addedNodeDecrement != 0 {
+			node.decrementCounts(addedNodeDecrement)
+		}
+		return
+	}
+
+	currentNode := node
+	if addedNodeDecrement == 0 {
+		for {
+			currentNode.subtractContainedCount(containedCountDecrement)
+			currentNode = currentNode.getParent()
+			if currentNode == nil || currentNode.IsAdded() {
+				break
+			}
+		}
+	} else {
+		for {
+			currentNode.subtractContainedCount(containedCountDecrement)
+			currentNode.storedSize -= addedNodeDecrement
+			currentNode = currentNode.getParent()
+			if currentNode == nil {
+				break
+			} else if currentNode.IsAdded() {
+				currentNode.decrementCounts(addedNodeDecrement)
+				break
+			}
+		}
+	}
+}
+
+func (node *binTreeNode[E, V]) decrementCounts(nodeDecrement int) {
+	currentNode := node
+	for {
+		currentNode.storedSize -= nodeDecrement
+		currentNode = currentNode.getParent()
+		if currentNode == nil {
+			break
+		}
+	}
+}
+
+func (node *binTreeNode[E, V]) incrementCounts(nodeIncrement int) {
+	currentNode := node
+	for {
+		currentNode.storedSize += nodeIncrement
+		currentNode = currentNode.getParent()
+		if currentNode == nil {
+			break
+		}
+	}
+}
+
+func (node *binTreeNode[E, V]) subtractContainedCount(containedCountDecrement *big.Int) {
+	count := node.containedCount
+	if count == nil {
+		node.containedCount = bigZero().Neg(containedCountDecrement)
+	} else {
+		count.Sub(count, containedCountDecrement)
+	}
+}
+
+// addBigs returns one + two.  A nil value is considered to be zero.
+// It can also return nil if the result is zero.
+func addBigs(one, two *big.Int) *big.Int {
+	if one == nil {
+		return two
+	} else if two == nil {
+		return one
+	} else if one.Sign() == 0 {
+		return two
+	} else if two.Sign() == 0 {
+		return one
+	}
+	res := bigZero().Add(one, two)
+	if res.Sign() == 0 {
+		return nil
+	}
+	return res
+}
+
+// subtractBigs returns one - two.  A nil value is considered to be zero.
+// It can also return nil if the result is zero.
+func subtractBigs(one, two *big.Int) *big.Int {
+	if one == nil {
+		if two == nil {
+			return nil
+		}
+		return bigZero().Neg(two)
+	} else if two == nil || two.Sign() == 0 {
+		return one
+	}
+	res := bigZero().Sub(one, two)
+	if res.Sign() == 0 {
+		return nil
+	}
+	return res
 }
 
 func (node *binTreeNode[E, V]) replaceThisRoot(replacement *binTreeNode[E, V]) {
@@ -423,11 +786,15 @@ func (node *binTreeNode[E, V]) replaceThisRoot(replacement *binTreeNode[E, V]) {
 		if !freezeRoot {
 			var e E
 			node.setKey(e)
-			//node.setKey(nil)
 			// here we'd need to replace with the default root (ie call setKey with key of 0.0.0.0/0 or ::/0 or 0:0:0:0:0:0)
 		}
 		node.storedSize = 0
 		node.ClearValue()
+		if node.containedCount == nil {
+			node.containedCount = bigZero()
+		} else {
+			node.containedCount.SetInt64(0)
+		}
 	} else {
 		// We never go here when FREEZE_ROOT is true
 		node.setNodeAdded(replacement.IsAdded())
@@ -436,10 +803,14 @@ func (node *binTreeNode[E, V]) replaceThisRoot(replacement *binTreeNode[E, V]) {
 		node.setKey(replacement.GetKey())
 		node.storedSize = replacement.storedSize
 		node.SetValue(replacement.GetValue())
+		if node.containedCount == nil {
+			node.containedCount = bigZero()
+		}
+		node.containedCount.Set(replacement.containedCount)
 	}
 }
 
-// Clear removes this node and all sub-nodes from the sub-tree with this node as the root, after which isEmpty() will return true.
+// Clear removes this node and all sub-nodes
 func (node *binTreeNode[E, V]) Clear() {
 	node.checkCopy()
 	if node != nil {
@@ -447,9 +818,13 @@ func (node *binTreeNode[E, V]) Clear() {
 	}
 }
 
+func (node *binTreeNode[E, V]) isInitialRoot() bool {
+	return node.getUpperSubNode() == nil && node.getLowerSubNode() == nil && !node.IsAdded()
+}
+
 // IsEmpty returns where there are not any elements in the sub-tree with this node as the root.
 func (node *binTreeNode[E, V]) IsEmpty() bool {
-	return !node.IsAdded() && node.getUpperSubNode() == nil && node.getLowerSubNode() == nil
+	return node.isInitialRoot()
 }
 
 // IsLeaf returns whether this node is in the tree (a node for which IsAdded() is true)
@@ -765,7 +1140,7 @@ func (node *binTreeNode[E, V]) previousAddedNode() *binTreeNode[E, V] {
 
 // The generic method pointers are fine.  The parser errors are just a Goland problem.  Try it out in playground: https://go.dev/play/p/lf8zJtGCKYI
 
-func nextTest[E Key, V any](current, end *binTreeNode[E, V], nextOperator func(current *binTreeNode[E, V], end *binTreeNode[E, V]) *binTreeNode[E, V], tester func(current *binTreeNode[E, V]) bool) *binTreeNode[E, V] {
+func nextTest[E Key[E], V any](current, end *binTreeNode[E, V], nextOperator func(current *binTreeNode[E, V], end *binTreeNode[E, V]) *binTreeNode[E, V], tester func(current *binTreeNode[E, V]) bool) *binTreeNode[E, V] {
 	for {
 		current = nextOperator(current, end)
 		if current == end || current == nil {
@@ -893,7 +1268,7 @@ const (
 	belowElbows     = "  "
 )
 
-type nodePrinter[E Key, V any] interface {
+type nodePrinter[E Key[E], V any] interface {
 	GetKey() E
 	GetValue() V
 	IsAdded() bool
@@ -910,7 +1285,7 @@ func isNil[V any](v V) bool {
 
 // NodeString returns a visual representation of the given node including the key, with an open circle indicating this node is not an added node,
 // a closed circle indicating this node is an added node.
-func NodeString[E Key, V any](node nodePrinter[E, V]) string {
+func NodeString[E Key[E], V any](node nodePrinter[E, V]) string {
 	if node == nil {
 		return nilString()
 	}
@@ -934,9 +1309,18 @@ type indents struct {
 // withNonAddedKeys: whether to show nodes that are not added nodes
 // withSizes: whether to include the counts of added nodes in each sub-tree
 func (node *binTreeNode[E, V]) TreeString(withNonAddedKeys, withSizes bool) string {
+	return node.TreeStringWithCounts(withNonAddedKeys, withSizes, false)
+}
+
+// TreeStringWithCounts returns a visual representation of the sub-tree with this node as root, with one node per line.
+//
+// withNonAddedKeys: whether to show nodes that are not added nodes
+// withSizes: whether to include the counts of added nodes in each sub-tree
+// withMatchingAddressCounts whether to include the counts of keys that can be matched by each sub-tree
+func (node *binTreeNode[E, V]) TreeStringWithCounts(withNonAddedKeys, withSizes, withMatchingAddressCounts bool) string {
 	builder := strings.Builder{}
 	builder.WriteByte('\n')
-	node.printTree(&builder, indents{}, withNonAddedKeys, withSizes)
+	node.printTree(&builder, indents{}, withNonAddedKeys, withSizes, withMatchingAddressCounts)
 	return builder.String()
 }
 
@@ -944,7 +1328,8 @@ func (node *binTreeNode[E, V]) printTree(
 	builder *strings.Builder,
 	initialIndents indents,
 	withNonAdded,
-	withSizes bool) {
+	withSizes,
+	withMatchingAddressCounts bool) {
 	if node == nil {
 		builder.WriteString(initialIndents.nodeIndent)
 		builder.WriteString(nilString())
@@ -967,9 +1352,18 @@ func (node *binTreeNode[E, V]) printTree(
 		if withNonAdded || next.IsAdded() {
 			builder.WriteString(nodeIndent)
 			builder.WriteString(next.String())
-			if withSizes {
+
+			if withSizes || withMatchingAddressCounts {
 				builder.WriteString(" (")
-				builder.WriteString(strconv.Itoa(next.Size()))
+				if withSizes {
+					builder.WriteString(strconv.Itoa(next.Size()))
+					if withMatchingAddressCounts {
+						builder.WriteString(", ")
+						builder.WriteString(next.getMatchingKeyCount().String())
+					}
+				} else { // withMatchingAddressCounts is true
+					builder.WriteString(next.getMatchingKeyCount().String())
+				}
 				builder.WriteByte(')')
 			}
 			builder.WriteByte('\n')
@@ -1027,7 +1421,7 @@ func (node binTreeNode[E, V]) format(state fmt.State, verb rune) {
 }
 
 // only used to eliminate the method set of *binTreeNode
-type binTreeNodePtr[E Key, V any] *binTreeNode[E, V]
+type binTreeNodePtr[E Key[E], V any] *binTreeNode[E, V]
 
 func flagsFromState(state fmt.State, verb rune) string {
 	flags := "# +-0"
@@ -1068,8 +1462,10 @@ func (node *binTreeNode[E, V]) clone() *binTreeNode[E, V] {
 	result.setUpper(nil)
 	if node.IsAdded() {
 		result.storedSize = 1
+		result.containedCount = node.GetKeyContainedCount()
 	} else {
 		result.storedSize = 0
+		result.containedCount = bigZero()
 	}
 	// it is ok to have no change tracker, because the parent, lower and upper are nil
 	// so any attempt to remove or clear will do nothing,
@@ -1082,19 +1478,23 @@ func (node *binTreeNode[E, V]) clone() *binTreeNode[E, V] {
 	return &result
 }
 
-func (node *binTreeNode[E, V]) cloneTreeNode(cTracker *changeTracker, pool *sync.Pool) *binTreeNode[E, V] {
+func (node *binTreeNode[E, V]) cloneTreeNode(cTracker *ChangeTracker, pool *sync.Pool) *binTreeNode[E, V] {
 	if node == nil {
 		return nil
 	}
 	result := *node // maintains same key and value which are not copied
 	result.setParent(nil)
+	// intentionally not clearing lower or upper
 	result.cTracker = cTracker
 	result.pool = pool
 	result.setAddr()
+	if result.containedCount != nil {
+		result.containedCount = bigZero().Set(result.containedCount)
+	}
 	return &result
 }
 
-func (node *binTreeNode[E, V]) cloneTreeTrackerBounds(ctracker *changeTracker, pool *sync.Pool, bnds *bounds[E]) *binTreeNode[E, V] {
+func (node *binTreeNode[E, V]) cloneTreeTrackerBounds(ctracker *ChangeTracker, pool *sync.Pool, bnds *bounds[E]) *binTreeNode[E, V] {
 	if node == nil {
 		return nil
 	}

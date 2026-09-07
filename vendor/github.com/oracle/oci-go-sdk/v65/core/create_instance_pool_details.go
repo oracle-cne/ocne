@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -22,6 +22,8 @@ import (
 )
 
 // CreateInstancePoolDetails The data to create an instance pool.
+// For a GMC-enabled resource pool, the referenced instance configuration must be a GMC configuration and
+// the placement configuration must identify the availability domain and compute cluster for the pool.
 type CreateInstancePoolDetails struct {
 
 	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the compartment containing the instance pool.
@@ -36,9 +38,11 @@ type CreateInstancePoolDetails struct {
 	// To use the instance pool with a regional subnet, provide a placement configuration for
 	// each availability domain, and include the regional subnet in each placement
 	// configuration.
+	// To use compute cluster with instance pool, provide a single placement configuration.
 	PlacementConfigurations []CreateInstancePoolPlacementConfigurationDetails `mandatory:"true" json:"placementConfigurations"`
 
 	// The number of instances that should be in the instance pool.
+	// For a GMC-enabled resource pool, this is the number of GMC resources that should be in the pool.
 	Size *int `mandatory:"true" json:"size"`
 
 	// Defined tags for this resource. Each key is predefined and scoped to a

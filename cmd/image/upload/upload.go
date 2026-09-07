@@ -12,6 +12,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/commands/image/upload"
 	"github.com/oracle-cne/ocne/pkg/config/types"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -104,6 +105,16 @@ func ovrIfSet(src string, dest *string) {
 	}
 }
 
+func resolveProviderType(cmd *cobra.Command, commandLineProvider string, configProvider string) string {
+	if !cmd.Flags().Changed(flagProviderType) && configProvider != "" {
+		log.Debugf("Using image upload provider type %q from cluster configuration", configProvider)
+		return configProvider
+	}
+
+	log.Debugf("Using image upload provider type %q from command line/default options", commandLineProvider)
+	return commandLineProvider
+}
+
 // RunCmd runs the "ocne image upload" command
 func RunCmd(cmd *cobra.Command) error {
 	_, cc, err := cmdutil.GetFullConfig(&config, &clusterConfig, clusterConfigPath)
@@ -115,6 +126,7 @@ func RunCmd(cmd *cobra.Command) error {
 	ovrIfSet(uploadOptions.BucketName, &cc.Providers.Oci.ImageBucket)
 	ovrIfSet(uploadOptions.CompartmentName, &cc.Providers.Oci.Compartment)
 	ovrIfSet(uploadOptions.Profile, &cc.Providers.Oci.Profile)
+	uploadOptions.ProviderType = resolveProviderType(cmd, uploadOptions.ProviderType, cc.Provider)
 
 	uploadOptions.ClusterConfig = cc
 	if err := flags.ValidateArchitecture(uploadOptions.ImageArchitecture); err != nil {

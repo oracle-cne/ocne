@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -30,6 +30,7 @@ type LicensingConfig struct {
 	// License Type for the OS license.
 	// * `OCI_PROVIDED` - OCI provided license (e.g. metered $/OCPU-hour).
 	// * `BRING_YOUR_OWN_LICENSE` - Bring your own license.
+	// * `PARTNER_PROVIDED` - Partner provided license.
 	LicenseType LicensingConfigLicenseTypeEnum `mandatory:"false" json:"licenseType,omitempty"`
 
 	// The Operating System version of the license config.
@@ -103,16 +104,19 @@ type LicensingConfigLicenseTypeEnum string
 const (
 	LicensingConfigLicenseTypeOciProvided         LicensingConfigLicenseTypeEnum = "OCI_PROVIDED"
 	LicensingConfigLicenseTypeBringYourOwnLicense LicensingConfigLicenseTypeEnum = "BRING_YOUR_OWN_LICENSE"
+	LicensingConfigLicenseTypePartnerProvided     LicensingConfigLicenseTypeEnum = "PARTNER_PROVIDED"
 )
 
 var mappingLicensingConfigLicenseTypeEnum = map[string]LicensingConfigLicenseTypeEnum{
 	"OCI_PROVIDED":           LicensingConfigLicenseTypeOciProvided,
 	"BRING_YOUR_OWN_LICENSE": LicensingConfigLicenseTypeBringYourOwnLicense,
+	"PARTNER_PROVIDED":       LicensingConfigLicenseTypePartnerProvided,
 }
 
 var mappingLicensingConfigLicenseTypeEnumLowerCase = map[string]LicensingConfigLicenseTypeEnum{
 	"oci_provided":           LicensingConfigLicenseTypeOciProvided,
 	"bring_your_own_license": LicensingConfigLicenseTypeBringYourOwnLicense,
+	"partner_provided":       LicensingConfigLicenseTypePartnerProvided,
 }
 
 // GetLicensingConfigLicenseTypeEnumValues Enumerates the set of values for LicensingConfigLicenseTypeEnum
@@ -129,6 +133,7 @@ func GetLicensingConfigLicenseTypeEnumStringValues() []string {
 	return []string{
 		"OCI_PROVIDED",
 		"BRING_YOUR_OWN_LICENSE",
+		"PARTNER_PROVIDED",
 	}
 }
 

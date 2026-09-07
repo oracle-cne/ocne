@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/version"
@@ -59,9 +59,8 @@ type UpgradePlan struct {
 
 // UpgradeOptions defines the options used to upgrade installation.
 type UpgradeOptions struct {
-	WaitProviders                    bool
-	WaitProviderTimeout              time.Duration
-	EnableCRDStorageVersionMigration bool
+	WaitProviders       bool
+	WaitProviderTimeout time.Duration
 }
 
 // isPartialUpgrade returns true if at least one upgradeItem in the plan does not have a target version.
@@ -107,8 +106,8 @@ func (u *providerUpgrader) Plan(ctx context.Context) ([]UpgradePlan, error) {
 	}
 
 	// The core provider is driving all the plan logic for entire management cluster, because all the providers
-	// are expected to support the same contract version or compatible onew.
-	// e.g if the core provider supports v1alpha4, all the providers in the same management cluster should support v1alpha4 as well;
+	// are expected to support the same contract version or compatible one.
+	// E.g. if the core provider supports v1alpha4, all the providers in the same management cluster should support v1alpha4 as well;
 	// all the providers in the management cluster can upgrade to the latest release supporting v1alpha4, or if available,
 	// all the providers can upgrade to the latest release supporting v1alpha5 (not supported in current clusterctl release,
 	// but upgrade plan should report these options)
@@ -116,7 +115,7 @@ func (u *providerUpgrader) Plan(ctx context.Context) ([]UpgradePlan, error) {
 	// Gets the upgrade info for the core provider.
 	coreProviders := providerList.FilterCore()
 	if len(coreProviders) != 1 {
-		return nil, errors.Errorf("invalid management cluster: there must be one core provider, found %d", len(coreProviders))
+		return nil, pkgerrors.Errorf("invalid management cluster: there must be one core provider, found %d", len(coreProviders))
 	}
 	coreProvider := coreProviders[0]
 
@@ -129,7 +128,7 @@ func (u *providerUpgrader) Plan(ctx context.Context) ([]UpgradePlan, error) {
 	// This includes the current contract and the new ones available, if any.
 	contractsForUpgrade := coreUpgradeInfo.getContractsForUpgrade()
 	if len(contractsForUpgrade) == 0 {
-		return nil, errors.Wrapf(err, "invalid metadata: unable to find the contract version implemented by the %s provider", coreProvider.InstanceName())
+		return nil, pkgerrors.Wrapf(err, "invalid metadata: unable to find the contract version implemented by the %s provider", coreProvider.InstanceName())
 	}
 
 	// Creates an UpgradePlan for each contract version considered for upgrades; each upgrade plans contains
@@ -158,7 +157,7 @@ func (u *providerUpgrader) Plan(ctx context.Context) ([]UpgradePlan, error) {
 
 func (u *providerUpgrader) ApplyPlan(ctx context.Context, opts UpgradeOptions, contract string) error {
 	if contract != u.currentContractVersion {
-		return errors.Errorf("current version of clusterctl could only upgrade to %s contract, requested %s", u.currentContractVersion, contract)
+		return pkgerrors.Errorf("current version of clusterctl could only upgrade to %s contract, requested %s", u.currentContractVersion, contract)
 	}
 
 	log := logf.Log
@@ -173,6 +172,15 @@ func (u *providerUpgrader) ApplyPlan(ctx context.Context, opts UpgradeOptions, c
 	upgradePlan, err := u.getUpgradePlan(ctx, providerList.Items, contract)
 	if err != nil {
 		return err
+	}
+
+	// Make sure there is something to upgrade, clear providers that do not
+	// need it
+	for i := len(upgradePlan.Providers) - 1; i >= 0; i-- {
+		if upgradePlan.Providers[i].NextVersion == "" {
+			// Remove this from our plan
+			upgradePlan.Providers = append(upgradePlan.Providers[:i], upgradePlan.Providers[i+1:]...)
+		}
 	}
 
 	// Do the upgrade
@@ -238,7 +246,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 	}
 	coreProviders := providerList.FilterCore()
 	if len(coreProviders) != 1 {
-		return nil, errors.Errorf("invalid management cluster: there must be one core provider, found %d", len(coreProviders))
+		return nil, pkgerrors.Errorf("invalid management cluster: there must be one core provider, found %d", len(coreProviders))
 	}
 	coreProvider := coreProviders[0]
 
@@ -256,7 +264,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 	}
 
 	if targetContract != u.currentContractVersion {
-		return nil, errors.Errorf("current version of clusterctl could only upgrade the core provider to %s contract version, requested %s", u.currentContractVersion, targetContract)
+		return nil, pkgerrors.Errorf("current version of clusterctl could only upgrade the core provider to %s contract version, requested %s", u.currentContractVersion, targetContract)
 	}
 	compatibleContracts := u.getCompatibleContractVersions(targetContract)
 
@@ -276,7 +284,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 			}
 		}
 		if provider == nil {
-			return nil, errors.Errorf("unable to perform upgrade: the provider %s in not part of the management cluster", upgradeItem.InstanceName())
+			return nil, pkgerrors.Errorf("unable to perform upgrade: the provider %s in not part of the management cluster", upgradeItem.InstanceName())
 		}
 
 		if upgradeItem.Version == "" {
@@ -290,7 +298,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 		}
 
 		if !compatibleContracts.Has(contract) {
-			return nil, errors.Errorf("unable to perform upgrade: the target version for the provider %s implements the %s contract version, while the core provider supports %s contract versions", upgradeItem.InstanceName(), contract, strings.Join(compatibleContracts.UnsortedList(), ", "))
+			return nil, pkgerrors.Errorf("unable to perform upgrade: the target version for the provider %s implements the %s contract version, while the core provider supports %s contract versions", upgradeItem.InstanceName(), contract, strings.Join(compatibleContracts.UnsortedList(), ", "))
 		}
 
 		upgradePlan.Providers = append(upgradePlan.Providers, upgradeItem)
@@ -311,7 +319,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 		}
 
 		if !compatibleContracts.Has(contract) {
-			return nil, errors.Errorf("unable to perform upgrade: the provider %s implements the %s contract version, while the core provider is getting updated to a version that supports %s contract versions. Please include the %[1]s provider in the upgrade", provider.InstanceName(), contract, strings.Join(compatibleContracts.UnsortedList(), ", "))
+			return nil, pkgerrors.Errorf("unable to perform upgrade: the provider %s implements the %s contract version, while the core provider is getting updated to a version that supports %s contract versions. Please include the %[1]s provider in the upgrade", provider.InstanceName(), contract, strings.Join(compatibleContracts.UnsortedList(), ", "))
 		}
 	}
 	return upgradePlan, nil
@@ -321,7 +329,7 @@ func (u *providerUpgrader) createCustomPlan(ctx context.Context, upgradeItems []
 func (u *providerUpgrader) getProviderContractByVersion(ctx context.Context, provider clusterctlv1.Provider, targetVersion string) (string, error) {
 	targetSemVersion, err := version.ParseSemantic(targetVersion)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse target version for the %s provider", provider.InstanceName())
+		return "", pkgerrors.Wrapf(err, "failed to parse target version for the %s provider", provider.InstanceName())
 	}
 
 	// Gets the metadata for the core Provider
@@ -332,7 +340,7 @@ func (u *providerUpgrader) getProviderContractByVersion(ctx context.Context, pro
 
 	releaseSeries := upgradeInfo.metadata.GetReleaseSeriesForVersion(targetSemVersion)
 	if releaseSeries == nil {
-		return "", errors.Errorf("invalid target version: version %s for the provider %s does not match any release series", targetVersion, provider.InstanceName())
+		return "", pkgerrors.Errorf("invalid target version: version %s for the provider %s does not match any release series", targetVersion, provider.InstanceName())
 	}
 	return releaseSeries.Contract, nil
 }
@@ -379,7 +387,7 @@ func (u *providerUpgrader) doUpgrade(ctx context.Context, upgradePlan *UpgradePl
 
 		currentVersion, err := semver.ParseTolerant(upgradeItem.Version)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse current version for %s provider", upgradeItem.InstanceName())
+			return pkgerrors.Wrapf(err, "failed to parse current version for %s provider", upgradeItem.InstanceName())
 		}
 
 		if currentVersion.LT(minVersionSkew) {
@@ -388,11 +396,11 @@ func (u *providerUpgrader) doUpgrade(ctx context.Context, upgradePlan *UpgradePl
 
 		nextVersion, err := semver.ParseTolerant(upgradeItem.NextVersion)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse next version for %s provider", upgradeItem.InstanceName())
+			return pkgerrors.Wrapf(err, "failed to parse next version for %s provider", upgradeItem.InstanceName())
 		}
 
 		if nextVersion.Minor > currentVersion.Minor+3 {
-			return errors.Errorf("upgrade for %s provider can't skip more than 3 versions", upgradeItem.InstanceName())
+			return pkgerrors.Errorf("upgrade for %s provider can't skip more than 3 versions", upgradeItem.InstanceName())
 		}
 	}
 
@@ -401,33 +409,6 @@ func (u *providerUpgrader) doUpgrade(ctx context.Context, upgradePlan *UpgradePl
 	sort.Slice(providers, func(a, b int) bool {
 		return providers[a].GetProviderType().Order() < providers[b].GetProviderType().Order()
 	})
-
-	if opts.EnableCRDStorageVersionMigration {
-		// Migrate CRs to latest CRD storage version, if necessary.
-		// Note: We have to do this before the providers are scaled down or deleted
-		// so conversion webhooks still work.
-		for _, upgradeItem := range providers {
-			// If there is not a specified next version, skip it (we are already up-to-date).
-			if upgradeItem.NextVersion == "" {
-				continue
-			}
-
-			// Gets the provider components for the target version.
-			components, err := u.getUpgradeComponents(ctx, upgradeItem)
-			if err != nil {
-				return err
-			}
-
-			c, err := u.proxy.NewClient(ctx)
-			if err != nil {
-				return err
-			}
-
-			if err := NewCRDMigrator(c).Run(ctx, components.Objs()); err != nil {
-				return err
-			}
-		}
-	}
 
 	// Scale down all providers.
 	// This is done to ensure all Pods of all "old" provider Deployments have been deleted.
@@ -482,11 +463,7 @@ func (u *providerUpgrader) doUpgrade(ctx context.Context, upgradePlan *UpgradePl
 		}
 	}
 
-	installOpts := InstallOptions{
-		WaitProviders:       opts.WaitProviders,
-		WaitProviderTimeout: opts.WaitProviderTimeout,
-	}
-	return waitForProvidersReady(ctx, installOpts, installQueue, u.proxy)
+	return waitForProvidersReady(ctx, InstallOptions(opts), installQueue, u.proxy)
 }
 
 func (u *providerUpgrader) scaleDownProvider(ctx context.Context, provider clusterctlv1.Provider) error {
@@ -507,7 +484,7 @@ func (u *providerUpgrader) scaleDownProvider(ctx context.Context, provider clust
 			clusterctlv1.ClusterctlLabel: "",
 			clusterv1.ProviderNameLabel:  provider.ManifestLabel(),
 		}); err != nil {
-		return errors.Wrapf(err, "failed to list Deployments for provider %s", provider.Name)
+		return pkgerrors.Wrapf(err, "failed to list Deployments for provider %s", provider.Name)
 	}
 
 	// Scale down provider Deployments.
@@ -526,7 +503,7 @@ func scaleDownDeployment(ctx context.Context, c client.Client, deploy appsv1.Dep
 	if err := retryWithExponentialBackoff(ctx, newWriteBackoff(), func(ctx context.Context) error {
 		deployment := &appsv1.Deployment{}
 		if err := c.Get(ctx, client.ObjectKeyFromObject(&deploy), deployment); err != nil {
-			return errors.Wrapf(err, "failed to get Deployment/%s", deploy.GetName())
+			return pkgerrors.Wrapf(err, "failed to get Deployment/%s", deploy.GetName())
 		}
 
 		// Deployment already scaled down, return early.
@@ -537,11 +514,11 @@ func scaleDownDeployment(ctx context.Context, c client.Client, deploy appsv1.Dep
 		// Scale down.
 		deployment.Spec.Replicas = ptr.To[int32](0)
 		if err := c.Update(ctx, deployment); err != nil {
-			return errors.Wrapf(err, "failed to update Deployment/%s", deploy.GetName())
+			return pkgerrors.Wrapf(err, "failed to update Deployment/%s", deploy.GetName())
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrapf(err, "failed to scale down Deployment")
+		return pkgerrors.Wrapf(err, "failed to scale down Deployment")
 	}
 
 	deploymentScaleToZeroBackOff := wait.Backoff{
@@ -553,7 +530,7 @@ func scaleDownDeployment(ctx context.Context, c client.Client, deploy appsv1.Dep
 	if err := retryWithExponentialBackoff(ctx, deploymentScaleToZeroBackOff, func(ctx context.Context) error {
 		deployment := &appsv1.Deployment{}
 		if err := c.Get(ctx, client.ObjectKeyFromObject(&deploy), deployment); err != nil {
-			return errors.Wrapf(err, "failed to get Deployment/%s", deploy.GetName())
+			return pkgerrors.Wrapf(err, "failed to get Deployment/%s", deploy.GetName())
 		}
 
 		// Deployment is scaled down.
@@ -561,9 +538,9 @@ func scaleDownDeployment(ctx context.Context, c client.Client, deploy appsv1.Dep
 			return nil
 		}
 
-		return errors.Errorf("Deployment still has %d replicas", deployment.Status.Replicas)
+		return pkgerrors.Errorf("Deployment still has %d replicas", deployment.Status.Replicas)
 	}); err != nil {
-		return errors.Wrapf(err, "failed to wait until Deployment is scaled down")
+		return pkgerrors.Wrapf(err, "failed to wait until Deployment is scaled down")
 	}
 
 	return nil

@@ -1,5 +1,5 @@
 //
-// Copyright 2022-2024 Sean C Foley
+// Copyright 2022-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package tree
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"sync"
 	"unsafe"
@@ -26,14 +27,20 @@ type operation int
 
 const (
 	// Given a key E
-	insert         operation = iota // add node for E if not already there
-	remap                           // alters nodes based on the existing nodes and their values
-	lookup                          // find node for E, traversing all containing elements along the way
-	near                            // closest match, going down trie to get element considered closest. Whether one thing is closer than another is determined by the sorted order.
-	containing                      // find a single node whose key contains E
-	allContaining                   // list the nodes whose keys contain E
-	insertedDelete                  // Remove node for E
-	subtreeDelete                   // Remove nodes whose keys are contained by E
+	insert        operation = iota // add node for E if not already there
+	remap                          // alters nodes based on the existing nodes and their values
+	lookup                         // find node for E, traversing all containing elements along the way
+	containing                     // find a single node whose key contains E
+	allContaining                  // list the nodes whose keys contain E
+	near                           // closest match, search trie to get added element considered closest according to the trie order.
+	// Whether one thing is closer than another is determined by the sorted order.
+	// For example, for subnet 1.2.0.0/16, 1.2.128.0 is closest address on the high side, 1.2.127.255 is closest address on the low side
+
+	containmentNear           // closest to match or containment.  An address or subnet contained in an added subnet node is a match.  Otherwise, find the nearest to containment or match.
+	delete                    // Remove node for E
+	subtreeDelete             // Remove nodes whose keys are contained by E
+	intersectingSubtreeDelete // remove nodes whose keys intersect E
+	addUncontained            // add E if not contained by an existing added node
 )
 
 type opResult[E TrieKey[E], V any] struct {
@@ -86,7 +93,10 @@ type opResult[E TrieKey[E], V any] struct {
 	// deletions:
 
 	// this tree was deleted
-	deleted *BinTrieNode[E, V]
+	deleted,
+
+	// this trie node is the parent node that remains after the "deleted" node was deleted, which might not be the direct parent
+	remainingParent *BinTrieNode[E, V]
 
 	// contains:
 
@@ -112,6 +122,8 @@ type opResult[E TrieKey[E], V any] struct {
 	// this added tree node was already added to the trie
 	addedAlready *BinTrieNode[E, V]
 
+	previousAddrCounts []*big.Int
+
 	//
 	//
 	//
@@ -124,6 +136,9 @@ type opResult[E TrieKey[E], V any] struct {
 	comp KeyCompareResult
 }
 
+// clean cleans up the opresult to be reused with another operation.
+// Do not use with "near", "insert", "remap", "delete", "subtreeDelete".
+// We'd need to do more cleaning if we did.
 func (result *opResult[E, V]) clean() {
 	result.exists = false
 	result.existingNode = nil
@@ -134,6 +149,7 @@ func (result *opResult[E, V]) clean() {
 	result.containingEnd = nil
 	result.smallestContaining = nil
 	result.largestContaining = nil
+	result.previousAddrCounts = nil
 
 	// the remainder do not need cleaning, only those fields used by ops that use pooling of opResult, the "search" operations
 }
@@ -150,6 +166,7 @@ func (result *opResult[E, V]) getContaining() *Path[E, V] {
 }
 
 // add to the list of tree elements that contain the supplied argument
+// containingSub is always an "added" node
 func (result *opResult[E, V]) addContaining(containingSub *BinTrieNode[E, V]) {
 	if containingSub.IsAdded() {
 		node := &PathNode[E, V]{
@@ -168,6 +185,12 @@ func (result *opResult[E, V]) addContaining(containingSub *BinTrieNode[E, V]) {
 			for next := last.previous; next != nil; next = next.previous {
 				next.storedSize++
 			}
+
+			// Each node in the list is an added node with size and containingCount initialized to default values or a single added node, by the call to clone().
+			// That means no changes are needed for containmentCount, just size, as we add each node to the list.
+			// The second arg here could be cloned.getKeyContainedCount() to set to the correct value,
+			// but we know that the value is already correct, so we just pass null for containmentCount instead.
+			//last.setContainmentCount(1, nil)
 		}
 		result.containingEnd = node
 	}
@@ -208,21 +231,30 @@ type KeyCompareResult interface {
 // For keys with a prefix length, the prefix length must remain constance, and the prefix bits must remain constant.
 // For keys with no prefix length, all the key bits must remain constant.
 type TrieKey[E any] interface {
-	comparable
 
 	// MatchBits matches the bits in this key to the bits in the given key, starting from the given bit index.
-	// Only the remaining bits in the prefix can be compared for either key.
-	// If the prefix length of a key is nil, all the remaining bits can be compared.
+	// Only the remaining bits, past the bit index, in the prefix can be compared for either key.
+	// If the prefix length of a key is nil, then the entire key is considered to be the prefix, and all the remaining bits are comparable.
 	//
-	// MatchBits returns false on a successful match or mismatch, and true if only a partial match, in which case further trie traversal is required.
-	// In the case where continueToNext is true, followingBitsFlag is 0 if the single bit in the given key that follows the prefix length of this key is zero, and non-zero otherwise.
+	// MatchBits returns false on a successful match or mismatch, or a partial match in which no further trie traveral is required.
+	// MatchBits returns true for a partial match with further trie traversal required.
+	// Whether further traversal is required is determined by the value returned by BitsMatchPartially in the callback KeyCompareResult.
+	// In such cases, when continueToNext is true, followingBitsFlag is 0 if the single bit in the given key that follows the prefix length of this key is zero, and non-zero otherwise.
 	//
-	// MatchBits calls BitsMatch in handleMatch when the given key matches all the bits in this key (even if this key has a shorter prefix),
-	// or calls BitsDoNotMatch in handleMatch when there is a mismatch of bits, returning true in both cases.
+	// MatchBits calls BitsMatch in handleMatch when the given key matches all the prefix bits in this key (even if this key has a shorter prefix).
+	// MatchBits calls BitsDoNotMatch in handleMatch when there is a mismatch of bits, if the simpleMatch argument is false.
+	// When simpleMatch is true, and there is a mismatch, no callback is called.
+	// Whenver there is a match or a mismatch, false is returned to indicate no durther traversal is required.
 	//
-	// If the given key has a shorter prefix length, so not all bits in this key can be compared to the given key,
+	// The remaining case is when the bits match partially.
+	// When the given key has a shorter prefix length, so not all bits in this key can be compared to the given key,
 	// but the bits that can be compared are a match, then that is a partial match.
-	// MatchBits calls neither method in handleMatch and returns false in that case.
+	// MatchBits calls neither BitsMatch or BitsDoNotMatch in handleMatch.  Instead, it calls BitsMatchPartially.
+	// In that case, the value returned as continueToNext will match the value that is returned from the call to BitsMatchPartially.
+	//
+	// trieKeyData is the key data pertaining to this key, the receiver.
+	// It is optional, the call to MatchBits will obtain it if necessary if the passed in argument is nil.
+	// It is provided as an argument if there will be multiple calls to MatchBits for the same receiver key, in which case it is more efficient to obtain the data just once.
 	MatchBits(key E, bitIndex BitCount, simpleMatch bool, handleMatch KeyCompareResult, trieKeyData *TrieKeyData) (continueToNext bool, followingBitsFlag uint64)
 
 	// Compare returns a negative integer, zero, or a positive integer if this instance is less than, equal, or greater than the give item.
@@ -235,6 +267,9 @@ type TrieKey[E any] interface {
 
 	// GetBitCount returns the bit count for the key, which is a fixed value for any and all keys in the trie.
 	GetBitCount() BitCount
+
+	// GetCount returns the count of elements that can be matched by a key, which is generally 2 to the power of the number of bits in the prefix, or 1 if no prefix at all.
+	GetCount() *big.Int
 
 	// GetPrefixLen returns the prefix length if this key has a prefix length (ie it is a prefix block).
 	// It returns nil if not a prefix block.
@@ -267,6 +302,14 @@ type TrieKey[E any] interface {
 	// from 32-bit and 128-bit keys for optimized search.
 	// Implementing this method is optional, even for 32-bit and 128-bit keys, it can return nil.
 	GetTrieKeyData() *TrieKeyData
+
+	// IncludesZeroBits returns true if the bits in the lower value of this key between the indicated indices are all zero.
+	// Index 0 is the most significant bit.  The bits are checked from fromBPrefixBitIndex inclusive to toPrefixBitIndex exclusive.
+	IncludesZeroBits(fromBPrefixBitIndex, toPrefixBitIndex int) bool
+
+	// IncludesMaxBits returns true if the bits in the upper value of this key between the indicated indices are all one.
+	// Index 0 is the most significant bit.  The bits are checked from fromBPrefixBitIndex inclusive to toPrefixBitIndex exclusive.
+	IncludesMaxBits(fromBPrefixBitIndex, toPrefixBitIndex int) bool
 }
 
 // Providing TrieKeyData for trie keys makes lookup faster.
@@ -356,10 +399,33 @@ func (node *BinTrieNode[E, V]) Remove() {
 	node.toBinTreeNode().Remove()
 }
 
+// RemoveChildren removes both child nodes of this node, if any exist.
+// Returns whether one was removed.
+func (node *BinTrieNode[E, V]) RemoveChildren() bool {
+	return node.toBinTreeNode().RemoveChildren()
+}
+
 // NodeSize returns the count of all nodes in the tree starting from this node and extending to all sub-nodes.
 // Unlike for the Size method, this is not a constant-time operation and must visit all sub-nodes of this node.
 func (node *BinTrieNode[E, V]) NodeSize() int {
 	return node.toBinTreeNode().NodeSize()
+}
+
+// GetMatchingKeyCount returns the total number of elements covered by prefix block keys added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
+func (node *BinTrieNode[E, V]) GetMatchingKeyCount() *big.Int {
+	return node.toBinTreeNode().GetMatchingKeyCount()
+}
+
+// ContainingMaxElements returns true if and only if the total number of individial keys contained by the prefix block keys of
+// added nodes in the trie, starting from this node and extending to all sub-nodes, is the maximum possible.
+// In other words, the keys of the added nodes together contain all the possible individual sub-keys.
+func (node *BinTrieNode[E, V]) ContainingMaxElements() bool {
+	return node.toBinTreeNode().ContainingMaxElements()
+}
+
+// GetKeyContainedCount returns the count of elements potentially matched by the key
+func (node *BinTrieNode[E, V]) GetKeyContainedCount() *big.Int {
+	return node.toBinTreeNode().GetKeyContainedCount()
 }
 
 // Size returns the count of nodes added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
@@ -436,6 +502,139 @@ func (node *BinTrieNode[E, V]) doLookup(key E, longestPrefixMatch, contains bool
 	return
 }
 
+// Add adds the key to the trie.  If this node is not the root, this is inserting from some other location in the trie.
+// This requires an additional constraint on the prefix of the given key being added to ensure the trie structure is maintained.
+// The prefix of the added key must match the prefix of this node.
+//
+// More specifically, if this node's key has no prefix, then the given key must have no prefix as well, or a prefix comprising the entire key, and all the bits in both keys must match.
+// If this node's key has a prefix, then the given key must either have no prefix at all, or a prefix at least as long as that of the node,
+// and the bits in the node key's prefix must match the corresponding bits in the given address.
+// If the above constraint is not met, then the method will panic.
+// Otherwise, the key will be added to the sub-trie with this node as the root.  The returned value is true if the trie was changed, or false if the key was already in that sub-trie.
+func (node *BinTrieNode[E, V]) Add(key E) bool {
+	nodePrefixLen := node.checkPrefix(key)
+	if nodePrefixLen == nil {
+		// the prefixes match, but since they comprise all address bits, this means the keys are the same
+		// this also means the existing node is an added node since it has no children
+		return false
+	}
+	result := &opResult[E, V]{
+		key: key,
+		op:  insert,
+	}
+	node.matchBitsFromIndex(nodePrefixLen.bitCount(), result)
+	return !result.exists
+}
+
+func (node *BinTrieNode[E, V]) AddNode(key E) *BinTrieNode[E, V] {
+	nodePrefixLen := node.checkPrefix(key)
+	if nodePrefixLen == nil {
+		// the prefixes match, but since they comprise all address bits, this means the keys are the same
+		// this also means the existing node is an added node since it has no children
+		return node
+	}
+	result := &opResult[E, V]{
+		key: key,
+		op:  insert,
+	}
+	node.matchBitsFromIndex(nodePrefixLen.bitCount(), result)
+	resultNode := result.existingNode
+	if resultNode == nil {
+		resultNode = result.inserted
+	}
+	return resultNode
+}
+
+func (node *BinTrieNode[E, V]) Put(key E, value V) (V, bool) {
+	nodePrefixLen := node.checkPrefix(key)
+	if nodePrefixLen == nil {
+		// the prefixes match, but since they comprise all address bits, this means the keys are the same
+		// this also means the existing node is an added node since it has no children
+		existingValue := node.GetValue()
+		node.SetValue(value)
+		return existingValue, false
+	}
+	result := &opResult[E, V]{
+		key:      key,
+		op:       insert,
+		newValue: value,
+		// new value assignment
+	}
+	node.matchBitsFromIndex(nodePrefixLen.bitCount(), result)
+	return result.existingValue, !result.exists
+
+}
+
+func (node *BinTrieNode[E, V]) PutNode(key E, value V) *BinTrieNode[E, V] {
+	nodePrefixLen := node.checkPrefix(key)
+	if nodePrefixLen == nil {
+		// the prefixes match, but since they comprise all address bits, this means the keys are the same
+		// this also means the existing node is an added node since it has no children
+		node.SetValue(value)
+		return node
+	}
+	result := &opResult[E, V]{
+		key:      key,
+		op:       insert,
+		newValue: value,
+		// new value assignment
+	}
+	node.matchBitsFromIndex(nodePrefixLen.bitCount(), result)
+	resultNode := result.existingNode
+	if resultNode == nil {
+		resultNode = result.inserted
+	}
+	return resultNode
+}
+
+func (node *BinTrieNode[E, V]) checkPrefix(key E) PrefixLen {
+	// if this node is not root, we need to ensure that the prefix of the given key matches,
+	// otherwise we panic, because it cannot be added from this node, it should have been added to a higher node, the root if necessary
+	nodeKey := node.GetKey()
+	nodePrefixLen := nodeKey.GetPrefixLen()
+	keyPrefixLen := key.GetPrefixLen()
+
+	// The prefix must match the entire prefix of the node, otherwise we panic.
+	// It must have at least the same length and it must match all the prefix bits of the node key.
+	if keyPrefixLen.Compare(nodePrefixLen) < 0 {
+		keyAndNodeMismatch()
+	}
+	comp := initialKeyComparator[E]{}
+	comp.matchKeys(nodeKey, key)
+	return nodePrefixLen
+}
+
+func keyAndNodeMismatch() {
+	panic("key does not match node")
+}
+
+type initialKeyComparator[E TrieKey[E]] struct {
+	matched bool
+}
+
+func (p *initialKeyComparator[E]) matchKeys(nodeKey, key E) {
+	key.MatchBits(nodeKey, 0, true, p, nil)
+	if !p.matched {
+		keyAndNodeMismatch()
+	}
+}
+
+func (p *initialKeyComparator[E]) BitsMatch() {
+	p.matched = true
+}
+
+func (p *initialKeyComparator[E]) BitsMatchPartially() (res bool) {
+	p.matched = true
+	return
+}
+
+func (p *initialKeyComparator[E]) BitsDoNotMatch(matchedBits BitCount) {
+	// when simpleMattch is true, the 3rd arg to MatchBits,
+	// this method BitsDoNotMatch is never called even when the bits do not match,
+	// hence the need to also rely on the calls to BitsMatch and BitsMatchPartially to indicate a match
+	keyAndNodeMismatch()
+}
+
 func (node *BinTrieNode[E, V]) Get(key E) (V, bool) {
 	var result *opResult[E, V]
 	if node == nil {
@@ -497,7 +696,7 @@ func (node *BinTrieNode[E, V]) RemoveNode(key E) bool {
 	}
 	result := &opResult[E, V]{
 		key: key,
-		op:  insertedDelete,
+		op:  delete,
 	}
 	node.matchBits(result)
 	return result.exists
@@ -523,6 +722,16 @@ func (node *BinTrieNode[E, V]) GetAddedNode(key E) *BinTrieNode[E, V] {
 	return nil
 }
 
+func (node *BinTrieNode[E, V]) GetKeyElementBig(keyIndex *big.Int) (*BinTrieNode[E, V], *big.Int) {
+	n, i := node.toBinTreeNode().GetKeyElementBig(keyIndex)
+	return toTrieNode(n), i
+}
+
+func (node *BinTrieNode[E, V]) GetKeyElement(keyIndex int64) (*BinTrieNode[E, V], int64) {
+	n, i := node.toBinTreeNode().GetKeyElement(keyIndex)
+	return toTrieNode(n), i
+}
+
 func (node *BinTrieNode[E, V]) RemoveElementsContainedBy(key E) *BinTrieNode[E, V] {
 	if node == nil {
 		return nil
@@ -535,8 +744,30 @@ func (node *BinTrieNode[E, V]) RemoveElementsContainedBy(key E) *BinTrieNode[E, 
 	return result.deleted
 }
 
+// RemoveElementsIntersectedBy will remove any element of the trie whose key intersects the given key, and all child elements of that element,
+// whether those child elements intersect or not.
+func (node *BinTrieNode[E, V]) RemoveElementsIntersectedBy(key E) *BinTrieNode[E, V] {
+	if node == nil {
+		return nil
+	}
+	result := &opResult[E, V]{
+		key: key,
+		op:  intersectingSubtreeDelete,
+	}
+	node.matchBits(result)
+	return result.deleted
+}
+
 func (node *BinTrieNode[E, V]) ElementsContainedBy(key E) *BinTrieNode[E, V] {
 	return node.doLookup(key, false, true)
+}
+
+// ElementsIntersectedBy will return the highest-level node whose key intersects the given key .
+//
+// Returns the root node of the subtrie that intersects, or nil if no key intersects.
+func (node *BinTrieNode[E, V]) ElementsIntersectedBy(key E) (res *BinTrieNode[E, V]) {
+	res, _ = node.elementContainsOrOverlaps(key, false, false)
+	return
 }
 
 // ElementsContaining finds the trie nodes containing the given key and returns them as a linked list
@@ -581,17 +812,31 @@ func (node *BinTrieNode[E, V]) ShortestPrefixMatch(key E) (E, bool) {
 	return res.GetKey(), true
 }
 
+// ShortestPrefixMatch finds the added node with the shortest matching prefix amongst keys added to the trie.
+// It is quicker than LongestPrefixMatchNode in that once it finds the first containing node, the look-up is done.
 func (node *BinTrieNode[E, V]) ShortestPrefixMatchNode(key E) *BinTrieNode[E, V] {
 	return node.elementContains(key)
+}
+
+// Enumerate finds the shortest prefix match node.
+// It calculates the index into the key of that node, added to the matching key count of all nodes with keys of lower value.
+// If there is no shortest prefix match node, it returns nil.
+func (node *BinTrieNode[E, V]) Enumerate(key E) (*BinTrieNode[E, V], *big.Int) {
+	return node.elementContainsOrOverlaps(key, true, true)
 }
 
 func (node *BinTrieNode[E, V]) ElementContains(key E) bool {
 	return node.elementContains(key) != nil
 }
 
-func (node *BinTrieNode[E, V]) elementContains(key E) *BinTrieNode[E, V] {
+func (node *BinTrieNode[E, V]) elementContains(key E) (res *BinTrieNode[E, V]) {
+	res, _ = node.elementContainsOrOverlaps(key, true, false)
+	return
+}
+
+func (node *BinTrieNode[E, V]) elementContainsOrOverlaps(key E, contains bool, withIndex bool) (res *BinTrieNode[E, V], index *big.Int) {
 	if node == nil {
-		return nil
+		return nil, nil
 	}
 	var result *opResult[E, V]
 	pool := node.pool
@@ -605,18 +850,43 @@ func (node *BinTrieNode[E, V]) elementContains(key E) *BinTrieNode[E, V] {
 			op:  containing,
 		}
 	}
+	if withIndex {
+		result.previousAddrCounts = make([]*big.Int, 0, key.GetBitCount())
+	}
 	node.matchBits(result)
-	res := result.largestContaining
+	res = result.largestContaining
+	if res == nil && !contains {
+		res = result.containedBy
+	}
+	if withIndex && res != nil {
+		index = bigZero()
+		// we add in reverse order to add smaller numbers first, which is faster
+		for i := len(result.previousAddrCounts) - 1; i >= 0; i-- {
+			index.Add(index, result.previousAddrCounts[i])
+		}
+	}
 	if pool != nil {
 		result.clean()
 		pool.Put(result)
 	}
-	return res
+	return
+}
+
+func (node *BinTrieNode[E, V]) elementOverlaps(key E) (res *BinTrieNode[E, V]) {
+	res, _ = node.elementContainsOrOverlaps(key, false, false)
+	return
+}
+
+// ElementOverlaps checks if a key in the trie overlaps the given key.
+//
+// Returns true if the given key overlaps a trie key, false otherwise.
+func (node *BinTrieNode[E, V]) ElementOverlaps(key E) bool {
+	return node.elementOverlaps(key) != nil
 }
 
 func (node *BinTrieNode[E, V]) removeSubtree(result *opResult[E, V]) {
 	result.deleted = node
-	node.Clear()
+	result.remainingParent = toTrieNode(node.binTreeNode.replaceThis(nil))
 }
 
 func (node *BinTrieNode[E, V]) removeOp(result *opResult[E, V]) {
@@ -632,20 +902,21 @@ func (node *BinTrieNode[E, V]) matchBits(result *opResult[E, V]) {
 // at which point it completes the operation, whatever that operation is
 func (node *BinTrieNode[E, V]) matchBitsFromIndex(bitIndex int, result *opResult[E, V]) {
 	matchNode := node
-	existingKey := node.GetKey()
+	nodeKey := node.GetKey()
 	newKey := result.key
-	if newKey.GetBitCount() != existingKey.GetBitCount() {
+	if newKey.GetBitCount() != nodeKey.GetBitCount() {
 		panic("mismatched bit length between trie keys")
 	}
 
-	newKeyData := newKey.GetTrieKeyData()
-
 	op := result.op
+
+	var newKeyData *TrieKeyData
 	var simpleMatch bool
 	switch op {
-	case insert, near, remap:
+	case insert, near, remap, containmentNear, addUncontained: // simpleMatch == false
 	default:
 		simpleMatch = true
+		newKeyData = newKey.GetTrieKeyData()
 	}
 
 	// having these allocated in result eliminates gc activity
@@ -653,7 +924,7 @@ func (node *BinTrieNode[E, V]) matchBitsFromIndex(bitIndex int, result *opResult
 	result.comp = &result.nodeComp
 	for {
 		result.nodeComp.node = matchNode
-		continueToNext, followingBitsFlag := newKey.MatchBits(existingKey, bitIndex, simpleMatch, result.comp, newKeyData)
+		continueToNext, followingBitsFlag := newKey.MatchBits(nodeKey, bitIndex, simpleMatch, result.comp, newKeyData)
 		if continueToNext {
 			// matched all node bits up the given count, so move into sub-nodes
 			matchNode = matchNode.matchSubNode(followingBitsFlag, result)
@@ -665,8 +936,8 @@ func (node *BinTrieNode[E, V]) matchBitsFromIndex(bitIndex int, result *opResult
 			// The sub-node was chosen according to the next bit.
 			// That bit is therefore now a match,
 			// so increment the matched bits by 1, and keep going.
-			bitIndex = existingKey.GetPrefixLen().bitCount() + 1
-			existingKey = matchNode.GetKey()
+			bitIndex = nodeKey.GetPrefixLen().bitCount() + 1
+			nodeKey = matchNode.GetKey()
 		} else {
 			// reached the end of the line
 			break
@@ -679,6 +950,8 @@ type nodeCompare[E TrieKey[E], V any] struct {
 	node   *BinTrieNode[E, V]
 }
 
+// All the bits of the compared key match the same bits in the key of the existing node.
+// The existing node key is contained by the compared key.
 func (comp nodeCompare[E, V]) BitsMatch() {
 	node := comp.node
 	result := comp.result
@@ -712,9 +985,10 @@ func (comp nodeCompare[E, V]) BitsMatch() {
 			} else {
 				node.handleNodeMatch(result)
 			}
-		} else if existingPrefBitCount == existingKey.GetBitCount() {
+		} else if newPrefBitCount == existingKey.GetBitCount() {
 			node.handleMatch(result)
 		} else { // existing prefix > newPrefixLen
+			// the node is added or not added, either way the subtree is contained
 			node.handleContained(result, newPrefBitCount)
 		}
 	}
@@ -724,37 +998,88 @@ func (comp nodeCompare[E, V]) BitsDoNotMatch(matchedBits BitCount) {
 	comp.node.handleSplitNode(comp.result, matchedBits)
 }
 
+// The existing node key's prefix bits match the same bits in the compared key, but the compared key prefix has more bits.
+// The existing node key contains the compared key.
 func (comp nodeCompare[E, V]) BitsMatchPartially() bool {
 	node, result := comp.node, comp.result
 	if node.IsAdded() {
-		node.handleContains(result)
-		return result.op != containing // we can stop if we are "containing" since we have the answer
+		if node.handleContains(result, false) {
+			return false
+		}
 	}
 	return true
 }
 
+// The prefix of the key of an existing node matches entirely the same bits of a prefix of a given key.  The given key's prefix may be shorter.  The given key contains the key of the existing node.
 func (node *BinTrieNode[E, V]) handleContained(result *opResult[E, V], newPref BitCount) {
 	op := result.op
-	if op == insert {
+	if op == insert || op == addUncontained {
 		// if we have 1.2.3.4 and 1.2.3.4/32, and we are looking at the last segment,
 		// then there are no more bits to look at, and this makes the former a sub-node of the latter.
 		// In most cases, however, there are more bits in existingAddr, the latter, to look at.
 		node.replace(result, newPref)
-	} else if op == subtreeDelete {
+	} else if op == subtreeDelete || op == intersectingSubtreeDelete {
 		node.removeSubtree(result)
-	} else if op == near {
+	} else if op == near || op == containmentNear {
 		node.findNearest(result, newPref)
 	} else if op == remap {
 		node.remapNonExistingReplace(result, newPref)
 	}
 }
 
-func (node *BinTrieNode[E, V]) handleContains(result *opResult[E, V]) bool {
-	if result.op == containing {
-		result.largestContaining = node // used by ElementContains
+// Returns true if no more trie traversal is required, if nothing more needs to be done for the given operation.
+// The prefix of the given key E is matched entirely by the same bits of the prefix of a key from an existing node.  The existing node key's prefix may be shorter.  The existing node key contains the given key.
+func (node *BinTrieNode[E, V]) handleContains(result *opResult[E, V], fromMatch bool) (done bool) {
+	op := result.op
+	if op == containing {
+		result.largestContaining = node // used by ElementContains and ElementOverlaps
 		return true
-	} else if result.op == allContaining {
+	} else if op == allContaining {
 		result.addContaining(node) // used by ElementsContaining
+		if fromMatch {
+			return true
+		}
+	} else if op == addUncontained {
+		// the key being added is contained in the existing added node, so nothing to do
+		return true
+	} else if op == intersectingSubtreeDelete {
+		node.removeSubtree(result)
+		return true
+	} else if op == containmentNear {
+		key := result.key
+		bitCount := key.GetBitCount()
+		prefixLen := key.GetPrefixLen()
+		if result.nearExclusive {
+			fullAddress := prefixLen == nil || BitCount(*prefixLen) == bitCount
+			if fullAddress {
+				if fromMatch {
+					result.backtrackNode = node
+				} else {
+					nodePrefixLen := BitCount(*node.GetKey().GetPrefixLen())
+					if result.nearestFloor {
+						if key.IncludesZeroBits(nodePrefixLen, bitCount) {
+							result.backtrackNode = node
+						} else {
+							result.nearestNode = node
+						}
+					} else {
+						if key.IncludesMaxBits(nodePrefixLen, bitCount) {
+							result.backtrackNode = node
+						} else {
+							result.nearestNode = node
+						}
+					}
+				}
+			} else {
+				result.nearestNode = node
+			}
+		} else {
+			if fromMatch {
+				node.matched(result)
+			} else {
+				result.nearestNode = node
+			}
+		}
 		return true
 	}
 	result.smallestContaining = node // used by longest prefix match, which uses the lookup op
@@ -763,9 +1088,9 @@ func (node *BinTrieNode[E, V]) handleContains(result *opResult[E, V]) bool {
 
 func (node *BinTrieNode[E, V]) handleSplitNode(result *opResult[E, V], totalMatchingBits BitCount) {
 	op := result.op
-	if op == insert {
+	if op == insert || op == addUncontained {
 		node.split(result, totalMatchingBits, node.createNew(result.key))
-	} else if op == near {
+	} else if op == near || op == containmentNear {
 		node.findNearest(result, totalMatchingBits)
 	} else if op == remap {
 		node.remapNonExistingSplit(result, totalMatchingBits)
@@ -780,9 +1105,11 @@ func (node *BinTrieNode[E, V]) handleNodeMatch(result *opResult[E, V]) {
 		result.existingNode = node
 	} else if op == insert {
 		node.existingAdded(result)
-	} else if op == subtreeDelete {
+	} else if op == subtreeDelete || op == intersectingSubtreeDelete {
 		node.removeSubtree(result)
-	} else if op == near {
+	} else if op == addUncontained {
+		node.existingAdded(result)
+	} else if op == near || op == containmentNear {
 		node.findNearestFromMatch(result)
 	} else if op == remap {
 		node.remapNonAdded(result)
@@ -791,13 +1118,13 @@ func (node *BinTrieNode[E, V]) handleNodeMatch(result *opResult[E, V]) {
 
 func (node *BinTrieNode[E, V]) handleMatch(result *opResult[E, V]) {
 	result.exists = true
-	if !node.handleContains(result) {
+	if !node.handleContains(result, true) { // a match is also a contains, if two keys match, they contain each other
 		op := result.op
 		if op == lookup {
 			node.matched(result)
 		} else if op == insert {
 			node.matchedInserted(result)
-		} else if op == insertedDelete {
+		} else if op == delete {
 			node.removeOp(result)
 		} else if op == subtreeDelete {
 			node.removeSubtree(result)
@@ -858,7 +1185,7 @@ const (
 // It returns true if a new node needs to be created (match is nil) or added (match is non-nil)
 func (node *BinTrieNode[E, V]) remap(result *opResult[E, V], isMatch bool) bool {
 	remapper := result.remapper
-	change := node.cTracker.getCurrent()
+	change := node.cTracker.GetCurrent()
 	var existingValue V
 	if isMatch {
 		existingValue = node.GetValue()
@@ -870,8 +1197,8 @@ func (node *BinTrieNode[E, V]) remap(result *opResult[E, V], isMatch bool) bool 
 	} else if action == removeNode {
 		if isMatch {
 			cTracker := node.cTracker
-			if cTracker != nil && cTracker.changedSince(change) {
-				panic("the tree has been modified by the remapper")
+			if cTracker != nil {
+				cTracker.ChangedSince(change)
 			}
 			node.ClearValue()
 			node.removeOp(result)
@@ -879,8 +1206,8 @@ func (node *BinTrieNode[E, V]) remap(result *opResult[E, V], isMatch bool) bool 
 		return false
 	} else { // action is remapValue
 		cTracker := node.cTracker
-		if cTracker != nil && cTracker.changedSince(change) {
-			panic("the tree has been modified by the remapper")
+		if cTracker != nil {
+			cTracker.ChangedSince(change)
 		}
 		result.newValue = newValue
 		return true
@@ -917,9 +1244,9 @@ func (node *BinTrieNode[E, V]) inserted(result *opResult[E, V]) {
 
 func (node *BinTrieNode[E, V]) added(result *opResult[E, V]) {
 	node.setNodeAdded(true)
-	node.adjustCount(1)
+	node.setContainmentCount(1, node.GetKeyContainedCount())
 	node.SetValue(result.newValue)
-	node.cTracker.changed()
+	node.cTracker.Changed()
 }
 
 // The current node and the new node both become sub-nodes of a new block node taking the position of the current node.
@@ -941,6 +1268,7 @@ func (node *BinTrieNode[E, V]) replace(result *opResult[E, V], totalMatchingBits
 func (node *BinTrieNode[E, V]) replaceToSub(newAssignedKey E, totalMatchingBits BitCount, newSubNode *BinTrieNode[E, V]) *BinTrieNode[E, V] {
 	newNode := node.createNew(newAssignedKey)
 	newNode.storedSize = node.storedSize
+	newNode.containedCount = bigZero().Set(node.containedCount)
 	parent := node.GetParent()
 	if parent.GetUpperSubNode() == node {
 		parent.setUpper(newNode)
@@ -1048,11 +1376,12 @@ func (node *BinTrieNode[E, V]) findNearest(result *opResult[E, V], differingBitI
 }
 
 func (node *BinTrieNode[E, V]) matchSubNode(bitsFollowing uint64, result *opResult[E, V]) *BinTrieNode[E, V] {
+	op := result.op
 	newKey := result.key
 	if !freezeRoot && node.IsEmpty() {
-		if result.op == remap {
+		if op == remap {
 			node.remapNonAdded(result)
-		} else if result.op == insert {
+		} else if op == insert || op == addUncontained {
 			node.setKey(newKey)
 			node.existingAdded(result)
 		}
@@ -1060,12 +1389,11 @@ func (node *BinTrieNode[E, V]) matchSubNode(bitsFollowing uint64, result *opResu
 		upper := node.GetUpperSubNode()
 		if upper == nil {
 			// no match
-			op := result.op
-			if op == insert {
+			if op == insert || op == addUncontained {
 				upper = node.createNew(newKey)
 				node.setUpper(upper)
 				upper.inserted(result)
-			} else if op == near {
+			} else if op == near || op == containmentNear {
 				if result.nearestFloor {
 					// With only one sub-node at most, normally that would mean this node must be added.
 					// But there is one exception, when we are the non-added root node.
@@ -1097,6 +1425,12 @@ func (node *BinTrieNode[E, V]) matchSubNode(bitsFollowing uint64, result *opResu
 				}
 			}
 		} else {
+			if result.previousAddrCounts != nil {
+				lower := node.GetLowerSubNode()
+				if lower != nil {
+					result.previousAddrCounts = append(result.previousAddrCounts, lower.getMatchingKeyCount())
+				}
+			}
 			return upper
 		}
 	} else {
@@ -1105,11 +1439,11 @@ func (node *BinTrieNode[E, V]) matchSubNode(bitsFollowing uint64, result *opResu
 		if lower == nil {
 			// no match
 			op := result.op
-			if op == insert {
+			if op == insert || op == addUncontained {
 				lower = node.createNew(newKey)
 				node.setLower(lower)
 				lower.inserted(result)
-			} else if op == near {
+			} else if op == near || op == containmentNear {
 				if result.nearestFloor {
 					result.backtrackNode = node
 				} else {
@@ -1198,6 +1532,14 @@ func (node *BinTrieNode[E, V]) LastAddedNode() *BinTrieNode[E, V] {
 }
 
 func (node *BinTrieNode[E, V]) findNodeNear(key E, below, exclusive bool) *BinTrieNode[E, V] {
+	return node.findNodeNearOp(key, near, below, exclusive)
+}
+
+func (node *BinTrieNode[E, V]) findNodeContainingNear(key E, below, exclusive bool) *BinTrieNode[E, V] {
+	return node.findNodeNearOp(key, containmentNear, below, exclusive)
+}
+
+func (node *BinTrieNode[E, V]) findNodeNearOp(key E, op operation, below, exclusive bool) *BinTrieNode[E, V] {
 	var result *opResult[E, V]
 	if node == nil {
 		return nil
@@ -1206,7 +1548,7 @@ func (node *BinTrieNode[E, V]) findNodeNear(key E, below, exclusive bool) *BinTr
 	if pool != nil {
 		result = pool.Get().(*opResult[E, V])
 		result.key = key
-		result.op = near
+		result.op = op
 		result.nearestFloor = below
 		result.nearExclusive = exclusive
 	} else {
@@ -1271,6 +1613,22 @@ func (node *BinTrieNode[E, V]) CeilingAddedNode(key E) *BinTrieNode[E, V] {
 	return node.findNodeNear(key, false, false)
 }
 
+func (node *BinTrieNode[E, V]) ContainingLowerAddedNode(key E) *BinTrieNode[E, V] {
+	return node.findNodeContainingNear(key, true, true)
+}
+
+func (node *BinTrieNode[E, V]) ContainingFloorAddedNode(key E) *BinTrieNode[E, V] {
+	return node.findNodeContainingNear(key, true, false)
+}
+
+func (node *BinTrieNode[E, V]) ContainingHigherAddedNode(key E) *BinTrieNode[E, V] {
+	return node.findNodeContainingNear(key, false, true)
+}
+
+func (node *BinTrieNode[E, V]) ContainingCeilingAddedNode(key E) *BinTrieNode[E, V] {
+	return node.findNodeContainingNear(key, false, false)
+}
+
 // Iterator returns an iterator that iterates through the elements of the sub-tree with this node as the root.
 // The iteration is in sorted element order.
 func (node *BinTrieNode[E, V]) Iterator() TrieKeyIterator[E] {
@@ -1311,9 +1669,6 @@ func (node *BinTrieNode[E, V]) BlockSizeAllNodeIterator(lowerSubNodeFirst bool) 
 
 // BlockSizeCompare compares keys by block size and then by prefix value if block sizes are equal
 func BlockSizeCompare[E TrieKey[E]](key1, key2 E, reverseBlocksEqualSize bool) int {
-	if key2 == key1 {
-		return 0
-	}
 	pref2 := key2.GetPrefixLen()
 	pref1 := key1.GetPrefixLen()
 	if pref2 != nil {
@@ -1371,7 +1726,7 @@ func (node *BinTrieNode[E, V]) BlockSizeCachingAllNodeIterator() CachingTrieNode
 	return &cachingTrieNodeIterator[E, V]{&iter}
 }
 
-func (node *BinTrieNode[E, V]) ContainingFirstIterator(forwardSubNodeOrder bool) CachingTrieNodeIterator[E, V] {
+func (node *BinTrieNode[E, V]) ContainingFirstIterator(forwardSubNodeOrder bool) TrieNodeIteratorRem[E, V] {
 	return &cachingTrieNodeIterator[E, V]{node.toBinTreeNode().containingFirstIterator(forwardSubNodeOrder)}
 }
 
@@ -1399,13 +1754,17 @@ func (node *BinTrieNode[E, V]) CloneTree() *BinTrieNode[E, V] {
 	return node.cloneTree()
 }
 
+func newOperationPool[E TrieKey[E], V any]() *sync.Pool {
+	return &sync.Pool{
+		New: func() any { return &opResult[E, V]{} },
+	}
+}
+
 func (node *BinTrieNode[E, V]) cloneTreeBounds(bnds *bounds[E]) *BinTrieNode[E, V] {
 	if node == nil {
 		return nil
 	}
-	return toTrieNode(node.cloneTreeTrackerBounds(&changeTracker{}, &sync.Pool{
-		New: func() any { return &opResult[E, V]{} },
-	}, bnds))
+	return toTrieNode(node.cloneTreeTrackerBounds(&ChangeTracker{}, newOperationPool[E, V](), bnds))
 }
 
 // Clones the sub-tree starting with this node as root.
@@ -1419,8 +1778,6 @@ func (node *BinTrieNode[E, V]) cloneTree() *BinTrieNode[E, V] {
 func (node *BinTrieNode[E, V]) AsNewTrie() *BinTrie[E, V] {
 	// I suspect clone is faster - in Java I used AddTrie to add the bounded part of the trie if it was bounded
 	// but AddTrie needs to insert nodes amongst existing nodes, clone does not
-	// newTrie := NewBinTrie(key)
-	// newTrie.AddTrie(node)
 	key := node.GetKey()
 	trie := &BinTrie[E, V]{binTree[E, V]{}}
 	rootKey := key.ToPrefixBlockLen(0)
@@ -1471,11 +1828,15 @@ func (node *BinTrieNode[E, V]) TreeEqual(other *BinTrieNode[E, V]) bool {
 	} else if other.Size() != node.Size() {
 		return false
 	}
-	these, others := node.Iterator(), other.Iterator()
+	these := node.Iterator()
 	if these.HasNext() {
-		for thisKey := these.Next(); these.HasNext(); thisKey = these.Next() {
+		others := other.Iterator()
+		for thisKey := these.Next(); ; thisKey = these.Next() {
 			if thisKey.Compare(others.Next()) != 0 {
 				return false
+			}
+			if !these.HasNext() {
+				break
 			}
 		}
 	}

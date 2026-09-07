@@ -12,22 +12,22 @@ import (
 	"strings"
 	"time"
 
-	"helm.sh/helm/v3/pkg/release"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/release"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeadmconst "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
 
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cluster/ignition"
-	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/application/install"
 	"github.com/oracle-cne/ocne/pkg/commands/application/ls"
+	"github.com/oracle-cne/ocne/pkg/config/types"
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -108,7 +108,6 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 
 	log.Debugf("Finding images to tag on %s", node.ObjectMeta.Name)
 
-
 	kubeProxyImg, kubeProxyCurrent, _ := k8s.GetImageCandidate(constants.KubeProxyImage, constants.CurrentTag, kubeProxyTag, node)
 	corednsImg, corednsCurrent, _ := k8s.GetImageCandidate(constants.CoreDNSImage, constants.CurrentTag, corednsTag, node)
 	flannelImg, flannelCurrent, _ := k8s.GetImageCandidate(constants.CNIFlannelImage, constants.CurrentTag, flannelTag, node)
@@ -149,8 +148,8 @@ func tagOnNode(node *v1.Node, restConfig *rest.Config, client kubernetes.Interfa
 func getRelease(release string, namespace string, kubeConfigPath string) (*release.Release, error) {
 	releases, err := ls.List(application.LsOptions{
 		KubeConfigPath: kubeConfigPath,
-		Namespace: namespace,
-		All: false,
+		Namespace:      namespace,
+		All:            false,
 	})
 	if err != nil {
 		return nil, err
@@ -167,7 +166,6 @@ func getRelease(release string, namespace string, kubeConfigPath string) (*relea
 
 	return nil, nil
 }
-
 
 func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 	// If kube-proxy is already installed as an application, don't try
@@ -211,11 +209,10 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 					Version:   constants.KubeProxyVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config:    proxyRelease.Config,
-					},
 				},
+			},
 		}, kubeConfigPath, false)
 	}
-
 
 	// Calculating the correct overrides based solely on the kubeconfig is
 	// hard, and is not tolerant to user customizations.  It's much easier
@@ -257,13 +254,13 @@ func updateKubeProxy(client kubernetes.Interface, kubeConfigPath string) error {
 				Release:   constants.KubeProxyRelease,
 				Version:   constants.KubeProxyVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{
-						"image": map[string]interface{}{
-							"tag": constants.KubeProxyTag,
-						},
-						"kubeconfig": kcfgParsed,
-						"config": confParsed,
+				Config: map[string]interface{}{
+					"image": map[string]interface{}{
+						"tag": constants.KubeProxyTag,
 					},
+					"kubeconfig": kcfgParsed,
+					"config":     confParsed,
+				},
 			},
 		},
 	}, kubeConfigPath, false)
@@ -285,7 +282,6 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 
 		return err
 	}
-
 
 	if corednsRelease != nil {
 		tag, found, err := unstructured.NestedString(corednsRelease.Config, "image", "tag")
@@ -334,12 +330,12 @@ func updateCoreDNS(client kubernetes.Interface, kubeConfigPath string) error {
 				Release:   constants.CoreDNSRelease,
 				Version:   constants.CoreDNSVersion,
 				Catalog:   catalog.InternalCatalog,
-				Config:    map[string]interface{}{
+				Config: map[string]interface{}{
 					"image": map[string]interface{}{
 						"tag": constants.CoreDNSTag,
 					},
 					"service": map[string]interface{}{
-						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIP":  kubeletConfig.ClusterDNS[0],
 						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
@@ -389,6 +385,183 @@ func updateFlannel(kubeConfigPath string) error {
 			},
 		},
 	}, kubeConfigPath, false)
+}
+
+func updateFlannelNodeIPAssignment(_ *rest.Config, _ kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
+	needsUpdate := false
+	for _, node := range nodes.Items {
+		versionComparison, err := util.CompareVersions(node.Status.NodeInfo.KubeletVersion, "1.34")
+		if err != nil {
+			return err
+		}
+		if versionComparison < 0 {
+			needsUpdate = true
+			break
+		}
+	}
+
+	if !needsUpdate {
+		log.Debugf("Skipping Flannel node IP update because the cluster was started with ocne 2.3 or lower")
+		return nil
+	}
+
+	haRelease, err := getRelease(constants.HAMonitorRelease, constants.HAMonitorNamespace, kubeConfigPath)
+	if err != nil {
+		return err
+	}
+	if haRelease == nil {
+		log.Debugf("Skipping Flannel node IP update because the HA monitor application is not installed")
+		return nil
+	}
+
+	flannelRelease, err := getRelease(constants.CNIFlannelRelease, constants.CNIFlannelNamespace, kubeConfigPath)
+	if err != nil {
+		return err
+	}
+	if flannelRelease == nil {
+		log.Debugf("Skipping Flannel node IP update because Flannel is not installed")
+		return nil
+	}
+	if !isFlannelReleaseConfigBeforeNodeIPAssignment(flannelRelease.Config) {
+		log.Debugf("Skipping Flannel node IP update because the Flannel release configuration was customized or was not deployed by an earlier CLI version")
+		return nil
+	}
+
+	updated, err := addFlannelNodeIPConfiguration(flannelRelease.Config)
+	if err != nil {
+		return err
+	}
+
+	if !updated {
+		log.Debugf("Flannel node IP configuration is already up to date")
+		return nil
+	}
+
+	log.Debugf("Updating Flannel release with node IP configuration")
+	return install.UpdateApplications([]install.ApplicationDescription{
+		{
+			Application: &types.Application{
+				Name:      constants.CNIFlannelChart,
+				Namespace: constants.CNIFlannelNamespace,
+				Release:   constants.CNIFlannelRelease,
+				Version:   constants.CNIFlannelVersion,
+				Catalog:   catalog.InternalCatalog,
+				Config:    flannelRelease.Config,
+			},
+		},
+	}, kubeConfigPath, false)
+}
+
+// isFlannelReleaseConfigBeforeNodeIPAssignment reports whether config is one
+// of the release configurations generated by CLI versions before node IP
+// assignment was added.  Do not update a release that contains any additional
+// values: those values may represent a user customization.
+func isFlannelReleaseConfigBeforeNodeIPAssignment(config map[string]interface{}) bool {
+	// Before node IP assignment, Start generated either the single-stack
+	// configuration (podCidr and flannel) or the dual-stack configuration
+	// (podCidr, podCidrv6, and flannel).
+	if len(config) != 2 && len(config) != 3 {
+		return false
+	}
+	if _, ok := config["podCidr"].(string); !ok {
+		return false
+	}
+	if len(config) == 3 {
+		if _, ok := config["podCidrv6"].(string); !ok {
+			return false
+		}
+	}
+
+	flannel, ok := config["flannel"].(map[string]interface{})
+	if !ok || len(flannel) != 2 {
+		return false
+	}
+	image, ok := flannel["image"].(map[string]interface{})
+	if !ok || len(image) != 1 {
+		return false
+	}
+	if _, ok := image["tag"].(string); !ok {
+		return false
+	}
+
+	args, ok := flannel["args"].([]interface{})
+	if !ok || len(args) < 2 || len(args) > 3 {
+		return false
+	}
+	if args[0] != "--ip-masq" || args[1] != "--kube-subnet-mgr" {
+		return false
+	}
+	if len(args) == 3 {
+		iface, ok := args[2].(string)
+		if !ok || !strings.HasPrefix(iface, "--iface=") {
+			return false
+		}
+	}
+
+	return true
+}
+
+func addFlannelNodeIPConfiguration(config map[string]interface{}) (bool, error) {
+	args, found, err := unstructured.NestedSlice(config, "flannel", "args")
+	if err != nil {
+		return false, err
+	}
+	if !found {
+		return false, err
+	}
+
+	updated := false
+	if !containsString(args, "--public-ip=$(NODE_IP)") {
+		args = append(args, "--public-ip=$(NODE_IP)")
+		if err := unstructured.SetNestedSlice(config, args, "flannel", "args"); err != nil {
+			return false, err
+		}
+		updated = true
+	}
+
+	extraEnv, _, err := unstructured.NestedSlice(config, "flannel", "extraEnv")
+	if err != nil {
+		return false, err
+	}
+	if !containsEnvironmentVariable(extraEnv, "NODE_IP") {
+		extraEnv = append(extraEnv, map[string]interface{}{
+			"name": "NODE_IP",
+			"valueFrom": map[string]interface{}{
+				"fieldRef": map[string]interface{}{
+					"fieldPath": "status.hostIP",
+				},
+			},
+		})
+		if err := unstructured.SetNestedSlice(config, extraEnv, "flannel", "extraEnv"); err != nil {
+			return false, err
+		}
+		updated = true
+	}
+
+	return updated, nil
+}
+
+func containsString(values []interface{}, target string) bool {
+	for _, value := range values {
+		stringValue, ok := value.(string)
+		if ok && stringValue == target {
+			return true
+		}
+	}
+	return false
+}
+
+func containsEnvironmentVariable(values []interface{}, name string) bool {
+	for _, value := range values {
+		environmentVariable, ok := value.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if environmentVariable["name"] == name {
+			return true
+		}
+	}
+	return false
 }
 
 func updateUI(kubeConfigPath string) error {
@@ -511,6 +684,49 @@ func oneThirtyAndLower(restConfig *rest.Config, client kubernetes.Interface, kub
 	return nil
 }
 
+func isKubernetesOneThirtyFour(version string) (bool, error) {
+	atLeastOneThirtyFour, err := util.CompareVersions(version, "1.34")
+	if err != nil {
+		return false, err
+	}
+
+	beforeOneThirtyFive, err := util.CompareVersions(version, "1.35")
+	if err != nil {
+		return false, err
+	}
+
+	return atLeastOneThirtyFour >= 0 && beforeOneThirtyFive == -1, nil
+}
+
+func removePodInfraContainerImageFlag(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath string, nodes *v1.NodeList) error {
+	log.Debugf("Starting kubelet pod infrastructure image flag cleanup")
+	for _, node := range nodes.Items {
+		isOneThirtyFour, err := isKubernetesOneThirtyFour(node.Status.NodeInfo.KubeletVersion)
+		if err != nil {
+			return err
+		}
+
+		if !isOneThirtyFour {
+			log.Debugf("Skipping node %s with Kubernetes version %s", node.Name, node.Status.NodeInfo.KubeletVersion)
+			continue
+		}
+
+		log.Debugf("Removing pod infrastructure image flag on node %s with Kubernetes version %s", node.Name, node.Status.NodeInfo.KubeletVersion)
+		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
+		if err != nil {
+			return err
+		}
+
+		err = script.RunScript(client, kcConfig, node.Name, constants.OCNESystemNamespace, "remove-pod-infra-image-flag", RemovePodInfraContainerImageFlag, []v1.EnvVar{})
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Debugf("Finished kubelet pod infrastructure image flag cleanup")
+	return nil
+}
+
 var vipableProviderIds = []string{
 	"olvm://",
 }
@@ -539,10 +755,10 @@ func generateVipUpdateScript(bindPort uint16, altPort uint16, virtualIp string) 
 	}
 
 	in := struct {
-		Units []string
+		Units         []string
 		UnitsToEnable []string
-		UnitsToStart []string
-		Files map[string]string
+		UnitsToStart  []string
+		Files         map[string]string
 	}{
 		Units: []string{
 			ignition.KeepalivedRefreshServiceName,
@@ -553,19 +769,18 @@ func generateVipUpdateScript(bindPort uint16, altPort uint16, virtualIp string) 
 			ignition.KeepalivedRefreshPathName,
 			ignition.KeepalivedRefreshServiceName,
 			ignition.NginxRefreshServiceName,
-
 		},
-		UnitsToStart: []string {
+		UnitsToStart: []string{
 			ignition.NginxRefreshPathName,
 			ignition.KeepalivedRefreshPathName,
 		},
 		Files: map[string]string{
 			unitToPath(ignition.KeepalivedRefreshServiceName): ignition.GetKeepalivedRefreshUnit(),
-			unitToPath(ignition.KeepalivedRefreshPathName): ignition.GetKeepalivedRefreshPathUnit(),
-			unitToPath(ignition.NginxRefreshServiceName): ignition.GetNginxRefreshUnit(),
-			unitToPath(ignition.NginxRefreshPathName): ignition.GetNginxRefreshPathUnit(),
-			unitToPath(ignition.NginxServiceName): ignition.NginxService,
-			ignition.KeepAlivedCheckScriptPath: keepalivedCheckScript,
+			unitToPath(ignition.KeepalivedRefreshPathName):    ignition.GetKeepalivedRefreshPathUnit(),
+			unitToPath(ignition.NginxRefreshServiceName):      ignition.GetNginxRefreshUnit(),
+			unitToPath(ignition.NginxRefreshPathName):         ignition.GetNginxRefreshPathUnit(),
+			unitToPath(ignition.NginxServiceName):             ignition.NginxService,
+			ignition.KeepAlivedCheckScriptPath:                keepalivedCheckScript,
 		},
 	}
 
@@ -701,7 +916,7 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 		keepalivedConf := kcConfig.Streams.Out.(*bytes.Buffer).String()
 		log.Debugf("Looking for %s", apiHost)
 		log.Debugf("  in:")
-		log.Debugf(keepalivedConf)
+		log.Debugf("%s", keepalivedConf)
 		if strings.Contains(keepalivedConf, apiHost) {
 			log.Debugf("Node %s manages a virtual IP", n.Name)
 			continue
@@ -742,7 +957,7 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 			return err
 		}
 		log.Debugf("update script for node %s is:", n.Name)
-		log.Debugf(updateScript)
+		log.Debugf("%s", updateScript)
 
 		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
 		if err != nil {
@@ -760,14 +975,14 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 	err = install.InstallApplications([]install.ApplicationDescription{
 		{
 			Application: &types.Application{
-				Name: constants.HAMonitorChart,
+				Name:      constants.HAMonitorChart,
 				Namespace: constants.HAMonitorNamespace,
-				Release: constants.HAMonitorRelease,
-				Version: constants.HAMonitorVersion,
-				Catalog: catalog.InternalCatalog,
+				Release:   constants.HAMonitorRelease,
+				Version:   constants.HAMonitorVersion,
+				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
 					"apiAddress": apiHost,
-					"apiPort": strconv.FormatUint(uint64(apiHostPort), 10),
+					"apiPort":    strconv.FormatUint(uint64(apiHostPort), 10),
 				},
 			},
 		},
@@ -781,10 +996,13 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 }
 
 // updateFuncs is an ordered list of update functions to run.
-var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList)error{
+var updateFuncs = []func(*rest.Config, kubernetes.Interface, string, *v1.NodeList) error{
 	oneThirtyAndLower,
+	updateFlannelNodeIPAssignment,
+	removePodInfraContainerImageFlag,
 	virtualIp,
 }
+
 // Update applies the cumulative set of changes that have built
 // up over time as configuration deficiences have been discovered
 // and repaired.
@@ -800,6 +1018,7 @@ func Update(restConfig *rest.Config, client kubernetes.Interface, kubeConfigPath
 
 // Custom time type for non-standard format
 const ctLayout = "2006-01-02 15:04:05 -0700"
+
 type CustomTime struct {
 	time.Time
 }
@@ -842,7 +1061,7 @@ func IsUpdateAvailable(node *v1.Node, kubeClient kubernetes.Interface, restConfi
 	// command fails because selectors require listing nodes.  This issue
 	// is limited to OCK instances running Kubernetes 1.32.5/7.  Do a more
 	// intensive check for that case.
-	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8"  {
+	if node.Status.NodeInfo.KubeletVersion == "v1.32.7+1.el8" || node.Status.NodeInfo.KubeletVersion == "v1.32.5+1.el8" {
 		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
 		if err != nil {
 			return false, err
@@ -878,4 +1097,3 @@ func IsUpdateAvailableByName(name string, kubeClient kubernetes.Interface, restC
 	}
 	return IsUpdateAvailable(node, kubeClient, restConfig, kubeConfigPath)
 }
-

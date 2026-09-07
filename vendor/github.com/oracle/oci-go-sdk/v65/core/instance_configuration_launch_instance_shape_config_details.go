@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -54,6 +54,11 @@ type InstanceConfigurationLaunchInstanceShapeConfigDetails struct {
 
 	// This field is reserved for internal use.
 	ResourceManagement InstanceConfigurationLaunchInstanceShapeConfigDetailsResourceManagementEnum `mandatory:"false" json:"resourceManagement,omitempty"`
+
+	// The NVMe-backed local storage capacity, in GB, for flexible dense (DenseLV) VM shapes. If the selected shape
+	// is DenseLV, the value must be greater than 0. For all other shapes, the value must be null (if specified);
+	// any non-null value for a non-DenseLV shape results in an error.
+	LocalVolumeSizeInGBs *int `mandatory:"false" json:"localVolumeSizeInGBs"`
 }
 
 func (m InstanceConfigurationLaunchInstanceShapeConfigDetails) String() string {

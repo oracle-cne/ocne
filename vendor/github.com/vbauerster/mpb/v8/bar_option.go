@@ -1,8 +1,8 @@
 package mpb
 
 import (
-	"bytes"
 	"io"
+	"slices"
 
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -10,31 +10,31 @@ import (
 // BarOption is a func option to alter default behavior of a bar.
 type BarOption func(*bState)
 
-func inspect(decorators []decor.Decorator) (dest []decor.Decorator) {
-	for _, decorator := range decorators {
-		if decorator == nil {
-			continue
-		}
-		dest = append(dest, decorator)
-	}
-	return
-}
-
 // PrependDecorators let you inject decorators to the bar's left side.
 func PrependDecorators(decorators ...decor.Decorator) BarOption {
-	decorators = inspect(decorators)
+	i := 0
+	for _, d := range decorators {
+		if d != nil {
+			decorators[i] = d
+			i++
+		}
+	}
 	return func(s *bState) {
-		s.populateEwmaDecorators(decorators)
-		s.decorators[0] = decorators
+		s.decorGroups[0] = slices.Clip(decorators[:i])
 	}
 }
 
 // AppendDecorators let you inject decorators to the bar's right side.
 func AppendDecorators(decorators ...decor.Decorator) BarOption {
-	decorators = inspect(decorators)
+	i := 0
+	for _, d := range decorators {
+		if d != nil {
+			decorators[i] = d
+			i++
+		}
+	}
 	return func(s *bState) {
-		s.populateEwmaDecorators(decorators)
-		s.decorators[1] = decorators
+		s.decorGroups[1] = slices.Clip(decorators[:i])
 	}
 }
 
@@ -57,12 +57,13 @@ func BarWidth(width int) BarOption {
 // When argument bar completes or aborts queued bar replaces its place.
 func BarQueueAfter(bar *Bar) BarOption {
 	return func(s *bState) {
-		s.waitBar = bar
+		s.waitFor = bar
 	}
 }
 
-// BarRemoveOnComplete removes both bar's filler and its decorators
-// on complete event.
+// BarRemoveOnComplete removes both bar's filler and its decorators on
+// complete event. This one is ineffective if PopCompletedMode ContainerOption
+// is enabled.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.rmOnComplete = true
@@ -80,6 +81,25 @@ func BarFillerOnComplete(message string) BarOption {
 	return BarFillerMiddleware(func(base BarFiller) BarFiller {
 		return BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
 			if st.Completed {
+				_, err := io.WriteString(w, message)
+				return err
+			}
+			return base.Fill(w, st)
+		})
+	})
+}
+
+// BarFillerClearOnAbort clears bar's filler on abort event.
+// It's shortcut for BarFillerOnAbort("").
+func BarFillerClearOnAbort() BarOption {
+	return BarFillerOnAbort("")
+}
+
+// BarFillerOnAbort replaces bar's filler with message, on abort event.
+func BarFillerOnAbort(message string) BarOption {
+	return BarFillerMiddleware(func(base BarFiller) BarFiller {
+		return BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+			if st.Aborted {
 				_, err := io.WriteString(w, message)
 				return err
 			}
@@ -106,53 +126,32 @@ func BarPriority(priority int) BarOption {
 	}
 }
 
-// BarExtender extends bar with arbitrary lines. Provided BarFiller will be
-// called at each render/flush cycle. Any lines written to the underlying
-// io.Writer will extend the bar either in above (rev = true) or below
-// (rev = false) direction.
-func BarExtender(filler BarFiller, rev bool) BarOption {
-	if filler == nil {
-		return nil
-	}
-	if f, ok := filler.(BarFillerFunc); ok && f == nil {
-		return nil
-	}
-	fn := makeExtenderFunc(filler, rev)
+// BarExtender is deprecated use BarTopExtender or BarBtmExtender instead.
+func BarExtender(filler BarFiller, top bool) BarOption {
 	return func(s *bState) {
-		s.extender = fn
+		s.extender = makeRowExtender(top, filler)
 	}
 }
 
-func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
-	buf := new(bytes.Buffer)
-	base := func(stat decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
-		err := filler.Fill(buf, stat)
-		if err != nil {
-			buf.Reset()
-			return rows, err
-		}
-		for {
-			line, err := buf.ReadBytes('\n')
-			if err != nil {
-				buf.Reset()
-				break
-			}
-			rows = append(rows, bytes.NewReader(line))
-		}
-		return rows, err
+// BarTopExtender extends a bar with arbitrary lines above.
+// Each BarFiller represent one line so it should write '\n' no more than once.
+// For example if there is need to extend a bar by 2 lines, provide 2 fillers
+// and so on. If BarFiller writes more than one line then whole output is going
+// to be corrupted. This option cannot be used together with BarBtmExtender.
+func BarTopExtender(fillers ...BarFiller) BarOption {
+	return func(s *bState) {
+		s.extender = makeRowExtender(true, fillers...)
 	}
-	if !rev {
-		return base
-	}
-	return func(stat decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
-		rows, err := base(stat, rows...)
-		if err != nil {
-			return rows, err
-		}
-		for left, right := 0, len(rows)-1; left < right; left, right = left+1, right-1 {
-			rows[left], rows[right] = rows[right], rows[left]
-		}
-		return rows, err
+}
+
+// BarBtmExtender extends a bar with arbitrary lines below.
+// Each BarFiller represent one line so it should write '\n' no more than once.
+// For example if there is need to extend a bar by 2 lines, provide 2 fillers
+// and so on. If BarFiller writes more than one line then whole output is going
+// to be corrupted. This option cannot be used together with BarTopExtender.
+func BarBtmExtender(fillers ...BarFiller) BarOption {
+	return func(s *bState) {
+		s.extender = makeRowExtender(false, fillers...)
 	}
 }
 

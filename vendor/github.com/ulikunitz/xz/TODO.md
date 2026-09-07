@@ -1,9 +1,5 @@
 # TODO list
 
-## Release v0.5.x
-
-1. Support check flag in gxz command.
-
 ## Release v0.6
 
 1. Review encoder and check for lzma improvements under xz.
@@ -78,13 +74,31 @@
 * Update README.md
 * xb copyright . in xz directory to ensure all new files have Copyright header
 * `VERSION=<version> go generate github.com/ulikunitz/xz/...` to update version files
-* Execute test for Linux/amd64, Linux/x86 and Windows/amd64.
+* Execute [test for Linux/amd64, Linux/x86 and Windows/amd64](.github/workflows/go-test-platforms.yml).
 * Update TODO.md - write short log entry
 * `git checkout master && git merge dev`
 * `git tag -a <version>`
 * `git push`
 
 ## Log
+
+## 2026-07-20
+
+New release v0.5.16 to support other operating systems like Illumos using a
+simple fallback function for IsTerminal to avoid adding a dependency.
+
+## 2025-08-28
+
+Release v0.5.14 addresses the security vulnerability CVE-2025-58058. If you put
+bytes in from of a LZMA stream, the header might not be read correctly and
+memory for the dictionary buffer allocated. I have implemented mitigations for
+the problem.
+
+### 2025-08-20
+
+Release v0.5.13 addressed issue #61 regarding handling of multiple WriteClosers
+together. So I added a new package xio with a WriteCloserStack to address the
+issue.
 
 ### 2024-04-03
 

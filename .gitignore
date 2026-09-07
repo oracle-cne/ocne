@@ -3,6 +3,10 @@ manifests/charts/
 pkg/catalog/embedded/charts
 out
 build
+# Docker v28 vendors a required Go package whose directory is named "build".
+# Keep it tracked while retaining the general build-output ignore rule above.
+!vendor/github.com/docker/docker/api/types/build/
+!vendor/github.com/docker/docker/api/types/build/*.go
 pkg/image/docker:__container-registry.oracle.com_os_oraclelinux:8-slim
 test/tests
 .vscode/

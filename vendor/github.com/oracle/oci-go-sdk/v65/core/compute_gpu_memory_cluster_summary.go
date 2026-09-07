@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -24,23 +24,29 @@ import (
 // ComputeGpuMemoryClusterSummary Summary model for listing Compute GPU Memory Clusters.
 type ComputeGpuMemoryClusterSummary struct {
 
-	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) for the Customer-unique GPU memory cluster
+	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) for the Customer-unique GPU Memory Cluster
 	Id *string `mandatory:"true" json:"id"`
 
-	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the compartment that contains the compute GPU memory cluster.
+	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the compartment that contains the compute GPU Memory Cluster.
 	// compartment.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
-	// The availability domain of GPU memory cluster.
+	// The availability domain of GPU Memory Cluster.
 	// Example: `Uocm:PHX-AD-1`
 	AvailabilityDomain *string `mandatory:"true" json:"availabilityDomain"`
 
-	// The current state of the compute GPU memory cluster.
+	// The current state of the compute GPU Memory Cluster.
 	LifecycleState ComputeGpuMemoryClusterLifecycleStateEnum `mandatory:"true" json:"lifecycleState"`
 
 	// The date and time the boot volume was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
+
+	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the GPU memory fabric.
+	GpuMemoryFabricId *string `mandatory:"false" json:"gpuMemoryFabricId"`
+
+	// The size represents the total number of instances in the GPU Memory Cluster, including both running instances and those still in the process of launching.
+	Size *int64 `mandatory:"false" json:"size"`
 
 	// Defined tags for this resource. Each key is predefined and scoped to a
 	// namespace. For more information, see Resource Tags (https://docs.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).

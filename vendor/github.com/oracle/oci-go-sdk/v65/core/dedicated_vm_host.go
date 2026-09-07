@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -84,13 +84,22 @@ type DedicatedVmHost struct {
 	// Specifies if the Dedicated Virtual Machine Host (DVMH) is restricted to running only Confidential VMs. If `true`, only Confidential VMs can be launched. If `false`, Confidential VMs cannot be launched.
 	IsMemoryEncryptionEnabled *bool `mandatory:"false" json:"isMemoryEncryptionEnabled"`
 
+	// Specifies if the Dedicated Virtual Machine Host (DVMH) is to running only Burstable VMs. If `true`, only Burstable VMs can be launched. If `false`, Burstable VMs cannot be launched.
+	IsBurstable *bool `mandatory:"false" json:"isBurstable"`
+
 	// The total memory of the dedicated VM host, in GBs.
 	TotalMemoryInGBs *float32 `mandatory:"false" json:"totalMemoryInGBs"`
 
 	// The remaining memory of the dedicated VM host, in GBs.
 	RemainingMemoryInGBs *float32 `mandatory:"false" json:"remainingMemoryInGBs"`
 
-	// A list of total and remaining CPU and memory per capacity bucket.
+	// The total local volume of the dedicated VM host, in GBs.
+	TotalLocalVolumeInGBs *float32 `mandatory:"false" json:"totalLocalVolumeInGBs"`
+
+	// The remaining local volume of the dedicated VM host, in GBs.
+	RemainingLocalVolumeInGBs *float32 `mandatory:"false" json:"remainingLocalVolumeInGBs"`
+
+	// A list of total and remaining CPU, memory, and local volume per capacity bucket.
 	CapacityBins []CapacityBin `mandatory:"false" json:"capacityBins"`
 
 	// The compute bare metal host OCID of the dedicated virtual machine host.
@@ -125,8 +134,11 @@ func (m *DedicatedVmHost) UnmarshalJSON(data []byte) (e error) {
 		PlacementConstraintDetails placementconstraintdetails        `json:"placementConstraintDetails"`
 		CapacityConfig             *string                           `json:"capacityConfig"`
 		IsMemoryEncryptionEnabled  *bool                             `json:"isMemoryEncryptionEnabled"`
+		IsBurstable                *bool                             `json:"isBurstable"`
 		TotalMemoryInGBs           *float32                          `json:"totalMemoryInGBs"`
 		RemainingMemoryInGBs       *float32                          `json:"remainingMemoryInGBs"`
+		TotalLocalVolumeInGBs      *float32                          `json:"totalLocalVolumeInGBs"`
+		RemainingLocalVolumeInGBs  *float32                          `json:"remainingLocalVolumeInGBs"`
 		CapacityBins               []CapacityBin                     `json:"capacityBins"`
 		ComputeBareMetalHostId     *string                           `json:"computeBareMetalHostId"`
 		AvailabilityDomain         *string                           `json:"availabilityDomain"`
@@ -165,9 +177,15 @@ func (m *DedicatedVmHost) UnmarshalJSON(data []byte) (e error) {
 
 	m.IsMemoryEncryptionEnabled = model.IsMemoryEncryptionEnabled
 
+	m.IsBurstable = model.IsBurstable
+
 	m.TotalMemoryInGBs = model.TotalMemoryInGBs
 
 	m.RemainingMemoryInGBs = model.RemainingMemoryInGBs
+
+	m.TotalLocalVolumeInGBs = model.TotalLocalVolumeInGBs
+
+	m.RemainingLocalVolumeInGBs = model.RemainingLocalVolumeInGBs
 
 	m.CapacityBins = make([]CapacityBin, len(model.CapacityBins))
 	copy(m.CapacityBins, model.CapacityBins)

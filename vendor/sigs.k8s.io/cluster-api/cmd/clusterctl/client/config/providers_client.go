@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/drone/envsubst/v2"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -40,6 +40,7 @@ const (
 	AWSProviderName        = "aws"
 	AzureProviderName      = "azure"
 	BYOHProviderName       = "byoh"
+	CloudscaleProviderName = "cloudscale-ch-cloudscale"
 	CloudStackProviderName = "cloudstack"
 	DockerProviderName     = "docker"
 	DOProviderName         = "digitalocean"
@@ -64,6 +65,7 @@ const (
 	MAASProviderName           = "maas"
 	KubevirtProviderName       = "kubevirt"
 	KubeKeyProviderName        = "kubekey"
+	KubeSwiftProviderName      = "kubeswift-io"
 	VclusterProviderName       = "vcluster"
 	VirtinkProviderName        = "virtink"
 	CoxEdgeProviderName        = "coxedge"
@@ -73,6 +75,8 @@ const (
 	VultrProviderName          = "vultr-vultr"
 	OpenNebulaProviderName     = "opennebula"
 	ScalewayProviderName       = "scaleway"
+	MetalStackProviderName     = "metal-stack"
+	OxideProviderName          = "oxide"
 )
 
 // Bootstrap providers.
@@ -97,12 +101,14 @@ const (
 	RKE2ControlPlaneProviderName                = "rke2"
 	K0smotronControlPlaneProviderName           = "k0sproject-k0smotron"
 	CanonicalKubernetesControlPlaneProviderName = "canonical-kubernetes"
+	HCPControlPlaneProviderName                 = "hosted-control-plane"
 )
 
 // IPAM providers.
 const (
 	InClusterIPAMProviderName = "in-cluster"
 	NutanixIPAMProviderName   = "nutanix"
+	Metal3IPAMProviderName    = "metal3"
 )
 
 // Add-on providers.
@@ -183,6 +189,11 @@ func (p *providersClient) defaults() []Provider {
 			// NB. The Docker provider is not designed for production use and is intended for development environments only.
 			name:         DockerProviderName,
 			url:          "https://github.com/kubernetes-sigs/cluster-api/releases/latest/infrastructure-components-development.yaml",
+			providerType: clusterctlv1.InfrastructureProviderType,
+		},
+		&provider{
+			name:         CloudscaleProviderName,
+			url:          "https://github.com/cloudscale-ch/cluster-api-provider-cloudscale/releases/latest/infrastructure-components.yaml",
 			providerType: clusterctlv1.InfrastructureProviderType,
 		},
 		&provider{
@@ -340,6 +351,21 @@ func (p *providersClient) defaults() []Provider {
 			url:          "https://github.com/scaleway/cluster-api-provider-scaleway/releases/latest/infrastructure-components.yaml",
 			providerType: clusterctlv1.InfrastructureProviderType,
 		},
+		&provider{
+			name:         MetalStackProviderName,
+			url:          "https://github.com/metal-stack/cluster-api-provider-metal-stack/releases/latest/infrastructure-components.yaml",
+			providerType: clusterctlv1.InfrastructureProviderType,
+		},
+		&provider{
+			name:         OxideProviderName,
+			url:          "https://github.com/oxidecomputer/cluster-api-provider-oxide/releases/latest/infrastructure-components.yaml",
+			providerType: clusterctlv1.InfrastructureProviderType,
+		},
+		&provider{
+			name:         KubeSwiftProviderName,
+			url:          "https://github.com/kubeswift-io/cluster-api-provider-kubeswift/releases/latest/infrastructure-components.yaml",
+			providerType: clusterctlv1.InfrastructureProviderType,
+		},
 
 		// Bootstrap providers
 		&provider{
@@ -424,11 +450,21 @@ func (p *providersClient) defaults() []Provider {
 			url:          "https://github.com/canonical/cluster-api-k8s/releases/latest/control-plane-components.yaml",
 			providerType: clusterctlv1.ControlPlaneProviderType,
 		},
+		&provider{
+			name:         HCPControlPlaneProviderName,
+			url:          "https://github.com/teutonet/cluster-api-provider-hosted-control-plane/releases/latest/control-plane-components.yaml",
+			providerType: clusterctlv1.ControlPlaneProviderType,
+		},
 
 		// IPAM providers
 		&provider{
 			name:         InClusterIPAMProviderName,
 			url:          "https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/ipam-components.yaml",
+			providerType: clusterctlv1.IPAMProviderType,
+		},
+		&provider{
+			name:         Metal3IPAMProviderName,
+			url:          "https://github.com/metal3-io/ip-address-manager/releases/latest/ipam-components.yaml",
 			providerType: clusterctlv1.IPAMProviderType,
 		},
 		&provider{
@@ -481,19 +517,19 @@ func (p *providersClient) List() ([]Provider, error) {
 
 	userDefinedProviders := []configProvider{}
 	if err := p.reader.UnmarshalKey(ProvidersConfigKey, &userDefinedProviders); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal providers from the clusterctl configuration file")
+		return nil, pkgerrors.Wrap(err, "failed to unmarshal providers from the clusterctl configuration file")
 	}
 
 	for _, u := range userDefinedProviders {
 		var err error
 		u.URL, err = envsubst.Eval(u.URL, os.Getenv)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to evaluate url: %q", u.URL)
+			return nil, pkgerrors.Wrapf(err, "unable to evaluate url: %q", u.URL)
 		}
 
 		provider := NewProvider(u.Name, u.URL, u.Type)
 		if err := validateProvider(provider); err != nil {
-			return nil, errors.Wrapf(err, "error validating configuration for the %s with name %s. Please fix the providers value in clusterctl configuration file", provider.Type(), provider.Name())
+			return nil, pkgerrors.Wrapf(err, "error validating configuration for the %s with name %s. Please fix the providers value in clusterctl configuration file", provider.Type(), provider.Name())
 		}
 
 		override := false
@@ -530,31 +566,31 @@ func (p *providersClient) Get(name string, providerType clusterctlv1.ProviderTyp
 		}
 	}
 
-	return nil, errors.Errorf("failed to get configuration for the %s with name %s. Please check the provider name and/or add configuration for new providers using the .clusterctl config file", providerType, name)
+	return nil, pkgerrors.Errorf("failed to get configuration for the %s with name %s. Please check the provider name and/or add configuration for new providers using the .clusterctl config file", providerType, name)
 }
 
 func validateProvider(r Provider) error {
 	if r.Name() == "" {
-		return errors.New("name value cannot be empty")
+		return pkgerrors.New("name value cannot be empty")
 	}
 
 	if r.Name() != strings.ToLower(r.Name()) {
-		return errors.Errorf("provider name %s must be in lower case", r.Name())
+		return pkgerrors.Errorf("provider name %s must be in lower case", r.Name())
 	}
 
 	if (r.Name() == ClusterAPIProviderName) != (r.Type() == clusterctlv1.CoreProviderType) {
-		return errors.Errorf("name %s must be used with the %s type (name: %s, type: %s)", ClusterAPIProviderName, clusterctlv1.CoreProviderType, r.Name(), r.Type())
+		return pkgerrors.Errorf("name %s must be used with the %s type (name: %s, type: %s)", ClusterAPIProviderName, clusterctlv1.CoreProviderType, r.Name(), r.Type())
 	}
 
 	if errMsgs := validation.IsDNS1123Subdomain(r.Name()); len(errMsgs) != 0 {
-		return errors.Errorf("invalid provider name: %s", strings.Join(errMsgs, "; "))
+		return pkgerrors.Errorf("invalid provider name: %s", strings.Join(errMsgs, "; "))
 	}
 	if r.URL() == "" {
-		return errors.New("provider URL value cannot be empty")
+		return pkgerrors.New("provider URL value cannot be empty")
 	}
 
 	if _, err := url.Parse(r.URL()); err != nil {
-		return errors.Wrap(err, "error parsing provider URL")
+		return pkgerrors.Wrap(err, "error parsing provider URL")
 	}
 
 	switch r.Type() {
@@ -567,7 +603,7 @@ func validateProvider(r Provider) error {
 		clusterctlv1.AddonProviderType:
 		break
 	default:
-		return errors.Errorf("invalid provider type. Allowed values are [%s, %s, %s, %s, %s, %s, %s]",
+		return pkgerrors.Errorf("invalid provider type. Allowed values are [%s, %s, %s, %s, %s, %s, %s]",
 			clusterctlv1.CoreProviderType,
 			clusterctlv1.BootstrapProviderType,
 			clusterctlv1.InfrastructureProviderType,

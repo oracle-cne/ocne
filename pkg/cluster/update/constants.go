@@ -8,7 +8,6 @@ import (
 )
 
 const (
-
 	CheckNodeUpdate = `#! /bin/bash
 shopt -s extglob
 
@@ -25,6 +24,20 @@ if echo "$OCK_REFS" | grep -q -e 'ock:ock'; then
 fi
 
 echo '{}' | chroot /hostroot jq ".boot_timestamp = \"$BOOT_COMMIT_DATE\" | .update_timestamp = \"$UPDATE_COMMIT_DATE\""
+`
+
+	RemovePodInfraContainerImageFlag = `#! /bin/bash
+set -euo pipefail
+
+FLAGS_FILE="/hostroot/var/lib/kubelet/kubeadm-flags.env"
+
+if [[ ! -f "${FLAGS_FILE}" ]]; then
+	echo "${FLAGS_FILE} does not exist"
+	exit 0
+fi
+
+sed -i -E 's/[[:space:]]?--pod-infra-container-image=[-a-zA-Z0-9._/:]+[[:space:]]?//g' "${FLAGS_FILE}"
+echo "Removed --pod-infra-container-image from ${FLAGS_FILE} if present"
 `
 
 	GetControlPlaneEndpointNic = `#! /bin/bash
@@ -65,5 +78,5 @@ exit 0
 )
 
 var Files = map[string]string{
-	ignition.KubeadmUpgradePath:   ignition.KubeadmUpgrade,
+	ignition.KubeadmUpgradePath: ignition.KubeadmUpgrade,
 }

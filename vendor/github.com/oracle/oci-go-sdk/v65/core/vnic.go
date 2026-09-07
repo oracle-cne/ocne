@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -125,7 +125,6 @@ type Vnic struct {
 	// Defaults to `false`, which means the check is performed. For information
 	// about why you would skip the source/destination check, see
 	// Using a Private IP as a Route Target (https://docs.oracle.com/iaas/Content/Network/Tasks/managingroutetables.htm#privateip).
-	//
 	// If the VNIC belongs to a VLAN as part of the Oracle Cloud VMware Solution (instead of
 	// belonging to a subnet), the `skipSourceDestCheck` attribute is `true`.
 	// This is because the source/destination check is always disabled for VNICs in a VLAN.
@@ -134,6 +133,10 @@ type Vnic struct {
 
 	// The OCID (https://docs.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of the subnet the VNIC is in.
 	SubnetId *string `mandatory:"false" json:"subnetId"`
+
+	// Usage of system tag keys. These predefined keys are scoped to namespaces.
+	// Example: `{ "orcl-cloud": { "free-tier-retained": "true" } }`
+	SystemTags map[string]map[string]interface{} `mandatory:"false" json:"systemTags"`
 
 	// List of IPv6 addresses assigned to the VNIC.
 	// Example: `2001:DB8::`

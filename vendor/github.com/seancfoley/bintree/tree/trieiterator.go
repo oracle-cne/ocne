@@ -1,5 +1,5 @@
 //
-// Copyright 2024 Sean C Foley
+// Copyright 2024-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,8 +89,8 @@ func (iter *cachingTrieNodeIterator[E, V]) Remove() *BinTrieNode[E, V] {
 }
 
 type dualTrieNodeIterator struct {
-	oneCurrentChange, twoCurrentChange change
-	oneChangeTracker, twoChangeTracker *changeTracker
+	oneCurrentChange, twoCurrentChange Change
+	oneChangeTracker, twoChangeTracker *ChangeTracker
 }
 
 type dualIterator[E TrieKey[E], V any] struct {
@@ -111,21 +111,21 @@ func (iter *dualIterator[E, V]) HasNext() bool {
 func (iter *dualIterator[E, V]) Next() *BinTrieNode[E, V] {
 	if iter.onSecond {
 		ct := iter.oneChangeTracker
-		if ct != nil && ct.changedSince(iter.oneCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.oneCurrentChange)
 		}
 		return iter.two.Next()
 	} else if !iter.one.HasNext() {
 		iter.onSecond = true
 		ct := iter.oneChangeTracker
-		if ct != nil && ct.changedSince(iter.oneCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.oneCurrentChange)
 		}
 		return iter.two.Next()
 	}
 	ct := iter.twoChangeTracker
-	if ct != nil && ct.changedSince(iter.twoCurrentChange) {
-		changePanic()
+	if ct != nil {
+		ct.ChangedSince(iter.twoCurrentChange)
 	}
 	return iter.one.Next()
 }
@@ -135,27 +135,27 @@ func (iter *dualIterator[E, V]) Remove() (res *BinTrieNode[E, V]) {
 		// we check the change tracker of the iterator we are not using,
 		// since the call to Remove will check the change tracker of the iterator we are using
 		ct := iter.oneChangeTracker
-		if ct != nil && ct.changedSince(iter.oneCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.oneCurrentChange)
 		}
 		res = iter.two.Remove()
 		// we update the change value of the iterator we used, since we just made a change
 		ct = iter.twoChangeTracker
 		if ct != nil {
-			iter.twoCurrentChange = ct.getCurrent()
+			iter.twoCurrentChange = ct.GetCurrent()
 		}
 	} else {
 		// we check the change tracker of the iterator we are not using,
 		// since the call to Remove will check the change tracker of the iterator we are using
 		ct := iter.twoChangeTracker
-		if ct != nil && ct.changedSince(iter.twoCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.twoCurrentChange)
 		}
 		res = iter.one.Remove()
 		// we update the change value of the iterator we used, since we just made a change
 		ct = iter.oneChangeTracker
 		if ct != nil {
-			iter.oneCurrentChange = ct.getCurrent()
+			iter.oneCurrentChange = ct.GetCurrent()
 		}
 	}
 	return
@@ -175,13 +175,13 @@ func CombineSequentiallyRem[E TrieKey[E], V any](oneRoot, twoRoot *BinTrieNode[E
 	}
 
 	oneTracker := oneRoot.cTracker
-	var oneChange, twoChange change
+	var oneChange, twoChange Change
 	if oneTracker != nil {
-		oneChange = oneTracker.getCurrent()
+		oneChange = oneTracker.GetCurrent()
 	}
 	twoTracker := twoRoot.cTracker
 	if twoTracker != nil {
-		twoChange = twoTracker.getCurrent()
+		twoChange = twoTracker.GetCurrent()
 	}
 
 	return &dualIterator[E, V]{
@@ -198,13 +198,13 @@ func CombineSequentiallyRem[E TrieKey[E], V any](oneRoot, twoRoot *BinTrieNode[E
 
 func CombineByBlockSize[E TrieKey[E], V any](oneRoot, twoRoot *BinTrieNode[E, V], one, two TrieNodeIteratorRem[E, V], lowerSubNodeFirst bool) TrieNodeIteratorRem[E, V] {
 	oneTracker := oneRoot.cTracker
-	var oneChange, twoChange change
+	var oneChange, twoChange Change
 	if oneTracker != nil {
-		oneChange = oneTracker.getCurrent()
+		oneChange = oneTracker.GetCurrent()
 	}
 	twoTracker := twoRoot.cTracker
 	if twoTracker != nil {
-		twoChange = twoTracker.getCurrent()
+		twoChange = twoTracker.GetCurrent()
 	}
 
 	return &dualBlockSizeIterator[E, V]{
@@ -252,14 +252,14 @@ func (iter *dualBlockSizeIterator[E, V]) Next() (result *BinTrieNode[E, V]) {
 	}
 	if !accessedOne {
 		ct := iter.oneChangeTracker
-		if ct != nil && ct.changedSince(iter.oneCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.oneCurrentChange)
 		}
 	}
 	if !accessedTwo {
 		ct := iter.twoChangeTracker
-		if ct != nil && ct.changedSince(iter.twoCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.twoCurrentChange)
 		}
 	}
 
@@ -290,9 +290,6 @@ func (iter *dualBlockSizeIterator[E, V]) Next() (result *BinTrieNode[E, V]) {
 
 // blockSizeCompare compares keys by block size and then by prefix value if block sizes are equal
 func blockSizeCompare[E TrieKey[E]](key1, key2 E, reverseBlocksEqualSize bool) int {
-	if key2 == key1 {
-		return 0
-	}
 	pref2 := key2.GetPrefixLen()
 	pref1 := key1.GetPrefixLen()
 	if pref1 != nil {
@@ -325,24 +322,24 @@ func (iter *dualBlockSizeIterator[E, V]) Remove() (result *BinTrieNode[E, V]) {
 	}
 	if iter.lastItemIsOne {
 		ct := iter.twoChangeTracker
-		if ct != nil && ct.changedSince(iter.twoCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.twoCurrentChange)
 		}
 		result = iter.one.Remove()
 		// we update the change value of the iterator we used, since we just made a change
 		ct = iter.oneChangeTracker
 		if ct != nil {
-			iter.oneCurrentChange = ct.getCurrent()
+			iter.oneCurrentChange = ct.GetCurrent()
 		}
 	} else {
 		ct := iter.oneChangeTracker
-		if ct != nil && ct.changedSince(iter.oneCurrentChange) {
-			changePanic()
+		if ct != nil {
+			ct.ChangedSince(iter.oneCurrentChange)
 		}
 		result = iter.two.Remove()
 		ct = iter.twoChangeTracker
 		if ct != nil {
-			iter.twoCurrentChange = ct.getCurrent()
+			iter.twoCurrentChange = ct.GetCurrent()
 		}
 	}
 	iter.lastItem = nil

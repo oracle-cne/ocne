@@ -1,5 +1,5 @@
 //
-// Copyright 2020-2024 Sean C Foley
+// Copyright 2020-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,8 +37,26 @@ func clone[T any](orig []T) []T {
 	return append(make([]T, 0, len(orig)), orig...)
 }
 
+func cloneBigInts(orig []*big.Int) (newSlice []*big.Int) {
+	newSlice = make([]*big.Int, len(orig), cap(orig))
+	for i, b := range orig {
+		newSlice[i] = bigZero().Set(b)
+	}
+	return
+}
+
 func cloneSeries[T any](addr T, orig []T) []T {
 	return append(append(make([]T, 0, len(orig)+1), addr), orig...)
+}
+
+func expandCapacity[T any](orig []T, additionalCapacity int) []T {
+	currentAdditional := cap(orig) - len(orig)
+	if currentAdditional < additionalCapacity {
+		needed := additionalCapacity - currentAdditional
+		// the make here does not allocate
+		return append(orig[:cap(orig)], make([]T, needed)...)[:len(orig)]
+	}
+	return orig
 }
 
 func fillDivs(orig []*AddressDivision, val *AddressDivision) {
@@ -190,38 +208,21 @@ func flagsFromState(state fmt.State, verb rune) string {
 	return string(vals)
 }
 
-// TODO later when moving up to Go 1.21 you can use generic type cmp.Ordered to make the min/max funcs generic
-// in fact, there are predeclared functions min and max starting with 1.21
+type ordered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
+		~float32 | ~float64 |
+		~string
+}
 
-func umin(a, b uint) uint {
+func min[T ordered](a, b T) T {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func imin(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func minSegInt(a, b SegInt) SegInt {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func maxSegInt(a, b SegInt) SegInt {
+func max[T ordered](a, b T) T {
 	if a > b {
 		return a
 	}
@@ -236,4 +237,53 @@ func atomicLoadPointer(dataLoc *unsafe.Pointer) unsafe.Pointer {
 
 func atomicStorePointer(dataLoc *unsafe.Pointer, val unsafe.Pointer) {
 	atomic.StorePointer(dataLoc, val)
+}
+
+func insertElementAt[S ~[]E, E any](slice S, index int, element E) S {
+	length := len(slice)
+	if index == length {
+		return append(slice, element)
+	} else if length+1 > cap(slice) {
+		newSlice := append(slice[:index], make(S, (length-index)+1)... /* stack allocated */)
+		newSlice[index] = element
+		copy(newSlice[index+1:], slice[index:])
+		return newSlice
+	}
+	slice = slice[:length+1]
+	copy(slice[index+1:], slice[index:])
+	slice[index] = element
+	return slice
+}
+
+func insertElementsAt[S ~[]E, E any](slice S, index int, elements ...E) S {
+	length := len(slice)
+	if index == length {
+		return append(slice, elements...)
+	}
+	numElements := len(elements)
+	if numElements == 0 {
+		return slice
+	}
+	if length+numElements > cap(slice) {
+		newSlice := append(slice[:index], make(S, (length-index)+numElements)... /* stack allocated */)
+		copy(newSlice[index:], elements)
+		copy(newSlice[index+numElements:], slice[index:])
+		return newSlice
+	}
+	slice = slice[:length+numElements]
+	copy(slice[index+numElements:], slice[index:])
+	copy(slice[index:], elements)
+	return slice
+}
+
+func removeElement[S ~[]E, E any](slice S, from int) S {
+	return append(slice[:from], slice[from+1:]...)
+}
+
+func removeElements[S ~[]E, E any](slice S, from, to int) S {
+	return append(slice[:from], slice[to:]...)
+}
+
+func removeEndElements[S ~[]E, E any](slice S, from int) S {
+	return slice[:from]
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 package common
@@ -599,7 +599,7 @@ func addToHeader(request *http.Request, value reflect.Value, field reflect.Struc
 		for i := 0; i < numOfElements; i++ {
 			collectionFormatStringValues[i], e = toStringValue(value.Index(i), field)
 			if e != nil {
-				Debugf("Header element could not be marshalled to a string: %w", e)
+				Debugf("Header element could not be marshalled to a string: %v", e)
 				return
 			}
 		}
@@ -1008,11 +1008,23 @@ func valueFromPolymorphicJSON(content []byte, unmarshaler PolymorphicJSONUnmarsh
 	return
 }
 
+func readAndPreserveResponseBody(response *http.Response) ([]byte, error) {
+	if response == nil || response.Body == nil || response.Body == http.NoBody {
+		return nil, nil
+	}
+	body := response.Body
+	content, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+	_ = body.Close()
+	response.Body = io.NopCloser(bytes.NewReader(content))
+	return content, nil
+}
+
 func valueFromJSONBody(response *http.Response, value *reflect.Value, unmarshaler PolymorphicJSONUnmarshaler) (val interface{}, err error) {
-	//Consumes the body, consider implementing it
-	//without body consumption
 	var content []byte
-	content, err = ioutil.ReadAll(response.Body)
+	content, err = readAndPreserveResponseBody(response)
 	if err != nil {
 		return
 	}
@@ -1043,7 +1055,7 @@ func addFromBody(response *http.Response, value *reflect.Value, field reflect.St
 		return
 	case "plain-text":
 		//Expects UTF-8
-		byteArr, e := ioutil.ReadAll(response.Body)
+		byteArr, e := readAndPreserveResponseBody(response)
 		if e != nil {
 			return e
 		}

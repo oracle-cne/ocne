@@ -381,6 +381,10 @@ func (bd *ByoDriver) DefaultCNIInterfaces() []string {
 	return []string{bd.Config.Providers.Byo.NetworkInterface}
 }
 
+func (bd *ByoDriver) ShouldAssignNodeIP() bool {
+	return bd.Config.VirtualIp != ""
+}
+
 func (bd *ByoDriver) getKubeAPIServerIP() string {
 	if bd.Config.VirtualIp != "" {
 		return bd.Config.VirtualIp

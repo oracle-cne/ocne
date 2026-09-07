@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -47,6 +47,7 @@ type InstanceConfigurationLaunchOptions struct {
 	// * `VFIO` - Direct attached Virtual Function network controller. This is the networking type
 	// when you launch an instance using hardware-assisted (SR-IOV) networking.
 	// * `PARAVIRTUALIZED` - VM instances launch with paravirtualized devices using VirtIO drivers.
+	// * `ACCELERATEDPV` - VM instances launch with accelerated paravirtualized networking type.
 	NetworkType InstanceConfigurationLaunchOptionsNetworkTypeEnum `mandatory:"false" json:"networkType,omitempty"`
 
 	// Emulation type for volume.
@@ -199,18 +200,21 @@ const (
 	InstanceConfigurationLaunchOptionsNetworkTypeE1000           InstanceConfigurationLaunchOptionsNetworkTypeEnum = "E1000"
 	InstanceConfigurationLaunchOptionsNetworkTypeVfio            InstanceConfigurationLaunchOptionsNetworkTypeEnum = "VFIO"
 	InstanceConfigurationLaunchOptionsNetworkTypeParavirtualized InstanceConfigurationLaunchOptionsNetworkTypeEnum = "PARAVIRTUALIZED"
+	InstanceConfigurationLaunchOptionsNetworkTypeAcceleratedpv   InstanceConfigurationLaunchOptionsNetworkTypeEnum = "ACCELERATEDPV"
 )
 
 var mappingInstanceConfigurationLaunchOptionsNetworkTypeEnum = map[string]InstanceConfigurationLaunchOptionsNetworkTypeEnum{
 	"E1000":           InstanceConfigurationLaunchOptionsNetworkTypeE1000,
 	"VFIO":            InstanceConfigurationLaunchOptionsNetworkTypeVfio,
 	"PARAVIRTUALIZED": InstanceConfigurationLaunchOptionsNetworkTypeParavirtualized,
+	"ACCELERATEDPV":   InstanceConfigurationLaunchOptionsNetworkTypeAcceleratedpv,
 }
 
 var mappingInstanceConfigurationLaunchOptionsNetworkTypeEnumLowerCase = map[string]InstanceConfigurationLaunchOptionsNetworkTypeEnum{
 	"e1000":           InstanceConfigurationLaunchOptionsNetworkTypeE1000,
 	"vfio":            InstanceConfigurationLaunchOptionsNetworkTypeVfio,
 	"paravirtualized": InstanceConfigurationLaunchOptionsNetworkTypeParavirtualized,
+	"acceleratedpv":   InstanceConfigurationLaunchOptionsNetworkTypeAcceleratedpv,
 }
 
 // GetInstanceConfigurationLaunchOptionsNetworkTypeEnumValues Enumerates the set of values for InstanceConfigurationLaunchOptionsNetworkTypeEnum
@@ -228,6 +232,7 @@ func GetInstanceConfigurationLaunchOptionsNetworkTypeEnumStringValues() []string
 		"E1000",
 		"VFIO",
 		"PARAVIRTUALIZED",
+		"ACCELERATEDPV",
 	}
 }
 

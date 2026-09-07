@@ -1,5 +1,5 @@
 //
-// Copyright 2022-2024 Sean C Foley
+// Copyright 2022-2026 Sean C Foley
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package tree
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"unsafe"
@@ -64,6 +65,8 @@ func (trie *BinTrie[E, V]) absoluteRoot() (root *BinTrieNode[E, V]) {
 	return
 }
 
+// Instead of inherting the following two methods, we use toBinTree(), so that the methods still work with a nil *BinTrie
+
 // Size returns the number of elements in the tree.
 // Only nodes for which IsAdded() returns true are counted.
 // When zero is returned, IsEmpty() returns true.
@@ -99,7 +102,7 @@ func (trie *BinTrie[E, V]) EnsureRoot(key E) *BinTrieNode[E, V] {
 func (trie *BinTrie[E, V]) setRoot(key E) *binTreeNode[E, V] {
 	root := &binTreeNode[E, V]{
 		item:     key,
-		cTracker: &changeTracker{},
+		cTracker: &ChangeTracker{},
 		pool: &sync.Pool{
 			New: func() any { return &opResult[E, V]{} },
 		},
@@ -138,6 +141,14 @@ func (trie *BinTrie[E, V]) TreeString(withNonAddedKeys bool) string {
 	return trie.binTree.TreeString(withNonAddedKeys)
 }
 
+// TreeString returns a visual representation of the tree with one node per line, with or without the non-added keys.
+func (trie *BinTrie[E, V]) TreeStringWithCounts(withNonAddedKeys, withSizes, withMatchingAddressCounts bool) string {
+	if trie == nil {
+		return "\n" + nilString()
+	}
+	return trie.binTree.TreeStringWithCounts(withNonAddedKeys, withSizes, withMatchingAddressCounts)
+}
+
 // Add adds the given key to the trie, returning true if not there already.
 func (trie *BinTrie[E, V]) Add(key E) bool {
 	root := trie.EnsureRoot(key)
@@ -164,6 +175,52 @@ func (trie *BinTrie[E, V]) AddNode(key E) *BinTrieNode[E, V] {
 	return node
 }
 
+// GetKeyElementBig returns the added node containing the given index into the keys of the trie, with the index of zero returning the first added node.
+// It also returns the remaining index into the key of the returned node.
+//
+// If the increment is negative, or the increment exceeds GetCount() - 1, GetKeyElementBig panics.
+func (trie *BinTrie[E, V]) GetKeyElementBig(keyIndex *big.Int) (*BinTrieNode[E, V], *big.Int) {
+	return trie.GetRoot().GetKeyElementBig(keyIndex)
+}
+
+// GetKeyElement returns the added node containing the given index into the keys of the trie, with the index of zero returning the first added node.
+// It also returns the remaining index into the key of the returned node.
+//
+// If the increment is negative, or the increment exceeds GetCount() - 1, this panics.
+func (trie *BinTrie[E, V]) GetKeyElement(keyIndex int64) (*BinTrieNode[E, V], int64) {
+	return trie.GetRoot().GetKeyElement(keyIndex)
+}
+
+// ContainingMaxElements returns true if and only if the total number of individial keys contained by the prefix block keys of
+// added nodes in the trie is the maximum possible.
+// In other words, the keys of the added nodes together contain all the possible individual sub-keys.
+func (trie *BinTrie[E, V]) ContainingMaxElements() bool {
+	return trie.toBinTree().ContainingMaxElements()
+}
+
+// Returns the total number of keys covered by keys added to the sub-tree starting from this node as root and moving downwards to sub-nodes.
+func (trie *BinTrie[E, V]) GetMatchingKeyCount() *big.Int {
+	return trie.toBinTree().GetMatchingKeyCount()
+}
+
+// AddIfNoElementsContaining adds the key to the trie if it is not contained by an existing element in the trie.
+//
+// The new or existing node for the key is returned.
+func (trie *BinTrie[E, V]) AddIfNoElementsContaining(key E) *BinTrieNode[E, V] {
+	root := trie.EnsureRoot(key)
+	result := &opResult[E, V]{
+		key: key,
+		op:  addUncontained,
+	}
+	root.matchBits(result)
+	node := result.existingNode
+	if node == nil {
+		node = result.inserted
+	}
+	return node
+}
+
+// used by AddTrie amd AddTrieKeys methods
 func (trie *BinTrie[E, V]) addNode(result *opResult[E, V], fromNode *BinTrieNode[E, V]) *BinTrieNode[E, V] {
 	fromNode.matchBitsFromIndex(fromNode.GetKey().GetPrefixLen().Len(), result)
 	node := result.existingNode
@@ -198,8 +255,8 @@ func addTrie[ED TrieKey[ED], ES TrieKey[ES], VD, VS any](
 	}
 	var firstNode *BinTrieNode[ED, VD]
 	root := targetTrie.EnsureRoot(firstKey)
-	firstAdded := toAdd.IsAdded()
-	if firstAdded {
+	firstIsAdded := toAdd.IsAdded()
+	if firstIsAdded {
 		if valueMap != nil {
 			result.newValue = valueMap(toAdd.GetValue())
 			// new value assignment
@@ -228,7 +285,7 @@ func addTrie[ED TrieKey[ED], ES TrieKey[ES], VD, VS any](
 			lastAddedNode = cachedNode
 		}
 	}
-	if !firstAdded {
+	if !firstIsAdded {
 		firstNode = targetTrie.GetNode(keyMap(sourceNode.GetKey()))
 	}
 	return firstNode
@@ -311,8 +368,19 @@ func (trie *BinTrie[E, V]) RemoveElementsContainedBy(key E) *BinTrieNode[E, V] {
 	return trie.absoluteRoot().RemoveElementsContainedBy(key)
 }
 
+func (trie *BinTrie[E, V]) RemoveElementsIntersectedBy(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().RemoveElementsIntersectedBy(key)
+}
+
 func (trie *BinTrie[E, V]) ElementsContainedBy(key E) *BinTrieNode[E, V] {
 	return trie.absoluteRoot().ElementsContainedBy(key)
+}
+
+// ElementsIntersectedBy will return the highest-level node whose key intersects the given key .
+//
+// Returns the root node of the subtrie that intersects, or nil if no key intersects.
+func (trie *BinTrie[E, V]) ElementsIntersectedBy(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().ElementsIntersectedBy(key)
 }
 
 func (trie *BinTrie[E, V]) ElementsContaining(key E) *Path[E, V] {
@@ -333,6 +401,13 @@ func (trie *BinTrie[E, V]) ElementContains(key E) bool {
 	return trie.absoluteRoot().ElementContains(key)
 }
 
+// ElementOverlaps checks if a key in the trie overlaps the given key.
+//
+// Returns true if the given key overlaps a trie key, false otherwise.
+func (trie *BinTrie[E, V]) ElementOverlaps(key E) bool {
+	return trie.absoluteRoot().ElementOverlaps(key)
+}
+
 // ShortestPrefixMatch finds the added key with the shortest matching prefix.
 func (trie *BinTrie[E, V]) ShortestPrefixMatch(key E) (E, bool) {
 	return trie.absoluteRoot().ShortestPrefixMatch(key)
@@ -341,6 +416,13 @@ func (trie *BinTrie[E, V]) ShortestPrefixMatch(key E) (E, bool) {
 // ShortestPrefixMatchNode finds the added node whose key has the shortest matching prefix.
 func (trie *BinTrie[E, V]) ShortestPrefixMatchNode(key E) *BinTrieNode[E, V] {
 	return trie.absoluteRoot().ShortestPrefixMatchNode(key)
+}
+
+// Enumerate finds the shortest prefix match node.
+// It calculates the index into the key of that node, added to the matching key count of all nodes with keys of lower value.
+// If there is no shortest prefix match node, it returns nil.
+func (trie *BinTrie[E, V]) Enumerate(key E) (*BinTrieNode[E, V], *big.Int) {
+	return trie.absoluteRoot().Enumerate(key)
 }
 
 // GetNode gets the node in the sub-trie corresponding to the given address,
@@ -471,11 +553,13 @@ func (trie *BinTrie[E, V]) BlockSizeAllNodeIterator(lowerSubNodeFirst bool) Trie
 }
 
 // BlockSizeCachingAllNodeIterator returns an iterator that iterates all nodes, ordered by keys from largest prefix blocks to smallest, and then to individual addresses.
+// The returned iterator of type CachingTrieIterator allows you to cache an object with the lower or upper sub-node of the currently visited node.
+// Each cached object can be retrieved later when iterating the sub-nodes. That allows you to provide iteration context from a parent to its sub-nodes when iterating.
 func (trie *BinTrie[E, V]) BlockSizeCachingAllNodeIterator() CachingTrieNodeIterator[E, V] {
 	return trie.absoluteRoot().BlockSizeCachingAllNodeIterator()
 }
 
-func (trie *BinTrie[E, V]) ContainingFirstIterator(forwardSubNodeOrder bool) CachingTrieNodeIterator[E, V] {
+func (trie *BinTrie[E, V]) ContainingFirstIterator(forwardSubNodeOrder bool) TrieNodeIteratorRem[E, V] {
 	return trie.absoluteRoot().ContainingFirstIterator(forwardSubNodeOrder)
 }
 
@@ -523,11 +607,35 @@ func (trie *BinTrie[E, V]) CeilingAddedNode(key E) *BinTrieNode[E, V] {
 	return trie.absoluteRoot().CeilingAddedNode(key)
 }
 
+func (trie *BinTrie[E, V]) ContainingLowerAddedNode(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().ContainingLowerAddedNode(key)
+}
+
+func (trie *BinTrie[E, V]) ContainingFloorAddedNode(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().ContainingFloorAddedNode(key)
+}
+
+func (trie *BinTrie[E, V]) ContainingHigherAddedNode(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().ContainingHigherAddedNode(key)
+}
+
+func (trie *BinTrie[E, V]) ContainingCeilingAddedNode(key E) *BinTrieNode[E, V] {
+	return trie.absoluteRoot().ContainingCeilingAddedNode(key)
+}
+
 func (trie *BinTrie[E, V]) Clone() *BinTrie[E, V] {
 	if trie == nil {
 		return nil
 	}
 	return &BinTrie[E, V]{binTree[E, V]{root: trie.absoluteRoot().CloneTree().toBinTreeNode()}}
+}
+
+func (trie *BinTrie[E, V]) ChangeTracker() (tracker *ChangeTracker) {
+	root := trie.absoluteRoot()
+	if root != nil {
+		tracker = root.cTracker
+	}
+	return
 }
 
 // DeepEqual returns whether the given argument is a trie with a set of nodes with the same keys as in this trie according to the Compare method,
@@ -567,7 +675,7 @@ func TreesString[E TrieKey[E], V any](withNonAddedKeys bool, tries ...*BinTrie[E
 	for _, trie := range tries {
 		binTrees = append(binTrees, tobinTree(trie))
 	}
-	return treesString(withNonAddedKeys, true, (*binTree[E, V]).printTree, binTrees...)
+	return treesString(withNonAddedKeys, true, false, (*binTree[E, V]).printTree, binTrees...)
 }
 
 func tobinTree[E TrieKey[E], V any](trie *BinTrie[E, V]) *binTree[E, V] {
@@ -682,7 +790,8 @@ func AddedNodesTreesString[E TrieKey[E], V any](addedTrees ...*BinTrie[E, AddedS
 	return treesString(
 		true,
 		false,
-		func(tree *binTree[E, AddedSubnodeMapping], builder *strings.Builder, inds indents, withNonAddedKeys bool) {
+		false,
+		func(tree *binTree[E, AddedSubnodeMapping], builder *strings.Builder, inds indents, withNonAddedKeys, withSizes, withMatchingAddressCounts bool) {
 			if tree == nil {
 				addedNodesTreeString[E, V](builder, inds, nil)
 			} else {

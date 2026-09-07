@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, 2025, Oracle and/or its affiliates.  All rights reserved.
+// Copyright (c) 2016, 2018, 2026, Oracle and/or its affiliates.  All rights reserved.
 // This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
@@ -34,6 +34,8 @@ type HostGroupConfiguration struct {
 	// * `SKIP_RECYCLE` - Skips host wipe.
 	// * `FULL_RECYCLE` - Does not skip host wipe. This is the default behavior.
 	RecycleLevel HostGroupConfigurationRecycleLevelEnum `mandatory:"false" json:"recycleLevel,omitempty"`
+
+	QuickRecycleSettings *QuickRecycleSettings `mandatory:"false" json:"quickRecycleSettings"`
 
 	// The state of the host group configuration.
 	State HostGroupConfigurationStateEnum `mandatory:"false" json:"state,omitempty"`
