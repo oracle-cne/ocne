@@ -2221,13 +2221,7 @@ github.com/masahiro331/go-xfs-filesystem
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2021 masahiro331 m_fujimura@r.recruit.co.jp
-Copyright 2021 masahiro331 mur4m4s4.331@gmail.com
-Copyright 2022 masahiro331 m_fujimura@r.recruit.co.jp
-Copyright 2023 GitHub noreply@github.com
-Copyright 2023 masahiro331 m_fujimura@r.recruit.co.jp
-Copyright 2025 GitHub noreply@github.com
-Copyright 2026 GitHub noreply@github.com
+(no copyright notices found)
 
 --------------------------------- (separator) ----------------------------------
 
@@ -2375,37 +2369,13 @@ github.com/moby/docker-image-spec
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2015 Ankush Agarwal ankushagarwal11@gmail.com
-Copyright 2015 Joe Gordon joe.gordon0@gmail.com
-Copyright 2015 Josh Hawn josh.hawn@docker.com
-Copyright 2015 Mary Anthony mary@docker.com
-Copyright 2015 Sven Dowideit SvenDowideit@users.noreply.github.com
-Copyright 2015 Tomas Tomecek ttomecek@redhat.com
-Copyright 2016 Aaron Lehmann aaron.lehmann@docker.com
-Copyright 2016 GitHub noreply@github.com
-Copyright 2016 Otto Kekäläinen otto@seravo.fi
-Copyright 2016 Qiang Huang h.huangqiang@huawei.com
-Copyright 2016 Stefan J. Wernli swernli@microsoft.com
-Copyright 2016 Thomas Leonard thomas.leonard@docker.com
-Copyright 2016 Victor Vieux vieux@docker.com
-Copyright 2017 Akihiro Suda suda.akihiro@lab.ntt.co.jp
-Copyright 2017 GitHub noreply@github.com
-Copyright 2017 Sebastiaan van Stijn github@gone.nl
-Copyright 2017 Stephen J Day stephen.day@docker.com
-Copyright 2017 Timothy Hobbs timothyhobbs@seznam.cz
-Copyright 2018 Alex Goodman wagoodman@gmail.com
-Copyright 2018 bevisy binbin36520@gmail.com
-Copyright 2021 GitHub noreply@github.com
-Copyright 2021 haining.cao haining.cao@daocloud.io
-Copyright 2023 Ben Lovy ben@deciduously.com
+Copyright 2021 masahiro331 m_fujimura@r.recruit.co.jp
+Copyright 2021 masahiro331 mur4m4s4.331@gmail.com
+Copyright 2022 masahiro331 m_fujimura@r.recruit.co.jp
 Copyright 2023 GitHub noreply@github.com
-Copyright 2023 Paweł Gronowski pawel.gronowski@docker.com
-Copyright 2023 Sebastiaan van Stijn github@gone.nl
-Copyright 2023 arcosx arcosx@outlook.com
-Copyright 2024 Cory Snider csnider@mirantis.com
-Copyright 2024 GitHub noreply@github.com
-Copyright 2024 Paweł Gronowski pawel.gronowski@docker.com
-Copyright 2024 Sebastiaan van Stijn github@gone.nl
+Copyright 2023 masahiro331 m_fujimura@r.recruit.co.jp
+Copyright 2025 GitHub noreply@github.com
+Copyright 2026 GitHub noreply@github.com
 
 --------------------------------- (separator) ----------------------------------
 
