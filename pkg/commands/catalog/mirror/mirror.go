@@ -10,13 +10,14 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	"github.com/containers/image/v5/copy"
+	"github.com/containers/image/v5/docker/reference"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
-	"github.com/oracle-cne/ocne/pkg/constants"
 	copyCommand "github.com/oracle-cne/ocne/pkg/commands/catalog/copy"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	"github.com/oracle-cne/ocne/pkg/commands/cluster/dump"
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/helm"
 	imageUtil "github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -233,7 +234,6 @@ func buildOverride(chart catalog.ChartMeta, confInterface interface{}, configFro
 	return toReturn, nil
 }
 
-
 // skip determines if an application should be mirrored
 func skip(cm *catalog.ChartMeta) bool {
 	annot, ok := cm.Annotations[constants.CatalogMirror]
@@ -353,41 +353,95 @@ func extractImages(meta map[string][]catalog.ChartWithOverrides, chartCatalog *c
 
 	for name, chartMetaList := range meta {
 		for _, chartWithOverrides := range chartMetaList {
-			chart, err := chartCatalog.Connection.GetChart(name, chartWithOverrides.Chart.Version)
+			grabbed, err := chartImages(chartCatalog, chartWithOverrides, kubeInfo, k8sVersion)
 			if err != nil {
-				log.Errorf("Skipping helm Chart %s, error getting chart from catalog", name)
-				log.Error(err.Error())
+				log.Errorf("Skipping helm Chart %s: %s", name, err)
 				continue
 			}
-			in := bytes.NewReader(chart)
-			archive, err := loader.LoadArchive(in)
-			if err != nil {
-				log.Errorf("Skipping helm Chart %s, error reading chart bytes", name)
-				log.Error(err.Error())
-				continue
-			}
-			manifest, err := helm.Template(kubeInfo, archive, chartWithOverrides.Overrides, k8sVersion)
-			if err != nil {
-				log.Errorf("Skipping helm Chart %s, error rendering chart", name)
-				log.Error(err.Error())
-				continue
-			}
-			extraImages := grabExtraImages(manifest)
-			listOfYamlStrings := splitYamls(manifest) //split yamls so that unmarshall errors are not impossible to read
-			k8sObjects := unmarshallObjects(listOfYamlStrings)
-			grabbed := imagesFromObjects(k8sObjects)
-			if len(grabbed) > 0 {
-				images = append(images, grabbed...)
-			}
-			if len(extraImages) > 0 {
-				images = append(images, extraImages...)
-			}
+			images = append(images, grabbed...)
 		}
 	}
 	if len(images) == 0 {
 		return images, errors.New("no container images found")
 	}
 	return images, nil
+}
+
+// FilterByImage keeps chart versions whose default rendered workloads or extra-image
+// annotations reference the requested image. Untagged names match every tag/digest.
+// Charts that cannot be inspected are reported and skipped, as in catalog mirroring.
+func FilterByImage(found *catalog.Catalog, image, kubeConfigPath string) error {
+	wanted, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return fmt.Errorf("invalid image %q: %w", image, err)
+	}
+	_, tagged := wanted.(reference.Tagged)
+	_, digested := wanted.(reference.Digested)
+	kubeInfo, _ := client.CreateKubeInfo(kubeConfigPath)
+	defaults, err := versions.GetKubernetesVersions(constants.KubeVersion)
+	if err != nil {
+		return err
+	}
+	renderVersion := defaults.Kubernetes
+	if kubeInfo != nil {
+		if serverVersion, err := kubeInfo.Client.Discovery().ServerVersion(); err == nil {
+			renderVersion = serverVersion.GitVersion
+		}
+	}
+	kubeVersion, err := semver.NewVersion(renderVersion)
+	if err != nil {
+		return err
+	}
+	charts, err := addOverrides(found.ChartEntries, nil)
+	if err != nil {
+		return err
+	}
+	for name, versions := range charts {
+		matched := []catalog.ChartMeta{}
+		for _, chart := range versions {
+			images, err := chartImages(found, chart, kubeInfo, kubeVersion)
+			if err != nil {
+				log.Warnf("Skipping chart %s %s while searching images: %s", name, chart.Chart.Version, err)
+				continue
+			}
+			for _, candidate := range images {
+				actual, err := reference.ParseNormalizedNamed(candidate)
+				if err != nil {
+					log.Warnf("Skipping invalid image %q in chart %s %s: %s", candidate, name, chart.Chart.Version, err)
+					continue
+				}
+				actual = reference.TagNameOnly(actual)
+				if reference.TrimNamed(actual).String() == reference.TrimNamed(wanted).String() &&
+					((!tagged && !digested) || actual.String() == wanted.String()) {
+					matched = append(matched, chart.Chart)
+					break
+				}
+			}
+		}
+		if len(matched) == 0 {
+			delete(found.ChartEntries, name)
+		} else {
+			found.ChartEntries[name] = matched
+		}
+	}
+	return nil
+}
+
+func chartImages(found *catalog.Catalog, chart catalog.ChartWithOverrides, kubeInfo *client.KubeInfo, k8sVersion *semver.Version) ([]string, error) {
+	data, err := found.Connection.GetChart(chart.Chart.Name, chart.Chart.Version)
+	if err != nil {
+		return nil, err
+	}
+	archive, err := loader.LoadArchive(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := helm.Template(kubeInfo, archive, chart.Overrides, k8sVersion)
+	if err != nil {
+		return nil, err
+	}
+	objects := unmarshallObjects(splitYamls(manifest))
+	return append(imagesFromObjects(objects), grabExtraImages(manifest)...), nil
 }
 
 // imagesFromObjects grabs the image field from all k8s objects that have it
