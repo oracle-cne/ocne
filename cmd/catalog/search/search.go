@@ -11,6 +11,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/constants"
 	"github.com/oracle-cne/ocne/pkg/catalog"
 	"github.com/oracle-cne/ocne/pkg/cmdutil"
+	"github.com/oracle-cne/ocne/pkg/commands/catalog/mirror"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
 	pkgconst "github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/spf13/cobra"
@@ -24,6 +25,9 @@ const (
 # Search a catalog for a matching pattern
 ocne catalog search --name mycatalog --pattern *
 
+# Find applications using any tag of an image
+ocne catalog search --name embedded --image container-registry.oracle.com/olcne/ocne
+
 # Search the catalog that is built into the CLI
 ocne catalog search --name embedded
 `
@@ -31,6 +35,7 @@ ocne catalog search --name embedded
 
 var kubeConfig string
 var pattern string
+var image string
 var catalogName string
 
 const (
@@ -61,6 +66,8 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&catalogName, flagCatalogName, flagCatalogNameShort, pkgconst.DefaultCatalogName, flagCatalogNameHelp)
 	cmd.Flags().StringVarP(&pattern, flagPattern, flagPatternShort, "", flagPatternHelp)
 
+	cmd.Flags().StringVar(&image, "image", "", "Filter chart versions by image. Untagged repositories match all tags and digests; tagged or digested references match exactly. Uses default chart values and combines with --pattern; charts that cannot be rendered are reported and skipped")
+
 	return cmd
 }
 
@@ -73,6 +80,12 @@ func RunCmd(cmd *cobra.Command) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	if image != "" {
+		if err := mirror.FilterByImage(cat, image, kubeConfig); err != nil {
+			return err
+		}
 	}
 
 	// Get the names of all the charts.
