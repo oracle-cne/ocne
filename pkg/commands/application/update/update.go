@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package update
@@ -66,6 +66,11 @@ func Update(opt application.UpdateOptions) error {
 		ReleaseName:    opt.ReleaseName,
 		Values:         opt.Values,
 		ResetValues:    opt.ResetValues,
+		ApplicationOptions: application.ApplicationOptions{
+			Timeout:     opt.Timeout,
+			Wait:        opt.Wait,
+			WaitForJobs: opt.WaitForJobs,
+		},
 	})
 	return err
 }

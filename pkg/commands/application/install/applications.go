@@ -5,6 +5,7 @@ package install
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/oracle-cne/ocne/pkg/commands/application"
 	"github.com/oracle-cne/ocne/pkg/commands/catalog/search"
@@ -60,6 +61,10 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 		}
 		config = string(yamlValues)
 	}
+	var timeout time.Duration
+	if app.Application.Timeout != nil {
+		timeout = *app.Application.Timeout
+	}
 	opt := application.InstallOptions{
 		Catalog:        catalog,
 		KubeConfigPath: app.kubeConfigPath,
@@ -73,6 +78,11 @@ func installOrUpdateApplication(appIface interface{}, update bool) error {
 			{
 				LiteralOverride: config,
 			},
+		},
+		ApplicationOptions: application.ApplicationOptions{
+			Timeout:     timeout,
+			Wait:        app.Application.Wait,
+			WaitForJobs: app.Application.WaitForJobs,
 		},
 	}
 

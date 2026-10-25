@@ -1,7 +1,9 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package types
+
+import "time"
 
 type LibvirtProvider struct {
 	SessionURI                   string `yaml:"uri"`
@@ -191,13 +193,16 @@ type Catalog struct {
 }
 
 type Application struct {
-	Name       string      `yaml:"name"`
-	Release    string      `yaml:"release"`
-	Version    string      `yaml:"version"`
-	Catalog    string      `yaml:"catalog"`
-	Namespace  string      `yaml:"namespace"`
-	Config     interface{} `yaml:"config"`
-	ConfigFrom string      `yaml:"configFrom"`
+	Name        string         `yaml:"name"`
+	Release     string         `yaml:"release"`
+	Version     string         `yaml:"version"`
+	Catalog     string         `yaml:"catalog"`
+	Namespace   string         `yaml:"namespace"`
+	Config      interface{}    `yaml:"config"`
+	ConfigFrom  string         `yaml:"configFrom"`
+	Timeout     *time.Duration `yaml:"timeout,omitempty"`
+	Wait        bool           `yaml:"wait,omitempty"`
+	WaitForJobs bool           `yaml:"waitForJobs,omitempty"`
 }
 
 type EphemeralClusterConfig struct {
@@ -334,6 +339,22 @@ func iebp(i *bool, e *bool, def bool) bool {
 // one is, then a pointer to a copy of the first argument is
 // returned.  If both are nil, nil is returned.
 func iebpp(i *bool, e *bool) *bool {
+	if e != nil {
+		ret := *e
+		return &ret
+	} else if i != nil {
+		ret := *i
+		return &ret
+	}
+	return nil
+}
+
+// iebpp is short for "If Else time.Duration Pointer Pointer".  If one
+// the second value is not nil, a pointer to a copy of its value
+// is returned.  If the first argument is not nil but the second
+// one is, then a pointer to a copy of the first argument is
+// returned.  If both are nil, nil is returned.
+func ied(i *time.Duration, e *time.Duration) *time.Duration {
 	if e != nil {
 		ret := *e
 		return &ret
