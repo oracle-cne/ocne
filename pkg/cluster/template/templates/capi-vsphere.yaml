@@ -1,0 +1,179 @@
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "{{.ClusterConfig.Name}}"
+  name: "{{.ClusterConfig.Name}}"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - {{.ClusterConfig.PodSubnet}}
+    services:
+      cidrBlocks:
+        - {{.ClusterConfig.ServiceSubnet}}
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: "{{.ClusterConfig.Name}}-control-plane"
+    namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: VSphereCluster
+    name: "{{.ClusterConfig.Name}}"
+    namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereCluster
+metadata:
+  name: "{{.ClusterConfig.Name}}"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  server: "{{.ClusterConfig.Providers.Vsphere.Server}}"
+  thumbprint: "{{.ClusterConfig.Providers.Vsphere.Thumbprint}}"
+  identityRef:
+    kind: Secret
+    name: "{{.ClusterConfig.Name}}-vsphere-credentials"
+  cloudProviderConfiguration:
+    cloud: "vsphere"
+    insecure: false
+    workspace:
+      server: "{{.ClusterConfig.Providers.Vsphere.Server}}"
+      datacenter: "{{.ClusterConfig.Providers.Vsphere.Datacenter}}"
+      defaultDatastore: "{{.ClusterConfig.Providers.Vsphere.Datastore}}"
+      resourcePool: "{{.ClusterConfig.Providers.Vsphere.ResourcePool}}"
+      folder: "{{.ClusterConfig.Providers.Vsphere.Folder}}"
+    network:
+      name: "{{.ClusterConfig.Providers.Vsphere.Network}}"
+  controlPlaneEndpoint:
+    host: "{{.ClusterConfig.Providers.Vsphere.ControlPlaneEndpoint}}"
+    port: {{.ClusterConfig.KubeAPIServerBindPort}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "{{.ClusterConfig.Name}}-vsphere-credentials"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+stringData:
+  username: "{{.ClusterConfig.Providers.Vsphere.Username}}"
+  password: "{{.ClusterConfig.Providers.Vsphere.Password}}"
+---
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: "{{.ClusterConfig.Name}}-control-plane"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  version: "{{.ClusterConfig.KubeVersion}}"
+  replicas: {{.ClusterConfig.ControlPlaneNodes}}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: VSphereMachineTemplate
+      name: "{{.ClusterConfig.Name}}-control-plane"
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
+      controllerManager:
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
+      scheduler:
+        extraArgs:
+          tls-cipher-suites: {{.CipherSuite}}
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          tls-cipher-suites: {{.CipherSuite}}
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          tls-cipher-suites: {{.CipherSuite}}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-control-plane"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  template:
+    spec:
+      cloneMode: "linked"
+      datacenter: "{{.ClusterConfig.Providers.Vsphere.Datacenter}}"
+      datastore: "{{.ClusterConfig.Providers.Vsphere.Datastore}}"
+      folder: "{{.ClusterConfig.Providers.Vsphere.Folder}}"
+      network:
+        devices:
+        - networkName: "{{.ClusterConfig.Providers.Vsphere.Network}}"
+          dhcp4: true
+      numCPUs: 2
+      memoryMiB: 8192
+      resourcePool: "{{.ClusterConfig.Providers.Vsphere.ResourcePool}}"
+      snapshot: ""
+      template: "{{.ClusterConfig.Providers.Vsphere.Template}}"
+      diskGiB: 50
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  template:
+    spec:
+      cloneMode: "linked"
+      datacenter: "{{.ClusterConfig.Providers.Vsphere.Datacenter}}"
+      datastore: "{{.ClusterConfig.Providers.Vsphere.Datastore}}"
+      folder: "{{.ClusterConfig.Providers.Vsphere.Folder}}"
+      network:
+        devices:
+        - networkName: "{{.ClusterConfig.Providers.Vsphere.Network}}"
+          dhcp4: true
+      numCPUs: 2
+      memoryMiB: 4096
+      resourcePool: "{{.ClusterConfig.Providers.Vsphere.ResourcePool}}"
+      snapshot: ""
+      template: "{{.ClusterConfig.Providers.Vsphere.Template}}"
+      diskGiB: 40
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            tls-cipher-suites: {{.CipherSuite}}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "{{.ClusterConfig.Name}}-md-0"
+  namespace: "{{.ClusterConfig.Providers.Vsphere.Namespace}}"
+spec:
+  clusterName: "{{.ClusterConfig.Name}}"
+  replicas: {{.ClusterConfig.WorkerNodes}}
+  selector:
+    matchLabels: {}
+  template:
+    spec:
+      clusterName: "{{.ClusterConfig.Name}}"
+      version: "{{.ClusterConfig.KubeVersion}}"
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: "{{.ClusterConfig.Name}}-md-0"
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: VSphereMachineTemplate
+        name: "{{.ClusterConfig.Name}}-md-0"
