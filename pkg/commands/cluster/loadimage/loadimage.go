@@ -23,13 +23,20 @@ import (
 	"github.com/oracle-cne/ocne/pkg/k8s/client"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Load copies the image selected for each node architecture into host Podman.
-func Load(kubeconfig, nodeName, source string, out, errOut io.Writer) error {
+func Load(kubeconfig, nodeName, selector, source string, out, errOut io.Writer) error {
+	if nodeName != "" && selector != "" {
+		return fmt.Errorf("node and selector are mutually exclusive")
+	}
+	if _, err := labels.Parse(selector); err != nil {
+		return fmt.Errorf("invalid node selector: %w", err)
+	}
 	// Bare paths retain archive auto-detection; explicit references use the same
 	// transports as the other image commands.
 	if alltransports.TransportFromImageName(source) == nil {
@@ -56,7 +63,7 @@ func Load(kubeconfig, nodeName, source string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	nodes, err := k8s.GetNodeList(kubeClient)
+	nodes, err := kubeClient.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return err
 	}
@@ -74,7 +81,7 @@ func Load(kubeconfig, nodeName, source string, out, errOut io.Writer) error {
 		}
 	}
 	if len(nodes.Items) == 0 {
-		return fmt.Errorf("no cluster nodes found")
+		return fmt.Errorf("no cluster nodes match the requested selection")
 	}
 	// Prepare every required architecture before modifying the cluster.
 	dir, err := os.MkdirTemp("", "ocne-load-image-")

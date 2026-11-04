@@ -22,31 +22,58 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestLoadRejectsInvalidFileBeforeClusterAccess(t *testing.T) {
 	dir := t.TempDir()
 	for _, archive := range []string{filepath.Join(dir, "absent.tar"), dir} {
-		if err := Load("absent-kubeconfig", "", archive, io.Discard, io.Discard); err == nil || strings.Contains(err.Error(), "kubeconfig") {
+		if err := Load("absent-kubeconfig", "", "", archive, io.Discard, io.Discard); err == nil || strings.Contains(err.Error(), "kubeconfig") {
 			t.Fatalf("expected archive error for %s, got %v", archive, err)
 		}
 	}
 }
 
 func TestLoadNodeSelectionAndCleanup(t *testing.T) {
-	for _, selected := range []string{"", "worker", "absent"} {
-		t.Run("node="+selected, func(t *testing.T) {
+	for _, tc := range []struct {
+		name, node, selector, first string
+		empty                       bool
+	}{
+		{name: "all", first: "control-plane"},
+		{name: "node", node: "worker", first: "worker"},
+		{name: "missing-node", node: "absent", empty: true},
+		{name: "equality", selector: "pool=development", first: "worker"},
+		{name: "set", selector: "pool in (development,production)", first: "control-plane"},
+		{name: "existence", selector: "pool", first: "control-plane"},
+		{name: "conjunction", selector: "pool=development,!disabled", first: "worker"},
+		{name: "no-match", selector: "pool=absent", empty: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			var pod v1.Pod
 			created, deleted, execRequested := 0, 0, false
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				switch {
 				case r.URL.Path == "/api/v1/nodes":
-					json.NewEncoder(w).Encode(&v1.NodeList{Items: []v1.Node{
-						{ObjectMeta: metav1.ObjectMeta{Name: "control-plane"}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
-						{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
-					}})
+					if got := r.URL.Query().Get("labelSelector"); got != tc.selector {
+						t.Errorf("selector = %q, want %q", got, tc.selector)
+					}
+					selector, err := labels.Parse(tc.selector)
+					if err != nil {
+						t.Fatal(err)
+					}
+					nodes := []v1.Node{
+						{ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Labels: map[string]string{"pool": "production"}}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "worker", Labels: map[string]string{"pool": "development"}}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
+					}
+					filtered := &v1.NodeList{}
+					for _, node := range nodes {
+						if selector.Matches(labels.Set(node.Labels)) {
+							filtered.Items = append(filtered.Items, node)
+						}
+					}
+					json.NewEncoder(w).Encode(filtered)
 				case r.URL.Path == "/api/v1/namespaces/ocne-system":
 					json.NewEncoder(w).Encode(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ocne-system"}})
 				case strings.HasSuffix(r.URL.Path, "/exec"):
@@ -69,12 +96,8 @@ func TestLoadNodeSelectionAndCleanup(t *testing.T) {
 						return
 					}
 					created++
-					expected := selected
-					if expected == "" {
-						expected = "control-plane"
-					}
-					if pod.Spec.NodeName != expected {
-						t.Errorf("selected node %q, want %q", pod.Spec.NodeName, expected)
+					if pod.Spec.NodeName != tc.first {
+						t.Errorf("selected node %q, want %q", pod.Spec.NodeName, tc.first)
 					}
 					if pod.Spec.Containers[0].TTY || (pod.Spec.Containers[0].SecurityContext.Privileged == nil || !*pod.Spec.Containers[0].SecurityContext.Privileged) {
 						t.Error("loader must run with host administration access and no TTY")
@@ -99,15 +122,18 @@ func TestLoadNodeSelectionAndCleanup(t *testing.T) {
 				t.Fatal(err)
 			}
 			source := "oci:" + imageLayout(t, "amd64") + ":test-image"
-			err := Load(kubeconfig, selected, source, io.Discard, io.Discard)
+			err := Load(kubeconfig, tc.node, tc.selector, source, io.Discard, io.Discard)
 			if err == nil {
 				t.Fatal("expected controlled failure")
 			}
-			if selected == "absent" {
-				if created != 0 || !strings.Contains(err.Error(), "not found") {
-					t.Fatalf("unknown node must fail before creating pods: %v", err)
+			if tc.empty {
+				if created != 0 || deleted != 0 || execRequested {
+					t.Fatalf("empty selection must fail before creating pods: %v", err)
 				}
-			} else if created != 1 || deleted != 1 || !execRequested {
+				if !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "no cluster nodes match") {
+					t.Fatalf("unexpected empty selection error: %v", err)
+				}
+			} else if created != 1 || deleted != 1 || !execRequested || !strings.Contains(err.Error(), "controlled exec failure") {
 				t.Fatalf("load failure must stop traversal and remove pod: created=%d deleted=%d exec=%v error=%v", created, deleted, execRequested, err)
 			}
 		})
@@ -230,10 +256,51 @@ func TestLoadArchiveFormats(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Bare archive paths must get as far as kubeconfig lookup.
-			err := Load("absent-kubeconfig", "", file, io.Discard, io.Discard)
+			err := Load("absent-kubeconfig", "", "", file, io.Discard, io.Discard)
 			if err == nil || !strings.Contains(err.Error(), "kubeconfig") {
 				t.Fatalf("bare %s not accepted: %v", transport, err)
 			}
 		})
+	}
+}
+
+func TestLoadRejectsInvalidSelectionBeforeClusterAccess(t *testing.T) {
+	for _, tc := range []struct{ node, selector, message string }{
+		{selector: "pool in (", message: "invalid node selector"},
+		{node: "worker", selector: "pool=development", message: "mutually exclusive"},
+	} {
+		err := Load("absent-kubeconfig", tc.node, tc.selector, "absent.tar", io.Discard, io.Discard)
+		if err == nil || !strings.Contains(err.Error(), tc.message) {
+			t.Fatalf("expected %s, got %v", tc.message, err)
+		}
+	}
+}
+
+// SplitImage parses registry identity, whereas staging must also accept unnamed
+// sources whose transport has no DockerReference.
+func TestStageUnnamedOCISource(t *testing.T) {
+	source := "oci:" + imageLayout(t, "amd64")
+	if _, err := image.SplitImage(source); err == nil {
+		t.Fatal("SplitImage unexpectedly accepted an unnamed OCI source")
+	}
+	dest := filepath.Join(t.TempDir(), "image.tar")
+	if err := stageImage(source, "amd64", dest); err != nil {
+		t.Fatal(err)
+	}
+	ref, err := alltransports.ParseImageName("oci-archive:" + dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := ref.NewImage(context.Background(), image.GetSystemContext("amd64"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer img.Close()
+	config, err := img.OCIConfig(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.Architecture != "amd64" {
+		t.Fatalf("unexpected platform: %s", config.Architecture)
 	}
 }
