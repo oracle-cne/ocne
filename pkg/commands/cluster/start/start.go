@@ -328,7 +328,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					continue
 				}
 
-				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR")
+				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR", subnet)
 			}
 			applications = append(applications, install.ApplicationDescription{
 				Application: &types.Application{

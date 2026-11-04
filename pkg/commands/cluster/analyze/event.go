@@ -71,7 +71,7 @@ func getEventSymptoms(eventList *v1.EventList) ([]*triage.ResourceSymptomInfo[v1
 		// Add a new pod symptomList to the list
 		symptomInfo := triage.NewEventSymptomInfo(events[i])
 		symptomInfos = append(symptomInfos, symptomInfo)
-		symptomInfo.AddSymptom(fmt.Sprintf(events[i].Message))
+		symptomInfo.AddSymptom(events[i].Message)
 
 	}
 

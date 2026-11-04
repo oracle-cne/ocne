@@ -12,6 +12,7 @@ import (
 	"github.com/oracle-cne/ocne/cmd/cluster/info"
 	"github.com/oracle-cne/ocne/cmd/cluster/join"
 	"github.com/oracle-cne/ocne/cmd/cluster/list"
+	"github.com/oracle-cne/ocne/cmd/cluster/loadimage"
 	"github.com/oracle-cne/ocne/cmd/cluster/show"
 	"github.com/oracle-cne/ocne/cmd/cluster/stage"
 	"github.com/oracle-cne/ocne/cmd/cluster/start"
@@ -40,7 +41,7 @@ func NewCmd() *cobra.Command {
 		Short:     helpShort,
 		Long:      helpLong,
 		Args:      common.ArgsCheck,
-		ValidArgs: []string{analyze.CommandName, backup.CommandName, console.CommandName, dump.CommandName, info.CommandName, join.CommandName, delete.CommandName, template.CommandName, stage.CommandName},
+		ValidArgs: []string{analyze.CommandName, backup.CommandName, console.CommandName, loadimage.CommandName, dump.CommandName, info.CommandName, join.CommandName, delete.CommandName, template.CommandName, stage.CommandName},
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -54,6 +55,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(analyze.NewCmd())
 	cmd.AddCommand(backup.NewCmd())
 	cmd.AddCommand(console.NewCmd())
+	cmd.AddCommand(loadimage.NewCmd())
 	cmd.AddCommand(dump.NewCmd())
 	cmd.AddCommand(info.NewCmd())
 	cmd.AddCommand(join.NewCmd())

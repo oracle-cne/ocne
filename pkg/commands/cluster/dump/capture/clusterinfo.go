@@ -32,7 +32,7 @@ func CaptureClusterInfo(skipNodes bool, kubeClient kubernetes.Interface,  restCo
 		NodeNames:      nodeNames,
 	})
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err)
 	}
 	writer.Flush()
 

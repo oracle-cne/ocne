@@ -701,7 +701,7 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 		keepalivedConf := kcConfig.Streams.Out.(*bytes.Buffer).String()
 		log.Debugf("Looking for %s", apiHost)
 		log.Debugf("  in:")
-		log.Debugf(keepalivedConf)
+		log.Debug(keepalivedConf)
 		if strings.Contains(keepalivedConf, apiHost) {
 			log.Debugf("Node %s manages a virtual IP", n.Name)
 			continue
@@ -742,7 +742,7 @@ func virtualIp(restConfig *rest.Config, client kubernetes.Interface, kubeConfigP
 			return err
 		}
 		log.Debugf("update script for node %s is:", n.Name)
-		log.Debugf(updateScript)
+		log.Debug(updateScript)
 
 		kcConfig, err := kubectl.NewKubectlConfig(restConfig, kubeConfigPath, constants.OCNESystemNamespace, nil, false)
 		if err != nil {
