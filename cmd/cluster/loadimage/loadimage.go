@@ -15,9 +15,9 @@ const CommandName = "load-image"
 func NewCmd() *cobra.Command {
 	var kubeconfig, node string
 	cmd := &cobra.Command{
-		Use:   CommandName + " ARCHIVE",
-		Short: "Load a container image archive onto cluster nodes",
-		Long:  "Load a local Docker or OCI image archive into the node container storage used by CRI-O.\nBy default, load the archive onto every node in the cluster. Use --node to select one node.\nThe archive must contain images suitable for the selected nodes. Administrative cluster access is required.",
+		Use:   CommandName + " SOURCE",
+		Short: "Load a container image onto cluster nodes",
+		Long:  "Load a container image into the node storage used by CRI-O.\nSOURCE accepts a Docker or OCI archive path, or an image transport reference such as\ndocker://REGISTRY/IMAGE:TAG, docker-archive:PATH[:IMAGE:TAG], oci:PATH[:NAME],\noci-archive:PATH[:NAME], or dir:PATH. Archive references select one image.\nBy default, load onto every cluster node; --node selects one exact node name.\nManifest lists select the Linux image matching each node architecture. Single images\nmust match all selected nodes. All required images are prepared before loaders start.\nSelected source names are retained; unnamed OCI sources load by digest.\nAdministrative cluster access is required.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return loadimage.Load(kubeconfig, node, args[0], cmd.OutOrStdout(), cmd.ErrOrStderr())
@@ -25,6 +25,6 @@ func NewCmd() *cobra.Command {
 	}
 	cmdutil.SilenceUsage(cmd)
 	cmd.Flags().StringVarP(&kubeconfig, constants.FlagKubeconfig, constants.FlagKubeconfigShort, "", constants.FlagKubeconfigHelp)
-	cmd.Flags().StringVarP(&node, "node", "N", "", "Load the archive onto this node instead of every cluster node")
+	cmd.Flags().StringVarP(&node, "node", "N", "", "Load the image onto this node instead of every cluster node")
 	return cmd
 }

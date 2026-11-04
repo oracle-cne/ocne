@@ -4,7 +4,14 @@
 package loadimage
 
 import (
+	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+
+	"github.com/containers/image/v5/copy"
+	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/oracle-cne/ocne/pkg/image"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -37,8 +44,8 @@ func TestLoadNodeSelectionAndCleanup(t *testing.T) {
 				switch {
 				case r.URL.Path == "/api/v1/nodes":
 					json.NewEncoder(w).Encode(&v1.NodeList{Items: []v1.Node{
-						{ObjectMeta: metav1.ObjectMeta{Name: "control-plane"}},
-						{ObjectMeta: metav1.ObjectMeta{Name: "worker"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "control-plane"}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Status: v1.NodeStatus{NodeInfo: v1.NodeSystemInfo{Architecture: "amd64"}}},
 					}})
 				case r.URL.Path == "/api/v1/namespaces/ocne-system":
 					json.NewEncoder(w).Encode(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ocne-system"}})
@@ -91,11 +98,8 @@ func TestLoadNodeSelectionAndCleanup(t *testing.T) {
 			if err := os.WriteFile(kubeconfig, []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}
-			archive := filepath.Join(dir, "image.tar")
-			if err := os.WriteFile(archive, []byte("controlled archive"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			err := Load(kubeconfig, selected, archive, io.Discard, io.Discard)
+			source := "oci:" + imageLayout(t, "amd64") + ":test-image"
+			err := Load(kubeconfig, selected, source, io.Discard, io.Discard)
 			if err == nil {
 				t.Fatal("expected controlled failure")
 			}
@@ -105,6 +109,130 @@ func TestLoadNodeSelectionAndCleanup(t *testing.T) {
 				}
 			} else if created != 1 || deleted != 1 || !execRequested {
 				t.Fatalf("load failure must stop traversal and remove pod: created=%d deleted=%d exec=%v error=%v", created, deleted, execRequested, err)
+			}
+		})
+	}
+}
+
+// imageLayout builds image metadata, not executable foreign-architecture images.
+// The nested index exercises the same selection used for registry manifest lists.
+func imageLayout(t *testing.T, arches ...string) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "blobs", "sha256"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	writeBlob := func(value interface{}, mediaType string) map[string]interface{} {
+		data, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		hash := fmt.Sprintf("%x", sha256.Sum256(data))
+		if err := os.WriteFile(filepath.Join(dir, "blobs", "sha256", hash), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return map[string]interface{}{"mediaType": mediaType, "digest": "sha256:" + hash, "size": len(data)}
+	}
+	manifests := []map[string]interface{}{}
+	for _, arch := range arches {
+		config := writeBlob(map[string]interface{}{
+			"architecture": arch, "os": "linux",
+			"rootfs": map[string]interface{}{"type": "layers", "diff_ids": []string{}},
+			"config": map[string]interface{}{"Labels": map[string]string{"test-architecture": arch}},
+		}, "application/vnd.oci.image.config.v1+json")
+		manifest := writeBlob(map[string]interface{}{
+			"schemaVersion": 2, "mediaType": "application/vnd.oci.image.manifest.v1+json",
+			"config": config, "layers": []interface{}{},
+		}, "application/vnd.oci.image.manifest.v1+json")
+		manifest["platform"] = map[string]string{"architecture": arch, "os": "linux"}
+		manifests = append(manifests, manifest)
+	}
+	var selected map[string]interface{}
+	if len(manifests) == 1 {
+		selected = manifests[0]
+	} else {
+		selected = writeBlob(map[string]interface{}{
+			"schemaVersion": 2, "mediaType": "application/vnd.oci.image.index.v1+json", "manifests": manifests,
+		}, "application/vnd.oci.image.index.v1+json")
+	}
+	selected["annotations"] = map[string]string{"org.opencontainers.image.ref.name": "test-image"}
+	index, err := json.Marshal(map[string]interface{}{"schemaVersion": 2, "manifests": []interface{}{selected}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "index.json"), index, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "oci-layout"), []byte(`{"imageLayoutVersion":"1.0.0"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestStageImageSelectsNodeArchitecture(t *testing.T) {
+	source := "oci:" + imageLayout(t, "amd64", "arm64") + ":test-image"
+	for _, arch := range []string{"amd64", "x86_64", "arm64", "aarch64"} {
+		t.Run(arch, func(t *testing.T) {
+			dest := filepath.Join(t.TempDir(), "image.tar")
+			if err := stageImage(source, arch, dest); err != nil {
+				t.Fatal(err)
+			}
+			ref, err := alltransports.ParseImageName("oci-archive:" + dest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			img, err := ref.NewImage(context.Background(), image.GetSystemContext(arch))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer img.Close()
+			config, err := img.OCIConfig(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := image.GetSystemContext(arch).ArchitectureChoice
+			if config.Architecture != want || config.Config.Labels["test-architecture"] != want {
+				t.Fatalf("copied wrong manifest: %+v", config)
+			}
+		})
+	}
+}
+
+func TestStageImageRejectsIncompatiblePlatform(t *testing.T) {
+	for _, arches := range [][]string{{"amd64"}, {"amd64", "arm64"}} {
+		source := "oci:" + imageLayout(t, arches...) + ":test-image"
+		for _, arch := range []string{"s390x", ""} {
+			if err := stageImage(source, arch, filepath.Join(t.TempDir(), "image.tar")); err == nil {
+				t.Fatalf("unsupported architecture %q must not fall back to host", arch)
+			}
+		}
+	}
+	source := "oci:" + imageLayout(t, "amd64") + ":test-image"
+	if err := stageImage(source, "arm64", filepath.Join(t.TempDir(), "image.tar")); err == nil || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("single image must reject an incompatible node: %v", err)
+	}
+	armSource := "oci:" + imageLayout(t, "arm64") + ":test-image"
+	if err := stageImage(armSource, "amd64", filepath.Join(t.TempDir(), "image.tar")); err == nil {
+		t.Fatal("foreign image accepted for amd64 node")
+	}
+}
+
+func TestLoadArchiveFormats(t *testing.T) {
+	source := "oci:" + imageLayout(t, "amd64") + ":test-image"
+	for _, transport := range []string{"docker-archive", "oci-archive"} {
+		t.Run(transport, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "image.tar")
+			if err := image.Copy(source, transport+":"+file+":example.com/test/image:latest", "amd64", copy.CopySystemImage); err != nil {
+				t.Fatal(err)
+			}
+			dest := filepath.Join(t.TempDir(), "selected.tar")
+			if err := stageImage(transport+":"+file, "amd64", dest); err != nil {
+				t.Fatal(err)
+			}
+			// Bare archive paths must get as far as kubeconfig lookup.
+			err := Load("absent-kubeconfig", "", file, io.Discard, io.Discard)
+			if err == nil || !strings.Contains(err.Error(), "kubeconfig") {
+				t.Fatalf("bare %s not accepted: %v", transport, err)
 			}
 		})
 	}

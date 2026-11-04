@@ -20,7 +20,7 @@ func AddDefaultRegistries(images []string, registry string) []string {
 		}
 		toAdd, err := AddDefaultRegistry(imageToChange, registry)
 		if err != nil {
-			log.Errorf(err.Error())
+			log.Error(err)
 			continue
 		}
 		toReturn = append(toReturn, toAdd)

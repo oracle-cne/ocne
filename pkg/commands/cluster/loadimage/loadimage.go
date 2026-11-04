@@ -9,6 +9,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/containers/image/v5/copy"
+	dockerarchive "github.com/containers/image/v5/docker/archive"
+	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/oracle-cne/ocne/pkg/image"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/oracle-cne/ocne/pkg/constants"
 	"github.com/oracle-cne/ocne/pkg/k8s"
@@ -20,19 +28,28 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// Load streams a local image archive into host Podman on each selected node.
-func Load(kubeconfig, nodeName, archivePath string, out, errOut io.Writer) error {
-	archive, err := os.Open(archivePath)
-	if err != nil {
-		return err
+// Load copies the image selected for each node architecture into host Podman.
+func Load(kubeconfig, nodeName, source string, out, errOut io.Writer) error {
+	// Bare paths retain archive auto-detection; explicit references use the same
+	// transports as the other image commands.
+	if alltransports.TransportFromImageName(source) == nil {
+		info, err := os.Stat(source)
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("image archive must be a regular file; use oci:PATH for a layout")
+		}
+		reader, err := dockerarchive.NewReader(image.GetSystemContext(""), source)
+		if err == nil {
+			reader.Close()
+			source = "docker-archive:" + source
+		} else {
+			source = "oci-archive:" + source
+		}
 	}
-	defer archive.Close()
-	info, err := archive.Stat()
-	if err != nil {
+	if _, err := alltransports.ParseImageName(source); err != nil {
 		return err
-	}
-	if !info.Mode().IsRegular() {
-		return fmt.Errorf("image archive must be a regular file")
 	}
 
 	restConfig, kubeClient, err := client.GetKubeClient(kubeconfig)
@@ -58,6 +75,27 @@ func Load(kubeconfig, nodeName, archivePath string, out, errOut io.Writer) error
 	}
 	if len(nodes.Items) == 0 {
 		return fmt.Errorf("no cluster nodes found")
+	}
+	// Prepare every required architecture before modifying the cluster.
+	dir, err := os.MkdirTemp("", "ocne-load-image-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir)
+	archives := map[string]string{}
+	for _, node := range nodes.Items {
+		arch := node.Status.NodeInfo.Architecture
+		if arch == "" {
+			return fmt.Errorf("node %s has no reported architecture", node.Name)
+		}
+		if _, ok := archives[arch]; ok {
+			continue
+		}
+		archivePath := filepath.Join(dir, fmt.Sprintf("%d.tar", len(archives)))
+		if err := stageImage(source, arch, archivePath); err != nil {
+			return fmt.Errorf("prepare image for node %s (%s): %w", node.Name, arch, err)
+		}
+		archives[arch] = archivePath
 	}
 	if err := k8s.CreateNamespaceIfNotExists(kubeClient, constants.OCNESystemNamespace); err != nil {
 		return err
@@ -85,9 +123,11 @@ func Load(kubeconfig, nodeName, archivePath string, out, errOut io.Writer) error
 			if err := k8s.WaitForPod(kubeClient, pod.Namespace, pod.Name); err != nil {
 				return err
 			}
-			if _, err := archive.Seek(0, io.SeekStart); err != nil {
+			archive, err := os.Open(archives[node.Status.NodeInfo.Architecture])
+			if err != nil {
 				return err
 			}
+			defer archive.Close()
 			request := kubeClient.CoreV1().RESTClient().Post().
 				Resource("pods").Namespace(pod.Namespace).Name(pod.Name).
 				SubResource("exec").VersionedParams(&v1.PodExecOptions{
@@ -107,6 +147,60 @@ func Load(kubeconfig, nodeName, archivePath string, out, errOut io.Writer) error
 			return fmt.Errorf("load image archive on node %s: %w", node.Name, err)
 		}
 	}
-	_, err = fmt.Fprintf(out, "Loaded image archive on %d node(s).\n", len(nodes.Items))
-	return err
+	log.Infof("Loaded image on %d node(s).", len(nodes.Items))
+	return nil
+}
+
+// stageImage resolves manifest lists using the existing architecture mapping.
+// Check single-image configs too: copying an archive alone can accept a foreign
+// architecture when the source is not a manifest list.
+func stageImage(source, arch, archivePath string) error {
+	systemCtx := image.GetSystemContext(arch)
+	if systemCtx.ArchitectureChoice == "" {
+		return fmt.Errorf("unsupported node architecture %q", arch)
+	}
+	ref, err := alltransports.ParseImageName(source)
+	if err != nil {
+		return err
+	}
+	img, err := ref.NewImage(context.Background(), systemCtx)
+	if err != nil {
+		return err
+	}
+	defer img.Close()
+	config, err := img.OCIConfig(context.Background())
+	if err != nil {
+		return err
+	}
+	if config.OS != systemCtx.OSChoice || config.Architecture != systemCtx.ArchitectureChoice {
+		return fmt.Errorf("image platform %s/%s does not match node platform %s/%s",
+			config.OS, config.Architecture, systemCtx.OSChoice, systemCtx.ArchitectureChoice)
+	}
+
+	// Preserve a selected name when the source transport exposes one. Unnamed
+	// OCI sources are imported by digest, just as with podman load.
+	name := ""
+	if named := ref.DockerReference(); named != nil {
+		name = named.String()
+	} else if ref.Transport().Name() == "docker-archive" {
+		reader, readerRef, err := dockerarchive.NewReaderForReference(systemCtx, ref)
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+		tags, err := reader.ManifestTagsForReference(readerRef)
+		if err != nil {
+			return err
+		}
+		if len(tags) > 0 {
+			name = tags[0]
+		}
+	} else if ref.Transport().Name() == "oci" || ref.Transport().Name() == "oci-archive" {
+		_, name, _ = strings.Cut(ref.StringWithinTransport(), ":")
+	}
+	dest := "oci-archive:" + archivePath
+	if name != "" {
+		dest += ":" + name
+	}
+	return image.Copy(source, dest, arch, copy.CopySystemImage)
 }

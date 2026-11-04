@@ -374,7 +374,7 @@ func compareUnitDropins(a, b []types.Unit) bool {
 								return false
 							}
 							if (dropA.Contents != nil && dropB.Contents != nil) && (*dropA.Contents != *dropB.Contents) {
-								log.Debugf("Systemd.Unit.Dropin %s in %s changed content from\n%s\nto%s", dropA.Name, unitA.Name, dropA.Contents, dropB.Contents)
+								log.Debugf("Systemd.Unit.Dropin %s in %s changed content from\n%s\nto%s", dropA.Name, unitA.Name, *dropA.Contents, *dropB.Contents)
 								return false
 							}
 							matchedD[j] = true

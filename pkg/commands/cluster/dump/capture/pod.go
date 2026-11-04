@@ -22,7 +22,7 @@ import (
 func goCapturePodLogs(cs *captureSync, kubeClient kubernetes.Interface, outDir string, namespace string) {
 	podList, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		log.Errorf(fmt.Sprintf("An error occurred while listing Pods in namespace %s: %s\n", namespace, err.Error()))
+		log.Errorf("An error occurred while listing Pods in namespace %s: %s", namespace, err)
 		return
 	}
 	for i, pod := range podList.Items {
@@ -38,7 +38,7 @@ func goCapturePodLogs(cs *captureSync, kubeClient kubernetes.Interface, outDir s
 		go func() {
 			err := CapturePodLog(kubeClient, outDir, namespace, podList.Items[i].Name, 0)
 			if err != nil {
-				log.Errorf(err.Error())
+				log.Error(err)
 			}
 			<-cs.channel
 			cs.wg.Done()

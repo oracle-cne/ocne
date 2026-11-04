@@ -151,12 +151,12 @@ func redact(s string, redactedValuesOverride map[string]string) string {
 	if r, ok := redactedValues[s]; ok {
 		return r
 	}
-	r := GetShortSha256Hash(s)
-	redactedValues[s] = RedactionPrefix + r
+	r := RedactionPrefix + GetShortSha256Hash(s)
+	redactedValues[s] = r
 	return r
 }
 
-// GetShortSha256Hash generates the one way hash for the input string and then returns "REDACTED-"and the first 7 characters of that hash
+// GetShortSha256Hash returns the first eight hexadecimal characters of the SHA256 hash.
 func GetShortSha256Hash(line string) string {
 	data := []byte(line)
 	hashedVal := sha256.Sum256(data)

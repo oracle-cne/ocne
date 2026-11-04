@@ -59,7 +59,7 @@ func goCaptureDynamicRes(cs *captureSync, gvrs []schema.GroupVersionResource, dy
 		go func() {
 			err := captureDynamicRes(dynamicClient, gvrs[i], outDir, namespace, redact, managed, toJSON)
 			if err != nil {
-				log.Errorf(err.Error())
+				log.Error(err)
 			}
 			<-cs.channel
 			cs.wg.Done()
@@ -86,7 +86,7 @@ func captureDynamicRes(dynamicClient dynamic.Interface, gvr schema.GroupVersionR
 		return nil
 	}
 	if err != nil {
-		log.Errorf(fmt.Sprintf("An error occurred while listing %s in namespace %s: %s\n", gvr.Resource, namespace, err.Error()))
+		log.Errorf("An error occurred while listing %s in namespace %s: %s", gvr.Resource, namespace, err)
 		return nil
 	}
 	if len(list.Items) > 0 {
