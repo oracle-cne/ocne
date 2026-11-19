@@ -14,6 +14,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/image"
 	"github.com/oracle-cne/ocne/pkg/util"
 	"github.com/oracle-cne/ocne/pkg/util/logutils"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -35,15 +36,15 @@ const (
 	ActionInit    = "init"
 	ActionJoin    = "join"
 
-	KubeletServiceName      = "kubelet.service"
-	CrioServiceName         = "crio.service"
-	IscsidServiceName       = "iscsid.service"
-	KeepalivedServiceName   = "keepalived.service"
+	KubeletServiceName           = "kubelet.service"
+	CrioServiceName              = "crio.service"
+	IscsidServiceName            = "iscsid.service"
+	KeepalivedServiceName        = "keepalived.service"
 	KeepalivedRefreshServiceName = "keepalived-refresh.service"
 	KeepalivedRefreshPathName    = "keepalived-refresh.path"
-	NginxServiceName        = "ocne-nginx.service"
-	NginxRefreshServiceName = "ocne-nginx-refresh.service"
-	NginxRefreshPathName    = "ocne-nginx-refresh.path"
+	NginxServiceName             = "ocne-nginx.service"
+	NginxRefreshServiceName      = "ocne-nginx-refresh.service"
+	NginxRefreshPathName         = "ocne-nginx-refresh.path"
 
 	// Note that OcneServiceCommonBootstrapPatthen has and seemingly
 	// pointless endline.  That endline is actually very important.
@@ -77,13 +78,19 @@ set -e
 
 if [[ -f "/etc/ocne/reset-kubeadm" ]]; then
 	echo Performing kubeadm reset
-	kubeadm reset -f && rm /etc/ocne/reset-kubeadm
+	kubeadm reset -f && rm -f /etc/ocne/reset-kubeadm /etc/ocne/bootstrap-complete
 fi
 
 NODE_IP=$(ip addr show $NET_INTERFACE | grep 'inet6\?\b' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
 
 # If Kubernetes is already configured, don't bother doing anything
-if [[ -f "/etc/kubernetes/kubelet.conf" ]]; then
+if [[ -f /etc/ocne/disable-certificate-generation ]]; then
+	echo "Certificate generation is disabled; using externally provisioned credentials"
+	INITIALIZED=/etc/ocne/bootstrap-complete
+else
+	INITIALIZED=/etc/kubernetes/kubelet.conf
+fi
+if [[ -f "$INITIALIZED" ]]; then
 	echo Kubernetes is already initialized
 	exit 0
 fi
@@ -116,6 +123,11 @@ elif [[ "$ACTION" == "join" ]]; then
 else
 	echo "Action '$ACTION' is invalid.  Valid values are 'init' and 'join'"
 	exit 1
+fi
+
+if [[ -f /etc/ocne/disable-certificate-generation ]]; then
+	echo Recording successful bootstrap with externally provisioned credentials
+	touch /etc/ocne/bootstrap-complete
 fi
 `
 
@@ -154,55 +166,57 @@ Environment=no_proxy={{.NoProxy}}
 `
 
 	KubeadmUpgradePath = "/etc/ocne/ocne-kubeadm-upgrade.sh"
-	KubeadmUpgrade = `#! /bin/bash
+	KubeadmUpgrade     = `#! /bin/bash
 #
 # Copyright (c) 2025, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 exit 0
 `
 
-	OckDirectory="/etc/ocne/ock"
-	OckPatchDirectory="/etc/ocne/ock/patches"
+	OckDirectory      = "/etc/ocne/ock"
+	OckPatchDirectory = "/etc/ocne/ock/patches"
 )
 
 type ClusterInit struct {
-	OsTag                string
-	OsRegistry           string
-	ImageRegistry        string
-	KubeAPIServerIP      string
-	KubeAPIBindPort      uint16
-	KubeAPIBindPortAlt   uint16
-	InternalLB           bool
-	Proxy                types.Proxy
-	KubeAPIExtraSans     []string
-	KubePKICert          string
-	KubePKIKey           string
-	ServiceSubnet        string
-	PodSubnet            string
-	ExpectingWorkerNodes bool
-	ProxyMode            string
-	NetInterface         string
-	UploadCertificateKey string
-	KubeVersion          string
-	TLSCipherSuites      string
+	SkipCertificateGeneration bool
+	OsTag                     string
+	OsRegistry                string
+	ImageRegistry             string
+	KubeAPIServerIP           string
+	KubeAPIBindPort           uint16
+	KubeAPIBindPortAlt        uint16
+	InternalLB                bool
+	Proxy                     types.Proxy
+	KubeAPIExtraSans          []string
+	KubePKICert               string
+	KubePKIKey                string
+	ServiceSubnet             string
+	PodSubnet                 string
+	ExpectingWorkerNodes      bool
+	ProxyMode                 string
+	NetInterface              string
+	UploadCertificateKey      string
+	KubeVersion               string
+	TLSCipherSuites           string
 }
 
 type ClusterJoin struct {
-	Role                 clustertypes.NodeRole
-	OsTag                string
-	OsRegistry           string
-	ImageRegistry        string
-	KubeAPIServerIP      string
-	JoinToken            string
-	KubePKICertHashes    []string
-	KubeAPIBindPort      uint16
-	KubeAPIBindPortAlt   uint16
-	InternalLB           bool
-	Proxy                types.Proxy
-	ProxyMode            string
-	NetInterface         string
-	UploadCertificateKey string
-	TLSCipherSuites      string
+	SkipCertificateGeneration bool
+	Role                      clustertypes.NodeRole
+	OsTag                     string
+	OsRegistry                string
+	ImageRegistry             string
+	KubeAPIServerIP           string
+	JoinToken                 string
+	KubePKICertHashes         []string
+	KubeAPIBindPort           uint16
+	KubeAPIBindPortAlt        uint16
+	InternalLB                bool
+	Proxy                     types.Proxy
+	ProxyMode                 string
+	NetInterface              string
+	UploadCertificateKey      string
+	TLSCipherSuites           string
 }
 
 type combinedConfig struct {
@@ -230,14 +244,22 @@ type NetworkScript struct {
 }
 
 type clusterCommonConfig struct {
-	OsRegistry    string
-	OsTag         string
-	ImageRegistry string
-	NetInterface  string
+	SkipCertificateGeneration bool
+	OsRegistry                string
+	OsTag                     string
+	ImageRegistry             string
+	NetInterface              string
 }
 
 func clusterCommon(cc *clusterCommonConfig, action string) (*igntypes.Config, error) {
 	ret := NewIgnition()
+	if cc.SkipCertificateGeneration {
+		log.Debug("Disabling certificate generation in node bootstrap")
+		if err := AddFile(ret, &File{Path: "/etc/ocne/disable-certificate-generation", Mode: 0600,
+			Contents: FileContents{Source: "Certificate generation disabled by cluster configuration\n"}}); err != nil {
+			return nil, err
+		}
+	}
 
 	combinedConfig := combinedConfig{
 		Action:       action,
@@ -349,10 +371,11 @@ func ContainerConfiguration(registry string) (*igntypes.Config, error) {
 
 func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	ccc := &clusterCommonConfig{
-		OsRegistry:    ci.OsRegistry,
-		OsTag:         ci.OsTag,
-		ImageRegistry: ci.ImageRegistry,
-		NetInterface:  ci.NetInterface,
+		SkipCertificateGeneration: ci.SkipCertificateGeneration,
+		OsRegistry:                ci.OsRegistry,
+		OsTag:                     ci.OsTag,
+		ImageRegistry:             ci.ImageRegistry,
+		NetInterface:              ci.NetInterface,
 	}
 	ret, err := clusterCommon(ccc, ActionInit)
 	if err != nil {
@@ -397,8 +420,10 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 	// struct and it is guaranteed that no errors will happen so long as
 	// there are no conflicts made specifically in this function.
 	AddFile(ret, kubeadmFile)
-	AddFile(ret, caCertFile)
-	AddFile(ret, caKeyFile)
+	if !ci.SkipCertificateGeneration {
+		AddFile(ret, caCertFile)
+		AddFile(ret, caKeyFile)
+	}
 
 	if ci.InternalLB {
 		ret, err = IgnitionForVirtualIp(ret, ci.KubeAPIBindPort, ci.KubeAPIBindPortAlt, ci.KubeAPIServerIP, &ci.Proxy, ci.NetInterface)
@@ -412,10 +437,11 @@ func InitializeCluster(ci *ClusterInit) (*igntypes.Config, error) {
 
 func JoinCluster(cj *ClusterJoin) (*igntypes.Config, error) {
 	ccc := &clusterCommonConfig{
-		OsRegistry:    cj.OsRegistry,
-		OsTag:         cj.OsTag,
-		ImageRegistry: cj.ImageRegistry,
-		NetInterface:  cj.NetInterface,
+		SkipCertificateGeneration: cj.SkipCertificateGeneration,
+		OsRegistry:                cj.OsRegistry,
+		OsTag:                     cj.OsTag,
+		ImageRegistry:             cj.ImageRegistry,
+		NetInterface:              cj.NetInterface,
 	}
 	ret, err := clusterCommon(ccc, ActionJoin)
 	if err != nil {

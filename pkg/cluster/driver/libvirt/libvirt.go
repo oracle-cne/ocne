@@ -869,14 +869,14 @@ func (ld *LibvirtDriver) PostStart() error {
 	err := install.InstallApplications([]install.ApplicationDescription{
 		{
 			Application: &conftypes.Application{
-				Name: constants.HAMonitorChart,
+				Name:      constants.HAMonitorChart,
 				Namespace: constants.HAMonitorNamespace,
-				Release: constants.HAMonitorRelease,
-				Version: constants.HAMonitorVersion,
-				Catalog: catalog.InternalCatalog,
+				Release:   constants.HAMonitorRelease,
+				Version:   constants.HAMonitorVersion,
+				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
 					"apiAddress": ld.KubeAPIServerIP,
-					"apiPort": ld.Config.KubeAPIServerBindPort,
+					"apiPort":    ld.Config.KubeAPIServerBindPort,
 				},
 			},
 		},

@@ -70,39 +70,43 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 	}
 
 	if !join {
-		// If a cluster is being initialized, then the CA certificate
-		// and key need to be passed in to the new instance.
-		caCert, err := os.ReadFile(bd.PKIInfo.CACertPath)
-		if err != nil {
-			return nil, err
-		}
-		//caKey, err = util.ToBase64(bd.PKIInfo.CAKeyPath)
-		caKey, err := os.ReadFile(bd.PKIInfo.CAKeyPath)
-		if err != nil {
-			return nil, err
+		var caCert, caKey []byte
+		if bd.Config.CertificateGenerationEnabled() {
+			// If a cluster is being initialized, then the CA certificate
+			// and key need to be passed in to the new instance.
+			caCert, err = os.ReadFile(bd.PKIInfo.CACertPath)
+			if err != nil {
+				return nil, err
+			}
+			//caKey, err = util.ToBase64(bd.PKIInfo.CAKeyPath)
+			caKey, err = os.ReadFile(bd.PKIInfo.CAKeyPath)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		expectingWorkerNodes := bd.Config.WorkerNodes > 0
 		ign, err = ignition.InitializeCluster(&ignition.ClusterInit{
-			OsTag:                bd.Config.OsTag,
-			OsRegistry:           bd.Config.OsRegistry,
-			KubeAPIServerIP:      kubeAPIServerIP,
-			KubeAPIBindPort:      bd.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   bd.Config.KubeAPIServerBindPortAlt,
-			InternalLB:           internalLB,
-			Proxy:                bd.Config.Proxy,
-			KubeAPIExtraSans:     []string{},
-			KubePKICert:          string(caCert),
-			KubePKIKey:           string(caKey),
-			ServiceSubnet:        bd.Config.ServiceSubnet,
-			PodSubnet:            bd.Config.PodSubnet,
-			ExpectingWorkerNodes: expectingWorkerNodes,
-			ProxyMode:            bd.Config.KubeProxyMode,
-			ImageRegistry:        bd.Config.Registry,
-			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
-			UploadCertificateKey: bd.UploadCertificateKey,
-			KubeVersion:          bd.Config.KubeVersion,
-			TLSCipherSuites:      bd.Config.CipherSuites,
+			SkipCertificateGeneration: !bd.Config.CertificateGenerationEnabled(),
+			OsTag:                     bd.Config.OsTag,
+			OsRegistry:                bd.Config.OsRegistry,
+			KubeAPIServerIP:           kubeAPIServerIP,
+			KubeAPIBindPort:           bd.Config.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:        bd.Config.KubeAPIServerBindPortAlt,
+			InternalLB:                internalLB,
+			Proxy:                     bd.Config.Proxy,
+			KubeAPIExtraSans:          []string{},
+			KubePKICert:               string(caCert),
+			KubePKIKey:                string(caKey),
+			ServiceSubnet:             bd.Config.ServiceSubnet,
+			PodSubnet:                 bd.Config.PodSubnet,
+			ExpectingWorkerNodes:      expectingWorkerNodes,
+			ProxyMode:                 bd.Config.KubeProxyMode,
+			ImageRegistry:             bd.Config.Registry,
+			NetInterface:              bd.Config.Providers.Byo.NetworkInterface,
+			UploadCertificateKey:      bd.UploadCertificateKey,
+			KubeVersion:               bd.Config.KubeVersion,
+			TLSCipherSuites:           bd.Config.CipherSuites,
 		})
 	} else {
 		// Worker nodes do not get two networks.  On remote clusters,
@@ -112,21 +116,22 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 		// plane nodes suffer from.  Override the gateway so that
 		// the real default route is not deleted.
 		ign, err = ignition.JoinCluster(&ignition.ClusterJoin{
-			Role:                 role,
-			OsTag:                bd.Config.OsTag,
-			OsRegistry:           bd.Config.OsRegistry,
-			KubeAPIServerIP:      kubeAPIServerIP,
-			JoinToken:            joinToken,
-			KubePKICertHashes:    caCertHashes,
-			ImageRegistry:        bd.Config.Registry,
-			KubeAPIBindPort:      bd.Config.KubeAPIServerBindPort,
-			KubeAPIBindPortAlt:   bd.Config.KubeAPIServerBindPortAlt,
-			InternalLB:           internalLB,
-			Proxy:                bd.Config.Proxy,
-			ProxyMode:            bd.Config.KubeProxyMode,
-			NetInterface:         bd.Config.Providers.Byo.NetworkInterface,
-			UploadCertificateKey: bd.UploadCertificateKey,
-			TLSCipherSuites:      bd.Config.CipherSuites,
+			SkipCertificateGeneration: !bd.Config.CertificateGenerationEnabled(),
+			Role:                      role,
+			OsTag:                     bd.Config.OsTag,
+			OsRegistry:                bd.Config.OsRegistry,
+			KubeAPIServerIP:           kubeAPIServerIP,
+			JoinToken:                 joinToken,
+			KubePKICertHashes:         caCertHashes,
+			ImageRegistry:             bd.Config.Registry,
+			KubeAPIBindPort:           bd.Config.KubeAPIServerBindPort,
+			KubeAPIBindPortAlt:        bd.Config.KubeAPIServerBindPortAlt,
+			InternalLB:                internalLB,
+			Proxy:                     bd.Config.Proxy,
+			ProxyMode:                 bd.Config.KubeProxyMode,
+			NetInterface:              bd.Config.Providers.Byo.NetworkInterface,
+			UploadCertificateKey:      bd.UploadCertificateKey,
+			TLSCipherSuites:           bd.Config.CipherSuites,
 		})
 	}
 
@@ -175,6 +180,11 @@ func (bd *ByoDriver) ignitionForNode(role types.NodeRole, join bool, joinToken s
 }
 
 func (bd *ByoDriver) clusterInit() ([]byte, error) {
+	if !bd.Config.CertificateGenerationEnabled() {
+		log.Debug("BYO certificate generation is disabled; generating Ignition without bootstrap credentials")
+		return bd.ignitionForNode(types.ControlPlaneRole, false, "", nil)
+	}
+	log.Debug("Generating BYO bootstrap certificates and administrator kubeconfig")
 	// Generate the key material required for the cluster.  This includes
 	// a PKI for the Kubernetes components as well as the admin kubeconfig.
 	certOptions := certificate.CertOptions{
@@ -198,6 +208,9 @@ func (bd *ByoDriver) clusterInit() ([]byte, error) {
 	bd.PKIInfo = pkiInfo
 
 	caCertHashes, err := k8s.CertHashesFromKubeconfig(bd.KubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
 
 	initIgn, err := bd.ignitionForNode(types.ControlPlaneRole, false, "", caCertHashes)
 	if err != nil {
@@ -266,14 +279,14 @@ func (bd *ByoDriver) PostStart() error {
 	err := install.InstallApplications([]install.ApplicationDescription{
 		{
 			Application: &conftypes.Application{
-				Name: constants.HAMonitorChart,
+				Name:      constants.HAMonitorChart,
 				Namespace: constants.HAMonitorNamespace,
-				Release: constants.HAMonitorRelease,
-				Version: constants.HAMonitorVersion,
-				Catalog: catalog.InternalCatalog,
+				Release:   constants.HAMonitorRelease,
+				Version:   constants.HAMonitorVersion,
+				Catalog:   catalog.InternalCatalog,
 				Config: map[string]interface{}{
 					"apiAddress": bd.Config.VirtualIp,
-					"apiPort": bd.Config.KubeAPIServerBindPort,
+					"apiPort":    bd.Config.KubeAPIServerBindPort,
 				},
 			},
 		},
@@ -323,7 +336,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 	if !bd.Config.Providers.Byo.AutomaticTokenCreation {
 		// If a control plane node is being joined, print instructions
 		// for uploading the certificate key as well.
-		if role == types.ControlPlaneRole {
+		if role == types.ControlPlaneRole && bd.Config.CertificateGenerationEnabled() {
 			uploadStanza, err := k8s.UploadCertificateStanza(bd.KubeconfigPath, bd.UploadCertificateKey)
 			if err != nil {
 				return err
@@ -333,7 +346,7 @@ func (bd *ByoDriver) Join(kubeconfigPath string, controlPlaneNodes int, workerNo
 		} else {
 			fmt.Fprintf(os.Stderr, "Run this command before booting the new node to allow it to join the cluster: kubeadm token create %s\n", joinToken)
 		}
-	} else if role == types.ControlPlaneRole {
+	} else if role == types.ControlPlaneRole && bd.Config.CertificateGenerationEnabled() {
 		// If the expectation is that secrets are uploaded to the
 		// cluster automatically and a control plane node is being
 		// joined, then upload the certificates with the matching

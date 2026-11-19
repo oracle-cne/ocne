@@ -11,6 +11,7 @@ import (
 	"github.com/oracle-cne/ocne/pkg/catalog/versions"
 	"github.com/oracle-cne/ocne/pkg/cluster/types"
 	"github.com/oracle-cne/ocne/pkg/util"
+	log "github.com/sirupsen/logrus"
 )
 
 // Why all the structs?  Can't you just use the structs from the Kubernetes
@@ -29,7 +30,7 @@ type InitConfig struct {
 	NodeRegistration NodeRegistration `yaml:"nodeRegistration,omitempty"`
 	CertificateKey   string           `yaml:"certificateKey,omitempty"`
 	SkipPhases       []string         `yaml:"skipPhases,omitempty"`
-	Patches          *Patches          `yaml:"patches,omitempty"`
+	Patches          *Patches         `yaml:"patches,omitempty"`
 }
 
 type Patches struct {
@@ -200,6 +201,10 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 	if !ci.ExpectingWorkerNodes {
 		ret.NodeRegistration.Taints = &[]string{}
 	}
+	if ci.SkipCertificateGeneration {
+		log.Debug("Skipping kubeadm init certificate, kubeconfig and certificate upload phases")
+		ret.SkipPhases = append(ret.SkipPhases, "certs", "kubeconfig", "upload-certs")
+	}
 	return ret
 }
 
@@ -241,6 +246,10 @@ func GenerateKubeadmJoin(cj *ClusterJoin) *JoinConfig {
 		},
 	}
 	if cj.Role == types.ControlPlaneRole {
+		if cj.SkipCertificateGeneration {
+			log.Debug("Skipping kubeadm control plane certificate download, certificate and kubeconfig generation phases")
+			ret.SkipPhases = append(ret.SkipPhases, "control-plane-prepare/download-certs", "control-plane-prepare/certs", "control-plane-prepare/kubeconfig")
+		}
 		ret.ControlPlane = ControlPlane{
 			LocalAPIEndPoint: LocalAPIEndpoint{
 				AdvertiseAddress: "NODE_IP",

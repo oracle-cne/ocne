@@ -21,6 +21,12 @@ SCHEMA
 # The name of the cluster
 name: ocne
 
+# Use externally provisioned Kubernetes and UI certificates for BYO.
+# Defaults to false. Set true to disable certificate generation.
+# Other providers reject this setting, including false. Also supported in defaults.yaml;
+# an explicit cluster value takes precedence over the defaults file.
+# customCertificates: false
+
 # The number of control plane nodes to spawn
 # When the provider is set to oci, the number of control plane nodes must be odd
 controlPlaneNodes: 1
@@ -283,6 +289,41 @@ bootVolumeContainerImage: container-registry.oracle.com/olcne/ock:1.30
 # The kubeconfig to use for operations that require a running cluster
 kubeconfig: /home/myuser/.kube/kubeconfig.utilitycluster
 ```
+
+CERTIFICATE GENERATION
+----------------------
+
+The `customCertificates` setting is supported only by the `byo` provider.
+It defaults to `false`. Set it in the cluster configuration or in
+`~/.ocne/defaults.yaml`; an explicit cluster value overrides the defaults file.
+For other providers, omit it from both files. Supplying either `true` or `false`
+in cluster configuration or defaults is an error.
+
+```yaml
+provider: byo
+customCertificates: true
+```
+
+When `customCertificates` is `true`, the CLI does not generate bootstrap
+certificates or administrator kubeconfigs, kubeadm skips certificate and control plane kubeconfig generation,
+and UI installation does not create TLS Secrets. Certificate download and upload
+for control plane joins are also skipped. Provision the required files at their
+standard Kubernetes paths using `extraIgnition`, `extraIgnitionInline`, or the
+node provisioning system. This setting does not import or validate credentials.
+
+Supply administrator kubeconfigs separately. BYO emits initialization Ignition
+without creating `~/.kube/kubeconfig.<name>`; place a working kubeconfig there
+after bootstrapping the first node, before continuing application installation.
+
+For the UI, provision the `ui-tls` Secret in `ocne-system` separately, for example:
+
+```shell
+kubectl -n ocne-system create secret tls ui-tls --cert=ui.crt --key=ui.key
+```
+
+Generation remains enabled when the setting is omitted or explicitly `false`.
+Existing clusters and supplied credentials are not renewed or replaced by changing
+this setting.
 
 SEE ALSO
 --------

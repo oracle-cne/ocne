@@ -23,7 +23,7 @@ func TestCreateOCNECertificates(t *testing.T) {
 		OrgUnit: "OCNE",
 		State:   "TX",
 	}
-	certpair, err := createKubernetesCerts("1.2.3.4", "2.3.4.5", options)
+	certpair, err := createKubernetesCerts("1.2.3.4", []string{"2.3.4.0/24"}, options)
 	asserts.NoError(err)
 
 	// Verify generated certs
