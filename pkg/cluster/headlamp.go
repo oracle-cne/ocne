@@ -5,17 +5,24 @@ package cluster
 
 import (
 	"context"
+
+	"github.com/oracle-cne/ocne/pkg/certificate"
+	"github.com/oracle-cne/ocne/pkg/constants"
+	"github.com/oracle-cne/ocne/pkg/k8s"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/oracle-cne/ocne/pkg/certificate"
-	"github.com/oracle-cne/ocne/pkg/constants"
-	"github.com/oracle-cne/ocne/pkg/k8s"
 )
 
 // CreateCert - create a default certificate for accessing the UI
-func CreateCert(client kubernetes.Interface, namespace string) error {
+func CreateCert(client kubernetes.Interface, namespace string, generate bool) error {
+	if !generate {
+		log.Debug("UI certificate generation is disabled; using externally provisioned UI TLS Secret")
+		return nil
+	}
+	log.Debug("Ensuring UI namespace exists before checking for installed TLS credentials")
 	err := k8s.CreateNamespaceIfNotExists(client, namespace)
 	if err != nil {
 		return err
@@ -24,10 +31,12 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	// Nothing to do if the secret already exists
 	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Get(context.TODO(), constants.UISecretNameTLS, metav1.GetOptions{})
 	if err == nil || !errors.IsNotFound(err) {
+		log.Debugf("UI TLS Secret lookup complete; no generation required (error=%v)", err)
 		return err
 	}
 
 	// Create the certificates
+	log.Debug("Generating UI CA and server certificates")
 	certs, err := certificate.CreateHeadlampCerts(constants.UIServiceName)
 	if err != nil {
 		return err
@@ -45,6 +54,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	secret.Data[constants.CertKey] = certs.LeafCertResult.CertPEM
 	secret.Data[constants.PrivKey] = certs.LeafCertResult.PrivateKeyPEM
 
+	log.Debug("Creating UI server TLS Secret")
 	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		return err
@@ -54,6 +64,7 @@ func CreateCert(client kubernetes.Interface, namespace string) error {
 	secret.Data[constants.CertKey] = certs.RootCertResult.CertPEM
 	secret.Data[constants.PrivKey] = certs.RootCertResult.PrivateKeyPEM
 
+	log.Debug("Creating UI CA TLS Secret")
 	_, err = client.CoreV1().Secrets(constants.OCNESystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 
 	return err

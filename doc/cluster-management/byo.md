@@ -58,6 +58,9 @@ This is only true for the first invocation of the command.  Subsequent
 invocations will install any applications defined by the cluster configuration
 file.
 
+For the configuration, certificate provisioning, and startup sequence with
+operator-supplied certificates, see [BYO Clusters with Custom Certificates](byo-custom-certificates.md).
+
 ### Adding New Cluster Nodes
 
 There are two ways to add new nodes to a Kubernetes cluster: creating a new

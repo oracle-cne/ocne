@@ -27,9 +27,9 @@ import (
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/release"
+	v1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -46,7 +46,7 @@ const (
 func getTagForApplication(img string, bestTag string, legacyTag string, node *v1.Node) (string, error) {
 	tag := ""
 	log.Debugf("Checking %s on %s", img, node.Name)
-	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag,  legacyTag, node)
+	bestImg, haveBest, haveLegacy := k8s.GetImageCandidate(img, bestTag, legacyTag, node)
 	if bestImg == "" {
 		log.Infof("Control plane node %s does not have image %s.  Using tag %s", node.Name, img, legacyTag)
 		tag = legacyTag
@@ -230,7 +230,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 						"tag": coreDnsTag,
 					},
 					"service": map[string]interface{}{
-						"clusterIP": kubeletConfig.ClusterDNS[0],
+						"clusterIP":  kubeletConfig.ClusterDNS[0],
 						"clusterIPs": kubeletConfig.ClusterDNS,
 					},
 				},
@@ -253,7 +253,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 						"port": clusterConfig.KubeAPIServerBindPort,
 					},
 					"config": map[string]interface{}{
-						"mode": clusterConfig.KubeProxyMode,
+						"mode":        clusterConfig.KubeProxyMode,
 						"clusterCIDR": clusterConfig.ServiceSubnet,
 					},
 				},
@@ -296,7 +296,6 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 		case "", constants.CNIFlannel:
 			log.Debugf("Flannel will be installed as the CNI")
 
-
 			// If there are no control plane nodes, then it the
 			// query for them will fail because nobody can answer.
 			// In practice, it's not possible to have a zero length
@@ -328,7 +327,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					continue
 				}
 
-				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR")
+				return localKubeConfig, fmt.Errorf("%s is an invalid CIDR", subnet)
 			}
 			applications = append(applications, install.ApplicationDescription{
 				Application: &types.Application{
@@ -338,7 +337,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 					Version:   constants.CNIFlannelVersion,
 					Catalog:   catalog.InternalCatalog,
 					Config: map[string]interface{}{
-						"podCidr": ipv4Cidr,
+						"podCidr":   ipv4Cidr,
 						"podCidrv6": ipv6Cidr,
 						"flannel": map[string]interface{}{
 							"args": args,
@@ -412,7 +411,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {
-				err := cluster.CreateCert(kubeClient, constants.UINamespace)
+				err := cluster.CreateCert(kubeClient, constants.UINamespace, clusterConfig.UICertificateGenerationEnabled())
 				return err
 			},
 			Application: &types.Application{
@@ -527,7 +526,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	// Determine if port forwards need to be setup and a browser started
 	if config.AutoStartUI == "true" {
-		if err := autoStartUI(kubeClient, localKubeConfig, infoFuncWait); err != nil {
+		if err := autoStartUI(kubeClient, localKubeConfig, !clusterConfig.UICertificateGenerationEnabled(), infoFuncWait); err != nil {
 			return localKubeConfig, err
 		}
 	}
@@ -545,7 +544,13 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	return localKubeConfig, nil
 }
 
-func autoStartUI(client kubernetes.Interface, localKubeConfig string, infoFunc func(string)) error {
+func autoStartUI(client kubernetes.Interface, localKubeConfig string, customUICertificates bool, infoFunc func(string)) error {
+	log.Debugf("Checking automatic UI startup (customUICertificates=%t)", customUICertificates)
+	if customUICertificates {
+		log.Info("Skipping UI readiness, port forwarding, and browser startup because customUICertificates is enabled; apply the UI TLS Secrets after cluster start")
+		return nil
+	}
+	log.Debug("Waiting for the UI before starting port forwarding and opening the browser")
 	var err error
 	haveError := logutils.WaitFor(infoFunc, []*logutils.Waiter{
 		{

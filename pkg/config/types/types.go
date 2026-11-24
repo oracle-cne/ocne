@@ -207,6 +207,8 @@ type EphemeralClusterConfig struct {
 }
 
 type Config struct {
+	CustomCertificates       *bool                  `yaml:"customCertificates,omitempty"`
+	CustomUICertificates     *bool                  `yaml:"customUICertificates,omitempty"`
 	Providers                Providers              `yaml:"providers"`
 	KubeConfig               string                 `yaml:"kubeconfig"`
 	AutoStartUI              string                 `yaml:"autoStartUI"`
@@ -240,6 +242,8 @@ type Config struct {
 }
 
 type ClusterConfig struct {
+	CustomCertificates       *bool                  `yaml:"customCertificates,omitempty"`
+	CustomUICertificates     *bool                  `yaml:"customUICertificates,omitempty"`
 	WorkingDirectory         string                 `yaml:"directory"`
 	Name                     string                 `yaml:"name"`
 	Provider                 string                 `yaml:"provider"`
@@ -277,6 +281,21 @@ type ClusterConfig struct {
 	ClusterDefinition        string                 `yaml:"clusterDefinition"`
 	ExtraIgnitionInline      string                 `yaml:"extraIgnitionInline"`
 	ExtraIgnition            string                 `yaml:"extraIgnition"`
+}
+
+// CertificateGenerationEnabled defaults to true. The driver factory rejects
+// customCertificates for providers other than BYO before creating a driver.
+func (cc *ClusterConfig) CertificateGenerationEnabled() bool {
+	if cc.Provider != "byo" {
+		return true
+	}
+	return cc.CustomCertificates == nil || !*cc.CustomCertificates
+}
+
+// UICertificateGenerationEnabled defaults to true for every provider and is
+// independent of Kubernetes certificate generation.
+func (cc *ClusterConfig) UICertificateGenerationEnabled() bool {
+	return cc.CustomUICertificates == nil || !*cc.CustomUICertificates
 }
 
 type ImageInfo struct {
@@ -714,6 +733,8 @@ func MergeEphemeralConfig(def *EphemeralClusterConfig, ovr *EphemeralClusterConf
 // is set in the second argument, that value takes precedence.
 func MergeConfig(def *Config, ovr *Config) Config {
 	return Config{
+		CustomCertificates:       iebpp(def.CustomCertificates, ovr.CustomCertificates),
+		CustomUICertificates:     iebpp(def.CustomUICertificates, ovr.CustomUICertificates),
 		Providers:                MergeProviders(&def.Providers, &ovr.Providers),
 		KubeConfig:               ies(def.KubeConfig, ovr.KubeConfig),
 		AutoStartUI:              ies(def.AutoStartUI, ovr.AutoStartUI),
@@ -752,6 +773,8 @@ func MergeConfig(def *Config, ovr *Config) Config {
 // is set in the second argument, that value takes precedence.
 func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 	return ClusterConfig{
+		CustomCertificates:       iebpp(def.CustomCertificates, ovr.CustomCertificates),
+		CustomUICertificates:     iebpp(def.CustomUICertificates, ovr.CustomUICertificates),
 		WorkingDirectory:         ies(def.WorkingDirectory, ovr.WorkingDirectory),
 		Name:                     ies(def.Name, ovr.Name),
 		Provider:                 ies(def.Provider, ovr.Provider),
@@ -797,6 +820,8 @@ func MergeClusterConfig(def *ClusterConfig, ovr *ClusterConfig) ClusterConfig {
 // Precalculate Kubeversion above the return, feed that value into the right field
 func OverlayConfig(cc *ClusterConfig, c *Config) ClusterConfig {
 	clusterConfigToReturn := ClusterConfig{
+		CustomCertificates:       iebpp(c.CustomCertificates, cc.CustomCertificates),
+		CustomUICertificates:     iebpp(c.CustomUICertificates, cc.CustomUICertificates),
 		WorkingDirectory:         cc.WorkingDirectory,
 		Name:                     cc.Name,
 		Provider:                 cc.Provider,

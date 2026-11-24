@@ -17,6 +17,17 @@ SCHEMA
 ------
 
 ```
+# Use externally provisioned Kubernetes certificates for the BYO provider.
+# Defaults to false. A cluster configuration can override this value.
+# Omit this option for other providers; even an explicit false is an error.
+# customCertificates: false
+
+# Supply UI TLS Secrets separately. Supported by all providers.
+# Defaults to false. A cluster configuration can override this value.
+# When true, skip UI certificate generation, readiness waiting,
+# automatic port forwarding, and browser startup.
+# customUICertificates: false
+
 # Any proxy parameters that need to be propagated into the cluster nodes.
 # These values are set for any on-host services that require a network
 # connection.

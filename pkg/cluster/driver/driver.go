@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/oracle-cne/ocne/pkg/config/types"
+	log "github.com/sirupsen/logrus"
 )
 
 type ClusterDriver interface {
@@ -32,6 +33,10 @@ func RegisterDriver(name string, ftor DriverCreateFunc) {
 }
 
 func CreateDriver(config *types.Config, clusterConfig *types.ClusterConfig) (ClusterDriver, error) {
+	log.Debugf("Validating customCertificates support for provider %s", clusterConfig.Provider)
+	if clusterConfig.Provider != "byo" && (clusterConfig.CustomCertificates != nil || config.CustomCertificates != nil) {
+		return nil, fmt.Errorf("customCertificates is supported only by the byo provider; it must be omitted from cluster configuration and defaults for provider %q", clusterConfig.Provider)
+	}
 	ftor, ok := drivers[clusterConfig.Provider]
 	if !ok {
 		return nil, fmt.Errorf("No implementation exists for the %s driver", clusterConfig.Provider)
