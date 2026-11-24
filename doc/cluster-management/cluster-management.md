@@ -12,6 +12,9 @@ pages for details on how to use each one.
 * [OCI](oci.md)
 * [BYO](byo.md)
 
+To supply UI TLS credentials with any provider, see
+[Custom UI Certificates](custom-ui-certificates.md).
+
 ## Cluster Lifecyle
 
 Kubernetes clusters have a complex lifecycle.  They can be created, destroyed,

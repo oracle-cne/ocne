@@ -411,7 +411,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 		applications = append(applications, install.ApplicationDescription{
 			PreInstall: func() error {
-				err := cluster.CreateCert(kubeClient, constants.UINamespace, clusterConfig.CertificateGenerationEnabled())
+				err := cluster.CreateCert(kubeClient, constants.UINamespace, clusterConfig.UICertificateGenerationEnabled())
 				return err
 			},
 			Application: &types.Application{
@@ -526,7 +526,7 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 
 	// Determine if port forwards need to be setup and a browser started
 	if config.AutoStartUI == "true" {
-		if err := autoStartUI(kubeClient, localKubeConfig, infoFuncWait); err != nil {
+		if err := autoStartUI(kubeClient, localKubeConfig, !clusterConfig.UICertificateGenerationEnabled(), infoFuncWait); err != nil {
 			return localKubeConfig, err
 		}
 	}
@@ -544,7 +544,13 @@ func Start(config *types.Config, clusterConfig *types.ClusterConfig) (string, er
 	return localKubeConfig, nil
 }
 
-func autoStartUI(client kubernetes.Interface, localKubeConfig string, infoFunc func(string)) error {
+func autoStartUI(client kubernetes.Interface, localKubeConfig string, customUICertificates bool, infoFunc func(string)) error {
+	log.Debugf("Checking automatic UI startup (customUICertificates=%t)", customUICertificates)
+	if customUICertificates {
+		log.Info("Skipping UI readiness, port forwarding, and browser startup because customUICertificates is enabled; apply the UI TLS Secrets after cluster start")
+		return nil
+	}
+	log.Debug("Waiting for the UI before starting port forwarding and opening the browser")
 	var err error
 	haveError := logutils.WaitFor(infoFunc, []*logutils.Waiter{
 		{

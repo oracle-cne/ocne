@@ -21,11 +21,17 @@ SCHEMA
 # The name of the cluster
 name: ocne
 
-# Use externally provisioned Kubernetes and UI certificates for BYO.
+# Use externally provisioned Kubernetes certificates for BYO.
 # Defaults to false. Set true to disable certificate generation.
 # Other providers reject this setting, including false. Also supported in defaults.yaml;
 # an explicit cluster value takes precedence over the defaults file.
 # customCertificates: false
+
+# Supply UI TLS Secrets separately. Supported by all providers.
+# Defaults to false. Set true to skip UI certificate generation,
+# UI readiness waiting, automatic port forwarding, and browser startup.
+# Also supported in defaults.yaml; an explicit cluster value takes precedence.
+# customUICertificates: false
 
 # The number of control plane nodes to spawn
 # When the provider is set to oci, the number of control plane nodes must be odd
@@ -305,9 +311,9 @@ customCertificates: true
 ```
 
 When `customCertificates` is `true`, the CLI does not generate bootstrap
-certificates or administrator kubeconfigs, kubeadm skips certificate and control plane kubeconfig generation,
-and UI installation does not create TLS Secrets. Certificate download and upload
-for control plane joins are also skipped. Provision the required files at their
+certificates or administrator kubeconfigs, and kubeadm skips certificate and
+control plane kubeconfig generation. Certificate download and upload for control
+plane joins are also skipped. Provision the required files at their
 standard Kubernetes paths using `extraIgnition`, `extraIgnitionInline`, or the
 node provisioning system. This setting does not import or validate credentials.
 
@@ -315,15 +321,25 @@ Supply administrator kubeconfigs separately. BYO emits initialization Ignition
 without creating `~/.kube/kubeconfig.<name>`; place a working kubeconfig there
 after bootstrapping the first node, before continuing application installation.
 
-For the UI, provision the `ui-tls` Secret in `ocne-system` separately, for example:
+The independent `customUICertificates` setting is supported by all providers.
+It defaults to `false` and can be set in the cluster configuration or in
+`~/.ocne/defaults.yaml`. An explicit cluster value overrides the defaults file.
+Setting `customCertificates` does not change UI certificate generation.
 
-```shell
-kubectl -n ocne-system create secret tls ui-tls --cert=ui.crt --key=ui.key
+```yaml
+customUICertificates: true
 ```
 
-Generation remains enabled when the setting is omitted or explicitly `false`.
-Existing clusters and supplied credentials are not renewed or replaced by changing
-this setting.
+With `customUICertificates: true`, the CLI installs the UI without generating its
+TLS Secrets or waiting for the UI to start. Automatic port forwarding and browser
+startup are skipped even when `autoStartUI` is `true`. After cluster start
+finishes, supply the `ui-tls` and `certificate-authority-tls` Secrets in
+`ocne-system`. See [Custom UI Certificates](../cluster-management/custom-ui-certificates.md)
+for an OpenSSL example.
+
+Certificate generation remains enabled when its corresponding setting is omitted
+or explicitly `false`. Existing credentials are not renewed or replaced by
+changing these settings.
 
 SEE ALSO
 --------

@@ -1,375 +1,352 @@
 # BYO Clusters with Custom Certificates
 
-The BYO provider can start and join Kubernetes nodes using certificates supplied
-by the operator. Set `customCertificates: true` to disable certificate generation
-by OCNE. Provision the node credentials before OCNE bootstrap and create the UI
-TLS Secrets before installing cluster applications.
+The "Bring Your Own" provider supports certificates supplied by the operator.
+Set `customCertificates: true` to skip Kubernetes certificate generation by the
+CLI and supply the credentials through Ignition instead.
+The setting is supported only by the BYO provider and defaults to `false`.
 
-This example follows the [BYO certificate setup script](../../bats-tests/scenarios/libvirt/byo-certificates-start.sh):
-create the authorities, prepare each node's Ignition, boot the first control
-plane, supply the administrator kubeconfig, install the UI credentials and
-applications, and join the remaining nodes. Libvirt can supply the machines,
-but the cluster configuration must use `provider: byo`.
+This example creates certificate authorities, provisions credentials for each
+node, and embeds them into Ignition using `extraIgnition`.
 
 ## Prerequisites
 
-Use an OCK boot image matching the configured Kubernetes minor version and a
-means to deliver a different Ignition file to each machine. The [BYO installation
-example](byo.md#creating-a-cluster-and-joining-nodes) describes boot image and
-machine provisioning. The node counts in the configuration do not create BYO
-machines automatically.
+Use an Oracle Linux x86_64 host with libvirt and QEMU installed.  This example
+uses the running `default` libvirt network on `192.168.122.0/24`, an active
+directory storage pool named `images`, and an unused OCK boot image stored in
+that pool as `boot.qcow2-1.33`.  Prepare the boot image as described in
+[Bring Your Own Infrastructure](byo.md#creating-a-cluster-and-joining-nodes).
+The image must not have been booted with Ignition already applied.
 
-The administration host needs `ocne`, `kubectl`, OpenSSL, Bash, `jq`, and the
-Mike Farah implementation of `yq`. Each control plane needs its own reachable
-IPv4 address. Reserve an unused virtual IP on the control-plane network for the
-Kubernetes API. The administration host and every node must reach that address.
-Adjust the interface, addresses, subnets, registry access, and proxy settings to
-match the installation.
+The cluster uses virtual IP `192.168.122.230`.  The two control planes use
+`192.168.122.231` and `192.168.122.232`, and the worker uses `192.168.122.233`.
+Use unused addresses and VM names.  Adjust the addresses together if the libvirt
+network uses a different subnet.
 
-The example creates separate Kubernetes, etcd, front-proxy, and UI authorities.
-Its certificates are valid for 30 days, matching the test fixture. For an
-installation using an existing PKI, supply the corresponding certificates and
-keys and select validity periods and renewal procedures appropriate to that PKI.
-This provisioning method places signing keys on control planes so kubeadm and
-Kubernetes controllers can use them. Workers receive no CA signing keys.
+The administration host needs Bash, OpenSSL, `ocne`, `kubectl`, `virsh`,
+`qemu-img`, `jq`, and the Mike Farah implementation of `yq`.  All certificates
+and keys in this example are generated with OpenSSL.  `kubectl config` only
+assembles kubeconfig files from those credentials.
 
-## Configure the Cluster
-
-Run the administration-host commands in the same Bash session. Create a private
-working directory for credentials and Ignition files. Ignition will contain
-private keys and must be delivered through a protected provisioning channel.
+Run the commands in the same Bash session.  Create a private workspace and
+cluster configuration.
 
 ```bash
-set -euo pipefail
 umask 077
 mkdir byo-custom-certificates
 cd byo-custom-certificates
 export WORK_DIR="$PWD"
-export PKI_DIR="$WORK_DIR/pki"
-mkdir -p "$PKI_DIR"
-echo "Preparing the BYO certificate workspace in $WORK_DIR"
+mkdir -p pki/etcd
 
-cat > clusterConfig.yaml <<'YAML'
+cat > byo.yaml <<'YAML'
 name: byo-custom-certificates
 provider: byo
 kubernetesVersion: "1.33"
 customCertificates: true
-controlPlaneNodes: 3
-workerNodes: 3
-virtualIp: 192.168.122.241
-kubeApiServerBindPort: 6443
-kubeApiServerBindPortAlt: 6444
-serviceSubnet: 10.96.0.0/12
-podSubnet: 10.244.0.0/16
-bootVolumeContainerImage: container-registry.oracle.com/olcne/ock
-osRegistry: ostree-unverified-registry:container-registry.oracle.com/olcne/ock-ostree
-headless: false
+virtualIp: 192.168.122.230
 providers:
   byo:
     networkInterface: enp1s0
     automaticTokenCreation: true
 YAML
 
-export CLUSTER_CONFIG="$WORK_DIR/clusterConfig.yaml"
+export CLUSTER_CONFIG="$PWD/byo.yaml"
 export CLUSTER_NAME=$(yq -r .name "$CLUSTER_CONFIG")
 export API_VIP=$(yq -r .virtualIp "$CLUSTER_CONFIG")
+export KUBERNETES_SERVICE_IP=10.96.0.1
+export CONTROL_PLANE_1_IP=192.168.122.231
+export CONTROL_PLANE_2_IP=192.168.122.232
+export WORKER_IP=192.168.122.233
+
+export LIBVIRT_NETWORK=default
+export LIBVIRT_POOL=images
+export BOOT_VOLUME=boot.qcow2-1.33
+export BOOT_VOLUME_PATH=$(sudo virsh vol-path --pool "$LIBVIRT_POOL" "$BOOT_VOLUME")
+export POOL_PATH=$(dirname "$BOOT_VOLUME_PATH")
 ```
 
-`customCertificates` is a top-level cluster option. Its default is `false`,
-which enables the normal certificate-generation behavior. The option can also
-be set in the existing defaults file; an explicit cluster value overrides the
-defaults value. For any provider other than BYO, the option must be omitted
-from both files. An explicit `false` is also rejected for those providers.
+`KUBERNETES_SERVICE_IP` is the first usable address in the service subnet.
+The value above uses the default service subnet, `10.96.0.0/12`.  Change it if
+`byo.yaml` uses a different service subnet.
 
-With `true`, the initial `ocne cluster start` generates Ignition without creating
-the administrator kubeconfig or bootstrap PKI. OCNE skips kubeadm's certificate,
-kubeconfig, and certificate-upload phases; control-plane joins also skip
-certificate download. The flag supplies no certificate paths. Use
-`extraIgnition` or another provisioning mechanism to install the required files.
+The generated Ignition files contain private keys.  Deliver them using the
+protected provisioning method used for the cluster.
 
-## Provision the Authorities and Administrator Credentials
+## Define the Virtual Machines
 
-Generate the four authorities and a shared service-account signing key pair.
-Run this once for the cluster, rather than once per node.
+Define a helper based on the
+[BYO libvirt test example](../../bats-tests/scenarios/libvirt/deployments/byo-3cp3worker/env.sh).
+It reserves the node's DHCP address, creates its disk from the boot image,
+attaches its Ignition configuration, and starts the VM.
 
 ```bash
-for authority in kubernetes etcd front-proxy ui; do
-  echo "Creating the $authority certificate authority"
-  openssl req -x509 -newkey rsa:2048 -nodes -days 30 -sha256 \
-    -subj "/CN=$CLUSTER_NAME-$authority" \
-    -addext 'basicConstraints=critical,CA:TRUE' \
-    -addext 'keyUsage=critical,keyCertSign,cRLSign' \
-    -keyout "$PKI_DIR/$authority.key" -out "$PKI_DIR/$authority.crt"
-done
+create_domain() {
+  local node=$1 address=$2 mac=$3
 
-echo "Creating the shared service-account signing keys"
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$PKI_DIR/sa.key"
-openssl pkey -in "$PKI_DIR/sa.key" -pubout -out "$PKI_DIR/sa.pub"
+  echo "Reserving $address for $node"
+  sudo virsh net-update "$LIBVIRT_NETWORK" add ip-dhcp-host \
+    "<host mac='$mac' name='$node' ip='$address'/>" --live --config
+
+  echo "Creating the disk and staging Ignition for $node"
+  sudo qemu-img create -f qcow2 -F qcow2 -b "$BOOT_VOLUME_PATH" \
+    "$POOL_PATH/$node.qcow2" 30G
+  sudo install -m 0644 "$WORK_DIR/$node.ign" "$POOL_PATH/$node.ign"
+  sudo virsh pool-refresh "$LIBVIRT_POOL"
+
+  cat > "$WORK_DIR/$node.xml" <<XML
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>$node</name>
+  <memory unit='MiB'>4096</memory>
+  <vcpu>2</vcpu>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features><acpi/><apic/><smm state='off'/></features>
+  <cpu mode='host-passthrough'/>
+  <on_reboot>restart</on_reboot>
+  <devices>
+    <emulator>/usr/libexec/qemu-kvm</emulator>
+    <disk type='volume' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source pool='$LIBVIRT_POOL' volume='$node.qcow2'/>
+      <target dev='sda' bus='scsi'/>
+    </disk>
+    <controller type='scsi' model='virtio-scsi'/>
+    <interface type='network'>
+      <mac address='$mac'/>
+      <source network='$LIBVIRT_NETWORK'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0'/>
+    </interface>
+    <serial type='pty'><target port='0'/></serial>
+    <console type='pty'><target type='serial' port='0'/></console>
+    <rng model='virtio'><backend model='random'>/dev/urandom</backend></rng>
+  </devices>
+  <qemu:commandline>
+    <qemu:arg value='-fw_cfg'/>
+    <qemu:arg value='name=opt/com.coreos/config,file=$POOL_PATH/$node.ign'/>
+  </qemu:commandline>
+</domain>
+XML
+
+  echo "Defining and starting $node"
+  sudo virsh define "$WORK_DIR/$node.xml"
+  sudo virsh start "$node"
+}
 ```
 
-Define helpers to issue client and server certificates and build kubeconfigs.
-The kubeconfigs embed the supplied CA and use the shared API endpoint.
+## Create the Certificate Authorities
+
+Create the Kubernetes, etcd, and front-proxy authorities and the service account
+signing keys.  These are shared by all control planes.  The example certificates
+are valid for one year.
+
+```bash
+for authority in ca etcd/ca front-proxy-ca; do
+  echo "Creating the $authority certificate authority"
+  openssl req -x509 -newkey rsa:2048 -nodes -days 365 -sha256 \
+    -subj "/CN=$CLUSTER_NAME-${authority//\//-}" \
+    -addext 'basicConstraints=critical,CA:TRUE' \
+    -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+    -keyout "pki/$authority.key" -out "pki/$authority.crt"
+done
+
+echo "Creating the shared service account signing keys"
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out pki/sa.key
+openssl pkey -in pki/sa.key -pubout -out pki/sa.pub
+```
+
+To use existing authorities, place their certificates and keys at these same
+paths instead of generating them.
+
+## Provision Control Plane Credentials
+
+Define helpers to sign a certificate with OpenSSL and assemble a kubeconfig
+from a certificate and key.  The signing helper accepts an output path prefix,
+a CA path prefix, a subject, an extended key usage, and optional SANs.
 
 ```bash
 issue_certificate() {
-  local name=$1 authority=$2 subject=$3 extensions=$4
-  echo "Issuing $name from the $authority authority"
+  local output=$1 authority=$2 subject=$3 usage=$4 sans=${5:-}
+
+  echo "Creating the private key and certificate request for $output"
   openssl req -new -newkey rsa:2048 -nodes -subj "$subject" \
-    -keyout "$PKI_DIR/$name.key" -out "$PKI_DIR/$name.csr"
-  printf '%s\n' "$extensions" > "$PKI_DIR/$name.ext"
-  openssl x509 -req -in "$PKI_DIR/$name.csr" \
-    -CA "$PKI_DIR/$authority.crt" -CAkey "$PKI_DIR/$authority.key" \
-    -CAcreateserial -days 30 -sha256 -extfile "$PKI_DIR/$name.ext" \
-    -out "$PKI_DIR/$name.crt"
+    -keyout "$output.key" -out "$WORK_DIR/certificate.csr"
+  echo "Signing $output with $authority"
+  openssl x509 -req -in "$WORK_DIR/certificate.csr" \
+    -CA "$authority.crt" -CAkey "$authority.key" -CAcreateserial \
+    -days 365 -sha256 -out "$output.crt" \
+    -extfile <(printf '%s\n' \
+      'basicConstraints=critical,CA:FALSE' \
+      'keyUsage=critical,digitalSignature,keyEncipherment' \
+      "extendedKeyUsage=$usage" "${sans:+subjectAltName=$sans}")
 }
 
 write_kubeconfig() {
-  local identity=$1 destination=$2
-  echo "Writing the kubeconfig for $identity"
+  local certificate=$1 identity=$2 destination=$3
+
+  echo "Writing $destination for $identity"
   kubectl config --kubeconfig "$destination" set-cluster kubernetes \
     --server="https://$API_VIP:6443" \
-    --certificate-authority="$PKI_DIR/kubernetes.crt" --embed-certs=true
+    --certificate-authority="$WORK_DIR/pki/ca.crt" --embed-certs=true
   kubectl config --kubeconfig "$destination" set-credentials "$identity" \
-    --client-certificate="$PKI_DIR/$identity.crt" \
-    --client-key="$PKI_DIR/$identity.key" --embed-certs=true
+    --client-certificate="$certificate.crt" \
+    --client-key="$certificate.key" --embed-certs=true
   kubectl config --kubeconfig "$destination" set-context default \
     --cluster=kubernetes --user="$identity"
   kubectl config --kubeconfig "$destination" use-context default
-  chmod 0600 "$destination"
-}
-
-CLIENT_EXTENSIONS=$'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth'
-issue_certificate admin kubernetes '/CN=kubernetes-admin/O=system:masters' "$CLIENT_EXTENSIONS"
-write_kubeconfig admin "$WORK_DIR/admin.conf"
-
-issue_certificate ui-server ui '/CN=ui' \
-  $'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:ui,DNS:ui.ocne-system,DNS:ui.ocne-system.svc,DNS:localhost,IP:127.0.0.1'
-```
-
-The administrator identity has cluster-wide privileges. The UI certificate in
-this example covers the Service names and a localhost port-forward. Include
-any additional DNS names used to access the UI when issuing its certificate.
-
-## Provision Node Credentials Before Bootstrap
-
-Each control plane receives the same authorities and service-account keys.
-Its API server and etcd server/peer certificates must be issued for that node's
-address and hostname. Reusing one node's complete leaf certificate set on another
-node does not provide the required identities.
-
-| Node files | Purpose |
-| --- | --- |
-| `/etc/kubernetes/pki/ca.crt` and `ca.key` | Kubernetes authority |
-| `/etc/kubernetes/pki/etcd/ca.crt` and `ca.key` | etcd authority |
-| `/etc/kubernetes/pki/front-proxy-ca.crt` and `front-proxy-ca.key` | Front-proxy authority |
-| `/etc/kubernetes/pki/sa.key` and `sa.pub` | Shared service-account signing keys |
-| API server, API client, front-proxy client, and etcd leaf certificates and keys | Node-specific component identities |
-| `/etc/kubernetes/admin.conf`, `controller-manager.conf`, `scheduler.conf`, and `kubelet.conf` | Component access to the API |
-
-The following first-boot provisioner uses the supplied authorities to issue the
-control-plane leaf certificates and kubeconfigs. These explicit kubeadm commands
-belong to the operator's provisioning step and finish before OCNE starts. OCNE's
-own init and join commands skip those generation phases.
-
-The API VIP listens on port 6443. In this internal load-balancer configuration,
-the API server on each control plane binds to port 6444. Keep these ports and
-the network ranges consistent with the cluster configuration.
-
-```bash
-cat > kubeadm-template.yaml <<YAML
-apiVersion: kubeadm.k8s.io/v1beta3
-kind: InitConfiguration
-localAPIEndpoint:
-  advertiseAddress: NODE_IP
-  bindPort: 6444
-nodeRegistration:
-  criSocket: unix:///var/run/crio/crio.sock
----
-apiVersion: kubeadm.k8s.io/v1beta3
-kind: ClusterConfiguration
-kubernetesVersion: KUBERNETES_VERSION
-controlPlaneEndpoint: $API_VIP:6443
-networking:
-  serviceSubnet: $(yq -r .serviceSubnet "$CLUSTER_CONFIG")
-  podSubnet: $(yq -r .podSubnet "$CLUSTER_CONFIG")
-YAML
-
-cat > provision-certificates.sh <<'BASH'
-#!/bin/bash
-set -euo pipefail
-source /etc/ocne/custom-certificate.env
-umask 077
-echo "Provisioning custom credentials for $CUSTOM_NODE ($CUSTOM_ROLE)"
-if [ "$CUSTOM_ROLE" = control-plane ]; then
-  node_ip=$(ip -4 -o addr show dev "$CUSTOM_INTERFACE" scope global |
-    awk '{split($4, address, "/"); print address[1]; exit}')
-  test -n "$node_ip"
-  kube_version=$(kubeadm version -o short)
-  echo "Preparing credentials for $CUSTOM_NODE at $node_ip using $kube_version"
-  sed -e "s/NODE_IP/$node_ip/g" -e "s/KUBERNETES_VERSION/$kube_version/g" \
-    /etc/ocne/custom-kubeadm-template.yaml > /etc/ocne/custom-kubeadm.yaml
-  kubeadm init phase certs all --config /etc/ocne/custom-kubeadm.yaml
-  kubeadm init phase kubeconfig all --config /etc/ocne/custom-kubeadm.yaml
-fi
-touch /etc/ocne/custom-certificates-provisioned
-echo "Custom credential provisioning is complete for $CUSTOM_NODE"
-BASH
-```
-
-Run the provisioner on a fresh node before the VIP is assigned to its interface.
-It selects the first global IPv4 address on the configured interface. Where an
-interface has several node addresses, supply the intended advertise address
-explicitly instead. Kubeadm adds the Kubernetes Service identity and the API
-endpoint to the API server certificate; add any additional endpoint SANs to
-`apiServer.certSANs` in the template before issuing certificates.
-
-Workers need the public Kubernetes CA and a kubelet client kubeconfig. The
-worker client subject must be `CN=system:node:<hostname>, O=system:nodes` and
-must match the hostname delivered to that worker.
-
-## Prepare Each Node's Ignition
-
-The following functions package the files using generic extra Ignition. The
-provisioning service is required by, and ordered before, `ocne.service`. A failed
-provisioning step therefore prevents OCNE bootstrap from proceeding with missing
-credentials. The completion marker prevents reissuing credentials on every boot.
-
-```bash
-add_ignition_file() {
-  local source=$1 destination=$2 mode=${3:-384} encoded
-  echo "Adding $destination to $NODE_EXTRA"
-  encoded=$(base64 -w0 "$source")
-  jq --arg path "$destination" --arg data "data:;base64,$encoded" \
-    --argjson mode "$mode" \
-    '.storage.files += [{path:$path, mode:$mode, contents:{source:$data}}]' \
-    "$NODE_EXTRA" > "$NODE_EXTRA.next"
-  mv "$NODE_EXTRA.next" "$NODE_EXTRA"
-}
-
-prepare_node() {
-  local node=$1 role=$2 source target
-  echo "Preparing custom credentials and Ignition for $node ($role)"
-  NODE_EXTRA="$WORK_DIR/$node.extra.ign"
-  printf '{"ignition":{"version":"3.4.0"},"storage":{"files":[]}}\n' > "$NODE_EXTRA"
-  printf '%s\n' "$node" > "$WORK_DIR/$node.hostname"
-  add_ignition_file "$WORK_DIR/$node.hostname" /etc/hostname 420
-  add_ignition_file "$PKI_DIR/kubernetes.crt" /etc/kubernetes/pki/ca.crt
-  if [ "$role" = control-plane ]; then
-    while read -r source target; do
-      add_ignition_file "$PKI_DIR/$source" "/etc/kubernetes/pki/$target"
-    done <<'FILES'
-kubernetes.key ca.key
-etcd.crt etcd/ca.crt
-etcd.key etcd/ca.key
-front-proxy.crt front-proxy-ca.crt
-front-proxy.key front-proxy-ca.key
-sa.key sa.key
-sa.pub sa.pub
-FILES
-    add_ignition_file "$WORK_DIR/kubeadm-template.yaml" /etc/ocne/custom-kubeadm-template.yaml
-  else
-    issue_certificate "$node" kubernetes "/CN=system:node:$node/O=system:nodes" "$CLIENT_EXTENSIONS"
-    write_kubeconfig "$node" "$WORK_DIR/$node.kubelet.conf"
-    add_ignition_file "$WORK_DIR/$node.kubelet.conf" /etc/kubernetes/kubelet.conf
-  fi
-  printf 'CUSTOM_NODE=%q\nCUSTOM_ROLE=%q\nCUSTOM_INTERFACE=%q\n' \
-    "$node" "$role" "$(yq -r .providers.byo.networkInterface "$CLUSTER_CONFIG")" \
-    > "$WORK_DIR/$node.env"
-  add_ignition_file "$WORK_DIR/$node.env" /etc/ocne/custom-certificate.env
-  add_ignition_file "$WORK_DIR/provision-certificates.sh" /etc/ocne/provision-custom-certificates.sh 448
-  jq '.systemd.units = [
-    {name:"custom-certificates.service", enabled:true,
-     contents:"[Unit]\nDescription=Provision custom Kubernetes credentials\nWants=network-online.target\nAfter=network-online.target\nBefore=ocne.service\nConditionPathExists=!/etc/ocne/custom-certificates-provisioned\n[Service]\nType=oneshot\nExecStart=/etc/ocne/provision-custom-certificates.sh\nRemainAfterExit=yes\n[Install]\nWantedBy=multi-user.target\n"},
-    {name:"ocne.service", dropins:[{name:"custom-certificates.conf",
-     contents:"[Unit]\nRequires=custom-certificates.service\nAfter=custom-certificates.service\n"}]}
-  ]' "$NODE_EXTRA" > "$NODE_EXTRA.next"
-  mv "$NODE_EXTRA.next" "$NODE_EXTRA"
-  NODE_EXTRA="$NODE_EXTRA" yq '.extraIgnition = strenv(NODE_EXTRA)' "$CLUSTER_CONFIG" \
-    > "$WORK_DIR/$node.yaml"
 }
 ```
 
-File modes in Ignition JSON are decimal: `384` is `0600`, `420` is `0644`, and
-`448` is `0700`. Only hostname files use the public-readable mode in this example.
-If a separate issuer supplies fully prepared leaf certificates and kubeconfigs,
-install those files before `ocne.service` instead of running the kubeadm
-provisioning phases above.
-
-## Start the First Control Plane
-
-Generate Ignition for the first node before placing `admin.conf` at OCNE's
-expected kubeconfig path. Use a new cluster name whose local registration and
-kubeconfig do not already exist.
+Define a function that provisions a control plane.  Each node receives the
+shared authorities and signing keys, its own server and client certificates,
+and kubeconfigs for the administrator, controller manager, scheduler, and
+kubelet.  The API server certificate includes the node address, API virtual IP,
+and Kubernetes Service names and address.
 
 ```bash
-echo "Generating Ignition for the first control plane"
-test ! -e "$HOME/.kube/kubeconfig.$CLUSTER_NAME"
-prepare_node "$CLUSTER_NAME-control-plane" control-plane
-ocne cluster start -c "$WORK_DIR/$CLUSTER_NAME-control-plane.yaml" \
-  > "$WORK_DIR/$CLUSTER_NAME-control-plane.ign"
+prepare_control_plane() {
+  local node=$1 address=$2
+  local directory="$WORK_DIR/$node"
+  local kubernetes="$directory/files/etc/kubernetes"
+  local pki="$kubernetes/pki"
+  local ca="$WORK_DIR/pki/ca"
+  local etcd_ca="$WORK_DIR/pki/etcd/ca"
+  local node_sans="DNS:$node,DNS:localhost,IP:$address,IP:127.0.0.1,IP:::1"
+  local api_sans="$node_sans,IP:$API_VIP,IP:$KUBERNETES_SERVICE_IP"
+  api_sans+=",DNS:kubernetes,DNS:kubernetes.default"
+  api_sans+=",DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local"
+
+  echo "Preparing credentials for control plane $node at $address"
+  mkdir -p "$pki/etcd"
+  cp "$ca.crt" "$ca.key" "$WORK_DIR/pki/front-proxy-ca.crt" \
+    "$WORK_DIR/pki/front-proxy-ca.key" "$WORK_DIR/pki/sa.key" \
+    "$WORK_DIR/pki/sa.pub" "$pki/"
+  cp "$etcd_ca.crt" "$etcd_ca.key" "$pki/etcd/"
+  printf '%s\n' "$node" > "$directory/files/etc/hostname"
+
+  issue_certificate "$pki/apiserver" "$ca" '/CN=kube-apiserver' \
+    serverAuth "$api_sans"
+  issue_certificate "$pki/apiserver-kubelet-client" "$ca" \
+    '/CN=kube-apiserver-kubelet-client/O=system:masters' clientAuth
+  issue_certificate "$pki/front-proxy-client" "$WORK_DIR/pki/front-proxy-ca" \
+    '/CN=front-proxy-client' clientAuth
+  issue_certificate "$pki/apiserver-etcd-client" "$etcd_ca" \
+    '/CN=kube-apiserver-etcd-client' clientAuth
+  issue_certificate "$pki/etcd/server" "$etcd_ca" "/CN=$node" \
+    serverAuth,clientAuth "$node_sans"
+  issue_certificate "$pki/etcd/peer" "$etcd_ca" "/CN=$node" \
+    serverAuth,clientAuth "$node_sans"
+  issue_certificate "$pki/etcd/healthcheck-client" "$etcd_ca" \
+    '/CN=kube-etcd-healthcheck-client' clientAuth
+
+  issue_certificate "$pki/admin" "$ca" \
+    '/CN=kubernetes-admin/O=system:masters' clientAuth
+  write_kubeconfig "$pki/admin" kubernetes-admin "$kubernetes/admin.conf"
+  issue_certificate "$pki/controller-manager" "$ca" \
+    '/CN=system:kube-controller-manager' clientAuth
+  write_kubeconfig "$pki/controller-manager" system:kube-controller-manager \
+    "$kubernetes/controller-manager.conf"
+  issue_certificate "$pki/scheduler" "$ca" \
+    '/CN=system:kube-scheduler' clientAuth
+  write_kubeconfig "$pki/scheduler" system:kube-scheduler "$kubernetes/scheduler.conf"
+  issue_certificate "$pki/kubelet-client" "$ca" \
+    "/CN=system:node:$node/O=system:nodes" clientAuth
+  write_kubeconfig "$pki/kubelet-client" "system:node:$node" "$kubernetes/kubelet.conf"
+}
 ```
 
-Boot the first machine using the matching OCK image and this final `.ign` file.
-The `.extra.ign` file is an input to OCNE, not the complete boot configuration.
-Use the boot-image delivery method prepared in the prerequisites. For libvirt,
-follow the VM definition and Ignition attachment in the [BYO example](byo.md#creating-a-cluster-and-joining-nodes),
-substituting this node's name, disk, and final Ignition path.
-
-Install the supplied administrator kubeconfig locally, then wait for the API.
-The example stops after 15 minutes if bootstrap does not complete.
+Prepare the first control plane using its reserved address.  The generated
+hostname is also installed by Ignition so it matches the certificate identity.
 
 ```bash
-echo "Installing the supplied administrator kubeconfig"
+prepare_control_plane control-plane-1 "$CONTROL_PLANE_1_IP"
+```
+
+The resulting `control-plane-1/files/etc/kubernetes` directory contains the
+Kubernetes PKI and component kubeconfigs in the layout required on the node.
+Each additional control plane needs its own credentials, generated with its
+hostname and IP address.
+
+## Embed the Credentials in Ignition
+
+Define a function that packages the files for one node.  Each source file's
+path relative to `files` becomes its absolute path on the node.  For example,
+`files/etc/kubernetes/pki/ca.crt` becomes `/etc/kubernetes/pki/ca.crt`.
+
+```bash
+write_ignition() {
+  local node=$1
+  local directory="$WORK_DIR/$node/files"
+  local file
+
+  echo "Embedding credentials in $node.extra.ign"
+  while IFS= read -r -d '' file; do
+    echo "Adding /${file#"$directory/"}" >&2
+    jq -n --arg path "/${file#"$directory/"}" --rawfile contents "$file" \
+      '{path: $path, mode: 384,
+        contents: {source: ("data:;base64," + ($contents | @base64))}}'
+  done < <(find "$directory" -type f -print0) |
+    jq -s '{ignition: {version: "3.4.0"}, storage: {files: .}}' \
+      > "$WORK_DIR/$node.extra.ign"
+
+  echo "Writing the cluster configuration for $node"
+  NODE_EXTRA="$WORK_DIR/$node.extra.ign" \
+    yq '.extraIgnition = strenv(NODE_EXTRA)' "$CLUSTER_CONFIG" \
+      > "$WORK_DIR/$node.yaml"
+}
+
+write_ignition control-plane-1
+```
+
+The generated cluster configuration keeps the settings from `byo.yaml` and
+adds `extraIgnition` pointing to the node's credential file.
+
+## Create the Cluster
+
+Generate the complete Ignition configuration for the first control plane.
+
+```bash
+ocne cluster start -c control-plane-1.yaml > control-plane-1.ign
+create_domain control-plane-1 "$CONTROL_PLANE_1_IP" 52:54:00:cc:01:01
+```
+
+The VM uses the `.ign` file emitted by `ocne`, which includes the credentials
+from `.extra.ign` as well as the cluster bootstrap configuration.
+
+Follow the first control plane's bootstrap on its console.  Wait for bootstrap
+to finish, then press `Ctrl+]` to leave the console.
+
+```bash
+sudo virsh console control-plane-1
+```
+
+Once the API is available, install the generated administrator kubeconfig on
+the administration host.  Do this after generating the initial Ignition and
+before running `ocne cluster start` again.
+
+```bash
 mkdir -p "$HOME/.kube"
 export KUBECONFIG="$HOME/.kube/kubeconfig.$CLUSTER_NAME"
-test ! -e "$KUBECONFIG"
-install -m 0600 "$WORK_DIR/admin.conf" "$KUBECONFIG"
-
-echo "Waiting for the Kubernetes API at $API_VIP:6443"
-deadline=$((SECONDS + 900))
-until kubectl --request-timeout=5s get --raw=/readyz; do
-  if [ "$SECONDS" -ge "$deadline" ]; then
-    echo "The Kubernetes API did not become ready before the deadline" >&2
-    exit 1
-  fi
-  sleep 5
-done
+install -m 0600 control-plane-1/files/etc/kubernetes/admin.conf "$KUBECONFIG"
 ```
 
-Continue only after `/readyz` returns `ok`. On a node that fails bootstrap,
-inspect `journalctl -u custom-certificates.service -u ocne.service`. Supplying
-`kubelet.conf` alone is not a bootstrap completion signal in custom mode; OCNE
-records successful bootstrap in `/etc/ocne/bootstrap-complete`.
+## Install Cluster Applications
 
-## Install UI Credentials and Cluster Applications
+UI certificates are generated automatically.  To supply them separately,
+enable `customUICertificates` in `control-plane-1.yaml` before starting the
+applications, then follow [Custom UI Certificates](custom-ui-certificates.md).
 
-Create both Secrets before the second `ocne cluster start`. Custom mode also
-skips OCNE's UI certificate generation.
+Install the cluster applications.
 
 ```bash
-echo "Installing the supplied UI certificate and trust anchor"
-kubectl create namespace ocne-system --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n ocne-system create secret tls ui-tls \
-  --cert="$PKI_DIR/ui-server.crt" --key="$PKI_DIR/ui-server.key"
-kubectl -n ocne-system create secret generic certificate-authority-tls \
-  --from-file=tls.crt="$PKI_DIR/ui.crt"
-
-echo "Installing the cluster applications"
-ocne cluster start -c "$CLUSTER_CONFIG" --auto-start-ui=false
+ocne cluster start -c control-plane-1.yaml --auto-start-ui=false
 ```
 
-The second start uses the existing API and administrator kubeconfig to install
-applications. With workers configured, some application pods remain Pending
-until workers join because the control planes are tainted.
-
-### Select the Flannel Node Addresses
-
-In the example network, the API VIP shares an interface with the control-plane
-node address. Configure Flannel to use each node's own address for VXLAN rather
-than selecting the shared VIP. This is a network setting for this topology.
+Configure Flannel to use each node's own IP address for tunnels.  The control
+plane interface also carries the floating API virtual IP.
 
 ```bash
-echo "Selecting each node's address for Flannel tunnels"
 cat > flannel-interface.yaml <<'YAML'
 spec:
   template:
@@ -389,127 +366,53 @@ spec:
               fieldPath: status.hostIP
 YAML
 kubectl -n kube-flannel patch daemonset kube-flannel-ds --type=strategic \
-  --patch-file "$WORK_DIR/flannel-interface.yaml"
-kubectl -n kube-flannel rollout status daemonset/kube-flannel-ds --timeout=900s
+  --patch-file flannel-interface.yaml
 ```
 
-## Join the Remaining Nodes
+## Join a Control Plane Node
 
-Define a bounded registration and readiness wait. Transient API errors can
-occur while etcd membership changes as a control plane joins.
+Prepare credentials for the new control plane, generate its join Ignition,
+and start its VM.
 
 ```bash
-wait_for_node() {
-  local node=$1 deadline=$((SECONDS + 900))
-  echo "Waiting for $node to register and become Ready"
-  until kubectl wait --for=create "node/$node" --timeout=15s &&
-    kubectl wait --for=condition=Ready "node/$node" --timeout=15s; do
-    if [ "$SECONDS" -ge "$deadline" ]; then
-      echo "$node did not become Ready before the deadline" >&2
-      return 1
-    fi
-    echo "Registration or readiness is not yet confirmed for $node; retrying"
-    sleep 5
-  done
+prepare_control_plane control-plane-2 "$CONTROL_PLANE_2_IP"
+write_ignition control-plane-2
+ocne cluster join --role-control-plane -c control-plane-2.yaml > control-plane-2.ign
+create_domain control-plane-2 "$CONTROL_PLANE_2_IP" 52:54:00:cc:01:02
+```
+
+The CLI creates the join token because `automaticTokenCreation` is enabled.
+Ignition supplies the certificates.  Wait for this control plane to finish
+joining before starting another node.  Its console is available with
+`sudo virsh console control-plane-2`.
+
+## Join a Worker Node
+
+Workers need the public Kubernetes CA certificate and a kubelet client
+kubeconfig.  Define a function that uses OpenSSL to issue a client certificate
+with `CN=system:node:<hostname>, O=system:nodes`, then embeds it in a kubeconfig.
+
+```bash
+prepare_worker() {
+  local node=$1
+  local directory="$WORK_DIR/$node/files/etc/kubernetes"
+
+  echo "Preparing the CA certificate and kubelet credentials for $node"
+  mkdir -p "$directory/pki"
+  cp "$WORK_DIR/pki/ca.crt" "$directory/pki/ca.crt"
+  printf '%s\n' "$node" > "$WORK_DIR/$node/files/etc/hostname"
+  issue_certificate "$directory/pki/kubelet-client" "$WORK_DIR/pki/ca" \
+    "/CN=system:node:$node/O=system:nodes" clientAuth
+  write_kubeconfig "$directory/pki/kubelet-client" "system:node:$node" \
+    "$directory/kubelet.conf"
 }
+
+prepare_worker worker-1
+write_ignition worker-1
+ocne cluster join -c worker-1.yaml > worker-1.ign
+create_domain worker-1 "$WORKER_IP" 52:54:00:cc:01:03
 ```
 
-Prepare unique credentials and final Ignition for each additional control plane.
-The command below illustrates the second control plane; repeat it for
-`$CLUSTER_NAME-control-plane-3`.
-
-```bash
-node="$CLUSTER_NAME-control-plane-2"
-echo "Generating join Ignition for $node"
-prepare_node "$node" control-plane
-ocne cluster join --role-control-plane -c "$WORK_DIR/$node.yaml" > "$WORK_DIR/$node.ign"
-```
-
-Boot that machine with its final Ignition file, then wait before proceeding to
-the next control plane:
-
-```bash
-wait_for_node "$node"
-```
-
-All control planes use the shared authorities but issue their own leaf credentials.
-Custom mode does not upload or download a kubeadm certificate bundle.
-
-For each worker, issue the hostname-specific kubelet identity and generate the
-worker join Ignition. Repeat for workers 2 and 3, booting each machine with its
-own file.
-
-```bash
-node="$CLUSTER_NAME-worker-1"
-echo "Generating join Ignition for $node"
-prepare_node "$node" worker
-ocne cluster join -c "$WORK_DIR/$node.yaml" > "$WORK_DIR/$node.ign"
-```
-
-After booting the worker with that final Ignition file, run `wait_for_node "$node"`
-before preparing the next worker.
-
-`automaticTokenCreation: true` lets the CLI create join tokens through the live
-cluster. Generate each join configuration close to the time the node will boot;
-join tokens are temporary. Certificate provisioning and token creation are
-separate requirements.
-
-## Verify the Cluster and Certificates
-
-After booting all six machines, verify readiness and application availability.
-
-```bash
-echo "Checking all six nodes and the cluster applications"
-kubectl wait --for=condition=Ready nodes --all --timeout=900s
-kubectl get nodes -o wide
-kubectl -n kube-system rollout status deployment/coredns --timeout=900s
-kubectl -n ocne-system rollout status deployment/ui --timeout=900s
-kubectl get --raw=/readyz
-```
-
-Confirm that `kubectl get nodes` lists three control planes and three workers.
-Verify the live API server certificate against the supplied Kubernetes CA and
-the VIP used by the administrator kubeconfig.
-
-```bash
-echo "Verifying the API server certificate and endpoint identity"
-openssl s_client -connect "$API_VIP:6443" -CAfile "$PKI_DIR/kubernetes.crt" \
-  -verify_ip "$API_VIP" -verify_return_error < /dev/null
-```
-
-Check a control plane's installed trust anchor against the original authority.
-When inspecting multiple nodes in a shell loop, redirect console input from
-`/dev/null` so it cannot consume the list of node names.
-
-```bash
-echo "Comparing the installed Kubernetes authority with the supplied certificate"
-ocne cluster console --direct --node "$CLUSTER_NAME-control-plane" -- \
-  cat /etc/kubernetes/pki/ca.crt < /dev/null > "$WORK_DIR/installed-ca.crt"
-cmp "$PKI_DIR/kubernetes.crt" "$WORK_DIR/installed-ca.crt"
-```
-
-For the UI, start a port-forward in one terminal and verify the connection in a
-second terminal with the same working-directory variables. Successful
-verification uses the supplied UI authority and the `localhost` identity in the
-issued certificate.
-
-```bash
-echo "Forwarding the UI TLS port"
-kubectl -n ocne-system port-forward service/ui 8443:443
-```
-
-```bash
-echo "Verifying the certificate served by the running UI"
-openssl s_client -connect 127.0.0.1:8443 -servername localhost \
-  -CAfile "$PKI_DIR/ui.crt" -verify_hostname localhost \
-  -verify_return_error < /dev/null
-```
-
-The [live certificate tests](../../bats-tests/tests/functional/cluster/byo-certificates.bats)
-also verify every control-plane component and kubelet client, absence of signing
-keys on workers, preservation of provisioned credentials during bootstrap, and
-equality between the UI's served certificate and its Secret. The
-[upgrade tests](../../bats-tests/tests/upgrade/tests.bats) repeat trust checks after
-applicable node updates. A same-minor update must wait for a changed boot ID and
-Ready status on each node before advancing; its version string alone cannot
-confirm a reboot.
+Worker Ignition contains no CA signing keys.  Its console is available with
+`sudo virsh console worker-1`.  To add more nodes, repeat the corresponding
+steps with a unique hostname, IP address, and MAC address.
