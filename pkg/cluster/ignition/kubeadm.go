@@ -202,8 +202,9 @@ func GenerateKubeadmInit(ci *ClusterInit) *InitConfig {
 		ret.NodeRegistration.Taints = &[]string{}
 	}
 	if ci.SkipCertificateGeneration {
-		log.Debug("Skipping kubeadm init certificate, kubeconfig and certificate upload phases")
-		ret.SkipPhases = append(ret.SkipPhases, "certs", "kubeconfig", "upload-certs")
+		log.Debug("Skipping kubeadm init certificate, kubeconfig, certificate upload and join command phases")
+		// kubeadm's join command phase depends on the skipped upload-certs phase.
+		ret.SkipPhases = append(ret.SkipPhases, "certs", "kubeconfig", "upload-certs", "show-join-command")
 	}
 	return ret
 }

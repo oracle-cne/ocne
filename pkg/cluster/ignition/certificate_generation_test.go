@@ -14,7 +14,7 @@ func TestCertificateGenerationPhases(t *testing.T) {
 	for _, disabled := range []bool{false, true} {
 		t.Logf("Checking initialization and join phases with certificate generation disabled=%t", disabled)
 		init := GenerateKubeadmInit(&ClusterInit{SkipCertificateGeneration: disabled})
-		for _, phase := range []string{"certs", "kubeconfig", "upload-certs"} {
+		for _, phase := range []string{"certs", "kubeconfig", "upload-certs", "show-join-command"} {
 			if slices.Contains(init.SkipPhases, phase) != disabled {
 				t.Fatalf("unexpected init skip phases: %v", init.SkipPhases)
 			}
